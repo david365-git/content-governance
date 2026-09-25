@@ -4106,6 +4106,37 @@ function bc_runCoherenceFullAutomated() {
   };
 }
 
+function bc_runW2CPlanningAutomated() {
+  var startTime = Date.now();
+
+  var promptData = buildImageSuggestionPrompt('w2b_raw_html');
+  if (!promptData.success) throw new Error(promptData.message);
+
+  var apiResult = bc_sendPromptViaOpenAI(promptData.prompt);
+  if (!apiResult.success) throw new Error(apiResult.message);
+
+  var saveResult = saveW2CSuggestions(apiResult.text);
+  if (!saveResult.success) throw new Error(saveResult.message);
+
+  var reconcileResult = reconcileImageSuggestions('w2b_raw_html');
+  if (!reconcileResult.success) throw new Error(reconcileResult.message);
+
+  var libraryResult = saveW2CSuggestionsToImageLibrary();
+  if (!libraryResult.success) throw new Error(libraryResult.message);
+
+  bc_addToApiCostAndTime(
+    apiResult.cost,
+    (Date.now() - startTime) / 1000
+  );
+
+  return {
+    success: true,
+    message:
+      'W2C planning complete — suggestions saved, FL prepared, and Image Library populated. Human image review is now required.',
+    cost: apiResult.cost
+  };
+}
+
 function bc_runStage3Automated() {
   var startTime = Date.now();
   var htmlResult = getW2BHtmlFromSheet();
