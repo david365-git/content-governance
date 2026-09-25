@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      color: #333;
+    }
+    .description {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    select {
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    .button-container {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-cancel { background-color: #f0f0f0; color: #333; }
+    .btn-submit { background-color: #1a73e8; color: #fff; }
+    #status { font-size: 13px; margin-top: 10px; text-align: right; color: #1a73e8; }
+  </style>
+</head>
+<body>
+
+  <div class="description">
+    Specify the performance timeline depth window you want to extract from your connected Google Search Console data property.
+  </div>
+
+  <label for="mode">Sync Mode:</label>
+  <select id="mode" onchange="toggleTimescale()">
+    <option value="all" selected>All URLs in Posts Sheet</option>
+    <option value="single">Active Row Only</option>
+  </select>
+
+  <div id="timescaleWrapper">
+    <label for="timescale">Timescale Period:</label>
+    <select id="timescale">
+      <option value="6" selected>The Last 6 Months</option>
+      <option value="6_from_12">6 Months (Starting 12 Months Ago)</option>
+      <option value="16">The Last 16 Months</option>
+    </select>
+  </div>
+
+  <div class="button-container">
+    <button class="btn-cancel" onclick="google.script.host.close()">Cancel</button>
+    <button class="btn-submit" id="submitBtn" onclick="submitForm()">Update Sheet</button>
+  </div>
+  
+  <div id="status"></div>
+
+  <script>
+    function toggleTimescale() {
+      var mode = document.getElementById('mode').value;
+      document.getElementById('timescaleWrapper').style.display = mode === 'single' ? 'none' : 'block';
+    }
+
+    function submitForm() {
+      var mode = document.getElementById('mode').value;
+      var selection = mode === 'single' ? 'single' : document.getElementById('timescale').value;
+      var submitBtn = document.getElementById('submitBtn');
+      var statusDiv = document.getElementById('status');
+      
+      submitBtn.disabled = true;
+      statusDiv.innerText = "Running API fetch query, please wait...";
+      
+      google.script.run
+        .withSuccessHandler(function(responseMessage) {
+          alert(responseMessage);
+          google.script.host.close();
+        })
+        .withFailureHandler(function(error) {
+          statusDiv.style.color = "red";
+          statusDiv.innerText = "Error: " + error.message;
+          submitBtn.disabled = false;
+        })
+        .processGSCFetch(selection);
+    }
+  </script>
+</body>
+</html>

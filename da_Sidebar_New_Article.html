@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 13px; padding: 12px; background: #f9f9f9; }
+  h2 { font-size: 15px; color: #2c4770; margin: 0 0 12px 0; }
+  .section { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 12px; }
+  .section h3 { font-size: 13px; color: #2c4770; margin: 0 0 8px 0; }
+  button { width: 100%; padding: 8px; margin-bottom: 6px; background: #2c4770; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  button:hover { background: #1e3050; }
+  button.secondary { background: #666; }
+  button.secondary:hover { background: #444; }
+  textarea { width: 100%; height: 120px; font-size: 11px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; padding: 6px; box-sizing: border-box; margin-bottom: 6px; }
+  .prompt-box { width: 100%; height: 200px; font-size: 11px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; padding: 6px; box-sizing: border-box; background: #f4f4f4; margin-bottom: 6px; }
+  .msg { padding: 6px 8px; border-radius: 4px; margin-bottom: 6px; font-size: 12px; }
+  .msg.ok  { background: #c6efce; color: #276221; }
+  .msg.err { background: #ffc7ce; color: #9c0006; }
+  .msg.inf { background: #cfe2f3; color: #1c4587; }
+  .label { font-weight: bold; font-size: 12px; margin-bottom: 4px; display: block; }
+  .meta { font-size: 11px; color: #666; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<h2>New Article AC</h2>
+
+<!-- STEP 1 -->
+<div class="section">
+  <h3>Step 1 — Generate Classify Prompt</h3>
+  <p class="meta">Select a row in <strong>new_article_briefs</strong> then click Generate.</p>
+  <button onclick="generatePrompt()">Generate Classify Prompt</button>
+  <div id="meta" class="meta" style="display:none"></div>
+  <div id="step1msg"></div>
+  <span class="label" id="promptLabel" style="display:none">Copy this prompt into ChatGPT:</span>
+  <textarea class="prompt-box" id="promptBox" style="display:none" readonly></textarea>
+  <button class="secondary" id="copyBtn" style="display:none" onclick="copyPrompt()">Copy Prompt</button>
+</div>
+
+<!-- STEP 2 -->
+<div class="section">
+  <h3>Step 2 — Paste ChatGPT Result</h3>
+  <p class="meta">Paste the JSON array from ChatGPT below.</p>
+  <textarea id="jsonInput" placeholder='[{"index": 0, "field": "...", "selected": "...", "reason": "..."}, ...]'></textarea>
+  <button class="secondary" onclick="pasteFromClipboard()">Paste from Clipboard</button>
+  <button class="secondary" onclick="validateSelections()">Validate Selections</button>
+  <div id="step2msg"></div>
+</div>
+
+<!-- STEP 3 -->
+<div class="section">
+  <h3>Step 3 — Validate (Optional)</h3>
+  <p class="meta">Copy this validation prompt into ChatGPT, review the result, then adjust the JSON above if needed.</p>
+  <span class="label" id="validationLabel" style="display:none">Copy this prompt into ChatGPT:</span>
+  <textarea class="prompt-box" id="validationBox" style="display:none" readonly></textarea>
+  <button class="secondary" id="copyValidationBtn" style="display:none" onclick="copyValidationPrompt()">Copy Validation Prompt</button>
+  <div id="step3msg"></div>
+  <span class="label" id="validationResultLabel" style="display:none">Paste ChatGPT validation response:</span>
+  <textarea id="validationResultInput" style="display:none" placeholder='[{"index": 0, "fit": "good", "recommended": "...", "reason": "..."}, ...]'></textarea>
+  <button class="secondary" id="pasteValidationBtn" style="display:none" onclick="pasteValidationFromClipboard()">Paste from Clipboard</button>
+  <button class="secondary" id="applyValidationBtn" style="display:none" onclick="applyValidation()">Apply Recommendations to JSON</button>
+</div>
+
+<!-- STEP 4 -->
+<div class="section">
+  <h3>Step 4 — Write to Sheet</h3>
+  <p class="meta">Once satisfied with the selections click Write to Sheet.</p>
+  <button onclick="writeToSheet()">Write AC Values to Sheet</button>
+  <div id="step4msg"></div>
+</div>
+
+<!-- STEP 5 -->
+<div class="section">
+  <h3>Step 5 — Add Post to site-export Sheet</h3>
+  <p class="meta">Adds the article stub to site-export using the Post ID so the pipeline can pick it up normally. Post ID must be filled in first.</p>
+  <button onclick="addPostToSiteExport()">Add Post to site-export Sheet</button>
+  <div id="step5msg"></div>
+</div>
+
+<script>
+  var _rowNum = null;
+
+  function generatePrompt() {
+    document.getElementById('step1msg').innerHTML = '<div class="msg inf">Building prompt...</div>';
+    document.getElementById('promptBox').style.display = 'none';
+    document.getElementById('promptLabel').style.display = 'none';
+    document.getElementById('copyBtn').style.display = 'none';
+    document.getElementById('meta').style.display = 'none';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          document.getElementById('step1msg').innerHTML = '<div class="msg err">' + result.error + '</div>';
+          return;
+        }
+        _rowNum = result.rowNum;
+        document.getElementById('meta').textContent = 'Article Type: ' + result.articleType + '  |  Material: ' + result.material + '  |  Row: ' + result.rowNum;
+        document.getElementById('meta').style.display = 'block';
+        document.getElementById('promptBox').value = result.prompt;
+        document.getElementById('promptBox').style.display = 'block';
+        document.getElementById('promptLabel').style.display = 'block';
+        document.getElementById('copyBtn').style.display = 'block';
+        document.getElementById('step1msg').innerHTML = '<div class="msg ok">Prompt ready. Copy and paste into ChatGPT.</div>';
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('step1msg').innerHTML = '<div class="msg err">Error: ' + err.message + '</div>';
+      })
+      .da_buildNewArticleClassifyPrompt();
+  }
+
+  function copyPrompt() {
+    const box = document.getElementById('promptBox');
+    box.select();
+    document.execCommand('copy');
+    document.getElementById('step1msg').innerHTML = '<div class="msg ok">Prompt copied to clipboard.</div>';
+  }
+
+  function writeToSheet() {
+    const json = document.getElementById('jsonInput').value.trim();
+    if (!json) {
+      document.getElementById('step4msg').innerHTML = '<div class="msg err">Paste the JSON result first.</div>';
+      return;
+    }
+    if (!_rowNum) {
+      document.getElementById('step4msg').innerHTML = '<div class="msg err">Generate a prompt first so the row number is known.</div>';
+      return;
+    }
+    document.getElementById('step4msg').innerHTML = '<div class="msg inf">Writing to sheet...</div>';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          document.getElementById('step4msg').innerHTML = '<div class="msg ok">' + result.message + '</div>';
+        } else {
+          document.getElementById('step4msg').innerHTML = '<div class="msg err">' + result.message + '</div>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('step4msg').innerHTML = '<div class="msg err">Error: ' + err.message + '</div>';
+      })
+      .da_saveNewArticleClassification(json, _rowNum);
+  }
+
+  function copyPrompt() {
+    const box = document.getElementById('promptBox');
+    box.select();
+    document.execCommand('copy');
+    document.getElementById('step1msg').innerHTML = '<div class="msg ok">Prompt copied to clipboard.</div>';
+  }
+
+  function pasteFromClipboard() {
+    navigator.clipboard.readText()
+      .then(function(text) {
+        document.getElementById('jsonInput').value = text;
+        document.getElementById('step2msg').innerHTML = '<div class="msg ok">Clipboard pasted into field.</div>';
+      })
+      .catch(function(err) {
+        document.getElementById('step2msg').innerHTML = '<div class="msg err">Clipboard access denied. Please paste manually.</div>';
+      });
+  }
+  function validateSelections() {
+    const json = document.getElementById('jsonInput').value.trim();
+    if (!json) {
+      document.getElementById('step2msg').innerHTML = '<div class="msg err">Paste the JSON result first.</div>';
+      return;
+    }
+    if (!_rowNum) {
+      document.getElementById('step2msg').innerHTML = '<div class="msg err">Generate a prompt first so the row number is known.</div>';
+      return;
+    }
+    document.getElementById('step2msg').innerHTML = '<div class="msg inf">Building validation prompt...</div>';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          document.getElementById('step3msg').innerHTML = '<div class="msg err">' + result.error + '</div>';
+          return;
+        }
+        document.getElementById('validationBox').value = result.prompt;
+        document.getElementById('validationBox').style.display = 'block';
+        document.getElementById('validationLabel').style.display = 'block';
+        document.getElementById('copyValidationBtn').style.display = 'block';
+        document.getElementById('step2msg').innerHTML = '';
+        document.getElementById('step3msg').innerHTML = '<div class="msg ok">Validation prompt ready. Copy and paste into ChatGPT.</div>';
+        document.getElementById('validationResultLabel').style.display = 'block';
+        document.getElementById('validationResultInput').style.display = 'block';
+        document.getElementById('pasteValidationBtn').style.display = 'block';
+        document.getElementById('applyValidationBtn').style.display = 'block';
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('step3msg').innerHTML = '<div class="msg err">Error: ' + err.message + '</div>';
+      })
+      .da_buildValidationPrompt(json, _rowNum);
+  }
+
+  function copyValidationPrompt() {
+    const box = document.getElementById('validationBox');
+    box.select();
+    document.execCommand('copy');
+    document.getElementById('step3msg').innerHTML = '<div class="msg ok">Validation prompt copied to clipboard.</div>';
+  }
+  function pasteValidationFromClipboard() {
+    navigator.clipboard.readText()
+      .then(function(text) {
+        document.getElementById('validationResultInput').value = text;
+        document.getElementById('step3msg').innerHTML = '<div class="msg ok">Validation response pasted.</div>';
+      })
+      .catch(function(err) {
+        document.getElementById('step3msg').innerHTML = '<div class="msg err">Clipboard access denied. Please paste manually.</div>';
+      });
+  }
+
+  function applyValidation() {
+    const validationJson = document.getElementById('validationResultInput').value.trim();
+    const classifyJson   = document.getElementById('jsonInput').value.trim();
+
+    if (!validationJson) {
+      document.getElementById('step3msg').innerHTML = '<div class="msg err">Paste the validation response first.</div>';
+      return;
+    }
+    if (!classifyJson) {
+      document.getElementById('step3msg').innerHTML = '<div class="msg err">No classify JSON found in Step 2.</div>';
+      return;
+    }
+
+    let validation, classify;
+    try {
+      validation = JSON.parse(validationJson);
+      classify   = JSON.parse(classifyJson);
+    } catch(e) {
+      document.getElementById('step3msg').innerHTML = '<div class="msg err">JSON parse error: ' + e.message + '</div>';
+      return;
+    }
+
+    // Apply recommended values where fit is weak or poor
+    let changesApplied = 0;
+    validation.forEach(function(vItem) {
+      if (vItem.fit === 'weak' || vItem.fit === 'poor') {
+        const cItem = classify.find(function(c) { return c.index === vItem.index; });
+        if (cItem && vItem.recommended && vItem.recommended !== cItem.selected) {
+          cItem.selected = vItem.recommended;
+          changesApplied++;
+        }
+      }
+    });
+
+    document.getElementById('jsonInput').value = JSON.stringify(classify, null, 2);
+
+    if (changesApplied > 0) {
+      document.getElementById('step3msg').innerHTML = '<div class="msg ok">' + changesApplied + ' selection(s) updated in Step 2 JSON. Review then click Write to Sheet.</div>';
+    } else {
+      document.getElementById('step3msg').innerHTML = '<div class="msg inf">No changes needed — all selections confirmed as good fit.</div>';
+    }
+  }
+
+  function addPostToSiteExport() {
+    if (!_rowNum) {
+      document.getElementById('step5msg').innerHTML = '<div class="msg err">Generate a prompt first so the row number is known.</div>';
+      return;
+    }
+    document.getElementById('step5msg').innerHTML = '<div class="msg inf">Adding to site-export...</div>';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          document.getElementById('step5msg').innerHTML = '<div class="msg ok">' + result.message + '</div>';
+        } else {
+          document.getElementById('step5msg').innerHTML = '<div class="msg err">' + result.message + '</div>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('step5msg').innerHTML = '<div class="msg err">Error: ' + err.message + '</div>';
+      })
+      .da_addPostToSiteExport(_rowNum);
+  }
+</script>
+
+</body>
+</html>

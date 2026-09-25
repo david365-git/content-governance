@@ -1,0 +1,34 @@
+<!-- ══ ce_Sidebar_W4_5.html - W4.5 — COMPETITOR SERP NOTES ══ -->
+  <div id="window-w4-5" class="window-card" style="display:none" style="border-top:3px solid #00796b">
+    <div class="window-header">
+      <span class="window-label" style="color:#00796b">W4.5 — Competitor SERP Notes</span>
+      <span class="tag" style="background:#00796b">Gemini — Manual Pull</span>
+    </div>
+    <div class="window-body">
+      <div id="statusSerpNotes" class="status-bar pending">Run the Gemini grounded-search prompt for the Primary Search Term, paste the output below, then Save.</div>
+
+      <!-- Step 1: Generate + copy Gemini prompt -->
+      <div class="step-label" style="margin-top:6px">Step 1 — Generate prompt, then paste into Gemini (with Search grounding)</div>
+      <div class="btn-row">
+        <button style="background:#00796b" id="serpGenPromptBtn" onclick="runGenerateSerpGeminiPrompt()">⚙ Generate Prompt</button>
+      </div>
+      <textarea id="serpGeminiPrompt" readonly style="height:70px;font-size:11px;margin-top:4px" placeholder="Click Generate Prompt to build this from the row's Primary Search Term..."></textarea>
+      <div class="btn-row" style="margin-top:3px">
+        <button class="btn-copy" onclick="copyText('serpGeminiPrompt','statusSerpNotes','Prompt copied — paste into Gemini')">Copy Prompt</button>
+      </div>
+
+      <!-- Step 2: Paste Gemini output -->
+      <div class="step-label" style="margin-top:8px">Step 2 — Paste Gemini's raw output here</div>
+      <textarea id="serpNotesInput" placeholder="Paste Gemini's grounded search output here..." style="height:140px;font-size:11px"></textarea>
+      <div class="btn-row" style="margin-top:3px">
+        <button class="btn-copy" onclick="clearAndPaste('serpNotesInput')">⌫ Clear + Paste</button>
+      </div>
+
+      <!-- Step 3: Build + Save -->
+      <div class="btn-row" style="margin-top:8px">
+        <button style="background:#00796b" id="serpNotesSaveBtn" onclick="runSaveCompetitorSerpNotes()">💾 Build &amp; Save to Sheet</button>
+      </div>
+
+      <div id="serpNotesResult" style="display:none;margin-top:8px;font-family:JetBrains Mono,monospace;font-size:13px;background:#e0f2f1;border-radius:4px;padding:8px;white-space:pre-wrap;color:#333"></div>
+    </div>
+  </div>

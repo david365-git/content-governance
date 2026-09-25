@@ -1,0 +1,603 @@
+<!-- ══ ce_Sidebar_AC.html - ARTICLE CLASSIFICATION ══ -->
+<div id="window-ac" class="window-card" style="display:none;border-top:3px solid var(--blue)">
+  <div class="window-header">
+    <span class="window-label" style="color:var(--blue)">AC — Article Classification</span>
+    <span class="tag" style="background:var(--blue)">Narrative Axes</span><span class="tag" style="background:red;color:yellow">Run Prompt Splitter</span>
+  </div>
+  <div class="window-body">
+
+    <div style="margin-bottom:8px;">
+      <button class="btn-generate btn-full" onclick="window.acBuildClassifyPrompt()">⚙ Build Classify Prompt</button>
+      <div id="ac-prompt-output" style="display:none;margin-top:6px;">
+        <textarea id="ac-prompt-text" style="width:100%;height:160px;font-family:JetBrains Mono,monospace;font-size:10px;padding:6px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px;resize:vertical;" readonly></textarea>
+        <button class="btn-generate btn-full" style="margin-top:4px;" onclick="navigator.clipboard.writeText(document.getElementById('ac-prompt-text').value)">⚙ Copy Prompt</button>
+      </div>
+    </div>
+
+    <div id="ac-ab-block" style="margin-bottom:8px;border:1px solid #ccc;border-radius:4px;padding:8px;">
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;margin-bottom:6px;">AB — Paste LLM Output</div>
+      <textarea id="ac-ab-input" style="width:100%;height:120px;font-family:JetBrains Mono,monospace;font-size:10px;padding:6px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px;resize:vertical;" placeholder="Paste LLM output here..."></textarea>
+      <div class="btn-row" style="margin-top:4px;">
+        <button type="button" class="btn-generate" onclick="document.getElementById('ac-ab-input').value='';navigator.clipboard.readText().then(function(t){document.getElementById('ac-ab-input').value=t;});">⚙ Clear &amp; Paste</button>
+        <button type="button" class="btn-generate" style="background:#6a1b9a;color:#fff;" onclick="window.acLoadDropdowns()">⚙ Load Dropdowns</button>
+        <button type="button" class="btn-generate" onclick="window.acParseABOutput()">⚙ Parse &amp; Load into AC</button>
+      </div>
+      <div class="btn-row" style="margin-top:4px;">
+        <button type="button" id="acAutoBtn" class="btn-generate" style="background:#0b8043;color:#fff;" onclick="window.acRunAutomated()">⚡ Run AC Automated</button>
+      </div>
+      <div id="ac-auto-status" style="font-size:10px;margin-top:4px;"></div>
+      <div id="ac-ab-reasons" style="margin-top:6px;display:none;"></div>
+    </div>
+
+    <div id="ac-status" class="status-bar pending">Load values to begin</div>
+    <div id="ac-existing-values" style="display:none;margin-bottom:6px;background:#e3f2fd;border:1px solid #90caf9;border-radius:4px;padding:6px 8px;font-family:JetBrains Mono,monospace;font-size:10px;color:#0277bd;"></div>
+    <div id="ac-existing-values" style="display:none;margin-bottom:6px;background:#e3f2fd;border:1px solid #90caf9;border-radius:4px;padding:6px 8px;font-family:JetBrains Mono,monospace;font-size:10px;color:#0277bd;"></div>
+
+    <div id="ac-dropdowns" style="display:none;margin-top:8px;">
+
+      <div class="ac-axis" id="ac-axis-0">
+        <label class="section-label">What They Found</label>
+        <select id="ac-select-0" style="width:100%;font-size:11px;padding:4px;"></select>
+      </div>
+
+      <div class="ac-axis" id="ac-axis-1" style="margin-top:6px;">
+        <label class="section-label">Why They Called</label>
+        <select id="ac-select-1" style="width:100%;font-size:11px;padding:4px;"></select>
+      </div>
+
+      <div class="ac-axis" id="ac-axis-2" style="margin-top:6px;">
+        <label class="section-label">What The Floor Was Doing</label>
+        <select id="ac-select-2" style="width:100%;font-size:11px;padding:4px;"></select>
+      </div>
+
+      <div class="ac-axis" id="ac-axis-3" style="margin-top:6px;">
+        <label class="section-label">What Forced Careful Decisions</label>
+        <select id="ac-select-3" style="width:100%;font-size:11px;padding:4px;"></select>
+      </div>
+
+      <div class="ac-axis" id="ac-axis-4" style="margin-top:6px;">
+        <label class="section-label">What Governed The Approach</label>
+        <select id="ac-select-4" style="width:100%;font-size:11px;padding:4px;"></select>
+      </div>
+
+      <div class="ac-axis" id="ac-axis-5" style="margin-top:6px;">
+        <label class="section-label">What Changed For The Homeowner</label>
+        <select id="ac-select-5" style="width:100%;font-size:11px;padding:4px;"></select>
+      </div>
+
+      <div class="ac-axis" id="ac-axis-6" style="margin-top:6px;">
+        <label class="section-label">Story Direction</label>
+        <select id="ac-select-6" style="width:100%;font-size:11px;padding:4px;"></select>
+      </div>
+
+      <div class="ac-axis" id="ac-axis-angle" style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc;">
+        <label class="section-label" style="color:#6a1b9a;font-weight:700;">Article Angle (structural shape)</label>
+
+        
+
+        <div class="btn-row" style="margin-top:4px;">
+          <button type="button" class="btn-generate" style="background:#e65100;color:#fff;" onclick="window.suggestArticleAngle()">⚙ Suggest Fit (based on saved AC)</button>
+
+          <button type="button" class="btn-generate" style="background:#1565c0;color:#fff;" onclick="window.runArticleAngleAutomation()">▶ Automate Article Angle</button>
+
+          <div id="articleAngleAutoStatus" style="margin-top:6px;font-size:12px;"></div>
+          <button type="button" class="btn-generate" style="background:#00695c;color:#fff;" onclick="window.checkArticleAngleUsage()">⚙ Check Variety (same material)</button>
+        </div>
+        <div id="ac-angle-usage-block" style="display:none;margin-top:6px;"></div>
+        <div id="ac-angle-suggest-block" style="display:none;margin-top:6px;">
+          <textarea id="ac-angle-suggest-prompt" style="width:100%;height:100px;font-family:JetBrains Mono,monospace;font-size:10px;padding:6px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px;resize:vertical;" readonly></textarea>
+          <div class="btn-row" style="margin-top:4px;">
+            <button type="button" class="btn-generate" onclick="navigator.clipboard.writeText(document.getElementById('ac-angle-suggest-prompt').value)">⚙ Copy Prompt</button>
+          </div>
+          <textarea id="ac-angle-suggest-response" style="width:100%;height:120px;font-family:JetBrains Mono,monospace;font-size:10px;padding:6px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px;resize:vertical;margin-top:6px;" placeholder="Paste the LLM's fit analysis here..."></textarea>
+          <div class="btn-row" style="margin-top:4px;">
+            <button type="button" class="btn-generate" style="background:#2e7d32;color:#fff;" onclick="navigator.clipboard.readText().then(function(t){document.getElementById('ac-angle-suggest-response').value=t;window.renderArticleAngleFit(t);})">⚙ Paste Response</button>
+            <button type="button" class="btn-generate" onclick="window.renderArticleAngleFit(document.getElementById('ac-angle-suggest-response').value)">⚙ Render Result</button>
+          </div>
+          <div id="ac-angle-fit-cards" style="margin-top:8px;"></div>
+        </div>
+
+        <select id="ac-select-angle" style="width:100%;font-size:11px;padding:4px;margin-top:8px;"></select>
+        <div class="btn-row" style="margin-top:4px;">
+          <button type="button" class="btn-generate" style="background:#6a1b9a;color:#fff;" onclick="window.loadArticleAngle()">⚙ Load Angle</button>
+          <button type="button" class="btn-generate" onclick="window.randomiseArticleAngle()">⚙ Randomise</button>
+          <button type="button" class="btn-push" onclick="window.saveArticleAngle()">⚙ Save Angle</button>
+        </div>
+        <div id="ac-angle-status" class="status-bar pending" style="margin-top:6px;display:none;"></div>
+      </div>
+
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn-generate" onclick="window.acRandomiseAll()">⚙ Randomise All</button>
+        <button class="btn-push" onclick="window.acCheckAndSave()">⚙ Check &amp; Save</button>
+      </div>
+
+      <div id="ac-save-status" class="status-bar pending" style="margin-top:6px;display:none;"></div>
+
+      <div id="ac-duplication-warning" style="display:none;margin-top:8px;">
+        <div style="background:#fff3e0;border:1px solid #e65100;border-radius:4px;padding:8px;">
+          <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#e65100;margin-bottom:6px;">
+            ⚠ NEAR-DUPLICATE DETECTED
+          </div>
+          <div id="ac-duplication-detail" style="font-family:JetBrains Mono,monospace;font-size:11px;color:#333;margin-bottom:8px;"></div>
+          <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#333;margin-bottom:6px;">
+            Change one or more highlighted dropdowns above then click Check &amp; Save again, or save anyway.
+          </div>
+          <div class="btn-row">
+            <button class="btn-push" onclick="window.acSaveAnyway()">⚙ Save Anyway</button>
+            <button class="btn-generate" style="background:#1565c0;color:#fff;" onclick="window.acShowCompareModal()">⚙ Compare Axes</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="ac-compare-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;overflow:auto;">
+        <div style="background:#fff;margin:40px auto;padding:16px;max-width:640px;border-radius:6px;font-family:JetBrains Mono,monospace;font-size:11px;">
+          <div style="font-weight:700;font-size:13px;margin-bottom:12px;color:#e65100;">⚠ Axis Comparison — Current vs Duplicate Row</div>
+          <table id="ac-compare-table" style="width:100%;border-collapse:collapse;"></table>
+          <div style="margin-top:12px;text-align:right;">
+            <button class="btn-generate" onclick="document.getElementById('ac-compare-modal').style.display='none'">✕ Close</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script>
+window.runArticleAngleAutomation = function() {
+
+  var status =
+    document.getElementById('articleAngleAutoStatus');
+
+  status.textContent =
+    'Running Article Angle automation…';
+
+  status.style.color = '#555';
+
+  google.script.run
+    .withSuccessHandler(function(rowResult) {
+
+      if (
+        !rowResult ||
+        !rowResult.success ||
+        !rowResult.row ||
+        rowResult.row < 2
+      ) {
+        status.textContent =
+          '❌ Could not identify the selected posts row.';
+        status.style.color = '#c62828';
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+
+          if (res && res.success) {
+
+            status.textContent =
+              '✔ ' + res.message;
+
+            status.style.color = '#2e7d32';
+
+            if (
+              typeof window.loadArticleAngle === 'function'
+            ) {
+              window.loadArticleAngle();
+            }
+
+          } else {
+
+            status.textContent =
+              '❌ ' +
+              (
+                res && res.message
+                  ? res.message
+                  : 'Article Angle automation failed.'
+              );
+
+            status.style.color = '#c62828';
+          }
+        })
+        .withFailureHandler(function(err) {
+
+          status.textContent =
+            '❌ ' + err.message;
+
+          status.style.color = '#c62828';
+        })
+        .bc_runArticleAngleAutomated(
+          rowResult.row
+        );
+    })
+    .withFailureHandler(function(err) {
+
+      status.textContent =
+        '❌ ' + err.message;
+
+      status.style.color = '#c62828';
+    })
+    .bc_getActiveRowNumber();
+};
+
+window.acShowCompareModal = function() {
+  var warning = document.getElementById('ac-duplication-warning');
+  var detailDiv = document.getElementById('ac-duplication-detail');
+  var detail = detailDiv ? detailDiv.innerHTML : '';
+
+  var axisLabels = [
+    'What They Found',
+    'Why They Called',
+    'What The Floor Was Doing',
+    'What Forced Careful Decisions',
+    'What Governed The Approach',
+    'What Changed For The Homeowner',
+    'Story Direction'
+  ];
+
+  var selectIds = ['ac-select-0','ac-select-1','ac-select-2','ac-select-3','ac-select-4','ac-select-5','ac-select-6'];
+
+  // Extract duplicate row values from the duplication detail text
+  // These are stored on the warning div as data attributes when the warning fires
+  var dupValues = warning.getAttribute('data-dup-values') ? JSON.parse(warning.getAttribute('data-dup-values')) : [];
+  var matchedAxes = warning.getAttribute('data-matched-axes') ? JSON.parse(warning.getAttribute('data-matched-axes')) : [];
+  var dupRowNum = warning.getAttribute('data-dup-row') || '?';
+
+  var table = document.getElementById('ac-compare-table');
+  var html = '<tr style="background:#f5f5f5;">'
+    + '<th style="padding:6px 8px;text-align:left;border-bottom:2px solid #ccc;">Axis</th>'
+    + '<th style="padding:6px 8px;text-align:left;border-bottom:2px solid #ccc;">Current Article</th>'
+    + '<th style="padding:6px 8px;text-align:left;border-bottom:2px solid #ccc;">Row ' + dupRowNum + '</th>'
+    + '</tr>';
+
+  for (var i = 0; i < axisLabels.length; i++) {
+    var selectElem = document.getElementById(selectIds[i]);
+    var currentVal = selectElem ? selectElem.options[selectElem.selectedIndex].text : '—';
+    var dupVal = dupValues[i] || '—';
+    var isMatch = matchedAxes.indexOf(i) > -1;
+    var rowStyle = isMatch
+      ? 'background:#fff3e0;'
+      : 'background:#e8f5e9;';
+    var indicator = isMatch ? '🔶 MATCH' : '✅ DIFFERS';
+    html += '<tr style="' + rowStyle + '">'
+      + '<td style="padding:5px 8px;border-bottom:1px solid #eee;font-weight:700;">' + axisLabels[i] + '</td>'
+      + '<td style="padding:5px 8px;border-bottom:1px solid #eee;">' + currentVal + '</td>'
+      + '<td style="padding:5px 8px;border-bottom:1px solid #eee;">' + dupVal + ' <span style="color:#888;font-size:10px;">' + indicator + '</span></td>'
+      + '</tr>';
+  }
+
+  table.innerHTML = html;
+  document.getElementById('ac-compare-modal').style.display = 'block';
+};
+
+window.acBuildClassifyPrompt = function() {
+  const status = document.getElementById('ac-status');
+  status.textContent = 'Building prompt...';
+  status.className = 'status-bar pending';
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.error) {
+        status.textContent = result.error;
+        status.className = 'status-bar error';
+        return;
+      }
+      document.getElementById('ac-prompt-text').value = result.prompt;
+      document.getElementById('ac-prompt-output').style.display = 'block';
+      status.textContent = 'Prompt ready — copy and paste into ChatGPT, then paste output into AB below.';
+      status.className = 'status-bar success';
+    })
+    .withFailureHandler(function(err) {
+      status.textContent = 'Error: ' + err.message;
+      status.className = 'status-bar error';
+    })
+    .acBuildClassifyPrompt();
+};
+
+window.loadArticleAngle = function() {
+  var select = document.getElementById('ac-select-angle');
+  var status = document.getElementById('ac-angle-status');
+  status.style.display = 'block';
+  status.textContent = 'Loading...';
+  status.className = 'status-bar pending';
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) {
+        status.textContent = result.message;
+        status.className = 'status-bar error';
+        return;
+      }
+      select.innerHTML = '';
+      result.options.forEach(function(opt) {
+        var el = document.createElement('option');
+        el.value = opt;
+        el.textContent = opt;
+        select.appendChild(el);
+      });
+      if (result.value) {
+        for (var i = 0; i < select.options.length; i++) {
+          if (select.options[i].value === result.value) { select.selectedIndex = i; break; }
+        }
+        status.textContent = 'Loaded existing value: ' + result.value;
+      } else {
+        status.textContent = 'No angle set yet for this row — choose one and click Save.';
+      }
+      status.className = 'status-bar success';
+    })
+    .withFailureHandler(function(err) {
+      status.textContent = 'Error: ' + err.message;
+      status.className = 'status-bar error';
+    })
+    .getArticleAngleForActiveRow();
+};
+
+window.randomiseArticleAngle = function() {
+  var select = document.getElementById('ac-select-angle');
+  if (select.options.length === 0) { window.loadArticleAngle(); return; }
+  select.selectedIndex = Math.floor(Math.random() * select.options.length);
+};
+
+window.saveArticleAngle = function() {
+  var select = document.getElementById('ac-select-angle');
+  var status = document.getElementById('ac-angle-status');
+  var value = select.value;
+  if (!value) { status.textContent = 'Load angle options first.'; status.className = 'status-bar error'; status.style.display = 'block'; return; }
+  status.style.display = 'block';
+  status.textContent = 'Saving...';
+  status.className = 'status-bar pending';
+  google.script.run
+    .withSuccessHandler(function(result) {
+      status.textContent = result.message;
+      status.className = result.success ? 'status-bar success' : 'status-bar error';
+    })
+    .withFailureHandler(function(err) {
+      status.textContent = 'Error: ' + err.message;
+      status.className = 'status-bar error';
+    })
+    .saveArticleAngleForActiveRow(value);
+};
+
+window.renderArticleAngleFit = function(raw) {
+  var container = document.getElementById('ac-angle-fit-cards');
+  container.innerHTML = '';
+  if (!raw || !raw.trim()) return;
+
+  var recMatch = raw.match(/RECOMMENDED:\s*(.+)/i);
+  var recommended = recMatch ? recMatch[1].trim() : '';
+
+  var blocks = raw.split(/(?=SHAPE:)/).filter(function(b) { return b.trim().indexOf('SHAPE:') === 0; });
+
+  var fitColours = {
+    'YES': { bg: '#e8f5e9', border: '#2e7d32', text: '#2e7d32', icon: '✓' },
+    'PARTIAL': { bg: '#fff8e1', border: '#e65100', text: '#e65100', icon: '~' },
+    'NO': { bg: '#fce8e6', border: '#c62828', text: '#c62828', icon: '✗' }
+  };
+
+  blocks.forEach(function(block) {
+    var shapeMatch = block.match(/SHAPE:\s*(.+)/i);
+    var fitMatch = block.match(/FIT:\s*(YES|NO|PARTIAL)/i);
+    var reasonMatch = block.match(/REASON:\s*(.+)/i);
+
+    var shape = shapeMatch ? shapeMatch[1].trim() : 'Unknown';
+    var fit = fitMatch ? fitMatch[1].trim().toUpperCase() : 'NO';
+    var reason = reasonMatch ? reasonMatch[1].trim() : '';
+    var colours = fitColours[fit] || fitColours['NO'];
+    var isRecommended = recommended && shape.indexOf(recommended) > -1;
+
+    var card = document.createElement('div');
+    card.style.cssText = 'background:' + colours.bg + ';border:1px solid ' + colours.border + ';border-radius:5px;padding:8px 10px;margin-bottom:6px;font-size:11px;';
+    card.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+        '<span style="font-weight:700;color:' + colours.text + ';">' + colours.icon + ' ' + shape + (isRecommended ? ' ⭐' : '') + '</span>' +
+        '<span style="font-size:9px;font-weight:700;color:' + colours.text + ';text-transform:uppercase;">' + fit + '</span>' +
+      '</div>' +
+      '<div style="margin-top:3px;color:#333;">' + reason + '</div>';
+    container.appendChild(card);
+  });
+
+  if (recommended) {
+    var recDiv = document.createElement('div');
+    recDiv.style.cssText = 'background:#e3f2fd;border:2px solid #1565c0;border-radius:5px;padding:8px 10px;margin-top:4px;font-size:11px;font-weight:700;color:#1565c0;text-align:center;';
+    recDiv.textContent = '⭐ Recommended: ' + recommended;
+    container.appendChild(recDiv);
+  }
+};
+
+window.checkArticleAngleUsage = function() {
+  var block = document.getElementById('ac-angle-usage-block');
+  block.style.display = 'block';
+  block.innerHTML = '<div style="font-size:11px;color:#666;">Checking usage...</div>';
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) {
+        block.innerHTML = '<div style="font-size:11px;color:#c62828;">' + result.message + '</div>';
+        return;
+      }
+      var html = '<div style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;color:#00695c;margin-bottom:4px;">USAGE FOR ' + result.stoneType.toUpperCase() + ' CASE STUDIES</div>';
+      Object.keys(result.usageCounts).forEach(function(shape) {
+        var count = result.usageCounts[shape];
+        var isRecommended = result.recommended.indexOf(shape) > -1;
+        html += '<div style="display:flex;justify-content:space-between;padding:3px 6px;font-size:11px;' +
+          (isRecommended ? 'background:#e0f2f1;border-radius:3px;font-weight:700;' : '') + '">' +
+          '<span>' + (isRecommended ? '⭐ ' : '') + shape + '</span>' +
+          '<span>' + count + ' used</span></div>';
+      });
+      html += '<div style="margin-top:6px;font-size:10px;color:#00695c;font-weight:700;">Recommended (least used): ' + result.recommended.join(', ') + '</div>';
+      block.innerHTML = html;
+    })
+    .withFailureHandler(function(err) {
+      block.innerHTML = '<div style="font-size:11px;color:#c62828;">Error: ' + err.message + '</div>';
+    })
+    .getArticleAngleUsageForStoneType();
+};
+
+window.suggestArticleAngle = function() {
+  var block = document.getElementById('ac-angle-suggest-block');
+  var promptArea = document.getElementById('ac-angle-suggest-prompt');
+  block.style.display = 'block';
+  promptArea.value = 'Building prompt...';
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (!result.success) {
+        promptArea.value = 'ERROR: ' + result.message;
+        return;
+      }
+      promptArea.value = result.prompt;
+    })
+    .withFailureHandler(function(err) {
+      promptArea.value = 'Error: ' + err.message;
+    })
+    .buildArticleAngleSuggestionPrompt();
+};
+
+window.acRunAutomated = function() {
+
+  var btn = document.getElementById('acAutoBtn');
+  var statusDiv = document.getElementById('ac-auto-status');
+
+  btn.disabled = true;
+  btn.innerText = 'Running…';
+  statusDiv.innerText = 'Calling API…';
+  statusDiv.style.color = '';
+
+  google.script.run
+    .withSuccessHandler(function(rowResult) {
+
+      if (
+        !rowResult ||
+        !rowResult.success ||
+        !rowResult.row ||
+        rowResult.row < 2
+      ) {
+        btn.disabled = false;
+        btn.innerText = '⚡ Run AC Automated';
+        statusDiv.innerText = '❌ Could not identify the selected posts row.';
+        statusDiv.style.color = '#c5221f';
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+
+          btn.disabled = false;
+          btn.innerText = '⚡ Run AC Automated';
+
+          if (!res.success) {
+            statusDiv.innerText = '❌ ' + res.message;
+            statusDiv.style.color = '#c5221f';
+            return;
+          }
+
+          document.getElementById('ac-ab-input').value = res.text;
+
+          window.acLoadDropdowns();
+
+          setTimeout(function() {
+
+            window.acParseABOutput();
+
+            statusDiv.innerText =
+              '✔ AC classification saved. Cost: $' +
+              res.cost.toFixed(4);
+
+            statusDiv.style.color = '#0b8043';
+
+          }, 400);
+
+        })
+        .withFailureHandler(function(e) {
+
+          btn.disabled = false;
+          btn.innerText = '⚡ Run AC Automated';
+          statusDiv.innerText =
+          '❌ ' + e.message +
+          (e.stack ? '\n\n' + e.stack : '');
+          statusDiv.style.color = '#c5221f';
+
+        })
+        .bc_runACPromptAutomated(rowResult.row);
+
+    })
+    .withFailureHandler(function(e) {
+
+      btn.disabled = false;
+      btn.innerText = '⚡ Run AC Automated';
+      statusDiv.innerText =
+      '❌ ' + e.message +
+      (e.stack ? '\n\n' + e.stack : '');  
+      statusDiv.style.color = '#c5221f';
+
+    })
+    .bc_getActiveRowNumber();
+
+};
+
+window.acParseABOutput = function() {
+  window._acCurrentStatusId = (window._acCurrentStatusId || 0) + 1;
+  const selectIds = ['ac-select-0','ac-select-1','ac-select-2','ac-select-3','ac-select-4','ac-select-5','ac-select-6'];
+  const inputArea = document.getElementById('ac-ab-input');
+  const statusDiv = document.getElementById('ac-status');
+
+  if (document.getElementById('ac-select-0').options.length === 0) {
+    window.acLoadDropdowns();
+    statusDiv.textContent = 'Loading dropdowns first — please click Parse & Load again in a moment.';
+    statusDiv.className = 'status-bar pending';
+    return;
+  }
+  let matchCount = 0;
+
+  const deepClean = function(str) {
+    return str.toString()
+      .normalize('NFC')
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/\u00a0/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  };
+
+  try {
+    const rawValue = inputArea.value.trim().replace(/`/g, '').replace(/^json\s*/i, '').trim();
+    if (!rawValue) throw new Error('Input is empty');
+    const data = JSON.parse(rawValue);
+
+    data.forEach(function(entry) {
+      const selectId = selectIds[entry.index];
+      const selectElem = document.getElementById(selectId);
+      if (!selectElem) return;
+
+      const oldReason = selectElem.parentNode.querySelector('[data-inline-reason="' + selectId + '"]');
+      if (oldReason) oldReason.remove();
+
+      const targetText = deepClean(entry.selected || entry.closest_existing || '');
+      let found = false;
+
+      for (let i = 0; i < selectElem.options.length; i++) {
+        const optionText = deepClean(selectElem.options[i].text);
+        if (optionText === targetText) {
+          selectElem.selectedIndex = i;
+          selectElem.dispatchEvent(new Event('change', { bubbles: true }));
+          matchCount++;
+          found = true;
+          break;
+        }
+      }
+
+      const reasonDiv = document.createElement('div');
+      reasonDiv.setAttribute('data-inline-reason', selectId);
+      reasonDiv.style.color = 'red';
+      reasonDiv.style.fontSize = '11px';
+      reasonDiv.style.fontFamily = 'JetBrains Mono, monospace';
+      reasonDiv.style.marginTop = '2px';
+      reasonDiv.style.marginBottom = '10px';
+      reasonDiv.textContent = found ? entry.reason : '⚠ NO MATCH: ' + entry.selected.substring(0, 40) + '...';
+      selectElem.parentNode.insertBefore(reasonDiv, selectElem.nextSibling);
+    });
+
+    statusDiv.textContent = 'Matched ' + matchCount + ' out of ' + data.length + ' fields.';
+    statusDiv.className = matchCount === data.length ? 'status-bar success' : 'status-bar error';
+
+  } catch(e) {
+    statusDiv.textContent = 'Parse Error: ' + e.message;
+    statusDiv.className = 'status-bar error';
+  }
+};
+</script>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { 
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        padding: 20px; 
+        background-color: #f8f9fa; 
+        color: #3c4043;
+      }
+      label { 
+        font-weight: bold; 
+        display: block; 
+        margin-bottom: 10px; 
+        font-size: 14px;
+      }
+      select { 
+        width: 100%; 
+        padding: 12px; 
+        margin-bottom: 20px; 
+        border: 1px solid #dadce0; 
+        border-radius: 4px; 
+        font-size: 14px;
+        background-color: white;
+      }
+      button { 
+        width: 100%; 
+        padding: 12px; 
+        background-color: #1a73e8; 
+        color: white; 
+        border: none; 
+        border-radius: 4px; 
+        cursor: pointer; 
+        font-weight: bold;
+        font-size: 14px;
+        transition: background-color 0.2s;
+      }
+      button:hover { 
+        background-color: #1765cc; 
+      }
+      button:disabled { 
+        background-color: #bdc1c6; 
+        cursor: not-allowed; 
+      }
+      #status { 
+        margin-top: 20px; 
+        font-size: 13px; 
+        text-align: center; 
+        min-height: 1.2em;
+      }
+      .error { color: #d93025; }
+      .success { color: #188038; }
+    </style>
+  </head>
+  <body>
+    <label for="materials">Canonical Material Names</label>
+    <select id="materials">
+      <option value="Ceramic Tile">Ceramic Tile</option>
+      <option value="Grout">Grout</option>
+      <option value="Limestone">Limestone</option>
+      <option value="Marble">Marble</option>
+      <option value="Porcelain Tile">Porcelain Tile</option>
+      <option value="Quarry Tile">Quarry Tile</option>
+      <option value="Sandstone">Sandstone</option>
+      <option value="Slate">Slate</option>
+      <option value="Terracotta Tile">Terracotta Tile</option>
+      <option value="Terrazzo">Terrazzo</option>
+      <option value="Travertine">Travertine</option>
+      <option value="Victorian Encaustic Clay Tile">Victorian Encaustic Clay Tile</option>
+    </select>
+
+    <button id="runBtn" onclick="runProcess()">Run Governance Script</button>
+    
+    <div id="status"></div>
+
+    <script>
+      /**
+       * Calls the server-side function to update cell AP1 
+       * and filter the 'posts' sheet.
+       */
+      function runProcess() {
+        const material = document.getElementById('materials').value;
+        const btn = document.getElementById('runBtn');
+        const status = document.getElementById('status');
+        
+        // UI Feedback
+        btn.disabled = true;
+        status.innerText = "⏳ Processing Governance Controller...";
+        status.className = "";
+
+        // Diagnostic alert to confirm the button is firing locally
+        console.log("Sending to script: " + material);
+
+        // This function name MUST match your .gs file
+        google.script.run
+          .withSuccessHandler(function(response) {
+            btn.disabled = false;
+            status.innerText = "✅ " + response;
+            status.className = "success";
+          })
+          .withFailureHandler(function(err) {
+            btn.disabled = false;
+            status.innerText = "❌ Error: " + err.message;
+            status.className = "error";
+            console.error("Script Error:", err);
+          })
+          .openCanonicalMaterialSidebar(material);
+      }
+    </script>
+  </body>
+</html>

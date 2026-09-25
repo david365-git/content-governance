@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    color: #222;
+    background: #f5f5f5;
+    padding: 10px;
+  }
+
+  h2 {
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+  }
+
+  .btn {
+    display: inline-block;
+    padding: 5px 10px;
+    font-size: 11px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  .btn-primary   { background: #1a73e8; color: #fff; }
+  .btn-success   { background: #34a853; color: #fff; }
+  .btn-danger    { background: #ea4335; color: #fff; }
+  .btn-secondary { background: #888; color: #fff; }
+  .btn:hover     { opacity: 0.85; }
+  .btn:disabled  { opacity: 0.4; cursor: not-allowed; }
+
+  #status {
+    padding: 6px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    margin-bottom: 8px;
+    display: none;
+  }
+  #status.info    { background: #e8f0fe; color: #1a73e8; display: block; }
+  #status.success { background: #e6f4ea; color: #34a853; display: block; }
+  #status.error   { background: #fce8e6; color: #ea4335; display: block; }
+
+  .section-divider {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 10px 0;
+  }
+
+  /* VIDEO CARD */
+  .video-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+
+  .video-card-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .video-badge {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: bold;
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  .video-url {
+    font-size: 10px;
+    color: #555;
+    word-break: break-all;
+    margin-bottom: 6px;
+  }
+
+  .video-position {
+    font-size: 10px;
+    color: #888;
+    margin-bottom: 8px;
+  }
+
+  .action-row {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+
+  .action-btn {
+    padding: 4px 8px;
+    font-size: 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    cursor: pointer;
+    background: #f8f8f8;
+    font-weight: bold;
+  }
+
+  .action-btn.selected-header  { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+  .action-btn.selected-keep    { background: #34a853; color: #fff; border-color: #34a853; }
+  .action-btn.selected-move    { background: #f9ab00; color: #fff; border-color: #f9ab00; }
+  .action-btn.selected-remove  { background: #ea4335; color: #fff; border-color: #ea4335; }
+  .action-btn:hover            { opacity: 0.85; }
+
+  .section-select {
+    width: 100%;
+    font-size: 11px;
+    padding: 4px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    margin-top: 4px;
+    display: none;
+  }
+
+  .decision-summary {
+    font-size: 10px;
+    color: #555;
+    margin-top: 4px;
+    font-style: italic;
+  }
+
+  /* HTML PREVIEW */
+  #html-preview-wrap {
+    display: none;
+    margin-top: 8px;
+  }
+
+  #html-preview {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding: 8px;
+    font-size: 10px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 200px;
+    overflow-y: auto;
+    line-height: 1.4;
+  }
+
+  .toggle-link {
+    font-size: 10px;
+    color: #1a73e8;
+    cursor: pointer;
+    text-decoration: underline;
+    display: inline-block;
+    margin-top: 4px;
+  }
+
+  #no-videos-msg {
+    display: none;
+    padding: 8px;
+    background: #e6f4ea;
+    color: #34a853;
+    border-radius: 3px;
+    font-size: 11px;
+  }
+
+  #confirm-wrap { display: none; margin-top: 8px; }
+
+  .legend {
+    font-size: 10px;
+    color: #666;
+    margin-top: 4px;
+  }
+  .legend span {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    margin-right: 3px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+
+<h2>🎬 Video Manager</h2>
+
+<div id="status"></div>
+
+<button class="btn btn-primary" id="btn-scan" onclick="scanVideos()">Scan Article for Videos</button>
+
+<div id="no-videos-msg">No videos found in this article's HTML.</div>
+
+<div id="video-cards-wrap"></div>
+
+<div id="html-preview-wrap">
+  <hr class="section-divider">
+  <strong style="font-size:11px;">Highlighted HTML</strong>
+  <div class="legend">
+    <span style="background:#FFD700;"></span>Video 1 &nbsp;
+    <span style="background:#90EE90;"></span>Video 2 &nbsp;
+    <span style="background:#87CEEB;"></span>Video 3
+  </div>
+  <span class="toggle-link" onclick="toggleHtml()">Show / Hide HTML</span>
+  <div id="html-preview" style="display:none;"></div>
+  <p style="font-size:10px;color:#888;margin-top:4px;">Copy the HTML above and paste into a WYSIWYG editor to preview each video in context.</p>
+</div>
+
+<div id="confirm-wrap">
+  <hr class="section-divider">
+  <button class="btn btn-success" onclick="confirmDecisions()">✔ Confirm &amp; Save Decisions</button>
+</div>
+
+<script>
+  var _rowData    = null;   // full scan result from server
+  var _decisions  = {};     // keyed by video index: { action, section_number, section_title }
+  var _badgeColours = ['#FFD700','#34a853','#1a73e8','#ea4335','#9c27b0'];
+
+  function setStatus(msg, type) {
+    var el = document.getElementById('status');
+    el.textContent = msg;
+    el.className   = type;
+  }
+
+  function scanVideos() {
+    setStatus('Scanning article HTML…', 'info');
+    document.getElementById('btn-scan').disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('btn-scan').disabled = false;
+        if (result.error) {
+          setStatus(result.error, 'error');
+          return;
+        }
+        _rowData = result;
+        renderResults(result);
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('btn-scan').disabled = false;
+        setStatus('Error: ' + err.message, 'error');
+      })
+      .scanVideosForActiveRow();
+  }
+
+  function renderResults(data) {
+    var wrap = document.getElementById('video-cards-wrap');
+    wrap.innerHTML = '';
+
+    if (!data.videos || data.videos.length === 0) {
+      document.getElementById('no-videos-msg').style.display = 'block';
+      setStatus('Scan complete. No videos found.', 'success');
+      return;
+    }
+
+    setStatus('Scan complete. ' + data.videos.length + ' video(s) found. Set an action for each.', 'success');
+
+    // Pre-populate decisions from existing saved decisions
+    if (data.existingDecisions && data.existingDecisions.decisions) {
+      data.existingDecisions.decisions.forEach(function(d) {
+        _decisions[d.index] = { action: d.action, section_number: d.section_number, section_title: d.section_title };
+      });
+    }
+
+    data.videos.forEach(function(video) {
+      wrap.appendChild(buildVideoCard(video, data.sections));
+    });
+
+    // HTML preview
+    if (data.highlightedHtml) {
+      document.getElementById('html-preview').innerHTML = escapeHtml(data.highlightedHtml);
+      document.getElementById('html-preview-wrap').style.display = 'block';
+    }
+
+    document.getElementById('confirm-wrap').style.display = 'block';
+  }
+
+  function buildVideoCard(video, sections) {
+    var card   = document.createElement('div');
+    card.className = 'video-card';
+    card.id    = 'card-' + video.index;
+
+    var colour = _badgeColours[video.index % _badgeColours.length];
+    var label  = 'Video ' + (video.index + 1);
+    var thumbUrl = video.youtube_id
+      ? 'https://img.youtube.com/vi/' + video.youtube_id + '/default.jpg'
+      : null;
+
+    var thumbHtml = thumbUrl
+      ? '<img src="' + thumbUrl + '" style="width:60px;height:45px;object-fit:cover;border-radius:3px;flex-shrink:0;" onerror="this.style.display=\'none\'">'
+      : '';
+
+    var currentAction = (_decisions[video.index] && _decisions[video.index].action) || '';
+
+    // Build section options
+    var sectionOptions = '<option value="">-- select section --</option>';
+    (sections || []).forEach(function(s) {
+      sectionOptions += '<option value="' + s.number + '">' +
+        'Section ' + s.number + ' — ' + s.title + '</option>';
+    });
+
+    card.innerHTML =
+      '<div class="video-card-header">' +
+        '<span class="video-badge" style="background:' + colour + ';">' + label + '</span>' +
+        thumbHtml +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="video-position">Currently in: <strong>' + video.position + '</strong></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="video-url">' + video.url + '</div>' +
+      '<div class="action-row">' +
+        '<button class="action-btn" data-action="header"  data-idx="' + video.index + '" onclick="setAction(' + video.index + ',\'header\')">📌 Header</button>' +
+        '<button class="action-btn" data-action="keep"    data-idx="' + video.index + '" onclick="setAction(' + video.index + ',\'keep\')">✅ Keep in place</button>' +
+        '<button class="action-btn" data-action="move"    data-idx="' + video.index + '" onclick="setAction(' + video.index + ',\'move\')">↕ Move to section</button>' +
+        '<button class="action-btn" data-action="remove"  data-idx="' + video.index + '" onclick="setAction(' + video.index + ',\'remove\')">🗑 Remove</button>' +
+      '</div>' +
+      '<select class="section-select" id="section-select-' + video.index + '" onchange="setSection(' + video.index + ',this)">' +
+        sectionOptions +
+      '</select>' +
+      '<div class="decision-summary" id="decision-summary-' + video.index + '"></div>';
+
+    // Restore existing selection if any
+    if (currentAction) {
+      setTimeout(function() { setAction(video.index, currentAction, true); }, 50);
+    }
+
+    return card;
+  }
+
+  function setAction(idx, action, silent) {
+    _decisions[idx] = _decisions[idx] || {};
+    _decisions[idx].action = action;
+
+    // Update button styles
+    var card = document.getElementById('card-' + idx);
+    card.querySelectorAll('.action-btn').forEach(function(btn) {
+      btn.className = 'action-btn';
+      if (btn.getAttribute('data-action') === action) {
+        btn.className = 'action-btn selected-' + action;
+      }
+    });
+
+    // Show/hide section dropdown
+    var sel = document.getElementById('section-select-' + idx);
+    sel.style.display = (action === 'move') ? 'block' : 'none';
+
+    updateSummary(idx);
+  }
+
+  function setSection(idx, selectEl) {
+    var num   = selectEl.value;
+    var title = selectEl.options[selectEl.selectedIndex].text;
+    _decisions[idx] = _decisions[idx] || {};
+    _decisions[idx].section_number = num ? parseInt(num) : null;
+    _decisions[idx].section_title  = num ? title : null;
+    updateSummary(idx);
+  }
+
+  function updateSummary(idx) {
+    var d   = _decisions[idx] || {};
+    var el  = document.getElementById('decision-summary-' + idx);
+    var msg = '';
+    switch(d.action) {
+      case 'header': msg = 'Will be placed in the article header.'; break;
+      case 'keep':   msg = 'Will remain in its current position.'; break;
+      case 'remove': msg = 'Will be removed from the article. YouTube backlink retained.'; break;
+      case 'move':
+        msg = d.section_number
+          ? 'Will be moved to ' + d.section_title
+          : 'Select a target section above.';
+        break;
+    }
+    el.textContent = msg;
+  }
+
+  function confirmDecisions() {
+    // Validate all videos have a decision
+    var videos = _rowData ? _rowData.videos : [];
+    var missing = [];
+
+    videos.forEach(function(v) {
+      var d = _decisions[v.index];
+      if (!d || !d.action) {
+        missing.push('Video ' + (v.index + 1));
+      }
+      if (d && d.action === 'move' && !d.section_number) {
+        missing.push('Video ' + (v.index + 1) + ' (no section selected)');
+      }
+    });
+
+    if (missing.length > 0) {
+      setStatus('Please set an action for: ' + missing.join(', '), 'error');
+      return;
+    }
+
+    // Build decisions array
+    var decisionsArray = videos.map(function(v) {
+      var d = _decisions[v.index] || {};
+      return {
+        index:          v.index,
+        url:            v.url,
+        youtube_id:     v.youtube_id,
+        iframe_html:    v.iframe_html,
+        current_position: v.position,
+        action:         d.action,
+        section_number: d.section_number || null,
+        section_title:  d.section_title  || null
+      };
+    });
+
+    setStatus('Saving decisions…', 'info');
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) {
+          setStatus(result.error, 'error');
+          return;
+        }
+        setStatus('✔ Decisions saved for ' + result.saved + ' video(s). Pipeline will use these on next run.', 'success');
+      })
+      .withFailureHandler(function(err) {
+        setStatus('Error saving: ' + err.message, 'error');
+      })
+      .saveVideoDecisions(_rowData.row, decisionsArray);
+  }
+
+  function toggleHtml() {
+    var el = document.getElementById('html-preview');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g,  '&amp;')
+      .replace(/</g,  '&lt;')
+      .replace(/>/g,  '&gt;')
+      .replace(/"/g,  '&quot;');
+  }
+</script>
+</body>
+</html>

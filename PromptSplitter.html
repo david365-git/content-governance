@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<base target="_top">
+<title>Prompt Splitter</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; color: #1a1a2e; font-size: 13px; }
+.header { background: #1a1a2e; color: #90a4ae; padding: 10px 16px; font-family: monospace; font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+.container { padding: 12px 16px; }
+.input-section { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px; margin-bottom: 10px; }
+.lbl { font-family: monospace; font-size: 10px; font-weight: 700; color: #546e7a; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: block; }
+textarea { width: 100%; height: 100px; font-family: monospace; font-size: 11px; border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px; background: #fafafa; resize: vertical; }
+textarea:focus { outline: none; border-color: #aaa; background: #fff; }
+.btn-row { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+button { padding: 7px 14px; font-family: monospace; font-size: 11px; font-weight: 700; text-transform: uppercase; cursor: pointer; color: white; border: none; border-radius: 4px; letter-spacing: 0.5px; }
+.btn-split { background: #0277bd; }
+.btn-clear { background: #546e7a; }
+button:hover { filter: brightness(1.1); }
+.status { font-family: monospace; font-size: 11px; padding: 5px 8px; border-radius: 4px; margin-top: 7px; border-left: 3px solid #e0e0e0; background: #f8f8f8; display: none; }
+.status.info { border-left-color: #0277bd; color: #0277bd; background: #e3f2fd; display: block; }
+.status.done { border-left-color: #2e7d32; color: #2e7d32; background: #e8f5e9; display: block; }
+.status.warn { border-left-color: #e65100; color: #e65100; background: #fff3e0; display: block; }
+.summary-bar { background: #e3f2fd; border: 1px solid #90caf9; border-radius: 4px; padding: 7px 10px; font-family: monospace; font-size: 10px; color: #0277bd; margin-bottom: 10px; display: none; }
+.chunk-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
+.chunk-hdr { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: #fafafa; border-bottom: 1px solid #e0e0e0; }
+.chunk-title { font-family: monospace; font-size: 11px; font-weight: 700; color: #1a1a2e; }
+.chunk-meta { font-family: monospace; font-size: 10px; color: #777; }
+.chunk-instr { font-family: monospace; font-size: 10px; padding: 5px 10px; background: #e8f5e9; border-bottom: 1px solid #c8e6c9; color: #1b5e20; line-height: 1.5; }
+.chunk-instr.final { background: #fff3e0; border-bottom-color: #ffe0b2; color: #e65100; }
+.chunk-body { padding: 7px 10px; }
+.chunk-ta { width: 100%; height: 80px; font-family: monospace; font-size: 10px; border: 1px solid #e0e0e0; border-radius: 3px; padding: 5px; background: #fafafa; resize: vertical; }
+.copy-btn { width: 100%; margin-top: 5px; padding: 6px; background: #2e7d32; font-size: 11px; }
+.copy-btn.copied { background: #1b5e20; }
+.size-warn { font-family: monospace; font-size: 10px; color: #e65100; margin-top: 2px; }
+.size-ok { font-family: monospace; font-size: 10px; color: #2e7d32; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<div class="header">ABBEY FLOOR CARE — PROMPT SPLITTER</div>
+
+<div class="container">
+  <div class="input-section">
+    <span class="lbl">Paste Prompt Here</span>
+    <textarea id="promptInput" placeholder="Paste any pipeline prompt here..."></textarea>
+    <div class="btn-row">
+      <button class="btn-split" id="splitBtn">Split into Chunks</button>
+      <button class="btn-clear" id="clearBtn">Clear + Paste</button>
+    </div>
+    <div id="mainStatus" class="status"></div>
+  </div>
+  <div id="summaryBar" class="summary-bar"></div>
+  <div id="chunksOutput"></div>
+</div>
+
+<script>
+
+function initRunMode() {}
+
+var SPLIT_RULES = [
+  {
+    name: 'P1A',
+    detect: 'PROMPT 1A OF 4',
+    splits: [
+      { after: '===== END SYSTEM ROLE =====', label: 'Operating Frame + Classification Rules' },
+      { after: '===== END GOVERNANCE INPUTS =====', label: 'Governance Matrices + GSC Data + Metadata' },
+      { after: '--- HTML END ---', label: 'HTML Payload', isPayload: true }
+    ]
+  },
+  {
+    name: 'W1A',
+    detect: 'STAGE 1A — DATA LOADING',
+    splits: [
+      { after: '--- PROHIBITED LLM BEHAVIOURS FOR THIS MATERIAL ---', label: 'Material Calibration' },
+      { after: '--- SILO CONTEXT (INTERNAL LINKING GOVERNANCE) ---', label: 'Technical Matrix + Semantic Requirements' },
+      { after: '--- ORIGINAL HTML ---', label: 'Page Governance Data + Silo Map' },
+      { label: 'HTML Payload', isPayload: true }
+    ]
+  },
+  {
+    name: 'W0',
+    detect: 'STAGE 0 — NEW ENTITY SEEDING',
+    splits: [
+      { after: '--- TECHNICAL SPECIFICATION MATRIX', label: 'Operating Frame + GSC Data' },
+      { after: '--- END SERVICE AUTHORITY ENTITY TABLE ---', label: 'Technical Matrix + Entity Tables' },
+      { label: 'Task + Governed Entity Profile + Execute', isPayload: false }
+    ]
+  },
+  {
+    name: 'W2B',
+    detect: 'STAGE 2B — EXECUTE — READ ALL CONTEXT BELOW BEFORE OUTPUTTING',
+    splits: [
+      { after: '--- STAGE 1B STRUCTURAL RULES ---', label: 'Stage 1A — Authority Brief, TSM, Silo Map + Original HTML' },
+      { after: 'Retain all four structural rules. Respond only with: "Stage 1B structural rules received."', label: 'Stage 1B — Structural Rules' },
+      { after: 'Retain all four paragraph generation rules. Respond only with: "Stage 1C paragraph rules received."', label: 'Stage 1C — Paragraph Rules' },
+      { after: 'Retain all output quality rules. Respond only with: "Stage 1D output quality rules received."', label: 'Stage 1D — Output Quality Rules' },
+      { after: '\n\n---\n\n', label: 'Stage 2A — Pre-Write Rules + Reader-First Principle' },
+      { after: 'Commercial intensity does not define page type.', label: 'Article Type Control Lock' },
+      { after: '\n\n---\n\n', label: 'Entity Vocabulary, TSM Rules + Governance Locks' },
+      { label: 'Page Rules, Approved Section Plan + Execute', isPayload: false }
+    ]
+  },
+  {
+    name: 'W3',
+    detect: 'HUMANISATION',
+    splits: [
+      { after: '===== HTML TO REWRITE =====\n', label: 'Humanisation Rules + Instructions' },
+      { label: 'HTML Payload', isPayload: true }
+    ]
+  }
+];
+
+function wrapChunk(text, idx, total, isLast) {
+  if (isLast) {
+    return 'ALL CHUNKS NOW LOADED — EXECUTE NOW\nAll previous chunks have been loaded into your context.\nProcess the full combined prompt now and return your complete output.\n\n' + text.trim();
+  }
+  var header = 'CHUNK ' + (idx + 1) + ' OF ' + total + ' — LOAD ONLY — DO NOT EXECUTE\nIngest and retain this section. Do not begin writing. Do not generate HTML. Wait for remaining chunks.';
+  var footer = '\n\n--- HOLD ---\nDo not execute. Do not generate HTML. Do not begin writing.\nReply only with: READY FOR CHUNK ' + (idx + 2) + '\nNo other output.';
+  return header + '\n\n' + text.trim() + footer;
+}
+
+function applyRuleSplit(text, rule) {
+  var chunks = [];
+  var remaining = text;
+  var splits = rule.splits;
+  for (var i = 0; i < splits.length - 1; i++) {
+    var marker = splits[i].after;
+    if (!marker || marker.length === 0) { continue; }
+    var idx = remaining.indexOf(marker);
+    if (idx === -1) { continue; }
+    var cut = idx + marker.length;
+    var chunk = remaining.substring(0, cut);
+    if (chunk.trim().length > 0) {
+      chunks.push({
+        text: chunk,
+        label: splits[i].label || ('Part ' + (i + 1)),
+        isPayload: splits[i].isPayload || false
+      });
+    }
+    remaining = remaining.substring(cut);
+  }
+  if (remaining.trim().length > 0) {
+    var last = splits[splits.length - 1];
+    chunks.push({
+      text: remaining,
+      label: last.label || 'Final',
+      isPayload: last.isPayload || false
+    });
+  }
+  return chunks;
+}
+
+function genericSplit(text, maxChars) {
+  var chunks = [];
+  var remaining = text;
+  var n = 1;
+  while (remaining.length > 0) {
+    if (remaining.length <= maxChars) {
+      chunks.push({ text: remaining, label: 'Final Part', isPayload: false });
+      break;
+    }
+    var bp = maxChars;
+    var pb = remaining.lastIndexOf('\n\n', maxChars);
+    if (pb > maxChars * 0.5) {
+      bp = pb + 2;
+    } else {
+      var lb = remaining.lastIndexOf('\n', maxChars);
+      if (lb > maxChars * 0.5) { bp = lb + 1; }
+    }
+    if (bp <= 0) { bp = maxChars; }
+    chunks.push({ text: remaining.substring(0, bp), label: 'Part ' + n, isPayload: false });
+    remaining = remaining.substring(bp);
+    n++;
+    if (n > 100) { break; }
+  }
+  return chunks;
+}
+
+function expandOversizedChunks(chunks, maxChars) {
+  var expanded = [];
+  for (var i = 0; i < chunks.length; i++) {
+    var c = chunks[i];
+    if (c.text.length <= maxChars) {
+      expanded.push(c);
+      continue;
+    }
+    var subs = genericSplit(c.text, maxChars);
+    for (var s = 0; s < subs.length; s++) {
+      expanded.push({
+        text: subs[s].text,
+        label: subs.length > 1 ? (c.label + ' — Part ' + (s + 1) + ' of ' + subs.length) : c.label,
+        isPayload: c.isPayload || false
+      });
+    }
+  }
+  return expanded;
+}
+
+function showStatus(id, type, msg) {
+  var el = document.getElementById(id);
+  el.className = 'status ' + type;
+  el.textContent = msg;
+}
+
+function renderChunks(chunks, ruleName) {
+  var total = chunks.length;
+  var output = document.getElementById('chunksOutput');
+  var summary = document.getElementById('summaryBar');
+  output.innerHTML = '';
+  var totalChars = 0;
+  var maxChars = 0;
+  for (var i = 0; i < chunks.length; i++) {
+    totalChars += chunks[i].text.length;
+    if (chunks[i].text.length > maxChars) { maxChars = chunks[i].text.length; }
+  }
+  summary.textContent = ruleName + ' — ' + total + ' chunks — ' + totalChars.toLocaleString() + ' chars total — largest: ' + maxChars.toLocaleString() + ' chars';
+  summary.style.display = 'block';
+  for (var j = 0; j < chunks.length; j++) {
+    (function(chunk, idx) {
+      var isLast = (idx === total - 1);
+      var wrapped = wrapChunk(chunk.text, idx, total, isLast);
+      var chars = wrapped.length;
+      var sizeNote = chars > 40000
+        ? '<div class="size-warn">&#9888; ' + chars.toLocaleString() + ' chars — large</div>'
+        : '<div class="size-ok">&#10004; ' + chars.toLocaleString() + ' chars</div>';
+      var card = document.createElement('div');
+      card.className = 'chunk-card';
+      card.innerHTML =
+        '<div class="chunk-hdr">' +
+          '<span class="chunk-title">CHUNK ' + (idx + 1) + ' OF ' + total + ' — ' + chunk.label.toUpperCase() + '</span>' +
+          '<span class="chunk-meta">' + chunk.text.length.toLocaleString() + ' chars</span>' +
+        '</div>' +
+        '<div class="chunk-instr' + (isLast ? ' final' : '') + '">' +
+          (isLast ? 'PASTE LAST — triggers execution.' : 'PASTE FIRST — wait for READY FOR CHUNK ' + (idx + 2) + '.') +
+        '</div>' +
+        '<div class="chunk-body">' +
+          '<textarea class="chunk-ta" id="cta-' + idx + '" readonly></textarea>' +
+          sizeNote +
+          '<button class="copy-btn" id="cbtn-' + idx + '">Copy Chunk ' + (idx + 1) + '</button>' +
+        '</div>';
+      output.appendChild(card);
+      document.getElementById('cta-' + idx).value = wrapped;
+      document.getElementById('cbtn-' + idx).onclick = function() {
+        var ta = document.getElementById('cta-' + idx);
+        var btn = document.getElementById('cbtn-' + idx);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(ta.value).then(function() {
+            btn.textContent = 'Copied — paste into ChatGPT';
+            btn.classList.add('copied');
+            setTimeout(function() {
+              btn.textContent = 'Copy Chunk ' + (idx + 1);
+              btn.classList.remove('copied');
+            }, 3000);
+          }).catch(function() {
+            ta.select();
+            document.execCommand('copy');
+            btn.textContent = 'Copied';
+          });
+        } else {
+          ta.select();
+          document.execCommand('copy');
+          btn.textContent = 'Copied';
+        }
+      };
+    })(chunks[j], j);
+  }
+}
+
+function splitPrompt() {
+  try {
+    var btn = document.getElementById('splitBtn');
+    btn.textContent = 'Working...';
+    var input = document.getElementById('promptInput').value.trim();
+    if (!input) {
+      showStatus('mainStatus', 'warn', 'Paste a prompt first.');
+      btn.textContent = 'Split into Chunks';
+      return;
+    }
+    showStatus('mainStatus', 'info', 'Analysing...');
+    var rule = null;
+    for (var i = 0; i < SPLIT_RULES.length; i++) {
+      var r = SPLIT_RULES[i];
+      if (r.detect && r.detect.length > 0 && input.indexOf(r.detect) !== -1) {
+        rule = r;
+        break;
+      }
+    }
+    var chunks = [];
+    if (rule) {
+      chunks = applyRuleSplit(input, rule);
+    }
+    if (chunks.length <= 1) {
+      if (input.length < 30000) {
+        showStatus('mainStatus', 'done', 'Prompt is ' + input.length.toLocaleString() + ' chars — no splitting needed. Paste directly into ChatGPT.');
+        document.getElementById('chunksOutput').innerHTML = '';
+        document.getElementById('summaryBar').style.display = 'none';
+        btn.textContent = 'Split into Chunks';
+        return;
+      }
+      chunks = genericSplit(input, 25000);
+    } else {
+      chunks = expandOversizedChunks(chunks, 20000);
+    }
+    renderChunks(chunks, rule ? rule.name : 'Generic');
+    showStatus('mainStatus', 'done', 'Split into ' + chunks.length + ' chunks — copy and paste each in sequence.');
+    btn.textContent = 'Split into Chunks';
+  } catch(err) {
+    showStatus('mainStatus', 'warn', 'Error: ' + err.message);
+    document.getElementById('splitBtn').textContent = 'Split into Chunks';
+  }
+}
+
+function clearAll() {
+  document.getElementById('chunksOutput').innerHTML = '';
+  document.getElementById('summaryBar').style.display = 'none';
+  document.getElementById('mainStatus').style.display = 'none';
+  var ta = document.getElementById('promptInput');
+  ta.value = '';
+  ta.focus();
+  if (navigator.clipboard && navigator.clipboard.readText) {
+    navigator.clipboard.readText().then(function(text) {
+      ta.value = text;
+    }).catch(function() {});
+  }
+}
+
+function initRunMode() {}
+
+window.onload = function() {
+  document.getElementById('splitBtn').onclick = splitPrompt;
+  document.getElementById('clearBtn').onclick = clearAll;
+};
+
+</script>
+</body>
+</html>

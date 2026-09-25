@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 15px; }
+
+    textarea {
+      width: 100%;
+      height: 50px;
+      font-size: 11px;
+      font-family: monospace;
+      margin-bottom: 6px;
+    }
+
+    button {
+      padding: 6px 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+
+    .section {
+      margin-bottom: 18px;
+    }
+  </style>
+</head>
+<body>
+
+<h3>🤖 ChatGPT — Tier-Adaptive Prompt Builder</h3>
+
+<button onclick="generatePrompt()">Generate 3-Stage Prompt</button>
+
+<div class="section">
+  <strong>Section 1 — Governance</strong>
+  <textarea id="output1"></textarea>
+  <button onclick="copyText('output1')">Copy Section 1</button>
+</div>
+
+<div class="section">
+  <strong>Section 2 — Estate Context</strong>
+  <textarea id="output2"></textarea>
+  <button onclick="copyText('output2')">Copy Section 2</button>
+</div>
+
+<div class="section">
+  <strong>Section 3 — Page Data</strong>
+  <textarea id="output3"></textarea>
+  <button onclick="copyText('output3')">Copy Section 3</button>
+</div>
+
+<script>
+
+function generatePrompt() {
+  google.script.run
+    .withSuccessHandler(function(response) {
+      document.getElementById("output1").value = response.part1;
+      document.getElementById("output2").value = response.part2;
+      document.getElementById("output3").value = response.part3;
+    })
+    .getActiveRowTDFDataGPT();
+}
+
+function copyText(id) {
+  const textarea = document.getElementById(id);
+  textarea.select();
+  document.execCommand("copy");
+}
+
+</script>
+
+</body>
+</html>

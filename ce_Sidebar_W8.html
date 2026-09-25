@@ -1,0 +1,133 @@
+<div id="window-18" class="window-card" style="display:none; border-top:3px solid #e65100">
+  <div class="window-title">W8 — Thumbnail Prompt</div>
+  <div class="window-body">
+    <label style="font-family:JetBrains Mono,monospace;font-size:11px;color:#333;font-weight:bold;">Prompt Style:</label>
+    <select id="w8PromptStyle" style="width:100%;margin-top:4px;margin-bottom:8px;padding:6px;font-family:JetBrains Mono,monospace;font-size:11px;border:1px solid #ccc;border-radius:4px;">
+      <option value="v1">V1 — Original cartoon scene</option>
+      <option value="v2">V2 — High CTR visual clues style</option>
+    </select>
+    <button onclick="w8_generatePrompt()" style="width:100%;padding:8px;background:#e65100;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer">Generate Thumbnail Prompt</button>
+    <div id="statusW8" class="status-box"></div>
+    <div id="w8CharCount" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px;color:#555;display:none"></div>
+    <div id="w8PromptOutput" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px;background:#fff3e0;padding:8px;border-radius:4px;white-space:pre-wrap;display:none"></div>
+    <button id="w8CopyBtn" onclick="w8_copyPrompt()" style="display:none;width:100%;padding:8px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer;margin-top:6px">Copy Prompt</button>
+    <hr style="border:none;border-top:1px solid #ddd;margin:12px 0">
+    <button onclick="w8_generateFilename()" style="width:100%;padding:8px;background:#6a1b9a;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer">Generate Thumbnail Filename</button>
+    <div id="statusW8FN" class="status-box"></div>
+    <div id="w8FilenameOutput" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:12px;background:#f3e5f5;padding:8px;border-radius:4px;white-space:pre-wrap;display:none"></div>
+    <button id="w8CopyFNBtn" onclick="w8_copyFilename()" style="display:none;width:100%;padding:8px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer;margin-top:6px">Copy Filename</button>
+    <hr style="border:none;border-top:1px solid #ddd;margin:12px 0">
+    <button onclick="w8_generateYouTubeDetails()" style="width:100%;padding:8px;background:#c62828;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer">Generate YouTube Details</button>
+    <div id="statusW8YT" class="status-box"></div>
+    <div id="w8YTOutput" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px;background:#ffebee;padding:8px;border-radius:4px;white-space:pre-wrap;display:none"></div>
+    <button id="w8CopyYTBtn" onclick="w8_copyYouTubeDetails()" style="display:none;width:100%;padding:8px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer;margin-top:6px">Copy YouTube Details</button>
+  </div>
+</div>
+
+<script>
+  function w8_generatePrompt() {
+    var style = document.getElementById('w8PromptStyle').value;
+    var fnName = style === 'v2' ? 'generateW8ThumbnailPromptV2' : 'generateW8ThumbnailPrompt';
+    setStatus('statusW8', 'running', 'Generating prompt...', true);
+    google.script.run
+      .withSuccessHandler(function(msg) {
+        setStatus('statusW8', 'done', '✔ Prompt generated — ' + (style === 'v2' ? 'V2 High CTR style' : 'V1 Original style') + '.');
+        var box = document.getElementById('w8PromptOutput');
+        box.style.display = 'block';
+        box.innerText = msg;
+        var charCount = document.getElementById('w8CharCount');
+        charCount.style.display = 'block';
+        charCount.innerText = msg.length + ' characters';
+        document.getElementById('w8CopyBtn').style.display = 'block';
+      })
+      .withFailureHandler(function(e) {
+        setStatus('statusW8', 'fail', '❌ ' + e.message);
+      })
+      [fnName]();
+  }
+function w8_generateFilename() {
+    setStatus('statusW8FN', 'running', 'Generating filename...', true);
+    google.script.run
+      .withSuccessHandler(function(msg) {
+        setStatus('statusW8FN', 'done', '✔ Filename ready.');
+        var box = document.getElementById('w8FilenameOutput');
+        box.style.display = 'block';
+        box.innerText = msg;
+        document.getElementById('w8CopyFNBtn').style.display = 'block';
+      })
+      .withFailureHandler(function(e) {
+        setStatus('statusW8FN', 'fail', '❌ ' + e.message);
+      })
+      .generateW8Filename();
+  }
+
+  function w8_copyFilename() {
+    var text = document.getElementById('w8FilenameOutput').innerText;
+    if (!text) return;
+    navigator.clipboard.writeText(text)
+      .then(function() {
+        setStatus('statusW8FN', 'done', '✔ Copied — use when saving the thumbnail.');
+      })
+      .catch(function() {
+        var temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        setStatus('statusW8FN', 'done', '✔ Copied — use when saving the thumbnail.');
+      });
+  }
+
+  function w8_generateYouTubeDetails() {
+    setStatus('statusW8YT', 'running', 'Generating YouTube details...', true);
+    google.script.run
+      .withSuccessHandler(function(msg) {
+        setStatus('statusW8YT', 'done', '✔ YouTube details generated.');
+        var box = document.getElementById('w8YTOutput');
+        box.style.display = 'block';
+        box.innerText = msg;
+        document.getElementById('w8CopyYTBtn').style.display = 'block';
+      })
+      .withFailureHandler(function(e) {
+        setStatus('statusW8YT', 'fail', '❌ ' + e.message);
+      })
+      .generateW8YouTubeDetails();
+  }
+
+  function w8_copyYouTubeDetails() {
+    var text = document.getElementById('w8YTOutput').innerText;
+    if (!text) return;
+    navigator.clipboard.writeText(text)
+      .then(function() {
+        setStatus('statusW8YT', 'done', '✔ Copied — paste into YouTube Studio.');
+      })
+      .catch(function() {
+        var temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        setStatus('statusW8YT', 'done', '✔ Copied — paste into YouTube Studio.');
+      });
+  }
+
+  function w8_copyPrompt() {
+    var text = document.getElementById('w8PromptOutput').innerText;
+    if (!text) return;
+    navigator.clipboard.writeText(text)
+      .then(function() {
+        setStatus('statusW8', 'done', '✔ Copied — paste into ChatGPT.');
+      })
+      .catch(function() {
+        var temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        setStatus('statusW8', 'done', '✔ Copied — paste into ChatGPT.');
+      });
+  }
+</script>

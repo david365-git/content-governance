@@ -1,0 +1,200 @@
+<!-- ══ ce_Sidebar_W8PAR.html - W8 POST-ANALYSIS REFINEMENT ══ -->
+
+<!-- W8A — EDIT BRIEF -->
+<div id="window-w8par-a" class="window-card" style="display:none;border-top:3px solid #6a1b9a">
+  <div class="window-header">
+    <span class="window-label" style="color:#6a1b9a">W8A — Edit Brief</span>
+    <span class="tag" style="background:#6a1b9a">Auto</span>
+  </div>
+  <div class="window-body">
+    <div id="statusW8A" class="status-bar pending">Generate edit brief from W7 analysis</div>
+    <div class="btn-row" style="margin-top:6px">
+      <button style="background:#6a1b9a;color:#fff" onclick="runW8A()">⚙ Generate Edit Brief</button>
+    </div>
+   <div id="w8aBriefBlock" style="display:none;margin-top:8px">
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#6a1b9a;letter-spacing:1px;margin-bottom:4px">EDIT BRIEF</div>
+      <textarea id="w8aBrief" style="height:120px;font-size:8px" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- W8-M — MEDIA GAP TOOL -->
+<div id="window-w8par-m" class="window-card" style="display:none;border-top:3px solid #6a1b9a">
+  <div class="window-header">
+    <span class="window-label" style="color:#6a1b9a">W8-M — Media Gap Tool</span>
+  </div>
+  <div class="window-body">
+    <div id="statusW8M" class="status-bar pending">Load New HTML, or Clear &amp; Paste different content, then generate the media gap prompt.</div>
+
+    <div class="btn-row" style="margin-top:6px">
+      <button style="background:#6a1b9a;color:#fff" onclick="runW8MLoadHtml()">⚙ Load New HTML (col 98)</button>
+    </div>
+
+    <div id="w8mHtmlBlock" style="display:none;margin-top:8px">
+      <textarea id="w8mInputHtml" style="height:100px;font-size:8px"></textarea>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-copy" onclick="clearAndPaste('w8mInputHtml')" style="background:#37474f;color:#fff">⌫ Clear &amp; Paste Non-W8 Content</button>
+        <button style="background:#6a1b9a;color:#fff" onclick="runW8MGeneratePrompt()">⚙ Generate Media Gap Prompt</button>
+      </div>
+    </div>
+
+    <div id="w8mPromptBlock" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">MEDIA GAP PROMPT — copy to Gemini:</label>
+      <textarea id="w8mPrompt" style="height:120px;font-size:8px" readonly></textarea>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-copy" onclick="copyText('w8mPrompt','statusW8M','Prompt copied — paste into Gemini')">Copy Prompt to Gemini</button>
+      </div>
+
+      <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PASTE GEMINI'S RESPONSE (for reference):</label>
+        <textarea id="w8mGeminiResponse" style="height:100px;font-size:8px" placeholder="Paste Gemini's media gap recommendations here — for your reference while editing in WordPress."></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="clearAndPaste('w8mGeminiResponse')">⌫ Clear &amp; Paste</button>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PASTE YOUR FINISHED HTML (after adding images/URLs in WordPress):</label>
+        <textarea id="w8mOutputHtml" style="height:100px;font-size:8px" placeholder="Paste the updated HTML with new media inserted here..."></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="clearAndPaste('w8mOutputHtml')">⌫ Clear &amp; Paste</button>
+          <button class="btn-copy" id="w8mSaveBtn" onclick="saveW8MOutput()" style="background:#6a1b9a;color:#fff">⬇ Save to W8 Media Gap HTML</button>
+        </div>
+        <div id="w8mSaveResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:13px;color:#6a1b9a"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- W8B — SECTION REWRITE -->
+<div id="window-w8par-b" class="window-card" style="display:none;border-top:3px solid #6a1b9a">
+  <div class="window-header">
+    <span class="window-label" style="color:#6a1b9a">W8B — Section Rewrite</span>
+    <span class="tag" style="background:#6a1b9a">New Chat Required</span>
+  </div>
+  <div class="window-body">
+    <div id="statusW8B" class="status-bar pending">Step 1: Copy prompt → Step 2: Paste output → Save</div>
+
+    <div class="step-label" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#6a1b9a;letter-spacing:1px">STEP 1 — COPY REWRITE PROMPT TO CHATGPT</div>
+    <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#c62828;font-weight:700;margin-bottom:4px">⚠ OPEN A NEW CHATGPT CHAT — DO NOT USE THE CURRENT SESSION</div>
+    <div class="btn-row" style="margin-top:3px">
+      <button style="background:#6a1b9a;color:#fff" onclick="runW8BLoadPrompt()">⚙ Load Rewrite Prompt</button>
+    </div>
+    <div id="w8bPromptBlock" style="display:none;margin-top:6px">
+      <textarea id="w8bPrompt" style="height:80px;font-size:8px" readonly></textarea>
+      <div class="btn-row" style="margin-top:3px">
+        <button class="btn-copy" onclick="copyText('w8bPrompt','statusW8B','Prompt copied — paste into NEW ChatGPT chat')">Copy Prompt to ChatGPT</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+      <div class="step-label" style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#6a1b9a;letter-spacing:1px;margin-bottom:4px">STEP 2 — PASTE REWRITTEN OUTPUT</div>
+      <textarea id="w8bOutputHtml" placeholder="Paste rewritten HTML from ChatGPT here..." style="height:80px;font-size:8px"></textarea>
+      <div class="btn-row" style="margin-top:3px">
+        <button class="btn-copy" onclick="clearAndPaste('w8bOutputHtml')">⌫ Clear + Paste</button>
+        <button class="btn-copy" id="w8bSaveBtn" onclick="saveW8BOutput()" style="background:#6a1b9a;color:#fff" disabled>⬇ Save to W8B_HTML</button>
+      </div>
+      <div id="w8bSaveResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:13px;color:#6a1b9a"></div>
+    </div>
+  </div>
+</div>
+
+<!-- W8C — HUMANISATION -->
+<div id="window-w8par-c" class="window-card" style="display:none;border-top:3px solid #6a1b9a">
+  <div class="window-header">
+    <span class="window-label" style="color:#6a1b9a">W8C — Humanisation</span>
+    <span class="tag" style="background:#6a1b9a">New Chat Required</span>
+  </div>
+  <div class="window-body">
+    <div id="statusW8C" class="status-bar pending">Step 1: Copy rules → Step 2: Copy HTML → Step 3: Paste output → Save</div>
+
+    <div class="step-label" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#6a1b9a;letter-spacing:1px">STEP 1 — COPY HUMANISATION RULES TO CHATGPT</div>
+    <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#c62828;font-weight:700;margin-bottom:4px">⚠ OPEN A NEW CHATGPT CHAT — DO NOT USE THE CURRENT SESSION</div>
+    <div class="btn-row" style="margin-top:3px">
+      <button style="background:#6a1b9a;color:#fff" onclick="runW8CLoadRules()">⚙ Load Rules</button>
+    </div>
+    <div id="w8cRulesBlock" style="display:none;margin-top:6px">
+      <textarea id="w8cRules" style="height:60px;font-size:8px" readonly></textarea>
+      <div class="btn-row" style="margin-top:3px">
+        <button class="btn-copy" onclick="copyText('w8cRules','statusW8C','Rules copied — paste into NEW ChatGPT chat and wait for confirmation')">Copy Rules</button>
+      </div>
+    </div>
+
+    <div class="step-label" style="margin-top:8px;font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#6a1b9a;letter-spacing:1px">STEP 2 — LOAD W8B HTML THEN COPY TO CHATGPT</div>
+    <div class="btn-row" style="margin-top:3px">
+      <button style="background:#6a1b9a;color:#fff" onclick="runW8CLoadHtml()">⚙ Load W8B HTML</button>
+    </div>
+    <div id="w8cHtmlBlock" style="display:none;margin-top:6px">
+      <textarea id="w8cInputHtml" style="height:80px;font-size:8px" readonly></textarea>
+      <div class="btn-row" style="margin-top:3px">
+        <button class="btn-copy" onclick="copyText('w8cInputHtml','statusW8C','HTML copied — paste into the SAME ChatGPT chat')" style="background:#6a1b9a;color:#fff">Copy HTML to ChatGPT</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+      <div class="step-label" style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#6a1b9a;letter-spacing:1px;margin-bottom:4px">STEP 3 — PASTE HUMANISED OUTPUT</div>
+      <textarea id="w8cOutputHtml" placeholder="Paste humanised HTML from ChatGPT here..." style="height:80px;font-size:8px"></textarea>
+      <div class="btn-row" style="margin-top:3px">
+        <button class="btn-copy" onclick="clearAndPaste('w8cOutputHtml')">⌫ Clear + Paste</button>
+        <button class="btn-copy" id="w8cSaveBtn" onclick="saveW8COutput()" style="background:#6a1b9a;color:#fff" disabled>⬇ Save to W8C_HTML</button>
+      </div>
+      <div id="w8cSaveResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:13px;color:#6a1b9a"></div>
+    </div>
+  </div>
+</div>
+
+<!-- W8D — POST-REFINEMENT ANALYSIS -->
+<div id="window-w8par-d" class="window-card" style="display:none;border-top:3px solid #6a1b9a">
+  <div class="window-header">
+    <span class="window-label" style="color:#6a1b9a">W8D — Post-Refinement Analysis</span>
+    <span class="tag" style="background:#6a1b9a">Auto</span>
+  </div>
+  <div class="window-body">
+    <div id="statusW8D" class="status-bar pending">Run analysis to compare before and after recall scores</div>
+    <div class="btn-row" style="margin-top:6px">
+      <button style="background:#6a1b9a;color:#fff" onclick="runW8DAnalysis()">⚙ Run Comparison Analysis</button>
+    </div>
+
+    <div id="w8dResultBlock" style="display:none;margin-top:10px">
+
+      <!-- Score comparison -->
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div style="flex:1;padding:10px;border-radius:4px;background:#f9f9f9;border:1px solid #ddd;text-align:center">
+          <div style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;color:#555;margin-bottom:4px">BEFORE (W7)</div>
+          <div id="w8dScoreBefore" style="font-family:JetBrains Mono,monospace;font-size:22px;font-weight:700;color:#37474f">—</div>
+          <div id="w8dRecBefore" style="font-family:JetBrains Mono,monospace;font-size:10px;color:#555;margin-top:3px">—</div>
+        </div>
+        <div style="flex:1;padding:10px;border-radius:4px;background:#f9f9f9;border:1px solid #ddd;text-align:center">
+          <div style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;color:#555;margin-bottom:4px">AFTER (W8C)</div>
+          <div id="w8dScoreAfter" style="font-family:JetBrains Mono,monospace;font-size:22px;font-weight:700;color:#37474f">—</div>
+          <div id="w8dRecAfter" style="font-family:JetBrains Mono,monospace;font-size:10px;color:#555;margin-top:3px">—</div>
+        </div>
+        <div style="flex:1;padding:10px;border-radius:4px;background:#f9f9f9;border:1px solid #ddd;text-align:center">
+          <div style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;color:#555;margin-bottom:4px">MOVEMENT</div>
+          <div id="w8dScoreDelta" style="font-family:JetBrains Mono,monospace;font-size:22px;font-weight:700;color:#37474f">—</div>
+          <div id="w8dDeltaLabel" style="font-family:JetBrains Mono,monospace;font-size:10px;color:#555;margin-top:3px">—</div>
+        </div>
+      </div>
+
+      <!-- Word count comparison -->
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;padding:8px;background:#f9f9f9;border:1px solid #ddd;border-radius:4px;margin-bottom:10px">
+        <div style="font-weight:700;color:#555;margin-bottom:4px">WORD COUNT</div>
+        <div id="w8dWordCount" style="color:#37474f"></div>
+      </div>
+
+      <!-- Notes -->
+      <div id="w8dNotes" style="font-family:JetBrains Mono,monospace;font-size:10px;color:#555;padding:8px;background:#f9f9f9;border:1px solid #ddd;border-radius:4px;margin-bottom:10px;white-space:pre-wrap"></div>
+
+      <!-- Decision buttons -->
+      <div id="w8dDecisionBlock" style="display:none">
+        <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#6a1b9a;margin-bottom:6px">DECISION</div>
+        <div class="btn-row">
+          <button style="background:#2e7d32;color:#fff" onclick="runPushW8CToNewHtml()">✔ Push W8C to New HTML</button>
+          <button style="background:#c62828;color:#fff" onclick="runW8DReject()">✘ Reject — keep original</button>
+        </div>
+        <div id="w8dPushResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+      </div>
+
+    </div>
+  </div>
+</div>

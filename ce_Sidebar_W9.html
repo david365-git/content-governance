@@ -1,0 +1,103 @@
+<div id="window-19" class="window-card" style="display:none; border-top:3px solid #00695c">
+  <div class="window-title">W9 — Video Embed</div>
+  <div class="window-body">
+    <label style="font-family:JetBrains Mono,monospace;font-size:11px;color:#333">Paste YouTube URL:</label>
+    <input id="w9YoutubeUrl" type="text" placeholder="https://www.youtube.com/watch?v=..." 
+      style="width:100%;padding:6px;margin-top:4px;font-family:JetBrains Mono,monospace;font-size:11px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box"/>
+    <button onclick="w9_generatePrompt()" style="width:100%;padding:8px;margin-top:8px;background:#00695c;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer">Generate Embed Prompt</button>
+    <div id="statusW9" class="status-box"></div>
+    <div id="w9PromptOutput" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px;background:#e0f2f1;padding:8px;border-radius:4px;white-space:pre-wrap;display:none"></div>
+    <button id="w9CopyBtn" onclick="w9_copyPrompt()" style="display:none;width:100%;padding:8px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer;margin-top:6px">Copy Prompt</button>
+    <div id="w9Checklist" style="display:none;margin-top:10px;background:#fff8e1;border:1px solid #f9a825;border-radius:4px;padding:10px;">
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:bold;color:#f57f17;margin-bottom:6px;">✔ NEXT STEPS</div>
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#333;line-height:1.8;">
+        <div>1. Copy prompt above → paste into ChatGPT</div>
+        <div>2. ChatGPT returns the updated &lt;header&gt; block only</div>
+        <div>3. Paste the returned header block below and click Save.</div>
+        <div>3.1  This will replace the NEW THML (CT) Header information</div>
+        <div>4. Go to OUTPUT → W5C → Build Schema</div>
+        <div>5. Go to PUBLISH → W6 → export updated article</div>
+        <div>5.1. Publish updates the site-export with the new HTML that will propogate in Step 2</div>
+        <div>Humanised and preceeding columns are not updated, but will be in next stage.</div>
+      </div>
+    </div>
+
+    <div id="w9PasteWrap" style="display:none;margin-top:10px;">
+      <label style="font-family:JetBrains Mono,monospace;font-size:11px;color:#333;font-weight:bold;">Paste updated &lt;header&gt; block from ChatGPT:</label>
+      <textarea id="w9HeaderPaste" rows="6" placeholder="Paste the <header>...</header> block returned by ChatGPT here..." style="width:100%;margin-top:4px;font-family:JetBrains Mono,monospace;font-size:10px;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></textarea>
+      <button onclick="w9_saveHeader()" style="width:100%;padding:8px;margin-top:6px;background:#00695c;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer">Save Header to Sheet</button>
+      <div id="statusW9Save" class="status-box" style="margin-top:6px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function w9_generatePrompt() {
+    var url = document.getElementById('w9YoutubeUrl').value.trim();
+    if (!url) {
+      setStatus('statusW9', 'fail', '❌ Please paste a YouTube URL first.');
+      return;
+    }
+    setStatus('statusW9', 'running', 'Generating prompt...', true);
+    google.script.run
+      .withSuccessHandler(function(msg) {
+        if (msg.indexOf('ERROR:') === 0) {
+          setStatus('statusW9', 'fail', '❌ ' + msg);
+          return;
+        }
+        setStatus('statusW9', 'done', '✔ Prompt generated. YouTube URL and Video ID saved to posts sheet.');
+        var box = document.getElementById('w9PromptOutput');
+        box.style.display = 'block';
+        box.innerText = msg;
+        document.getElementById('w9CopyBtn').style.display = 'block';
+        document.getElementById('w9Checklist').style.display = 'block';
+        var navCl = document.getElementById('navChecklist');
+        if (navCl) navCl.style.display = 'block';
+      })
+      .withFailureHandler(function(e) {
+        setStatus('statusW9', 'fail', '❌ ' + e.message);
+      })
+      .generateW9VideoEmbedPrompt(url);
+  }
+
+  function w9_copyPrompt() {
+    var text = document.getElementById('w9PromptOutput').innerText;
+    if (!text) return;
+    navigator.clipboard.writeText(text)
+      .then(function() {
+        setStatus('statusW9', 'done', '✔ Copied — paste into ChatGPT.');
+        document.getElementById('w9PasteWrap').style.display = 'block';
+      })
+      .catch(function() {
+        var temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        setStatus('statusW9', 'done', '✔ Copied — paste into ChatGPT.');
+        document.getElementById('w9PasteWrap').style.display = 'block';
+      });
+  }
+
+  function w9_saveHeader() {
+    var header = document.getElementById('w9HeaderPaste').value.trim();
+    if (!header) {
+      setStatus('statusW9Save', 'fail', '❌ Paste the header block from ChatGPT first.');
+      return;
+    }
+    setStatus('statusW9Save', 'running', 'Saving...', true);
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.success) {
+          setStatus('statusW9Save', 'done', '✔ ' + result.message);
+        } else {
+          setStatus('statusW9Save', 'fail', '❌ ' + (result ? result.message : 'Unknown error'));
+        }
+      })
+      .withFailureHandler(function(e) {
+        setStatus('statusW9Save', 'fail', '❌ ' + e.message);
+      })
+      .saveVideoEmbedHeaderToSheet(header);
+  }
+</script>

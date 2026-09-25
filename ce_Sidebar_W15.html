@@ -1,0 +1,292 @@
+<!-- ══ ce_Sidebar_W15.html - W1.5A STRUCTURE AUDIT ══ -->
+  <div id="window-7" class="window-card" style="display:none" style="border-top:3px solid var(--pink)">
+    <div class="window-header">
+      <span class="window-label" style="color:var(--pink)">W1.5A — Structure Audit</span>
+      <span class="tag" style="background:var(--pink)">Audit + TSM Mapping</span>
+    </div>
+    <div class="window-body">
+      <div id="status15a" class="status-bar pending">Generate → Copy to ChatGPT → Paste structure → Save to CU</div>
+      
+      <!-- PROMPT TEXTAREA -->
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PROMPT (copy to ChatGPT):</label>
+        <textarea id="part15a" style="height:80px" placeholder="Click Generate to create W1.5A prompt"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-audit15" id="gen15abtn" onclick="runStage15A()">Generate Prompt</button>
+          <button class="btn-copy" onclick="copyText('part15a','status15a','Prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+        </div>
+      </div>
+
+      <!-- OUTPUT TEXTAREA -->
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STRUCTURE OUTPUT (paste from ChatGPT):</label>
+        <textarea id="part15a_output" style="height:200px" placeholder="Copy structure from ChatGPT, then click 'Paste from Clipboard'"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" id="clear15abtn" onclick="clearAndFocus('part15a_output','save15abtn','status15a','Cleared - now paste (Ctrl+V) structure from ChatGPT')" style="background:#2e7d32;color:#fff">Paste from Clipboard</button>
+          <button class="btn-copy" id="save15abtn" onclick="saveStage15AToSheet()" style="background:var(--pink);color:#fff" disabled>⬇ Save to Column CU</button>
+        </div>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" id="auto15abtn" onclick="run15AAutomated()" style="background:#0b8043;color:#fff">⚡ Run W1.5A Automated</button>
+        </div>
+        <div id="auto15aStatus" style="font-size:10px;margin-top:4px;"></div>
+      </div>
+    </div>
+  </div>
+  <!-- ══ W1.5B H2 GENERATION ══ -->
+  <div id="window-8" class="window-card" style="display:none" style="border-top:3px solid #ad1457">
+    <div class="window-header">
+      <span class="window-label" style="color:#ad1457">W1.5B — H2 Generation</span>
+      <span class="tag" style="background:#ad1457">Symptom-First H2s</span>
+    </div>
+    <div class="window-body">
+      <div id="status15b" class="status-bar pending">Generate prompt → Copy to ChatGPT → Paste H2s → Save to CV</div>
+
+      <div id="w15bGateBanner" style="display:none;padding:8px 10px;border-radius:5px;font-size:11px;font-weight:600;margin-bottom:10px;"></div>
+      
+      <!-- PROMPT TEXTAREA -->
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PROMPT (copy to ChatGPT):</label>
+        <textarea id="part15b" style="height:80px" placeholder="Click Generate to create W1.5B prompt"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-plan" id="gen15bbtn" onclick="runStage15B()">Generate Prompt</button>
+          <button class="btn-copy" onclick="copyText('part15b','status15b','Prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+        </div>
+      </div>
+
+     <!-- OUTPUT TEXTAREA -->
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">H2S OUTPUT (paste from ChatGPT):</label>
+        <textarea id="part15b_output" style="height:200px" placeholder="Copy H2s from ChatGPT, then click 'Paste from Clipboard'"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" id="clear15bbtn" onclick="clearAndFocus('part15b_output','save15bbtn','status15b','Cleared - now paste (Ctrl+V) H2s from ChatGPT')" style="background:#2e7d32;color:#fff">Paste from Clipboard</button>
+          <button class="btn-copy" id="save15bbtn" onclick="saveStage15BToSheet()" style="background:#ad1457;color:#fff" disabled>⬇ Save to Column CV</button>
+        </div>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" id="auto15bbtn" onclick="run15BAutomated()" style="background:#0b8043;color:#fff">⚡ Run Full W1.5B Sequence</button>
+        </div>
+
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" id="resume15bbtn" onclick="resume15BValidation()" style="background:#1565c0;color:#fff">▶ Resume W1.5B Validation</button>
+        </div>
+
+        <div id="auto15bStatus" style="font-size:10px;margin-top:4px;"></div>
+        </div>
+      </div>
+
+      <!-- ENTITY COVERAGE CHECK -->
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">REQUIRED ENTITY COVERAGE CHECK (after saving H2s to CV):</label>
+        <textarea id="entityCoveragePrompt" style="height:80px" placeholder="Click Generate to build coverage check prompt"></textarea>
+        <div id="entityCoverageLocalStatus" style="display:none;margin-top:4px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-plan" onclick="runEntityCoverageCheck()">Generate Coverage Check Prompt</button>
+          <button class="btn-copy" onclick="copyText('entityCoveragePrompt','status15b','Prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+        </div>
+        <textarea id="entityCoverageResponse" style="height:100px;margin-top:6px" placeholder="Paste ChatGPT coverage check response here"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="clearAndPaste('entityCoverageResponse')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
+          <button class="btn-copy" onclick="saveEntityCoverageResult()" style="background:#ad1457;color:#fff">⬇ Save Coverage Result to FM</button>
+        </div>
+        <div id="entityCoverageResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+          <label style="font-size:11px;color:#c62828;font-weight:600;display:block;margin-bottom:3px">IF FAILED — GENERATE FIX PROMPT:</label>
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn-plan" onclick="runEntityCoverageFixPrompt()" style="background:#c62828">Generate Fix Prompt</button>
+            <button class="btn-copy" onclick="copyText('entityCoverageFixPrompt','status15b','Fix prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+          </div>
+          <textarea id="entityCoverageFixPrompt" style="height:100px;margin-top:6px" placeholder="Click Generate Fix Prompt (only works after a saved FAIL result)"></textarea>
+          <textarea id="entityCoverageFixResponse" style="height:100px;margin-top:6px" placeholder="Paste ChatGPT corrected H2s here"></textarea>
+          <div class="btn-row" style="margin-top:4px">
+          <button class="btn-plan" onclick="applyEntityCoverageFix()">Save Corrected H2s & Rebuild Check</button>
+          </div>
+          <div id="entityCoverageFixLocalStatus" style="display:none;margin-top:4px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+          <div style="font-size:10px;color:#666;margin-top:4px">After ChatGPT responds: paste the corrected H2s into the box above, then click "Save Corrected H2s & Rebuild Check".</div>
+        </div>
+      </div>
+      <!-- REWRITE BRIEF COMPLIANCE CHECK -->
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">REWRITE BRIEF COMPLIANCE CHECK — H2 LEVEL (after saving H2s to CV):</label>
+        <textarea id="rewriteBriefCompliancePrompt" style="height:80px" placeholder="Click Generate to build rewrite brief compliance prompt"></textarea>
+        <div id="rewriteBriefComplianceLocalStatus" style="display:none;margin-top:4px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-plan" onclick="runRewriteBriefComplianceCheck()">Generate Compliance Check Prompt</button>
+          <button class="btn-copy" onclick="copyText('rewriteBriefCompliancePrompt','status15b','Prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+        </div>
+        <textarea id="rewriteBriefComplianceResponse" style="height:100px;margin-top:6px" placeholder="Paste ChatGPT compliance check response here"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="clearAndPaste('rewriteBriefComplianceResponse')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
+          <button class="btn-copy" onclick="saveRewriteBriefComplianceResult()" style="background:#ad1457;color:#fff">⬇ Save Compliance Result to FN</button>
+        </div>
+        <div id="rewriteBriefComplianceResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+
+        <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+          <label style="font-size:11px;color:#c62828;font-weight:600;display:block;margin-bottom:3px">IF FAILED — GENERATE FIX PROMPT:</label>
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn-plan" onclick="runRewriteBriefFixPrompt()" style="background:#c62828">Generate Fix Prompt</button>
+            <button class="btn-copy" onclick="copyText('rewriteBriefFixPrompt','status15b','Fix prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+          </div>
+          <textarea id="rewriteBriefFixPrompt" style="height:100px;margin-top:6px" placeholder="Click Generate Fix Prompt (only works after a saved FAIL result)"></textarea>
+          <div id="rewriteBriefFixLocalStatus" style="display:none;margin-top:4px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+          <div style="font-size:10px;color:#666;margin-top:4px">After ChatGPT responds: paste the corrected H2s into the "H2S OUTPUT" box above, click "Save to Column CV", then re-run the Rewrite Brief Compliance Check.</div>
+        </div>
+      </div>
+
+      </div>
+  </div>
+
+  <!-- ══ W1.5B.1 H2 HEADING GOVERNANCE CHECK ══ -->
+  <div id="window-8gov" class="window-card" style="display:none" style="border-top:3px solid #ad1457">
+    <div class="window-header">
+      <span class="window-label" style="color:#ad1457">W1.5B.1 — H2 Heading Governance</span>
+      <span class="tag" style="background:#ad1457">Rule 17</span>
+    </div>
+    <div class="window-body">
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">H2 HEADING GOVERNANCE CHECK — RULE 17 (after saving H2s to CV):</label>
+        <textarea id="h2GovernancePrompt" style="height:80px" placeholder="Click Generate to build H2 governance check prompt"></textarea>
+        <div id="h2GovernanceLocalStatus" style="display:none;margin-top:4px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-plan" onclick="runH2GovernanceCheck()">Generate Governance Check Prompt</button>
+          <button class="btn-copy" onclick="copyText('h2GovernancePrompt','status15b','Prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+        </div>
+        <textarea id="h2GovernanceResponse" style="height:100px;margin-top:6px" placeholder="Paste ChatGPT governance check response here"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="clearAndPaste('h2GovernanceResponse')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
+          <button class="btn-copy" onclick="saveH2GovernanceResult()" style="background:#ad1457;color:#fff">⬇ Save Governance Result to FP</button>
+        </div>
+        <div id="h2GovernanceResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+
+        <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+          <label style="font-size:11px;color:#c62828;font-weight:600;display:block;margin-bottom:3px">IF FAILED — GENERATE TARGETED FIX PROMPT:</label>
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn-plan" onclick="runH2GovernanceFixPrompt()" style="background:#c62828">Generate Fix Prompt</button>
+            <button class="btn-copy" onclick="copyText('h2GovernanceFixPrompt','status15b','Fix prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+          </div>
+          <textarea id="h2GovernanceFixPrompt" style="height:100px;margin-top:6px" placeholder="Click Generate Fix Prompt (only works after a saved FAIL result)"></textarea>
+          <div id="h2GovernanceFixLocalStatus" style="display:none;margin-top:4px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+          <div style="font-size:10px;color:#666;margin-top:4px">This targets only the failing headings — passing headings are preserved unchanged.</div>
+
+          <div style="margin-top:10px">
+            <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">CORRECTED H2 LIST (paste ChatGPT's full response here):</label>
+            <textarea id="h2GovernanceFixOutput" style="height:150px" placeholder="Paste the complete corrected H2 list from ChatGPT here"></textarea>
+            <div class="btn-row" style="margin-top:4px">
+              <button class="btn-copy" onclick="clearAndPaste('h2GovernanceFixOutput')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
+              <button class="btn-copy" onclick="saveH2GovernanceFixToSheet()" style="background:#ad1457;color:#fff">⬇ Save to Column CV</button>
+            </div>
+            <div style="font-size:10px;color:#666;margin-top:4px">Saves directly to Column CV — then re-run the governance check above.</div>
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:10px">
+          <button class="btn-copy" id="autoH2GovBtn" onclick="runH2GovAutomated()" style="background:#0b8043;color:#fff">⚡ Run H2 Governance Automated</button>
+        </div>
+        <div id="autoH2GovStatus" style="font-size:10px;margin-top:4px;"></div>
+      </div>
+    </div>
+  </div>
+  <!-- ══ W1.5C ENRICHMENT ══ -->
+  <div id="window-8a" class="window-card" style="display:none" style="border-top:3px solid #c2185b">
+    <div class="window-header">
+      <span class="window-label" style="color:#c2185b">W1.5C — Enrichment</span>
+      <span class="tag" style="background:#c2185b">Images + Patterns + Entities</span>
+    </div>
+    <div class="window-body">
+      <div id="status15c" class="status-bar pending">Generate prompt → Copy to ChatGPT → Paste plan → Save to CW</div>
+      
+      <!-- PROMPT TEXTAREA -->
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PROMPT (copy to ChatGPT):</label>
+        <textarea id="part15c" style="height:80px" placeholder="Click Generate to create W1.5C prompt"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-plan" id="gen15cbtn" onclick="runStage15C()">Generate Prompt</button>
+          <button class="btn-copy" onclick="copyText('part15c','status15c','Prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+        </div>
+      </div>
+
+      <!-- OUTPUT TEXTAREA -->
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">ENRICHED PLAN (paste from ChatGPT):</label>
+        <textarea id="part15c_output" style="height:200px" placeholder="Copy enriched plan from ChatGPT, then click 'Paste from Clipboard'"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" id="clear15cbtn" onclick="clearAndFocus('part15c_output','save15cbtn','status15c','Cleared - now paste (Ctrl+V) enriched plan from ChatGPT')" style="background:#2e7d32;color:#fff">Paste from Clipboard</button>
+          <button class="btn-copy" id="save15cbtn" onclick="saveStage15CToSheet()" style="background:#c2185b;color:#fff" disabled>⬇ Save to Column CW</button>
+        </div>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" id="auto15cbtn" onclick="run15CAutomated()" style="background:#0b8043;color:#fff">⚡ Run W1.5C Automated</button>
+        </div>
+        <div id="auto15cStatus" style="font-size:10px;margin-top:4px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ W1.5D LATERAL LINKS ══ -->
+  <div id="window-8b" class="window-card" style="display:none" style="border-top:3px solid #d81b60">
+    <div class="window-header">
+      <span class="window-label" style="color:#d81b60">W1.5D — Lateral Links</span>
+      <span class="tag" style="background:#d81b60">Link Assignment</span>
+    </div>
+    <div class="window-body">
+      <div id="status15d" class="status-bar pending">Generate prompt → Copy to ChatGPT → Paste final plan → Save to CX</div>
+      
+      <!-- PROMPT TEXTAREA -->
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PROMPT (copy to ChatGPT):</label>
+        <textarea id="part15d" style="height:80px" placeholder="Click Generate to create W1.5D prompt"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-plan" id="gen15dbtn" onclick="runStage15D()">Generate Prompt</button>
+          <button class="btn-copy" onclick="copyText('part15d','status15d','Prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+        </div>
+      </div>
+
+      <!-- OUTPUT TEXTAREA -->
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">FINAL PLAN (paste from ChatGPT):</label>
+        <textarea id="part15d_output" style="height:200px" placeholder="Copy final plan from ChatGPT, then click 'Paste from Clipboard'"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" id="clear15dbtn" onclick="clearAndFocus('part15d_output','save15dbtn','status15d','Cleared - now paste (Ctrl+V) final plan from ChatGPT')" style="background:#2e7d32;color:#fff">Paste from Clipboard</button>
+          <button class="btn-copy" id="save15dbtn" onclick="saveStage15DToSheet()" style="background:#d81b60;color:#fff" disabled>⬇ Save to Column CX</button>
+        </div>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" id="auto15dbtn" onclick="run15DAutomated()" style="background:#0b8043;color:#fff">⚡ Run W1.5D Automated</button>
+        </div>
+        <div id="auto15dStatus" style="font-size:10px;margin-top:4px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ W1.5E GOOGLE OPTIMIZATION ══ -->
+  <div id="window-8c" class="window-card" style="display:none" style="border-top:3px solid #00897b">
+    <div class="window-header">
+      <span class="window-label" style="color:#00897b">W1.5E — Google Optimization</span>
+      <span class="tag" style="background:#00897b">User Engagement</span>
+    </div>
+    <div class="window-body">
+      <div id="status15e" class="status-bar pending">Generate prompt → Copy to ChatGPT → Paste optimizations → Save to CY</div>
+      
+      <!-- PROMPT TEXTAREA -->
+      <div style="margin-bottom:8px">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PROMPT (copy to ChatGPT):</label>
+        <textarea id="part15e" style="height:80px" placeholder="Click Generate to create W1.5E prompt"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-plan" id="gen15ebtn" onclick="runStage15E()">Generate Prompt</button>
+          <button class="btn-copy" onclick="copyText('part15e','status15e','Prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+        </div>
+      </div>
+
+      <!-- OUTPUT TEXTAREA -->
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">OPTIMIZATIONS (paste from ChatGPT):</label>
+        <textarea id="part15e_output" style="height:200px" placeholder="Copy optimized plan from ChatGPT, then click 'Paste from Clipboard'"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" id="clear15ebtn" onclick="clearAndFocus('part15e_output','save15ebtn','status15e','Cleared - now paste (Ctrl+V) optimized plan from ChatGPT')" style="background:#2e7d32;color:#fff">Paste from Clipboard</button>
+          <button class="btn-copy" id="save15ebtn" onclick="saveStage15EToSheet()" style="background:#00897b;color:#fff" disabled>⬇ Save to Column CY</button>
+        </div>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" id="auto15ebtn" onclick="run15EAutomated()" style="background:#0b8043;color:#fff">⚡ Run W1.5E Automated</button>
+        </div>
+        <div id="auto15eStatus" style="font-size:10px;margin-top:4px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>

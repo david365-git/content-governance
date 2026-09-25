@@ -1,0 +1,1017 @@
+<script>
+
+  /* ══════════════════════════════════════════════════════════════
+     ce_Sidebar_JS_2_W1.html
+     W-1 Authority Brief, Problem Angle Selector, Problem Register.
+     Contains all functions changed in this update:
+     - runBuildAuthorityBrief: now auto-assigns angle silently
+     - showAngleSelector: pre-highlights auto-assigned angle
+     - runCheckProblemRegister: passes articleType + angleCode,
+       displays LOCATION_VARIANT vs POTENTIAL_CANNIBALISATION
+     Depends on: ce_Sidebar_JS_1_Core (ANGLE_DEFINITIONS,
+       selectedAngleCode, selectedAngleStmt, setStatus)
+  ══════════════════════════════════════════════════════════════ */
+
+  /* ══════════════════════════════════════════════════════════════
+     W-1 — AUTHORITY BRIEF
+     Auto-assigns problem angle immediately after brief is built.
+     Angle written to sheet silently — no confirmation needed.
+     Angle selector shows pre-highlighted auto-assigned angle.
+  ══════════════════════════════════════════════════════════════ */
+  function runBuildAuthorityBrief() {
+    var btn = document.getElementById('authBriefBuildBtn');
+    btn.disabled = true; btn.innerText = 'Building…';
+    setStatus('statusAuthBrief', 'running', 'Reading entity analysis columns…', true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false; btn.innerText = '⚙ Build Authority Brief';
+        if (res.success) {
+          document.getElementById('authBriefText').value = res.brief;
+          document.getElementById('authBriefResult').style.display = 'block';
+          setStatus('statusAuthBrief', 'running', 'Authority Brief built — assigning problem angle…', true);
+
+          // Step 1 — auto-assign angle silently
+          google.script.run
+            .withSuccessHandler(function(angleRes) {
+              var autoAngleCode = angleRes && angleRes.success ? angleRes.angleCode : '';
+
+              // Step 2 — get primary cluster and locality for angle selector display
+              google.script.run
+                .withSuccessHandler(function(data) {
+                  showAngleSelector(data.primaryCluster, data.locality, autoAngleCode);
+                  if (autoAngleCode && autoAngleCode !== 'EXEMPT') {
+                    setStatus('statusAuthBrief', 'done',
+                      '✔ Authority Brief built — angle auto-assigned: ' + autoAngleCode +
+                      ' — review, save brief to sheet, then proceed');
+                  } else {
+                    setStatus('statusAuthBrief', 'done',
+                      '✔ Authority Brief built — review, save to sheet, then select Problem Angle below');
+                  }
+                })
+                .withFailureHandler(function() {
+                  showAngleSelector('', '', autoAngleCode);
+                  setStatus('statusAuthBrief', 'done', '✔ Authority Brief built — review and save to sheet');
+                })
+                .getProblemAngleData();
+            })
+            .withFailureHandler(function(err) {
+              // Auto-assign failed — fall back to manual selection
+              setStatus('statusAuthBrief', 'done', '✔ Authority Brief built — select Problem Angle below');
+              google.script.run
+                .withSuccessHandler(function(data) {
+                  showAngleSelector(data.primaryCluster, data.locality, '');
+                })
+                .withFailureHandler(function() {})
+                .getProblemAngleData();
+            })
+            .autoAssignProblemAngle();
+
+        } else {
+          setStatus('statusAuthBrief', 'fail', '❌ ' + res.message);
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false; btn.innerText = '⚙ Build Authority Brief';
+        setStatus('statusAuthBrief', 'fail', '❌ ' + err.message);
+      })
+      .buildAuthorityBrief();
+  }
+
+  function runAutoAuthorityBrief() {
+
+  var btn = document.getElementById('authBriefAutoBtn');
+  var status = document.getElementById('statusAuthBrief');
+
+  btn.disabled = true;
+  btn.innerText = 'Running…';
+
+  status.textContent = '⏳ Running automated W-1...';
+  status.style.color = '#555';
+
+  google.script.run
+
+    .withSuccessHandler(function(res) {
+
+      btn.disabled = false;
+      btn.innerText = '▶ Auto W-1 Authority Brief';
+
+      if (res && res.success) {
+
+        status.textContent = '✔ ' + res.message;
+        status.style.color = '#2e7d32';
+
+      } else {
+
+        status.textContent =
+          '❌ ' +
+          ((res && res.message)
+            ? res.message
+            : 'Automated W-1 failed.');
+
+        status.style.color = '#c62828';
+      }
+    })
+
+    .withFailureHandler(function(err) {
+
+      btn.disabled = false;
+      btn.innerText = '▶ Auto W-1 Authority Brief';
+
+      status.textContent =
+        '❌ ' + err.message;
+
+      status.style.color = '#c62828';
+    })
+
+    .autoRunAuthorityBrief();
+}
+
+  function pushAuthorityBrief() {
+    var brief = document.getElementById('authBriefText').value.trim();
+    if (!brief) { document.getElementById('authBriefPushResult').textContent = '❌ No brief to save'; return; }
+    google.script.run
+      .withSuccessHandler(function(res) {
+        document.getElementById('authBriefPushResult').textContent =
+          res.success ? '✔ ' + res.message : '❌ ' + res.message;
+        if (res.success) {
+          setStatus('statusAuthBrief', 'done', '✔ Saved to col DN — proceed to W0B or W0');
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('authBriefPushResult').textContent = '❌ ' + err.message;
+      })
+      .pushAuthorityBriefToSheet(brief);
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     ANGLE SELECTOR
+     showAngleSelector accepts autoAngleCode — determined by
+     autoAssignProblemAngle() in the script. If supplied, the
+     matching angle box is pre-highlighted and the angle is
+     pre-selected with no click required.
+  ══════════════════════════════════════════════════════════════ */
+  function showAngleSelector(primaryCluster, locality, autoAngleCode) {
+    var sel  = document.getElementById('angleSelector');
+    var prob = document.getElementById('angleProblemDisplay');
+    if (!sel) return;
+    sel.style.display = 'block';
+    prob.textContent  = 'Problem this article addresses: ' + (primaryCluster || 'not yet identified');
+
+    var list  = document.getElementById('angleList');
+    var codes = ['WHY','ID','FIX','PREVENT','CHOOSE','LOCAL','PROVE','DECIDE'];
+
+    if (list) {
+      list.innerHTML = codes.map(function(code) {
+        var def    = ANGLE_DEFINITIONS[code];
+        if (!def) return '';
+        var isAuto = (code === autoAngleCode);
+        return '<div id="anglebox-' + code + '" onclick="selectAngle(\'' + code + '\')" style="' +
+          'cursor:pointer;border:' + (isAuto ? '2px' : '1px') + ' solid ' + (isAuto ? '#1a237e' : '#c5cae9') + ';' +
+          'border-radius:3px;padding:5px 7px;margin-bottom:4px;' +
+          'background:' + (isAuto ? '#e8eaf6' : '#fff') + ';transition:background 0.15s">' +
+          '<div style="font-family:JetBrains Mono,monospace;font-size:12px;font-weight:700;color:#1a237e">' +
+            code + ' — ' + def.label +
+            (isAuto ? ' <span style="background:#1a237e;color:#fff;font-size:10px;padding:1px 5px;border-radius:2px;margin-left:4px">AUTO</span>' : '') +
+          '</div>' +
+          '<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-top:2px">' +
+            '→ ' + def.readerQ +
+          '</div>' +
+          '<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#333;margin-top:2px;font-style:italic">' +
+            def.template.replace('[PROBLEM]', primaryCluster || 'this problem').replace('[LOCALITY]', locality || 'your area') +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // If auto-angle assigned — pre-select it immediately
+    if (autoAngleCode && autoAngleCode !== 'EXEMPT' && ANGLE_DEFINITIONS[autoAngleCode]) {
+      var def       = ANGLE_DEFINITIONS[autoAngleCode];
+      var locality2 = locality || 'your area';
+      var stmt      = "This article " + def.template
+        .replace('[PROBLEM]',  primaryCluster || 'this problem')
+        .replace('[LOCALITY]', locality2) + ".";
+      selectedAngleCode = autoAngleCode;
+      selectedAngleStmt = stmt;
+      var stmtEl  = document.getElementById('angleStatement');
+      if (stmtEl)  { stmtEl.textContent = stmt; stmtEl.style.display = 'block'; }
+      var saveBtn = document.getElementById('angleSaveBtn');
+      if (saveBtn)   saveBtn.style.display = 'block';
+      document.getElementById('angleSaveResult').textContent =
+        '✔ Angle auto-assigned from governance data — override below if needed';
+      return;
+    }
+
+    // No auto-angle — check sheet for any previously saved angle
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (data.angleCode) {
+          highlightAngleBox(data.angleCode);
+          selectedAngleCode = data.angleCode;
+          selectedAngleStmt = data.angleStatement;
+          var stmtEl  = document.getElementById('angleStatement');
+          stmtEl.textContent = data.angleStatement;
+          stmtEl.style.display = 'block';
+          document.getElementById('angleSaveBtn').style.display = 'block';
+        }
+      })
+      .withFailureHandler(function() {})
+      .getProblemAngleData();
+  }
+
+  function highlightAngleBox(code) {
+    var codes = ['WHY','ID','FIX','PREVENT','CHOOSE','LOCAL','PROVE','DECIDE'];
+    codes.forEach(function(c) {
+      var box = document.getElementById('anglebox-' + c);
+      if (box) {
+        box.style.background  = (c === code) ? '#e8eaf6' : '#fff';
+        box.style.borderColor = (c === code) ? '#1a237e' : '#c5cae9';
+        box.style.borderWidth = (c === code) ? '2px'     : '1px';
+      }
+    });
+  }
+
+  function selectAngle(code) {
+    var def = ANGLE_DEFINITIONS[code];
+    if (!def) return;
+    selectedAngleCode = code;
+    var probEl   = document.getElementById('angleProblemDisplay');
+    var probText = probEl ? probEl.textContent.replace('Problem this article addresses: ','').trim() : 'this problem';
+    var locality = document.getElementById('w0bLocality') ? document.getElementById('w0bLocality').value.trim() : '';
+    var stmt = "This article " + def.template
+      .replace('[PROBLEM]',  probText  || 'this problem')
+      .replace('[LOCALITY]', locality  || 'your area') + ".";
+    selectedAngleStmt = stmt;
+    highlightAngleBox(code);
+    var stmtEl = document.getElementById('angleStatement');
+    stmtEl.textContent = stmt;
+    stmtEl.style.display = 'block';
+    document.getElementById('angleSaveBtn').style.display = 'block';
+    document.getElementById('angleSaveResult').textContent = '';
+  }
+
+  function saveAngle() {
+    if (!selectedAngleCode) {
+      document.getElementById('angleSaveResult').textContent = 'Select an angle first';
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(res) {
+        document.getElementById('angleSaveResult').textContent =
+          res.success ? '✔ ' + res.message + ' — proceed to W0' : '❌ ' + res.message;
+        if (res.success) {
+          setStatus('statusAuthBrief', 'done', '✔ Authority Brief and Problem Angle saved — proceed to W0');
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('angleSaveResult').textContent = '❌ ' + err.message;
+      })
+      .pushProblemAngleToSheet(selectedAngleCode, selectedAngleStmt);
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     PROBLEM REGISTER
+     checkProblemRegister passes activeArticleType and
+     activeAngleCode for conflict classification.
+     Display distinguishes LOCATION_VARIANT from
+     POTENTIAL_CANNIBALISATION.
+  ══════════════════════════════════════════════════════════════ */
+  function runBuildProblemRegister() {
+    setStatus('statusProblemReg', 'running', 'Building Problem Register from all posts rows…', true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res.success) {
+          setStatus('statusProblemReg', 'done', '✔ ' + res.message + ' — click Check This Problem');
+        } else {
+          setStatus('statusProblemReg', 'fail', '❌ ' + res.message);
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusProblemReg', 'fail', '❌ ' + err.message);
+      })
+      .buildProblemRegister();
+  }
+
+  function saveAllW1ToSheet() {
+    var btn = document.getElementById('saveW1AllBtn');
+    var status = document.getElementById('saveW1AllStatus');
+    btn.disabled = true;
+    btn.innerText = 'Saving…';
+    status.textContent = '';
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false;
+        btn.innerText = '⬇ Save W1A–W1D to Sheet';
+        if (res.success) {
+          status.textContent = '✔ ' + res.message;
+          status.style.color = '#2e7d32';
+
+          // GOVERNANCE CHAIN: once EV–EY genuinely saved, auto-open
+          // W1.5A (window id 7) and auto-run its Generate Prompt.
+          // Small delay so the success message actually paints on screen
+          // before the window switches away — without it, the browser
+          // never gets a chance to render "✔ ..." before navigating.
+          setTimeout(function() {
+            navGoTo(7);
+            if (typeof runStage15A === 'function') runStage15A();
+          }, 700);
+        } else {
+          status.textContent = '❌ ' + res.message;
+          status.style.color = '#c62828';
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        btn.innerText = '⬇ Save W1A–W1D to Sheet';
+        status.textContent = '❌ ' + err.message;
+        status.style.color = '#c62828';
+      })
+      .saveAllW1Outputs();
+  }
+
+  var governancePipelineRow = null;
+
+  function runGovernanceAutomation() {
+
+  var btn = document.getElementById('runGovernanceBtn');
+
+  var stageEl =
+    document.getElementById('preAcPipelineStage');
+
+  var progressEl =
+    document.getElementById('preAcPipelineProgress');
+
+  var elapsedEl =
+    document.getElementById('preAcPipelineElapsed');
+
+  var costEl =
+    document.getElementById('preAcPipelineCost');
+
+  var lastEl =
+    document.getElementById('preAcPipelineLast');
+
+
+  var startTime = Date.now();
+
+
+  // ============================================================
+  // INITIALISE PANEL
+  // ============================================================
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = 'Running…';
+  }
+
+  if (stageEl) {
+    stageEl.textContent = 'Starting...';
+  }
+
+  if (progressEl) {
+    progressEl.textContent = '0 / 14';
+  }
+
+  if (elapsedEl) {
+    elapsedEl.textContent = '0s';
+  }
+
+  if (costEl) {
+    costEl.textContent = '$0.0000';
+  }
+
+  if (lastEl) {
+    lastEl.textContent = '—';
+  }
+
+
+  // ============================================================
+  // ELAPSED TIME TIMER
+  // ============================================================
+
+  var progressTimer = setInterval(function() {
+
+    var elapsed =
+      Math.floor(
+        (Date.now() - startTime) / 1000
+      );
+
+    if (elapsedEl) {
+      elapsedEl.textContent =
+        elapsed + 's';
+    }
+
+  }, 1000);
+
+
+  // ============================================================
+  // START PIPELINE
+  // ============================================================
+
+  google.script.run
+
+    .withSuccessHandler(function(startRes) {
+
+      if (!startRes || !startRes.success) {
+
+        clearInterval(progressTimer);
+
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText =
+            '▶ Run Pre-AC → W2B.3 Automation';
+        }
+
+        if (stageEl) {
+          stageEl.textContent =
+            'Failed to start';
+        }
+
+        if (lastEl) {
+          lastEl.textContent =
+            '❌ ' +
+            (
+              startRes &&
+              startRes.message
+                ? startRes.message
+                : 'Could not start pipeline.'
+            );
+        }
+
+        return;
+      }
+
+
+      governancePipelineRow =
+        startRes.row;
+
+
+      // ========================================================
+      // PIPELINE STAGES
+      // ========================================================
+
+      var pipelineStages = [
+        'Pre-AC',
+        'AC',
+        'W-1',
+        'W1A-W1D',
+        'W1.5A',
+        'W1.5B',
+        'W1.5C',
+        'W1.5D',
+        'W1.5E',
+        'W2B',
+        'W2B.05',
+        'W2B.1',
+        'W2B.2',
+        'W2B.3'
+      ];
+
+
+      // ========================================================
+      // POLL GK FOR PROGRESS + COST
+      // ========================================================
+
+      var logPoller =
+        setInterval(function() {
+
+          if (!governancePipelineRow) {
+            return;
+          }
+
+          google.script.run
+
+            .withSuccessHandler(function(logRes) {
+
+              if (
+                !logRes ||
+                !logRes.success
+              ) {
+                return;
+              }
+
+              var logText =
+                String(logRes.log || '');
+
+              var lines =
+                logText.split(/\r?\n/);
+
+              var completed = 0;
+              var runningCost = 0;
+              var lastCompleted = '—';
+
+
+              pipelineStages.forEach(
+                function(stageName) {
+
+                  var prefix =
+                    '✓ ' +
+                    stageName +
+                    ' complete — $';
+
+                  for (
+                    var i = 0;
+                    i < lines.length;
+                    i++
+                  ) {
+
+                    if (
+                      lines[i].indexOf(prefix) === 0
+                    ) {
+
+                      completed++;
+
+                      lastCompleted =
+                        '✓ ' + stageName;
+
+                      var costMatch =
+                        lines[i].match(
+                          /\$([0-9.]+)/
+                        );
+
+                      if (costMatch) {
+                        runningCost +=
+                          Number(
+                            costMatch[1] || 0
+                          );
+                      }
+
+                      break;
+                    }
+                  }
+                }
+              );
+
+
+              if (progressEl) {
+                progressEl.textContent =
+                  completed + ' / 14';
+              }
+
+              if (costEl) {
+                costEl.textContent =
+                  '$' +
+                  runningCost.toFixed(4);
+              }
+
+              if (lastEl) {
+                lastEl.textContent =
+                  lastCompleted;
+              }
+
+              if (stageEl) {
+
+                if (
+                  completed >=
+                  pipelineStages.length
+                ) {
+
+                  stageEl.textContent =
+                    'Complete';
+
+                } else {
+
+                  stageEl.textContent =
+                    pipelineStages[
+                      completed
+                    ];
+                }
+              }
+            })
+
+            .getPipelineRunLog(
+              governancePipelineRow
+            );
+
+        }, 30000);
+
+
+      // ========================================================
+      // RUN PRE-AC → W2B.3
+      // ========================================================
+
+      google.script.run
+
+        .withSuccessHandler(function(res) {
+
+          clearInterval(progressTimer);
+          clearInterval(logPoller);
+
+
+          var elapsedSeconds =
+            (
+              (Date.now() - startTime) /
+              1000
+            ).toFixed(1);
+
+
+          if (btn) {
+            btn.disabled = false;
+            btn.innerText =
+              '▶ Run Pre-AC → W2B.3 Automation';
+          }
+
+
+          // ====================================================
+          // SUCCESS
+          // ====================================================
+
+          if (
+            res &&
+            res.success
+          ) {
+
+            if (stageEl) {
+              stageEl.textContent =
+                'Complete';
+            }
+
+            if (progressEl) {
+              progressEl.textContent =
+                '14 / 14';
+            }
+
+            if (elapsedEl) {
+              elapsedEl.textContent =
+                elapsedSeconds + 's';
+            }
+
+            if (costEl) {
+              costEl.textContent =
+                '$' +
+                Number(
+                  res.cost || 0
+                ).toFixed(4);
+            }
+
+            if (lastEl) {
+              lastEl.textContent =
+                '✓ Pre-AC → W2B.3 complete';
+            }
+
+
+          // ====================================================
+          // STOPPED
+          // ====================================================
+
+          } else if (
+            res &&
+            res.stopped
+          ) {
+
+            if (stageEl) {
+              stageEl.textContent =
+                'Stopped';
+            }
+
+            if (elapsedEl) {
+              elapsedEl.textContent =
+                elapsedSeconds + 's';
+            }
+
+            if (costEl) {
+              costEl.textContent =
+                '$' +
+                Number(
+                  res.cost || 0
+                ).toFixed(4);
+            }
+
+            if (lastEl) {
+              lastEl.textContent =
+                '■ ' +
+                (
+                  res.message ||
+                  'Pipeline stopped.'
+                );
+            }
+
+
+          // ====================================================
+          // FAILED
+          // ====================================================
+
+          } else {
+
+            if (stageEl) {
+              stageEl.textContent =
+                'Failed';
+            }
+
+            if (elapsedEl) {
+              elapsedEl.textContent =
+                elapsedSeconds + 's';
+            }
+
+            if (costEl) {
+              costEl.textContent =
+                '$' +
+                Number(
+                  res && res.cost
+                    ? res.cost
+                    : 0
+                ).toFixed(4);
+            }
+
+            if (lastEl) {
+              lastEl.textContent =
+                '❌ ' +
+                (
+                  res &&
+                  res.message
+                    ? res.message
+                    : 'Automation failed.'
+                );
+            }
+          }
+
+
+          governancePipelineRow = null;
+        })
+
+
+        .withFailureHandler(function(err) {
+
+          clearInterval(progressTimer);
+          clearInterval(logPoller);
+
+          if (btn) {
+            btn.disabled = false;
+            btn.innerText =
+              '▶ Run Pre-AC → W2B.3 Automation';
+          }
+
+          if (stageEl) {
+            stageEl.textContent =
+              'Failed';
+          }
+
+          if (lastEl) {
+            lastEl.textContent =
+              '❌ ' +
+              (
+                err &&
+                err.message
+                  ? err.message
+                  : 'Pipeline execution error.'
+              );
+          }
+
+          governancePipelineRow = null;
+        })
+
+
+        .pipelineRunPreACToW2B3(
+          governancePipelineRow
+        );
+
+    })
+
+
+    // ==========================================================
+    // PIPELINE COULD NOT START
+    // ==========================================================
+
+    .withFailureHandler(function(err) {
+
+      clearInterval(progressTimer);
+
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText =
+          '▶ Run Pre-AC → W2B.3 Automation';
+      }
+
+      if (stageEl) {
+        stageEl.textContent =
+          'Failed to start';
+      }
+
+      if (lastEl) {
+        lastEl.textContent =
+          '❌ Could not start pipeline: ' +
+          (
+            err &&
+            err.message
+              ? err.message
+              : 'Unknown error'
+          );
+      }
+
+      governancePipelineRow = null;
+    })
+
+
+    .bc_startPipelineRun();
+}
+
+  function stopGovernanceAutomation() {
+
+    var status = document.getElementById('runGovernanceStatus');
+
+    if (!governancePipelineRow) {
+      status.textContent = 'No pipeline is currently running.';
+      status.style.color = '#c62828';
+      return;
+    }
+
+    status.textContent =
+      '■ Stop requested — waiting for current stage to finish...';
+
+    status.style.color = '#c62828';
+
+    google.script.run
+
+    .withSuccessHandler(function(res) {
+
+        if (res && res.success) {
+
+          status.textContent =
+            '■ Stop requested — pipeline will stop after the current stage.';
+
+        } else {
+
+          status.textContent =
+            '❌ ' +
+            ((res && res.message)
+              ? res.message
+              : 'Could not request stop.');
+        }
+      })
+
+      .withFailureHandler(function(err) {
+
+        status.textContent =
+          '❌ Could not request stop: ' +
+          err.message;
+      })
+
+      .pipelineRequestStop(governancePipelineRow);
+  }
+
+  function runCheckProblemRegister() {
+    var problem = '';
+    var probEl  = document.getElementById('angleProblemDisplay');
+    if (probEl) problem = probEl.textContent.replace('Problem this article addresses: ', '').trim();
+    if (!problem) {
+      setStatus('statusProblemReg', 'fail', '❌ Build Authority Brief first to identify the problem');
+      return;
+    }
+
+    setStatus('statusProblemReg', 'running', 'Checking estate coverage…', true);
+
+    google.script.run
+      .withSuccessHandler(function(info) {
+        var activeUrl         = info.url         || '';
+        var activeArticleType = info.articleType || '';
+        var activeAngleCode   = selectedAngleCode || '';
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (!res.success) {
+              setStatus('statusProblemReg', 'fail', '❌ ' + res.message);
+              return;
+            }
+
+            var resultEl  = document.getElementById('problemRegResult');
+            var summaryEl = document.getElementById('problemRegSummary');
+            var verdictEl = document.getElementById('problemRegVerdict');
+            var matchesEl = document.getElementById('problemRegMatches');
+            resultEl.style.display = 'block';
+
+            var TIER_MAP = {
+              'Hub Page': 1,        'Educational Guide': 1,
+              'Method Guide': 2,    'Service Page': 2,    'Geo Service Page': 2,
+              'Diagnostic Guide': 3,'Buyer Guide': 3,     'FAQ Spoke': 3,
+              'Case Study': 4
+            };
+
+            if (!res.found) {
+              setStatus('statusProblemReg', 'done', '✔ No other articles address this problem — new angle confirmed');
+              summaryEl.textContent = 'NEW ANGLE — no coverage conflict detected';
+              summaryEl.style.color = '#2e7d32';
+              verdictEl.style.display = 'none';
+              matchesEl.textContent   = '';
+              return;
+            }
+
+            // Separate by conflict type
+            var cannibalisationMatches = res.matches.filter(function(m) {
+              return m.conflictType === 'POTENTIAL_CANNIBALISATION';
+            });
+            var locationVariantMatches = res.matches.filter(function(m) {
+              return m.conflictType === 'LOCATION_VARIANT';
+            });
+
+            // Legacy fallback — classify by tier if conflictType not set
+            var activeTier    = TIER_MAP[activeArticleType] || 0;
+            var realConflicts = cannibalisationMatches.slice();
+            var tierDiffs     = [];
+
+            if (cannibalisationMatches.length === 0 && locationVariantMatches.length === 0) {
+              res.matches.forEach(function(m) {
+                var matchTier   = TIER_MAP[m.articleType] || 0;
+                var isSecondary = (m.angleCode || '').indexOf('secondary') > -1;
+                if (activeTier > 0 && matchTier > 0 && activeTier !== matchTier) {
+                  tierDiffs.push(m);
+                } else if (!isSecondary) {
+                  realConflicts.push(m);
+                } else {
+                  tierDiffs.push(m);
+                }
+              });
+            }
+
+            var verdictText = '';
+
+            if (locationVariantMatches.length > 0 && realConflicts.length === 0) {
+              verdictText = 'LOCATION VARIANTS — same problem and angle, different areas.\n';
+              locationVariantMatches.forEach(function(m) {
+                verdictText += '• "' + m.title + '" (' + m.articleType + ') — location variant. No conflict.\n';
+              });
+              verdictText += '\nThis article covers a different location. Proceed to W0.';
+              setStatus('statusProblemReg', 'done', '✔ Location variants only — no conflict detected');
+              summaryEl.textContent = locationVariantMatches.length + ' LOCATION VARIANT(S) — NO CONFLICT';
+              summaryEl.style.color = '#2e7d32';
+
+            } else if (locationVariantMatches.length > 0 && realConflicts.length > 0) {
+              verdictText = 'MIXED — location variants and potential conflicts detected.\n\n';
+              verdictText += 'LOCATION VARIANTS (no action needed):\n';
+              locationVariantMatches.forEach(function(m) {
+                verdictText += '• "' + m.title + '" — location variant.\n';
+              });
+              verdictText += '\nPOTENTIAL CONFLICTS (check angles):\n';
+              realConflicts.forEach(function(m) {
+                verdictText += '• "' + m.title + '" (' + m.articleType + ') — angle: ' + (m.angleCode || 'unknown') + '.\n';
+                verdictText += '  Check your angle is genuinely different before proceeding.\n';
+              });
+              setStatus('statusProblemReg', 'running', realConflicts.length + ' conflict(s) detected — check angles');
+              summaryEl.textContent = res.count + ' ARTICLE(S) FOUND — ' + realConflicts.length + ' CONFLICT(S)';
+              summaryEl.style.color = '#e65100';
+
+            } else if (realConflicts.length > 0 && tierDiffs.length === 0) {
+              verdictText = 'POTENTIAL CONFLICT — same tier coverage detected.\n';
+              realConflicts.forEach(function(m) {
+                verdictText += '• "' + m.title + '" (' + m.articleType + ') addresses this problem from angle: ' +
+                               (m.angleCode || 'unknown') + '.\n';
+                verdictText += '  Check your angle is genuinely different before proceeding.\n';
+              });
+              setStatus('statusProblemReg', realConflicts.length > 2 ? 'fail' : 'running',
+                realConflicts.length + ' article(s) already address this problem — check angles below');
+              summaryEl.textContent = res.count + ' ARTICLE(S) COVER THIS PROBLEM';
+              summaryEl.style.color = realConflicts.length > 2 ? '#b71c1c' : '#e65100';
+
+            } else if (realConflicts.length === 0 && tierDiffs.length > 0) {
+              verdictText = 'NO CONFLICT — coverage exists at a different tier or as secondary.\n';
+              tierDiffs.forEach(function(m) {
+                var matchTier   = TIER_MAP[m.articleType] || '?';
+                var isSecondary = (m.angleCode || '').indexOf('secondary') > -1;
+                if (isSecondary) {
+                  verdictText += '• "' + m.title + '" touches this topic as a secondary cluster — not a primary conflict.\n';
+                } else {
+                  verdictText += '• "' + m.title + '" covers this at Tier ' + matchTier + ' (' + m.articleType + '). ' +
+                                 'Your article is Tier ' + activeTier + ' (' + activeArticleType + '). Different tiers — proceed.\n';
+                }
+              });
+              verdictText += '\nYour article angle is distinct. Proceed to W0.';
+              setStatus('statusProblemReg', 'done', '✔ Coverage exists but no conflict — different tier or secondary');
+              summaryEl.textContent = res.count + ' ARTICLE(S) FOUND — NO CONFLICT';
+              summaryEl.style.color = '#2e7d32';
+            }
+
+            if (verdictText) {
+              verdictEl.style.display    = 'block';
+              verdictEl.style.whiteSpace = 'pre-wrap';
+              verdictEl.textContent      = verdictText;
+            }
+
+            // Matches detail
+            var html = '';
+            res.matches.forEach(function(m) {
+              var matchTier  = TIER_MAP[m.articleType] || '?';
+              var isConflict = m.conflictType === 'POTENTIAL_CANNIBALISATION' || realConflicts.indexOf(m) > -1;
+              var isVariant  = m.conflictType === 'LOCATION_VARIANT';
+              var bg    = isVariant  ? '#e8f5e9' : isConflict ? '#ffebee' : '#f1f8e9';
+              var badge = isVariant
+                ? ' <span style="background:#2e7d32;color:#fff;font-size:10px;padding:1px 4px;border-radius:2px">LOCATION VARIANT</span>'
+                : isConflict
+                  ? ' <span style="background:#b71c1c;color:#fff;font-size:10px;padding:1px 4px;border-radius:2px">CONFLICT</span>'
+                  : '';
+              html += '<div style="margin-bottom:4px;padding:3px;background:' + bg + ';border-radius:2px">';
+              html += '<strong>' + (m.angleCode || '— no angle set') + '</strong>' + badge;
+              html += ' — ' + (m.articleType || '') + ' (Tier ' + matchTier + ')<br>';
+              html += '<span style="color:#555;font-size:8px">' + (m.title || m.url) + '</span>';
+              html += '</div>';
+            });
+            matchesEl.innerHTML = html;
+          })
+          .withFailureHandler(function(err) {
+            setStatus('statusProblemReg', 'fail', '❌ ' + err.message);
+          })
+          .checkProblemRegister(problem, '', activeUrl, activeArticleType, activeAngleCode);
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusProblemReg', 'fail', '❌ Could not read active row URL: ' + err.message);
+      })
+      .getActiveRowUrl();
+  }
+
+</script>

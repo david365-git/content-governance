@@ -1,0 +1,55 @@
+<!-- ══ ce_Sidebar_W_Neg1.html - W-1 — AUTHORITY BRIEF ══ -->
+  <div id="window-0" class="window-card" style="display:block" style="border-top:3px solid #1a237e">
+    <div class="window-header">
+      <span class="window-label" style="color:#1a237e">W&#8209;1 — Authority Brief</span>
+      <span class="tag" style="background:#1a237e">Run First</span>
+    </div>
+    <div class="window-body">
+      <div id="statusAuthBrief" class="status-bar pending">Build authority brief from entity analysis columns — stores to col DN</div>
+      <button class="btn-generate btn-full" id="authBriefBuildBtn" onclick="runBuildAuthorityBrief()" style="background:#1a237e">
+        ⚙ Build Authority Brief
+      </button>
+      <button class="btn-generate btn-full" id="authBriefAutoBtn" onclick="runAutoAuthorityBrief()" style="background:#3949ab;margin-top:6px">
+  ▶ Auto W-1 Authority Brief
+</button>
+      <div id="authBriefResult" style="display:none;margin-top:8px">
+        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#1a237e;margin-bottom:3px;letter-spacing:1px">AUTHORITY BRIEF — REVIEW BEFORE PROCEEDING</div>
+        <textarea id="authBriefText" style="height:140px;font-size:13px;background:#e8eaf6" readonly></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="copyText('authBriefText','statusAuthBrief','Authority Brief copied')">Copy</button>
+          <button style="background:#2e7d32;color:#fff;font-family:JetBrains Mono,monospace;font-size:13px;padding:4px 10px;border:none;border-radius:3px;cursor:pointer" onclick="pushAuthorityBrief()">⬆ Save to Sheet</button>
+        </div>
+        <div id="authBriefPushResult" style="font-family:JetBrains Mono,monospace;font-size:13px;margin-top:4px;color:#555"></div>
+
+        <!-- Problem Register check -->
+        <div style="margin-top:10px;border-top:1px solid #e8eaf6;padding-top:10px">
+          <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#1a237e;margin-bottom:4px;letter-spacing:1px">PROBLEM REGISTER — ESTATE COVERAGE CHECK</div>
+          <div id="statusProblemReg" class="status-bar pending">Build register to check estate coverage for this problem</div>
+          <div class="btn-row" style="margin-top:4px">
+            <button style="background:#283593;color:#fff;font-family:JetBrains Mono,monospace;font-size:13px;padding:4px 8px;border:none;border-radius:3px;cursor:pointer" onclick="runBuildProblemRegister()">⚙ Build Register</button>
+            <button style="background:#1565c0;color:#fff;font-family:JetBrains Mono,monospace;font-size:13px;padding:4px 8px;border:none;border-radius:3px;cursor:pointer" onclick="runCheckProblemRegister()">🔍 Check This Problem</button>
+          </div>
+          <div id="problemRegResult" style="display:none;margin-top:6px;background:#e8eaf6;border-radius:3px;padding:6px">
+            <div id="problemRegSummary" style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#1a237e;margin-bottom:4px"></div>
+            <div id="problemRegVerdict" style="font-family:JetBrains Mono,monospace;font-size:12px;color:#333;background:#fff;border-radius:3px;padding:5px;margin-bottom:4px;line-height:1.6;display:none"></div>
+            <div id="problemRegMatches" style="font-family:JetBrains Mono,monospace;font-size:13px;color:#333;line-height:1.6"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Problem Angle Selector — shown after brief is built -->
+      <div id="angleSelector" style="display:none;margin-top:10px;border-top:1px solid #e8eaf6;padding-top:10px">
+        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#1a237e;margin-bottom:4px;letter-spacing:1px">PROBLEM ANGLE — HOW DOES THIS ARTICLE ADDRESS THE PROBLEM?</div>
+        <div id="angleProblemDisplay" style="font-family:JetBrains Mono,monospace;font-size:13px;color:#1a237e;margin-bottom:8px;background:#e8eaf6;padding:4px 6px;border-radius:3px"></div>
+
+        <!-- Angle list — all angles visible at once -->
+        <div id="angleList" style="margin-bottom:6px">
+          <!-- rows injected by JS -->
+        </div>
+
+        <div id="angleStatement" style="font-family:JetBrains Mono,monospace;font-size:13px;background:#e8eaf6;border-radius:3px;padding:6px;margin-bottom:6px;display:none;color:#1a237e;font-style:italic"></div>
+        <button id="angleSaveBtn" style="display:none;background:#1a237e;color:#fff;font-family:JetBrains Mono,monospace;font-size:13px;padding:6px 12px;border:none;border-radius:3px;cursor:pointer;width:100%" onclick="saveAngle()">⬆ Save Problem Angle to Sheet</button>
+        <div id="angleSaveResult" style="font-family:JetBrains Mono,monospace;font-size:13px;margin-top:4px;color:#555"></div>
+      </div>
+    </div>
+  </div>

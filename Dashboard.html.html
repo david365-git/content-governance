@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+  <style>
+    /* MASTER STYLES */
+    body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background-color: #f8f9fa; color: #3c4043; height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+    
+    /* STICKY TAB NAVIGATION */
+    .nav-tabs { 
+      position: sticky; 
+      top: 0; 
+      background: white; 
+      z-index: 1000; 
+      display: flex; 
+      flex-direction: row;
+      justify-content: space-between;
+      gap: 3px; 
+      padding: 6px 4px; 
+      border-bottom: 2px solid #1a73e8;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .tab-btn { 
+      flex: 1; 
+      min-width: 0; 
+      padding: 6px 0; 
+      font-size: 8.5px; 
+      font-weight: bold; 
+      cursor: pointer; 
+      border: 1px solid #dadce0; 
+      background: #f1f3f4; 
+      color: #5f6368; 
+      border-radius: 4px;
+      text-align: center; 
+      text-transform: uppercase;
+      white-space: nowrap; 
+      letter-spacing: -0.3px;
+    }
+    .tab-btn.active { background: #1a73e8; color: white; border-color: #1a73e8; }
+    
+    /* CONTENT AREAS */
+    .tab-content { display: none; padding: 12px; flex-grow: 1; overflow-y: auto; }
+    .tab-content.active { display: block; }
+
+    /* UNIFIED COMPONENT STYLES */
+    .version-header { font-size: 12px; font-weight: bold; color: #444; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+    textarea { 
+      width: 100%; border: 1px solid #dadce0; border-radius: 8px; 
+      font-family: 'Roboto Mono', monospace; font-size: 11px; padding: 10px; 
+      box-sizing: border-box; background: white; resize: none;
+    }
+    .main-textarea { height: 50vh; }
+    .ref-textarea { height: 35px; background: #e9ecef; margin-top: 10px; font-weight: bold; }
+    
+    /* PREVIEW INPUT STYLE */
+    .preview-box {
+      width: 100%; border: 1px solid #dadce0; border-radius: 4px; 
+      padding: 6px; font-size: 10px; background: #f1f3f4; 
+      margin-bottom: 8px; color: #1a73e8; font-weight: bold;
+    }
+
+    .button-row { display: flex; gap: 5px; margin: 10px 0; }
+    .btn { 
+      flex: 1; padding: 8px 2px; border-radius: 4px; border: none; 
+      cursor: pointer; font-weight: 600; font-size: 10px; color: white;
+      transition: opacity 0.2s; text-align: center;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-blue { background: #1a73e8; }
+    .btn-green { background: #1e8e3e; }
+    .btn-yellow { background: #f9ab00; }
+    
+    .status-msg { font-size: 10px; text-align: center; margin-top: 5px; height: 14px; color: #188038; font-weight: 500; }
+  </style>
+</head>
+<body>
+
+  <div class="nav-tabs">
+    <button class="tab-btn active" id="b1" onclick="showTab('tab1', 'b1')">1. GOV</button>
+    <button class="tab-btn" id="b2" onclick="showTab('tab2', 'b2')">2. D60</button>
+    <button class="tab-btn" id="b3" onclick="showTab('tab3', 'b3')">3. LOGIC</button>
+    <button class="tab-btn" id="b4" onclick="handleActionTab('tab4', 'b4')">4. ACTION</button>
+  </div>
+
+  <div id="tab1" class="tab-content active">
+    <div class="version-header">v4.0 - Master Governance</div>
+    <textarea id="masterPrompt" class="main-textarea" placeholder="Click Load to begin..."></textarea>
+    <div class="button-row">
+      <button class="btn btn-blue" onclick="gov_updateRow()">Load</button>
+      <button class="btn btn-green" onclick="gov_refreshRow()">Refresh</button>
+      <button class="btn btn-yellow" onclick="copyText('masterPrompt', 'govStatus')">Copy All</button>
+    </div>
+    <textarea id="postReference" class="ref-textarea" readonly placeholder="Post Title Reference"></textarea>
+    <div id="govStatus" class="status-msg"></div>
+  </div>
+
+  <div id="tab2" class="tab-content">
+    <div class="version-header">D60 Governance Controller</div>
+    <textarea id="d60Output" class="main-textarea" placeholder="LLM Output will appear here..."></textarea>
+    <div class="button-row">
+      <button class="btn btn-blue" onclick="d60_generate()">Generate Prompt</button>
+      <button class="btn btn-yellow" onclick="copyText('d60Output', 'd60Status')">Copy All</button>
+    </div>
+    <div id="d60Status" class="status-msg"></div>
+  </div>
+
+  <div id="tab3" class="tab-content">
+    <div class="version-header">Strategic Evaluation</div>
+    <p style="font-size: 11px;">Process the active row using the backend strategic logic script.</p>
+    <button class="btn btn-blue" style="width:100%" onclick="runStrategicLogic()">Run Strategic Evaluation</button>
+    <div id="logicStatus" class="status-msg"></div>
+  </div>
+
+  <div id="tab4" class="tab-content">
+    <div class="version-header">Consolidated Output</div>
+    <div style="font-size: 9px; color: #666; margin-bottom: 2px;">ACTIVE PREVIEW:</div>
+    <input type="text" id="actionPreview" class="preview-box" readonly placeholder="No row selected">
+    
+    <textarea id="outputField" class="main-textarea" readonly placeholder="Generating final action prompt..."></textarea>
+    <div class="button-row">
+      <button class="btn btn-blue" style="width:100%;" onclick="copyText('outputField', 'actionStatus')">Copy to Clipboard</button>
+    </div>
+    <div id="actionStatus" class="status-msg"></div>
+  </div>
+
+  <script>
+    // --- NAVIGATION LOGIC ---
+    function showTab(tabId, btnId) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      document.getElementById(btnId).classList.add('active');
+    }
+
+    // --- STEP 4 SPECIAL TRIGGER ---
+    function handleActionTab(tabId, btnId) {
+      showTab(tabId, btnId);
+      const status = document.getElementById('actionStatus');
+      const output = document.getElementById('outputField');
+      const preview = document.getElementById('actionPreview');
+
+      status.innerText = "Generating prompt...";
+      output.value = "Connecting to spreadsheet...";
+      
+      google.script.run
+        .withSuccessHandler(function(response) {
+          output.value = response.fullPrompt;
+          preview.value = response.title;
+          status.innerText = "Ready!";
+        })
+        .withFailureHandler(function(err) {
+          status.innerText = "Error generating prompt.";
+          output.value = "Error: " + err.message;
+        })
+        .launchHumanActionGenerator();
+    }
+
+    // --- GLOBAL UTILITIES ---
+    function copyText(areaId, statusId) {
+      const t = document.getElementById(areaId);
+      t.select();
+      document.execCommand('copy');
+      const status = document.getElementById(statusId);
+      status.innerText = "Copied!";
+      setTimeout(() => status.innerText = "", 2000);
+    }
+
+    // --- STEP 1: GOVERNANCE LOGIC ---
+    let frameworkData = null;
+    function gov_updateRow() {
+      document.getElementById('govStatus').innerText = "Connecting...";
+      google.script.run
+        .withSuccessHandler(function(response) {
+          frameworkData = response.framework;
+          assembleGovPrompt(response.row, response.framework);
+          document.getElementById('govStatus').innerText = "Loaded.";
+        })
+        .getFullGovernancePackage();
+    }
+
+    function gov_refreshRow() {
+      if (!frameworkData) return alert("Run Load first.");
+      google.script.run.withSuccessHandler(function(row) {
+        assembleGovPrompt(row, frameworkData);
+      }).getRowSpecificData();
+    }
+
+    function assembleGovPrompt(row, fw) {
+      const matAliases = { "victorian encaustic clay tile": ["victorian", "historic geometric and encaustic clay tile floors"] };
+      const stone = (row.stoneType || "").toLowerCase().trim();
+      const terms = [stone, ...(matAliases[stone] || [])];
+      
+      const safeTDF = (r) => (!r || r.length === 0) ? "(No data)" : r.map(x => Array.isArray(x) ? x.join('\t') : String(x)).join('\n');
+      const filterStd = (rows) => {
+        if (!rows || rows.length < 2) return "(Empty)";
+        const filtered = rows.filter((r, i) => i === 0 || (r[0] && terms.some(t => String(r[0]).toLowerCase().includes(t))));
+        return safeTDF(filtered);
+      };
+
+      document.getElementById('masterPrompt').value = `RUN MATERIAL: ${row.stoneType}\n\n${fw.promptJ16}\n\n${row.gscBlock}\n\n--- TAXONOMY ---\n${filterStd(fw.taxonomy)}\n\n--- ROLES ---\n${safeTDF(fw.roles)}\n\n${fw.promptO16}`;
+      document.getElementById('postReference').value = row.title;
+    }
+
+    // --- STEP 2: D60 LOGIC ---
+    function d60_generate() {
+      document.getElementById('d60Status').innerText = "Compiling...";
+      google.script.run
+        .withSuccessHandler(data => {
+          document.getElementById('d60Output').value = data.masterPrompt;
+          document.getElementById('d60Status').innerText = "Ready!";
+        })
+        .getCustomDataPackage();
+    }
+
+    // --- STEP 3: STRATEGIC LOGIC ---
+    function runStrategicLogic() {
+      document.getElementById('logicStatus').innerText = "Processing...";
+      google.script.run
+        .withSuccessHandler(() => {
+          document.getElementById('logicStatus').innerText = "✅ Done. Go to Step 4.";
+        })
+        .evaluateActiveRowStrategicLogic();
+    }
+  </script>
+</body>
+</html>

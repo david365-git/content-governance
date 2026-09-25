@@ -1,0 +1,104 @@
+<!-- ══ W2C IMAGE SUGGESTION ══ -->
+<div id="window-10b" class="window-card" style="display:none">
+  <div class="window-header">
+    <span class="window-label" style="color:var(--green)">W2C — Image Suggestion</span>
+  </div>
+  <div class="window-body">
+    <div id="statusW2C" class="status-bar pending">Generate prompt → Copy → paste to ChatGPT → paste JSON response → Save</div>
+
+    <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #ddd">
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 1 — GENERATE PROMPT:</label>
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">Reads the selected HTML source, finds every H2 heading and builds a ChatGPT prompt asking it to suggest suitable images for each heading.</div>
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">HTML SOURCE:</label>
+      <select id="w2cSourceSelect" style="width:100%;padding:6px;font-size:11px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;margin-bottom:6px">
+        <option value="w2b_raw_html">W2B Raw HTML (col EU)</option>
+        <option value="new_html">New HTML (col CT)</option>
+        <option value="humanised_html">Humanised HTML (col CZ)</option>
+        <option value="w8b_html">W8B_HTML (col FI)</option>
+        <option value="w8c_html">W8C_HTML (col FJ)</option>
+        <option value="html_semtc_adj">New HTML With Semantic Adjustment (col FT)</option>
+      </select>
+      <textarea id="w2cPrompt" style="height:140px" placeholder="Prompt will appear here"></textarea>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-generate" id="w2cGenBtn" onclick="runW2CGenerate()">Generate Prompt</button>
+        <button class="btn-copy" onclick="copyW2CPrompt()" style="background:#558b2f;color:#fff">Copy Prompt</button>
+      </div>
+    </div>
+
+    <div>
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 2 — PASTE LLM JSON RESPONSE HERE:</label>
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">ChatGPT returns a JSON array of image suggestions. Clear & Paste brings it from your clipboard. Save to Sheet writes the JSON to column FK.</div>
+      <textarea id="w2cResponse" style="height:140px" placeholder="Paste the JSON response from ChatGPT here"></textarea>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-copy" onclick="clearAndPaste('w2cResponse')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
+        <button class="btn-copy" onclick="saveW2CToSheet()" style="background:#37474f;color:#fff">⬇ Save to Sheet</button>
+      </div>
+      <div id="w2cSaveResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+    </div>
+
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 3 — RECONCILE WITH SELECTED HTML SOURCE:</label>
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">Reads the HTML source selected in Step 1 and the JSON from column FK. Injects a comment placeholder after each H2 showing where each image will go. Saves the result to column FL.</div>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-generate" onclick="runReconcileW2C()" style="background:#6a1b9a;color:#fff">⚙ Reconcile</button>
+      </div>
+      <div id="w2cReconcileResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+    </div>
+
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 3A — SAVE SUGGESTIONS TO IMAGE LIBRARY:</label>
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">Writes one row per image suggestion into the Image Library sheet with Post ID, H2 heading, slug, alt, caption and AI prompt. This is your working list for sourcing and generating images.</div>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-copy" onclick="saveToImageLibrary()" style="background:#2e7d32;color:#fff">⬇ Save to Image Library</button>
+      </div>
+      <div id="w2cLibraryResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+    </div>
+
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 3B — VIEW COLUMN FL HTML:</label>
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">Opens a modal showing the column FL content — raw HTML code tab and a WYSIWYG preview tab — so you can see the article with the comment placeholders in place.</div>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-copy" onclick="openFLViewer()" style="background:#1565c0;color:#fff">👁 View Column FL HTML</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 3C — GENERATE FIGURE HTML:</label>
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">Once you have added image URLs to column H of the Image Library, this builds a ChatGPT prompt to write the complete figure HTML for each image — with alt text, diagnostic captions, and linked captions where column K has a URL. Save Figure HTML writes the result to column L of the Image Library.</div>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-generate" onclick="runBuildFigureHtmlPrompt()" style="background:#1565c0;color:#fff">Generate Figure HTML Prompt</button>
+        <button class="btn-copy" onclick="copyFigurePrompt()" style="background:#558b2f;color:#fff">Copy Prompt</button>
+      </div>
+      <textarea id="w2cFigurePrompt" style="height:100px;margin-top:6px" placeholder="Figure HTML prompt will appear here"></textarea>
+      <div style="margin-top:6px">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">Paste ChatGPT response:</label>
+        <textarea id="w2cFigureResponse" style="height:80px" placeholder="Paste ChatGPT JSON response here"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="clearAndPaste('w2cFigureResponse')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
+          <button class="btn-copy" onclick="saveFigureHtml()" style="background:#37474f;color:#fff">⬇ Save Figure HTML</button>
+        </div>
+        <div id="w2cFigureResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 4A — INJECT IMAGES FROM IMAGE LIBRARY:</label>
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">Reads Image Library rows where Status is Ready, takes the figure HTML from column L, and replaces the comment placeholders in column FL with real figure tags. Updates Status to Injected.</div>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-generate" onclick="injectImagesFromLibrary()" style="background:#e65100;color:#fff">⚡ Inject Images into FL HTML</button>
+      </div>
+      <div id="w2cInjectResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+    </div>
+
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 4 — PASTE HTML WITH IMAGES ADDED:</label>
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">Manual fallback only — use this if you have edited the FL HTML yourself outside the pipeline. Clear & Paste brings your edited version in, Save to Sheet overwrites column FL.</div>
+      <textarea id="w2cFinalHtml" style="height:140px" placeholder="Paste the HTML with images added here"></textarea>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-copy" onclick="clearAndPaste('w2cFinalHtml')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
+        <button class="btn-copy" onclick="saveW2CFinalHtml()" style="background:#37474f;color:#fff">⬇ Save to Sheet</button>
+      </div>
+      <div id="w2cFinalSaveResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+    </div>
+  </div>
+</div>

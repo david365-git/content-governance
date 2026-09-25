@@ -1,0 +1,101 @@
+<!-- ══ ce_Sidebar_W4.html - W4B — IMAGE ALT & CAPTION ══ -->
+  <div id="window-11" class="window-card" style="display:none" style="border-top:3px solid #1565c0">
+    <div class="window-header">
+      <span class="window-label" style="color:#1565c0">W4B — Image Alt &amp; Caption</span>
+      <span class="tag" style="background:#1565c0">LLM — alt &amp; caption pass</span>
+    </div>
+    <div class="window-body">
+      <div id="statusW4B" class="status-bar pending">Load from CZ → Store Figures → Build prompt → paste LLM response → copy to W4</div>
+
+      <!-- Step 1: Load from CZ -->
+      <div class="step-label" style="margin-top:6px">Step 1 — Load humanised HTML from Column CZ</div>
+      <textarea id="w4bInputHtml" placeholder="Click Load from CZ to load humanised HTML..." style="height:80px;font-size:8px"></textarea>
+      <div class="btn-row" style="margin-top:3px">
+        <button class="btn-copy" onclick="loadHtmlToW4B()" style="background:var(--teal);color:#fff">⬇ Load from CZ</button>
+        <button class="btn-copy" onclick="runStoreFigures()" style="background:#5c6bc0;color:#fff" title="Store figure inventory from col 98 into col CU">⬇ Store Figures</button>
+      </div>
+
+      <!-- Step 2: Build prompt -->
+      <div class="step-label" style="margin-top:8px">Step 2 — Build &amp; copy alt/caption prompt</div>
+      <div class="btn-row">
+        <button style="background:#1565c0" onclick="runW4BBuild()">📋 Build Alt/Caption Prompt</button>
+      </div>
+      <div id="w4bPromptBlock" style="display:block;margin-top:6px">
+        <textarea id="w4bPrompt" style="height:80px;font-size:8px" readonly></textarea>
+        <div class="btn-row" style="margin-top:3px">
+          <button class="btn-copy" onclick="copyText('w4bPrompt','statusW4B','Prompt copied — paste into ChatGPT')">Copy Prompt</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Paste JSON response and push -->
+      <div class="step-label" style="margin-top:8px">Step 3 — Paste JSON response, then push to update HTML</div>
+      <textarea id="w4bOutputHtml" placeholder="Paste ChatGPT JSON response here..." style="height:80px;font-size:8px"></textarea>
+      <div class="btn-row" style="margin-top:3px">
+        <button class="btn-copy" onclick="clearAndPaste('w4bOutputHtml')">⌫ Clear + Paste</button>
+        <button class="btn-push" onclick="pushAltCaptionJson()" style="background:#2e7d32;color:#fff">⬆ Push Alt/Captions to CZ</button>
+      </div>
+      <div id="w4bStatus" style="display:block;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:13px;color:#2e7d32"></div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn-push" id="autoW4BBtn" onclick="runW4BAutomated()" style="background:#0b8043;color:#fff">⚡ Run W4B Automated</button>
+      </div>
+      <div id="autoW4BStatus" style="font-size:10px;margin-top:4px;"></div>
+    </div>
+  </div>
+  <!-- ══ W4 FINAL HTML ══ -->
+  <div id="window-12" class="window-card" style="display:none" style="border-top:3px solid var(--indigo)">
+    <div class="window-header">
+      <span class="window-label" style="color:var(--indigo)">W4 — Final HTML</span>
+      <span class="tag" style="background:var(--indigo)">Audit + Push</span>
+    </div>
+    <div class="window-body">
+      <div id="statusFinal" class="status-bar pending">Pending — paste Stage 2B HTML output here, then Audit + Push</div>
+      <textarea id="finalHtmlPreview" placeholder="Paste Stage 2B HTML here, then Audit + Push..."></textarea>
+      <div class="btn-row">
+        <button id="btnPush" class="btn-push" onclick="auditThenPushHTML()">Audit + Push to Sheet</button>
+        <button class="btn-copy" onclick="clearAndPaste('finalHtmlPreview')">⌫ Clear + Paste</button>
+        <button class="btn-copy" onclick="copyText('finalHtmlPreview','statusFinal','HTML copied — press Audit + Push to Sheet, or paste into WordPress')">Copy HTML</button>
+        <button class="btn-copy" onclick="loadHtmlFromSheet()" style="background:var(--teal);color:#fff">⬇ Load HTML from Sheet</button>
+        <button class="btn-copy" onclick="runRecalcTfIdf()" style="background:#6a1b9a;color:#fff" title="Recalculate TF-IDF and recall score against new HTML">↻ Recalc TF-IDF</button>
+      </div>
+      <div class="btn-row" style="margin-top:6px">
+        <button class="btn-push" id="autoW4Btn" onclick="runW4Automated()" style="background:#0b8043;color:#fff">⚡ Run W4 Automated</button>
+      </div>
+      <div id="autoW4Status" style="font-size:10px;margin-top:4px;"></div>
+      <div id="htmlAuditBlock" style="display:block;margin-top:10px">
+        <textarea id="auditResult" class="audit-textarea" placeholder="Audit results..."></textarea>
+        <div id="htmlFixSection" style="display:block;margin-top:8px">
+          <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#bf360c;margin-bottom:4px;letter-spacing:1px">HTML FIX PROMPT — COPY AND PASTE INTO CHATGPT</div>
+          <textarea id="htmlFixPrompt" style="height:120px;border-color:#bf360c"></textarea>
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn-copy" onclick="copyText('htmlFixPrompt','statusFinal','Fix prompt copied')">Copy Fix Prompt</button>
+            <button class="btn-mech" onclick="rePasteAndReaudit()" style="background:#bf360c;color:#fff">⌫ Re-paste &amp; Re-audit</button>
+          </div>
+        </div>
+
+        <div id="batchFixSection" style="display:block;margin-top:12px;padding-top:12px;border-top:1px dashed #ccc">
+          <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#00695c;margin-bottom:4px;letter-spacing:1px">BATCH FIX — ALL FAILURES IN ONE PROMPT</div>
+          <div id="statusBatchFix" class="status-bar pending">Combines all fixable failures into one prompt instead of one at a time.</div>
+          <div class="btn-row" style="margin-top:6px">
+            <button class="btn-copy" onclick="runBatchFixGenerate()" style="background:#00695c;color:#fff">⚙ Build Batch Fix Prompt</button>
+          </div>
+          <div id="batchFixPromptBlock" style="display:block;margin-top:8px">
+            <textarea id="batchFixPrompt" style="height:150px;border-color:#00695c" readonly></textarea>
+            <div class="btn-row" style="margin-top:4px">
+              <button class="btn-copy" onclick="copyText('batchFixPrompt','statusBatchFix','Batch prompt copied — paste into ChatGPT')">Copy Prompt</button>
+            </div>
+          </div>
+          <div id="batchFixPasteBlock" style="display:block;margin-top:8px">
+            <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PASTE JSON RESPONSE:</label>
+            <textarea id="batchFixPasteArea" style="height:150px" placeholder="Paste ChatGPT's JSON array of fixes here…"></textarea>
+            <div class="btn-row" style="margin-top:4px">
+              <button class="btn-copy" onclick="clearAndPaste('batchFixPasteArea')">⌫ Clear + Paste</button>
+              <button class="btn-copy" onclick="applyBatchFixClick()" style="background:#2e7d32;color:#fff">✔ Apply All Fixes</button>
+            </div>
+          </div>
+          <div id="batchFixResultBlock" style="display:block;margin-top:8px">
+            <div id="batchFixResultText" style="font-family:JetBrains Mono,monospace;font-size:11px;background:#e8f5e9;border-radius:4px;padding:8px;color:#333;white-space:pre-wrap"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

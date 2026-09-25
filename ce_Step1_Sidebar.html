@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 13px; padding: 12px; background: #f9f9f9; }
+    h2 { font-size: 15px; color: #333; margin-bottom: 4px; }
+    .status { padding: 8px; margin: 8px 0; border-radius: 4px; font-size: 12px; }
+    .status.info { background: #e8f0fe; color: #1a56db; }
+    .status.success { background: #e6f4ea; color: #137333; }
+    .status.error { background: #fce8e6; color: #c5221f; }
+    .status.warning { background: #fef7e0; color: #b06000; }
+    button { width: 100%; padding: 10px; margin: 6px 0; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; }
+    .btn-primary { background: #1a56db; color: white; }
+    .btn-primary:hover { background: #1444b0; }
+    .btn-secondary { background: #555; color: white; }
+    .btn-secondary:hover { background: #333; }
+    .btn-save { background: #137333; color: white; }
+    .btn-save:hover { background: #0d5228; }
+    textarea { width: 100%; height: 300px; font-size: 11px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; padding: 6px; box-sizing: border-box; margin: 6px 0; }
+    .label { font-weight: bold; color: #444; margin-top: 8px; display: block; }
+    .meta { font-size: 11px; color: #666; margin: 2px 0; }
+    hr { border: none; border-top: 1px solid #ddd; margin: 12px 0; }
+  </style>
+</head>
+<body>
+
+  <h2>Step 1 — Structure Audit</h2>
+  <p class="meta">Audits article structure and produces section mapping with word budgets.</p>
+
+  <hr>
+
+  <div id="post-info">
+    <div class="status info">Loading post data...</div>
+  </div>
+
+  <hr>
+
+  <span class="label">Assembled Prompt Preview</span>
+  <textarea id="prompt-preview" readonly placeholder="Click 'Assemble Prompt' to preview..."></textarea>
+
+  <button class="btn-secondary" onclick="assemblePrompt()">Assemble Prompt</button>
+  <button class="btn-primary" onclick="copyPrompt()">Copy Prompt to Clipboard</button>
+
+  <hr>
+
+  <span class="label">Step 1 Output (paste LLM response here)</span>
+  <textarea id="llm-output" placeholder="Paste the LLM response here after running the prompt in ChatGPT..."></textarea>
+
+  <button class="btn-save" onclick="saveOutput()">Save Step 1 Output to Sheet</button>
+
+  <div id="save-status"></div>
+
+<script>
+
+  var postData = {};
+
+  // Load post data on open
+  google.script.run
+    .withSuccessHandler(function(data) {
+      postData = data;
+      displayPostInfo(data);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('post-info').innerHTML =
+        '<div class="status error">Error loading post data: ' + err.message + '</div>';
+    })
+    .getActivePostData();
+
+  function displayPostInfo(data) {
+    var html = '<div class="status success">' +
+      '<strong>Post ID:</strong> ' + (data.postId || 'Unknown') + '<br>' +
+      '<strong>Title:</strong> ' + (data.title || 'Unknown') + '<br>' +
+      '<strong>Material:</strong> ' + (data.material || 'Unknown') + '<br>' +
+      '<strong>Article Type:</strong> ' + (data.articleType || 'Unknown') +
+      '</div>';
+    document.getElementById('post-info').innerHTML = html;
+  }
+
+  function assemblePrompt() {
+    if (!postData.authorityBrief) {
+      document.getElementById('prompt-preview').value = 'ERROR: Authority Brief not found for this post. Check column data.';
+      return;
+    }
+    if (!postData.tsm) {
+      document.getElementById('prompt-preview').value = 'ERROR: TSM not found for material: ' + postData.material + '. Check technical sheet.';
+      return;
+    }
+    if (!postData.technicalEntities) {
+      document.getElementById('prompt-preview').value = 'ERROR: Technical Entities not found for material: ' + postData.material + '. Check technical_entities sheet.';
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(prompt) {
+        document.getElementById('prompt-preview').value = prompt;
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('prompt-preview').value = 'ERROR assembling prompt: ' + err.message;
+      })
+      .assembleStep1Prompt(postData);
+  }
+
+  function copyPrompt() {
+    var textarea = document.getElementById('prompt-preview');
+    if (!textarea.value || textarea.value.startsWith('ERROR')) {
+      alert('Please assemble the prompt first.');
+      return;
+    }
+    textarea.select();
+    document.execCommand('copy');
+    alert('Prompt copied to clipboard. Paste into a fresh ChatGPT conversation.');
+  }
+
+  function saveOutput() {
+    var output = document.getElementById('llm-output').value.trim();
+    if (!output) {
+      document.getElementById('save-status').innerHTML =
+        '<div class="status warning">No output to save. Paste the LLM response first.</div>';
+      return;
+    }
+    if (!output.includes('Step 1 complete')) {
+      document.getElementById('save-status').innerHTML =
+        '<div class="status warning">Output does not contain expected completion string. Check the response and try again.</div>';
+      return;
+    }
+
+    document.getElementById('save-status').innerHTML =
+      '<div class="status info">Saving...</div>';
+
+    google.script.run
+      .withSuccessHandler(function() {
+        document.getElementById('save-status').innerHTML =
+          '<div class="status success">Step 1 output saved to sheet successfully.</div>';
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('save-status').innerHTML =
+          '<div class="status error">Save failed: ' + err.message + '</div>';
+      })
+      .saveStep1Output(postData.postId, output);
+  }
+
+</script>
+</body>
+</html>

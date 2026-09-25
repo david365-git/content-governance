@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: sans-serif; padding: 15px; background-color: #f1f3f4; }
+      label { font-weight: bold; font-size: 13px; color: #5f6368; }
+      textarea { 
+        width: 100%; height: 250px; margin-top: 10px; padding: 8px;
+        font-family: monospace; font-size: 11px; border: 1px solid #dadce0;
+        box-sizing: border-box; resize: none;
+      }
+      button { 
+        width: 100%; margin-top: 15px; padding: 12px; 
+        background-color: #1a73e8; color: white; border: none;
+        border-radius: 4px; font-weight: bold; cursor: pointer;
+      }
+      button:active { background-color: #174ea6; }
+      .hint { font-size: 11px; color: #70757a; margin-top: 10px; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <label>Data to copy:</label>
+    <textarea id="output"><?= textToCopy ?></textarea>
+    
+    <button onclick="copyData()">COPY TO CLIPBOARD</button>
+    <div class="hint">Click copy and this sidebar will close automatically.</div>
+
+    <script>
+      function copyData() {
+        const copyText = document.getElementById("output");
+        
+        // Method 1: Modern Clipboard API
+        navigator.clipboard.writeText(copyText.value).then(() => {
+          google.script.host.close();
+        }).catch(err => {
+          // Method 2: Fallback
+          copyText.select();
+          document.execCommand("copy");
+          google.script.host.close();
+        });
+      }
+    </script>
+  </body>
+</html>

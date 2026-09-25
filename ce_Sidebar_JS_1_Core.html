@@ -1,0 +1,891 @@
+<script>
+
+  /* ══════════════════════════════════════════════════════════════
+     ce_Sidebar_JS_1_Core.html
+     Shared variables and utility functions.
+     Must be loaded FIRST — all other JS files depend on these.
+  ══════════════════════════════════════════════════════════════ */
+
+  var selectedAngleCode = "";
+  var selectedAngleStmt = "";
+
+  var ANGLE_DEFINITIONS = {
+    "WHY":     { label: "Material Explanation",   readerQ: "Why is this happening to my floor?",               template: "explains why [PROBLEM] occurs at material level, so you understand what you are actually dealing with" },
+    "ID":      { label: "Diagnosis",              readerQ: "Which specific condition do I have?",               template: "helps you identify which specific condition is causing [PROBLEM], so you choose the right solution" },
+    "FIX":     { label: "Method / Process",       readerQ: "How is this professionally corrected?",             template: "explains how [PROBLEM] is professionally corrected, stage by stage" },
+    "PREVENT": { label: "Maintenance",            readerQ: "How do I stop this happening again?",               template: "explains how to prevent [PROBLEM] recurring through correct ongoing maintenance" },
+    "CHOOSE":  { label: "Contractor Selection",   readerQ: "Who should I hire and how do I evaluate them?",     template: "helps you find and evaluate the right specialist to correct [PROBLEM]" },
+    "LOCAL":   { label: "Geo Service",            readerQ: "Can someone fix this near me?",                     template: "offers professional correction of [PROBLEM] for homeowners in [LOCALITY]" },
+    "PROVE":   { label: "Case Study / Proof",     readerQ: "Has this actually been fixed for someone like me?", template: "shows how [PROBLEM] was corrected on a real floor, with before and after evidence" },
+    "DECIDE":  { label: "Value / Comparison",     readerQ: "Is professional intervention worth it?",            template: "helps you decide whether professional intervention is the right choice for [PROBLEM]" }
+  };
+
+  function setStatus(id, state, msg, showSpinner) {
+    const el = document.getElementById(id);
+    el.className = 'status-bar ' + state;
+    el.innerHTML = showSpinner ? '<span class="spinner"></span>' + msg : msg;
+  }
+  function setGenerating(statusId, btnId, label) {
+    setStatus(statusId, 'running', 'Generating ' + label + '…', true);
+    const btn = document.getElementById(btnId);
+    if (btn) { btn.disabled = true; btn.innerText = 'Generating…'; }
+  }
+  function setDone(statusId, btnId, origLabel, msg, confirmBtnId) {
+    setStatus(statusId, 'done', '✔ ' + msg);
+    const btn = document.getElementById(btnId);
+    if (btn) { btn.disabled = false; btn.innerText = origLabel; }
+    if (confirmBtnId) {
+      const cb = document.getElementById(confirmBtnId);
+      if (cb) { cb.disabled = false; cb.classList.add('active'); }
+    }
+  }
+  function setFail(statusId, btnId, origLabel, errMsg) {
+    setStatus(statusId, 'fail', '❌ ' + errMsg);
+    const btn = document.getElementById(btnId);
+    if (btn) { btn.disabled = false; btn.innerText = origLabel; }
+  }
+
+  function markConfirmed(confirmBtnId, pipId, statusId, msg) {
+    const cb = document.getElementById(confirmBtnId);
+    if (!cb || cb.disabled) return;
+    cb.disabled = true;
+    cb.classList.remove('active');
+    cb.innerText = '✔ Sent';
+    setStatus(statusId, 'confirmed', '✔ ' + msg);
+    const pip = document.getElementById(pipId);
+    if (pip) pip.classList.add('confirmed');
+  }
+
+  function copyText(id, statusId, msg) {
+    const val = document.getElementById(id).value;
+    if (!val.trim()) { alert('Nothing to copy — generate first.'); return; }
+    navigator.clipboard.writeText(val).then(function() {
+      const el = document.getElementById(statusId);
+      if (el && !el.classList.contains('confirmed')) {
+        setStatus(statusId, 'ready', '✔ ' + msg + ' — paste into ChatGPT, then press Pasted to LLM');
+      }
+    });
+  }
+
+  function clearAndFocus(textareaId, saveButtonId, statusId, msg) {
+    const textarea = document.getElementById(textareaId);
+    const saveBtn  = document.getElementById(saveButtonId);
+    if (!textarea) return;
+    textarea.value = '';
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText()
+        .then(text => {
+          textarea.value = text;
+          textarea.dispatchEvent(new Event('input'));
+          setStatus(statusId, 'ready', '✔ Pasted from clipboard! Check content and click Save.');
+        })
+        .catch(err => {
+          textarea.focus();
+          setStatus(statusId, 'ready', '✔ ' + msg);
+        });
+    } else {
+      textarea.focus();
+      setStatus(statusId, 'ready', '✔ ' + msg);
+    }
+    if (saveBtn) saveBtn.disabled = true;
+  }
+
+  function sanitisePastedText(text) {
+    text = text.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, function(m, inner) { return inner.trim(); });
+    var prev;
+    do { prev = text; text = text.replace(/\]\(https?:\/\/[^)]+\)/g, ''); } while (text !== prev);
+    try {
+      text = decodeURIComponent(text.replace(/%2B/g, '__PLUS__').replace(/\+/g, '%20')).replace(/__PLUS__/g, '+');
+    } catch(e) {
+      text = text.replace(/%22/g,'"').replace(/%3A/g,':').replace(/%2F/g,'/')
+                 .replace(/%7B/g,'{').replace(/%7D/g,'}').replace(/%5B/g,'[')
+                 .replace(/%5D/g,']').replace(/%2C/g,',').replace(/%20/g,' ');
+    }
+    text = text.replace(/application\/ld\s+json/gi, 'application/ld+json');
+    text = text.replace(/\[("?https?:\/\/[^\]"]*"?)\]/g, '$1');
+    text = text.replace(/\[(https?:\/\/)/g, '$1');
+    var trimmed = text.trim();
+    if (trimmed.charAt(0) === '{' || trimmed.charAt(0) === '[') {
+      text = text.replace(/(\r\n|\n|\r)\s*/g, ' ').trim();
+    }
+    return text;
+  }
+
+  var _currentWindow = 0;
+  var _totalWindows  = 23;
+  var _windowNames   = [
+    'AC — Article Classification','W-1 — Authority Brief','W0 — Forensic Analysis','W0B — Location Context',
+    'W1A — Data Loading','W1B — Structural Rules','W1C — Paragraph Rules',
+    'W1D — Output Quality','W1.5A — Audit','W1.5B — Section Plan',
+    'W2A — Pre-Write','W2B — Execute','W3 — Humanisation',
+    'W4B — Image Alt & Caption','W4 — Final HTML','W5 — H1 + Meta',
+    'W5C — Schema Builder','W5B — Schema Audit','W6 — WordPress Export + Publication Log','V2 — Video Generator','V3 — Thumbnail & YouTube','V4 — Video Embed'
+  ];
+  var _windowNameMap = {
+    'run-analysis': 'W7 — Run Analysis',
+    '8gov': 'W1.5B.1 — H2 Heading Governance',
+    '8a':  'W1.5C — Enrichment',
+    '8b':  'W1.5D — Lateral Links',
+    '8c':  'W1.5E — Google Optimization',
+    '10b': 'W2C — Image Suggestion',
+    '10c': 'W3 — Humanisation',
+    'vm':  'V1 — Video Manager',
+    'fi':  'FI — Featured Image',
+    17:    'V2 — Video Generator',
+    18:    'V3 — Thumbnail & YouTube',
+    19:    'V4 — Video Embed',
+    'w8e': 'W8E — Authority & CTR Analysis',
+    'w8es': 'W8E — Suggestions',
+    '10sim': 'W2B.1 — Similarity Check',
+    '10compliance': 'W2B.2 — Rewrite Brief Compliance',
+    '10fact': 'W2B.05 — Fact Check vs Source',
+    '10coherence': 'W2B.3 — Coherence & Depth Check'
+  };
+
+  function _getWindowName(idx) {
+    if (_windowNameMap[idx]) return _windowNameMap[idx];
+    return _windowNames[idx] || '';
+  }
+  var _w0bWindowIdx = 2;
+  var _isGeoPage    = false;
+
+  function navGoTo(idx) {
+    var cur    = document.getElementById('window-' + _currentWindow);
+    if (cur) cur.style.display = 'none';
+    var curBtn = document.getElementById('navbtn-' + _currentWindow);
+    if (curBtn) { curBtn.style.background = '#37474f'; curBtn.style.color = '#90a4ae'; }
+    _currentWindow = idx;
+    var next   = document.getElementById('window-' + _currentWindow);
+    if (next) next.style.display = 'block';
+    var nextBtn = document.getElementById('navbtn-' + _currentWindow);
+    if (nextBtn) { nextBtn.style.background = '#1565c0'; nextBtn.style.color = '#fff'; }
+    var label = document.getElementById('windowNavLabel');
+    if (label) label.textContent = _getWindowName(_currentWindow);
+
+    /* ── GOVERNANCE CHAIN AUTOMATION ──
+       Central dispatcher: when arrival at a specific window id should
+       trigger an automatic action, add it here. Kept in one place so the
+       whole chain can be audited/adjusted link-by-link without hunting
+       through multiple files. */
+    _runAutoChainOnArrival(idx);
+  }
+
+  function _runAutoChainOnArrival(idx) {
+    // idx 3 = W1A — auto-save-and-chain is intentionally NOT triggered on
+    // arrival, since other stages may need to open W1A independently
+    // without kicking off the whole governance chain. Use the "Save
+    // W1A–W1D to Sheet" button manually to start the chain when needed.
+
+    // idx '8gov' = W1.5B.1 — auto-run the Governance Check Prompt the
+    // moment this window opens.
+    if (idx === '8gov') {
+      if (typeof runH2GovernanceCheck === 'function') runH2GovernanceCheck();
+    }
+
+    // idx '8a' = W1.5C — auto-run its Generate Prompt the moment this
+    // window opens.
+    if (idx === '8a') {
+      if (typeof runStage15C === 'function') runStage15C();
+    }
+
+    // idx 'ac' = Article Classification — auto-load AC dropdowns and
+    // Article Angle the moment this window opens, so everything is
+    // populated immediately without needing a button click first.
+    if (idx === 'ac') {
+      if (typeof window.acLoadDropdowns === 'function') window.acLoadDropdowns();
+      if (typeof window.loadArticleAngle === 'function') window.loadArticleAngle();
+    }
+  }
+
+  function navNext() {
+    var next = _currentWindow + 1;
+    if (next >= _totalWindows) next = 0;
+    if (next === _w0bWindowIdx) {
+      var w0b = document.getElementById('window-' + _w0bWindowIdx);
+      if (w0b && w0b.getAttribute('data-geo-only') === 'true' && !_isGeoPage) { next++; }
+    }
+    navGoTo(next);
+  }
+
+  function navPrev() {
+    var prev = _currentWindow - 1;
+    if (prev < 0) prev = _totalWindows - 1;
+    navGoTo(prev);
+  }
+
+  function toggleW0BVisibility(articleType) {
+    _isGeoPage = (articleType === 'Geo Service Page' || articleType === 'Case Study');
+    var navBtn = document.getElementById('navbtn-2');
+    if (navBtn) {
+      navBtn.style.opacity = _isGeoPage ? '1' : '0.3';
+      navBtn.title = _isGeoPage ? 'W0B — Location Context' : 'W0B — Geo pages only';
+    }
+  }
+
+  ['part15a_output','part15b_output','part15c_output','part15d_output','part15e_output'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', function() {
+      var saveId  = id.replace('_output','').replace('part','save') + 'btn';
+      var saveBtn = document.getElementById(saveId);
+      if (saveBtn && el.value.trim().length > 100) saveBtn.disabled = false;
+    });
+  });
+
+  var w3OutputHtml = document.getElementById('w3OutputHtml');
+  if (w3OutputHtml) {
+    function enableW3SaveBtn() {
+      var saveBtn = document.getElementById('w3SaveBtn');
+      if (saveBtn && w3OutputHtml.value.trim().length > 100) saveBtn.disabled = false;
+    }
+    w3OutputHtml.addEventListener('input', enableW3SaveBtn);
+    w3OutputHtml.addEventListener('paste', function() { setTimeout(enableW3SaveBtn, 50); });
+  }
+
+  ['stage0PushInput','stage2html','govPasteBlock','w5bPasteArea'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('paste', function(e) {
+      e.preventDefault();
+      var text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      text = sanitisePastedText(text);
+      var start = el.selectionStart, end = el.selectionEnd, current = el.value;
+      el.value = current.substring(0, start) + text + current.substring(end);
+      el.selectionStart = el.selectionEnd = start + text.length;
+      el.dispatchEvent(new Event('input'));
+    });
+  });
+
+  function clearAndPaste(id) {
+    var el = document.getElementById(id);
+    el.value = '';
+    navigator.clipboard.readText().then(function(text) {
+      el.value = sanitisePastedText(text);
+      el.focus();
+      el.dispatchEvent(new Event('input'));
+    }).catch(function() {
+      el.focus();
+      document.execCommand('paste');
+    });
+  }
+
+  var _runModeMode = null;
+
+  function initRunMode() {
+    var banner = document.getElementById('run-mode-banner');
+    if (!banner) return;
+    banner.innerHTML =
+      '<span style="margin-right:8px;">Select run type:</span>' +
+      '<button onclick="setMode(\'PRODUCTION\')" style="margin-right:4px;padding:4px 10px;background:#1a73e8;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Production</button>' +
+      '<button onclick="setMode(\'TEST\')" style="padding:4px 10px;background:#c5221f;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Test</button>';
+    banner.style.backgroundColor = '#e8f0fe';
+    banner.style.color = '#1a3a6b';
+  }
+
+  window.setMode = function(selectedMode) {
+    _runModeMode = selectedMode;
+    window._runMode = _runModeMode;
+
+    if (_runModeMode === 'TEST') {
+      window._pipeline = 'Test';
+      setBanner('TEST RUN — posts sheet writes active — post_progress will not be updated', '#c5221f', 'white');
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        window._postStage = data.stage;
+        window._postProgressExists = data.exists;
+        window._pipeline = (data.stage <= 1) ? '1' : '2';
+        setBanner(data.label, data.bgColor, data.textColor);
+      })
+      .withFailureHandler(function(e) {
+        window._pipeline = 'Unknown';
+        setBanner('PRODUCTION — could not read stage: ' + e.message, '#e37400', 'white');
+      })
+      .bc_getPostProgressStatus();
+  };
+
+  function setBanner(label, bg, text) {
+    var el = document.getElementById('run-mode-banner');
+    if (!el) return;
+    el.textContent = label;
+    el.style.backgroundColor = bg;
+    el.style.color = text;
+  }
+
+  function rePasteAndReaudit() {
+    var ta = document.getElementById('finalHtmlPreview');
+    ta.value = '';
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText()
+        .then(function(text) {
+          ta.value = text;
+          setStatus('statusFinal', 'running', 'Re-pasted — running audit...', true);
+          auditThenPushHTML();
+        })
+        .catch(function() {
+          ta.focus();
+          setStatus('statusFinal', 'ready', 'Clipboard access denied — paste manually then click Audit + Push.');
+        });
+    } else {
+      ta.focus();
+      setStatus('statusFinal', 'ready', 'Paste the corrected HTML then click Audit + Push.');
+    }
+  }
+
+  window.addEventListener('load', function() {
+    setTimeout(initRunMode, 100);
+    recordRowOnOpen();
+  });
+
+  window._rowMismatchAlerted = false;
+  window._rowCheckInFlight = false;
+
+  window.recordRowOnOpen = function() {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res.success) {
+          document.getElementById('row-on-open').textContent = res.row;
+          document.getElementById('row-current').textContent = res.row;
+          document.getElementById('row-on-open-title').textContent = res.title || '';
+        } else {
+          document.getElementById('row-on-open').textContent = 'error';
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('row-on-open').textContent = 'error: ' + err.message;
+      })
+      .bc_getActiveRowNumberAndTitle();
+  };
+
+  window.checkCurrentRow = function() {
+    if (window._rowCheckInFlight) return;
+    window._rowCheckInFlight = true;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        window._rowCheckInFlight = false;
+        if (res.success) {
+          document.getElementById('row-current').textContent = res.row;
+          const openRow = document.getElementById('row-on-open').textContent;
+          var rowCurrentEl = document.getElementById('row-current');
+          if (openRow !== '—' && String(res.row) !== String(openRow)) {
+            rowCurrentEl.style.color = '#c62828';
+            rowCurrentEl.style.background = '#fce8e6';
+          } else {
+            rowCurrentEl.style.color = '';
+            rowCurrentEl.style.background = '';
+          }
+        } else {
+          document.getElementById('row-current').textContent = 'error';
+        }
+      })
+      .withFailureHandler(function(err) {
+        window._rowCheckInFlight = false;
+        document.getElementById('row-current').textContent = 'error: ' + err.message;
+      })
+      .bc_getActiveRowNumber();
+  };
+
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+      var banner = document.getElementById('run-mode-banner');
+      if (banner && banner.textContent === 'Checking run mode...') {
+        initRunMode();
+      }
+    }, 500);
+  });
+  window.buildClassificationPromptForSidebar = function() {
+    setStatus('classification-status', 'running', 'Building classification prompt...', true);
+    google.script.run
+      .withSuccessHandler(function(prompt) {
+        if (!prompt) {
+          setStatus('classification-status', 'error', 'Failed to build prompt. Check Post ID and site-export sheet.');
+          return;
+        }
+        document.getElementById('classificationPromptOutput').value = prompt;
+        setStatus('classification-status', 'done', 'Prompt ready. Copy and paste into LLM.');
+      })
+      .withFailureHandler(function(error) {
+        setStatus('classification-status', 'error', 'Failed: ' + error.message);
+      })
+      .buildClassificationPromptForSheet();
+  };
+
+  window.copyClassificationPrompt = function() {
+    var ta = document.getElementById('classificationPromptOutput');
+    if (!ta.value.trim()) { alert('No prompt to copy. Build the prompt first.'); return; }
+    navigator.clipboard.writeText(ta.value).then(function() {
+      setStatus('classification-status', 'done', 'Prompt copied. Paste into LLM and copy the response back.');
+    });
+  };
+
+  window.pasteClassificationResponse = function() {
+    var ta = document.getElementById('classificationResponseInput');
+    ta.value = '';
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText()
+        .then(function(text) {
+          ta.value = text;
+          setStatus('classification-save-status', 'done', 'Response pasted. Click Save Classification to Sheet.');
+        })
+        .catch(function() {
+          ta.focus();
+          setStatus('classification-save-status', 'ready', 'Clipboard access denied — paste manually then click Save.');
+        });
+    } else {
+      ta.focus();
+      setStatus('classification-save-status', 'ready', 'Paste the response manually then click Save.');
+    }
+  };
+
+  var _pendingClassification = null;
+
+  window.saveClassificationResponse = function() {
+    var response = document.getElementById('classificationResponseInput').value.trim();
+    if (!response) { alert('No response to save. Paste the LLM response first.'); return; }
+    setStatus('classification-save-status', 'running', 'Checking for duplicates...', true);
+    document.getElementById('duplication-warning').style.display = 'none';
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (!result || !result.success) {
+          setStatus('classification-save-status', 'fail', 'Save failed: ' + (result ? result.message : 'Unknown error'));
+          return;
+        }
+        if (result.isDuplicate) {
+          _pendingClassification = result;
+          setStatus('classification-save-status', 'fail', '⚠ ' + result.message + ' Review nudge options below.');
+          showDuplicationWarning(result);
+        } else {
+          setStatus('classification-save-status', 'done', '✔ ' + result.message);
+          document.getElementById('classificationResponseInput').value = '';
+          document.getElementById('duplication-warning').style.display = 'none';
+        }
+      })
+      .withFailureHandler(function(error) {
+        setStatus('classification-save-status', 'fail', 'Save failed: ' + error.message);
+      })
+      .saveClassificationResponseToSheet(response);
+  };
+
+  window.showDuplicationWarning = function(result) {
+    var warning = document.getElementById('duplication-warning');
+    var detail = document.getElementById('duplication-detail');
+    var axisLabel = document.getElementById('nudge-axis-label');
+    var nudgeOptions = document.getElementById('nudge-options');
+
+    var detailText = '';
+    result.nearDuplicates.forEach(function(dup) {
+      detailText += 'Row ' + dup.rowNum + ' matches ' + dup.matchCount + ' of 7 axes: ';
+      detailText += dup.matchedAxes.map(function(a) { return a.replace(/_/g, ' '); }).join(', ') + '\n';
+    });
+    detail.textContent = detailText;
+
+    var axisName = result.axisToNudge ? result.axisToNudge.replace(/_/g, ' ').toUpperCase() : '';
+    axisLabel.textContent = 'Suggested nudge axis: ' + axisName;
+
+    nudgeOptions.innerHTML = '';
+    if (result.axisToNudge && result.axisValues && result.axisValues[result.axisToNudge]) {
+      result.axisValues[result.axisToNudge].forEach(function(val) {
+        var btn = document.createElement('button');
+        btn.textContent = val;
+        btn.style.cssText = 'display:block;width:100%;text-align:left;padding:4px 8px;margin-bottom:3px;' +
+          'font-family:JetBrains Mono,monospace;font-size:11px;cursor:pointer;border:none;border-radius:3px;';
+        var isCurrent = result.currentValues && result.currentValues[result.axisToNudge] === val;
+        var isSuggested = val === result.nudgeSuggestion;
+        if (isSuggested) {
+          btn.style.background = '#1565c0';
+          btn.style.color = '#fff';
+          btn.style.fontWeight = '700';
+          btn.textContent = '★ ' + val + ' (suggested)';
+        } else if (isCurrent) {
+          btn.style.background = '#e65100';
+          btn.style.color = '#fff';
+          btn.textContent = '● ' + val + ' (current)';
+        } else {
+          btn.style.background = '#eceff1';
+          btn.style.color = '#333';
+        }
+        btn.onclick = (function(v) {
+          return function() {
+            if (_pendingClassification) {
+              _pendingClassification.selectedNudgeValue = v;
+            }
+            Array.from(nudgeOptions.querySelectorAll('button')).forEach(function(b) {
+              b.style.outline = 'none';
+            });
+            btn.style.outline = '2px solid #1565c0';
+          };
+        })(val);
+        nudgeOptions.appendChild(btn);
+      });
+    }
+    warning.style.display = 'block';
+  };
+
+  window.acceptNudge = function() {
+    if (!_pendingClassification) return;
+    var nudgedValues = Object.assign({}, _pendingClassification.currentValues);
+    var selectedValue = _pendingClassification.selectedNudgeValue || _pendingClassification.nudgeSuggestion;
+    if (_pendingClassification.axisToNudge && selectedValue) {
+      nudgedValues[_pendingClassification.axisToNudge] = selectedValue;
+    }
+    setStatus('classification-save-status', 'running', 'Saving with nudge...', true);
+    google.script.run
+      .withSuccessHandler(function(result) {
+        setStatus('classification-save-status', 'done', '✔ Classification saved with nudge applied.');
+        document.getElementById('classificationResponseInput').value = '';
+        document.getElementById('duplication-warning').style.display = 'none';
+        _pendingClassification = null;
+      })
+      .withFailureHandler(function(error) {
+        setStatus('classification-save-status', 'fail', 'Save failed: ' + error.message);
+      })
+      .saveClassificationWithNudge(nudgedValues);
+  };
+
+  window.saveAnyway = function() {
+    if (!_pendingClassification) return;
+    setStatus('classification-save-status', 'running', 'Saving original values...', true);
+    google.script.run
+      .withSuccessHandler(function(result) {
+        setStatus('classification-save-status', 'done', '✔ Classification saved with original values.');
+        document.getElementById('classificationResponseInput').value = '';
+        document.getElementById('duplication-warning').style.display = 'none';
+        _pendingClassification = null;
+      })
+      .withFailureHandler(function(error) {
+        setStatus('classification-save-status', 'fail', 'Save failed: ' + error.message);
+      })
+      .saveClassificationWithNudge(_pendingClassification.currentValues);
+  };
+
+  // ══ AC DROPDOWN SYSTEM ══
+
+  window._acLibraryValues = null;
+
+  var _acAxisMap = [
+    { libraryKey: 'ac_what_they_found',              sheetCol: 'ac_entry_condition',       selectId: 'ac-select-0' },
+    { libraryKey: 'ac_why_they_called',              sheetCol: 'ac_homeowner_perception',  selectId: 'ac-select-1' },
+    { libraryKey: 'ac_what_the_floor_was_doing',     sheetCol: 'ac_material_behaviour',    selectId: 'ac-select-2' },
+    { libraryKey: 'ac_what_forced_careful_decisions',sheetCol: 'ac_constraint',            selectId: 'ac-select-3' },
+    { libraryKey: 'ac_what_governed_the_approach',   sheetCol: 'ac_process_emphasis',      selectId: 'ac-select-4' },
+    { libraryKey: 'ac_what_changed_for_the_homeowner',sheetCol: 'ac_result_type',          selectId: 'ac-select-5' },
+    { libraryKey: 'ac_story_direction',              sheetCol: 'ac_narrative_archetype',   selectId: 'ac-select-6' }
+  ];
+
+  var _hubPageDefaults = {
+    'ac_what_they_found':               'Floor has lost its original appearance and is no longer responding to normal cleaning',
+    'ac_why_they_called':               'They want the floor to look right again and need a professional to tell them what is possible',
+    'ac_what_the_floor_was_doing':      'Original surface finish lost to ingrained soil making the floor dull and difficult to clean',
+    'ac_what_forced_careful_decisions': 'Every floor needs individual assessment covering current condition, traffic history, maintenance routine and realistic restoration outcomes before any approach can be recommended',
+    'ac_what_governed_the_approach':    'Professional assessment and experience — every floor is different and the proposed approach and expected outcomes are based on what that specific floor needs',
+    'ac_what_changed_for_the_homeowner':'Homeowner trusts the professional judgement and has a clear proposed outcome for their specific floor',
+    'ac_story_direction':               'Authority — comprehensive material knowledge organised for the homeowner'
+  };
+
+  window._acCurrentStatusId = window._acCurrentStatusId || 0;
+
+window.acLoadDropdowns = function() {
+  var operationId = ++window._acCurrentStatusId;
+  var statusEl = document.getElementById('ac-status');
+  statusEl.textContent = 'Loading values…';
+  statusEl.className = 'status-bar pending';
+
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (operationId !== window._acCurrentStatusId) return;
+        if (!result || !result.success) {
+          statusEl.textContent = 'Error: ' + (result ? result.message : 'Unknown error');
+          statusEl.className = 'status-bar fail';
+          return;
+        }
+        window._acLibraryValues = result.values;
+        var isHubPage = (result.articleType === 'Hub Page');
+
+        // Check for existing saved values and load them if present
+        var existingEl = document.getElementById('ac-existing-values');
+        var hasExisting = false;
+        _acAxisMap.forEach(function(axis) {
+          if (result[axis.sheetCol] && String(result[axis.sheetCol]).trim()) hasExisting = true;
+        });
+        if (hasExisting && existingEl) {
+          existingEl.style.display = 'block';
+          existingEl.textContent = '✔ Existing values found for this row — loaded into dropdowns. Change any axis then Check & Save.';
+        } else if (existingEl) {
+          existingEl.style.display = 'none';
+        }
+
+        _acAxisMap.forEach(function(axis) {
+        var select = document.getElementById(axis.selectId);
+        select.innerHTML = '';
+        var values = result.values[axis.libraryKey] || [];
+        values.forEach(function(val) {
+          var opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = val;
+          select.appendChild(opt);
+        });
+
+        // Update label if translation exists
+        var translatedLabel = result.labels && result.labels[axis.libraryKey];
+        if (translatedLabel) {
+          var labelEl = select.previousElementSibling;
+          if (labelEl && labelEl.tagName === 'LABEL') {
+            labelEl.textContent = translatedLabel;
+          }
+        }
+
+          if (isHubPage && result.hubDefaults && result.hubDefaults[axis.libraryKey]) {
+          var defaultVal = result.hubDefaults[axis.libraryKey];
+          var defaultIdx = values.indexOf(defaultVal);
+          if (defaultIdx > -1) {
+            select.selectedIndex = defaultIdx;
+          } else if (values.length > 0) {
+            select.selectedIndex = 0;
+          }
+        } else if (result[axis.sheetCol] && String(result[axis.sheetCol]).trim()) {
+            var existingVal = String(result[axis.sheetCol]).trim();
+            var existingIdx = values.indexOf(existingVal);
+            select.selectedIndex = existingIdx > -1 ? existingIdx : 0;
+          } else if (values.length > 0) {
+            var randomIndex = Math.floor(Math.random() * values.length);
+            select.selectedIndex = randomIndex;
+          }
+          select.style.border = '';
+          select.style.background = '';
+        });
+
+        document.getElementById('ac-dropdowns').style.display = 'block';
+        document.getElementById('ac-duplication-warning').style.display = 'none';
+        document.getElementById('ac-save-status').style.display = 'none';
+
+        if (isHubPage) {
+          statusEl.textContent = 'Hub Page detected — defaults pre-selected for ' + result.material + ', ' + result.articleType + '. Adjust if needed then Check & Save';
+        } else {
+          statusEl.textContent = 'Values loaded for ' + result.material + ', ' + result.articleType + ' — adjust dropdowns then Check & Save';
+        }
+        statusEl.className = 'status-bar pass';
+      })
+      .withFailureHandler(function(err) {
+      if (operationId !== window._acCurrentStatusId) return;
+      statusEl.textContent = 'Load failed: ' + err.message;
+      statusEl.className = 'status-bar fail';
+    })
+      .getAcValuesForActiveRow();
+  };
+
+  window.acRandomiseAll = function() {
+    if (!window._acLibraryValues) return;
+    _acAxisMap.forEach(function(axis) {
+      var select = document.getElementById(axis.selectId);
+      var values = window._acLibraryValues[axis.libraryKey] || [];
+      if (values.length > 0) {
+        select.selectedIndex = Math.floor(Math.random() * values.length);
+      }
+      select.style.border = '';
+      select.style.background = '';
+    });
+    document.getElementById('ac-duplication-warning').style.display = 'none';
+    document.getElementById('ac-save-status').style.display = 'none';
+  };
+
+  window.acCheckAndSave = function() {
+    var statusEl = document.getElementById('ac-save-status');
+    statusEl.style.display = 'block';
+    statusEl.textContent = 'Checking for duplicates…';
+    statusEl.className = 'status-bar pending';
+
+    var selected = {};
+    _acAxisMap.forEach(function(axis) {
+      var select = document.getElementById(axis.selectId);
+      selected[axis.sheetCol] = select ? select.value : '';
+    });
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.isDuplicate) {
+          var warningDiv = document.getElementById('ac-duplication-warning');
+          warningDiv.style.display = 'block';
+          document.getElementById('ac-duplication-detail').textContent =
+            'Matches ' + result.matchCount + ' of 7 axes with row ' + result.matchedRow + '. Highlighted dropdowns are the matching axes.';
+
+          var dupValuesArray = _acAxisMap.map(function(axis) {
+            return result.dupRowValues ? (result.dupRowValues[axis.sheetCol] || '—') : '—';
+          });
+          var matchedIndices = _acAxisMap.map(function(axis, idx) {
+            return (result.matchingCols && result.matchingCols.indexOf(axis.sheetCol) > -1) ? idx : -1;
+          }).filter(function(idx) { return idx > -1; });
+
+          warningDiv.setAttribute('data-dup-values', JSON.stringify(dupValuesArray));
+          warningDiv.setAttribute('data-matched-axes', JSON.stringify(matchedIndices));
+          warningDiv.setAttribute('data-dup-row', result.matchedRow || '?');
+
+          _acAxisMap.forEach(function(axis) {
+            var select = document.getElementById(axis.selectId);
+            if (result.matchingCols && result.matchingCols.indexOf(axis.sheetCol) > -1) {
+              select.style.border = '2px solid #e65100';
+              select.style.background = '#fff3e0';
+            } else {
+              select.style.border = '';
+              select.style.background = '';
+            }
+          });
+
+          statusEl.textContent = 'Near-duplicate found — change highlighted axes or save anyway';
+          statusEl.className = 'status-bar fail';
+        } else {
+          window._acPendingSave = selected;
+          window.acCommitSave(selected);
+        }
+      })
+      .withFailureHandler(function(err) {
+        statusEl.textContent = 'Check failed: ' + err.message;
+        statusEl.className = 'status-bar fail';
+      })
+      .checkAcDuplication(selected);
+  };
+
+  window.acSaveAnyway = function() {
+    var selected = {};
+    _acAxisMap.forEach(function(axis) {
+      var select = document.getElementById(axis.selectId);
+      selected[axis.sheetCol] = select ? select.value : '';
+    });
+    window.acCommitSave(selected);
+  };
+
+  window.acCommitSave = function(selected) {
+    var statusEl = document.getElementById('ac-save-status');
+    statusEl.style.display = 'block';
+    statusEl.textContent = 'Saving…';
+    statusEl.className = 'status-bar pending';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('ac-duplication-warning').style.display = 'none';
+        _acAxisMap.forEach(function(axis) {
+          var select = document.getElementById(axis.selectId);
+          select.style.border = '';
+          select.style.background = '';
+        });
+        if (result && result.success) {
+          statusEl.textContent = 'Saved to sheet';
+          statusEl.className = 'status-bar pass';
+        } else {
+          statusEl.textContent = 'Save failed: ' + (result ? result.message : 'Unknown error');
+          statusEl.className = 'status-bar fail';
+        }
+      })
+      .withFailureHandler(function(err) {
+        statusEl.textContent = 'Save failed: ' + err.message;
+        statusEl.className = 'status-bar fail';
+      })
+      .saveAcValuesToSheet(selected);
+  };
+
+  // ══ FEATURED IMAGE SYSTEM ══
+
+  window.fiGenerate = function() {
+    var statusEl = document.getElementById('fi-status');
+    var customMiddleTitle = document.getElementById('fi-middle-title').value.trim();
+    statusEl.textContent = 'Generating image prompt…';
+    statusEl.className = 'status-bar pending';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (!result || !result.success) {
+          statusEl.textContent = 'Error: ' + (result ? result.message : 'Unknown error');
+          statusEl.className = 'status-bar fail';
+          return;
+        }
+        var finalTitle = customMiddleTitle || result.middleTitle || '';
+      var finalPrompt = result.prompt.replace(
+        /Middle title \(elegant dark serif\): .+/,
+        'Middle title (elegant dark serif): ' + finalTitle
+      );
+      document.getElementById('fi-prompt').value   = finalPrompt;
+      document.getElementById('fi-filename').value = result.filename;
+      document.getElementById('fi-alttext').value  = result.altText;
+      if (!customMiddleTitle && result.middleTitle) {
+        document.getElementById('fi-middle-title').value = result.middleTitle;
+      }
+        document.getElementById('fi-output-block').style.display = 'block';
+        document.getElementById('fi-save-status').style.display  = 'none';
+        statusEl.textContent = 'Prompt ready — copy and paste into ChatGPT';
+        statusEl.className = 'status-bar pass';
+      })
+      .withFailureHandler(function(err) {
+        statusEl.textContent = 'Failed: ' + err.message;
+        statusEl.className = 'status-bar fail';
+      })
+      .buildFeaturedImagePrompt();
+  };
+
+  window.fiSaveToSheet = function() {
+    var url      = document.getElementById('fi-url').value.trim();
+    var filename = document.getElementById('fi-filename').value.trim();
+    var altText  = document.getElementById('fi-alttext').value.trim();
+    var statusEl = document.getElementById('fi-save-status');
+
+    if (!url) {
+      statusEl.style.display = 'block';
+      statusEl.textContent = 'Paste the WordPress image URL first';
+      statusEl.className = 'status-bar fail';
+      return;
+    }
+
+    statusEl.style.display = 'block';
+    statusEl.textContent = 'Saving…';
+    statusEl.className = 'status-bar pending';
+
+    var customMiddleTitle = document.getElementById('fi-middle-title').value.trim();
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.success) {
+          statusEl.textContent = 'Saved to sheet';
+          statusEl.className = 'status-bar pass';
+        } else {
+          statusEl.textContent = 'Save failed: ' + (result ? result.message : 'Unknown error');
+          statusEl.className = 'status-bar fail';
+        }
+      })
+      .withFailureHandler(function(err) {
+        statusEl.textContent = 'Save failed: ' + err.message;
+        statusEl.className = 'status-bar fail';
+      })
+      .saveFeaturedImageToSheet(url, filename, altText);
+  };
+
+  function copyField(fieldId, statusId, msg) {
+    var val = document.getElementById(fieldId).value;
+    if (!val.trim()) { alert('Nothing to copy.'); return; }
+    navigator.clipboard.writeText(val).then(function() {
+      var el = document.getElementById(statusId);
+      if (el) { el.textContent = '✔ ' + msg; el.className = 'status-bar pass'; }
+    });
+  }
+window.fiSuggestTitlePrompt = function() {
+  var statusEl = document.getElementById('fi-status');
+  statusEl.textContent = 'Building title prompt...';
+  statusEl.className = 'status-bar pending';
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.error) {
+        statusEl.textContent = result.error;
+        statusEl.className = 'status-bar error';
+        return;
+      }
+      document.getElementById('fi-title-prompt-text').value = result.prompt;
+      document.getElementById('fi-title-prompt-block').style.display = 'block';
+      statusEl.textContent = 'Prompt ready — copy and paste into ChatGPT, then paste your chosen title into the Middle Title field above.';
+      statusEl.className = 'status-bar success';
+    })
+    .withFailureHandler(function(err) {
+      statusEl.textContent = 'Error: ' + err.message;
+      statusEl.className = 'status-bar error';
+    })
+    .fiSuggestTitlePrompt();
+};
+</script>

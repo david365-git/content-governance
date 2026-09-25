@@ -1,0 +1,162 @@
+<div id="window-17" class="window-card" style="display:none; border-top:3px solid #1565c0">
+  <div class="window-title">W7 — Video Prompt</div>
+  <div class="window-body">
+    <button onclick="w7_generateDocName()" style="width:100%;padding:8px;background:#37474f;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer;margin-bottom:4px;">📋 Generate Doc Name</button>
+    <div id="w7DocName" style="display:none;margin-bottom:4px;padding:6px 8px;background:#eceff1;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:11px;word-break:break-all;"></div>
+    <div id="w7DocInstructions" style="display:none;margin-bottom:8px;padding:6px 8px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:10px;line-height:1.6;color:#1b5e20;">
+      <strong>TO CREATE THE NOTEBOOKLM SOURCE DOC:</strong><br>
+      1. <a href="https://docs.google.com/document/d/1XUzUUumf9ixmV24LYOSZi9BjlFMdmRFLmmo8_oOqXBg/edit" target="_blank" rel="noopener" style="color:#1565c0;">Open the _template doc</a><br>
+      2. Click <strong>File → Make a copy</strong><br>
+      3. Name the copy using the doc name above<br>
+      4. Save it to the <strong>NotebookLM Sources</strong> folder<br>
+      5. Then click <strong>Build NotebookLM Doc</strong> below to generate the content
+    </div>
+    <button onclick="w7_buildNotebookDoc()" style="width:100%;padding:8px;background:#00796b;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer;margin-bottom:8px;">📄 Build NotebookLM Doc</button>
+<div id="statusW7NB" class="status-box"></div>
+<div id="w7NbDocLink" style="display:none;margin-bottom:8px;font-family:JetBrains Mono,monospace;font-size:11px;">
+  <div style="margin-bottom:4px;font-weight:bold;color:#00796b;">📄 Copy into NotebookLM as Copied Text source:</div>
+  <textarea id="w7NbContent" style="width:100%;height:120px;font-family:JetBrains Mono,monospace;font-size:10px;border:1px solid #b2dfdb;border-radius:4px;padding:6px;" readonly></textarea>
+  <button onclick="w7_copyNbContent()" style="width:100%;padding:6px;background:#00796b;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:11px;font-weight:bold;cursor:pointer;margin-top:4px;">📋 Copy to Clipboard</button>
+</div>
+<hr style="border:none;border-top:1px solid #ddd;margin:8px 0">
+    <div style="margin-bottom:8px;">
+      <label style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:bold;color:#37474f;display:block;margin-bottom:4px;">VIDEO FORMAT</label>
+      <select id="w7FormatSelect" style="width:100%;padding:6px;font-family:JetBrains Mono,monospace;font-size:11px;border:1px solid #b0bec5;border-radius:4px;">
+        <option value="Brief">Brief — bite-sized overview (30–60 sec)</option>
+        <option value="Explainer">Explainer — structured comprehensive overview (3–5 min)</option>
+        <option value="Cinematic">Cinematic — immersive visual storytelling (5–10 min)</option>
+      </select>
+    </div>
+    <button onclick="w7_generatePrompt()" style="width:100%;padding:8px;background:#1565c0;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer">Generate Video Prompt</button>
+    <div id="statusW7" class="status-box"></div>
+    <div id="w7CharCount" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px;color:#555;display:none"></div>
+    <div id="w7PromptOutput" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px;background:#e3f2fd;padding:8px;border-radius:4px;white-space:pre-wrap;display:none"></div>
+    <button id="w7CopyBtn" onclick="w7_copyPrompt()" style="display:none;width:100%;padding:8px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer;margin-top:6px">Copy Prompt</button>
+    <hr style="border:none;border-top:1px solid #ddd;margin:12px 0">
+    <button onclick="w7_generateFilename()" style="width:100%;padding:8px;background:#6a1b9a;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer">Generate Video Filename</button>
+    <div id="statusW7FN" class="status-box"></div>
+    <div id="w7FilenameOutput" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:12px;background:#f3e5f5;padding:8px;border-radius:4px;white-space:pre-wrap;display:none"></div>
+    <button id="w7CopyFNBtn" onclick="w7_copyFilename()" style="display:none;width:100%;padding:8px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer;margin-top:6px">Copy Video Filename</button>
+  </div>
+</div>
+
+<script>
+function w7_generateFilename() {
+    setStatus('statusW7FN', 'running', 'Generating filename...', true);
+    google.script.run
+      .withSuccessHandler(function(msg) {
+        setStatus('statusW7FN', 'done', '✔ Filename ready.');
+        var box = document.getElementById('w7FilenameOutput');
+        box.style.display = 'block';
+        box.innerText = msg;
+        document.getElementById('w7CopyFNBtn').style.display = 'block';
+      })
+      .withFailureHandler(function(e) {
+        setStatus('statusW7FN', 'fail', '❌ ' + e.message);
+      })
+      .generateW7VideoFilename();
+  }
+
+  function w7_copyFilename() {
+    var text = document.getElementById('w7FilenameOutput').innerText;
+    if (!text) return;
+    navigator.clipboard.writeText(text)
+      .then(function() {
+        setStatus('statusW7FN', 'done', '✔ Copied — use when saving the video.');
+      })
+      .catch(function() {
+        var temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        setStatus('statusW7FN', 'done', '✔ Copied — use when saving the video.');
+      });
+  }
+
+  function w7_copyPrompt() {
+    var text = document.getElementById('w7PromptOutput').innerText;
+    if (!text) return;
+    navigator.clipboard.writeText(text)
+      .then(function() {
+        setStatus('statusW7', 'done', '✔ Copied — paste into NotebookLM.');
+      })
+      .catch(function() {
+        var temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        setStatus('statusW7', 'done', '✔ Copied — paste into NotebookLM.');
+      });
+  }
+  function w7_generatePrompt() {
+    setStatus('statusW7', 'running', 'Generating prompt...', true);
+    google.script.run
+      .withSuccessHandler(function(msg) {
+        setStatus('statusW7', 'done', msg);
+        var box = document.getElementById('w7PromptOutput');
+        box.style.display = 'block';
+        box.innerText = msg;
+        var charCount = document.getElementById('w7CharCount');
+        charCount.style.display = 'block';
+        charCount.innerText = msg.length + ' / 500 characters';
+        charCount.style.color = msg.length > 500 ? '#b71c1c' : '#1b5e20';
+        document.getElementById('w7CopyBtn').style.display = 'block';
+      })
+      .withFailureHandler(function(e) {
+        setStatus('statusW7', 'fail', '❌ ' + e.message);
+      })
+      .generateW7VideoPrompt(document.getElementById('w7FormatSelect').value);
+  }
+  function w7_buildNotebookDoc() {
+    setStatus('statusW7NB', 'running', 'Building NotebookLM content...', true);
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (!result.success) {
+          setStatus('statusW7NB', 'fail', '❌ ' + result.message);
+          return;
+        }
+        setStatus('statusW7NB', 'done', '✔ ' + result.message);
+        var wrap = document.getElementById('w7NbDocLink');
+        var ta   = document.getElementById('w7NbContent');
+        wrap.style.display = 'block';
+        ta.value = result.content;
+      })
+      .withFailureHandler(function(e) {
+        setStatus('statusW7NB', 'fail', '❌ ' + e.message);
+      })
+      .buildNotebookLMDoc();
+  }
+
+  function w7_copyNbContent() {
+    var ta = document.getElementById('w7NbContent');
+    if (!ta || !ta.value) return;
+    navigator.clipboard.writeText(ta.value)
+      .then(function() {
+        setStatus('statusW7NB', 'done', '✔ Copied — paste into NotebookLM as Copied Text source.');
+      })
+      .catch(function() {
+        ta.select();
+        document.execCommand('copy');
+        setStatus('statusW7NB', 'done', '✔ Copied — paste into NotebookLM as Copied Text source.');
+      });
+  }
+  function w7_generateDocName() {
+    google.script.run
+      .withSuccessHandler(function(name) {
+        var box = document.getElementById('w7DocName');
+        box.style.display = 'block';
+        box.innerHTML = name +
+          ' <button onclick="navigator.clipboard.writeText(\'' + name.replace(/'/g, "\\'") + '\').then(function(){setStatus(\'statusW7NB\',\'done\',\'✔ Doc name copied.\');})" ' +
+          'style="margin-left:6px;padding:2px 6px;font-size:10px;background:#1565c0;color:#fff;border:none;border-radius:3px;cursor:pointer;">Copy</button>';
+        document.getElementById('w7DocInstructions').style.display = 'block';
+      })
+      .withFailureHandler(function(e) {
+        setStatus('statusW7NB', 'fail', '❌ ' + e.message);
+      })
+      .generateNotebookLMDocName();
+  }
+</script>

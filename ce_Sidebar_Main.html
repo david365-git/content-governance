@@ -1,0 +1,65 @@
+<!-- buildContentEnginePromptFromActiveRow | ce_Sidebar_Main.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <?!= include('ce_Sidebar_CSS'); ?>
+</head>
+<body>
+
+<div class="container">
+
+  <div id="run-mode-banner" style="padding:8px 10px;text-align:center;font-weight:bold;font-size:12px;flex-shrink:0;">
+    Checking run mode...
+  </div>
+  <div style="display:flex;flex-direction:column;gap:2px;padding:4px 10px;background:#fef7e0;font-size:10px;flex-shrink:0;position:sticky;top:0;z-index:100;">
+    <div style="display:flex;gap:6px;align-items:center;">
+      <span style="font-weight:bold;color:#b06000;">Opened on Row:</span>
+      <span id="row-on-open" style="font-weight:bold;">—</span>
+      <span style="margin-left:auto;font-weight:bold;color:#b06000;">Current Row:</span>
+      <span id="row-current" style="font-weight:bold;">—</span>
+    </div>
+    <div id="row-on-open-title" style="font-size:9px;color:#5f6368;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+  </div>
+
+  <?!= include('ce_Sidebar_Nav'); ?>
+
+  <?!= include('ce_Sidebar_PreAC'); ?>
+  <?!= include('ce_Sidebar_AC'); ?>
+
+  <div class="section-label">Input Pipeline</div>
+
+  <?!= include('ce_Sidebar_W_Neg1'); ?>
+  <?!= include('ce_Sidebar_W0'); ?>
+  <?!= include('ce_Sidebar_W1'); ?>
+  <?!= include('ce_Sidebar_W15'); ?>
+  <?!= include('ce_Sidebar_W2'); ?>
+  <?!= include('ce_Sidebar_W2C'); ?>
+
+  <?!= include('ce_Sidebar_W3'); ?>
+  <?!= include('ce_Sidebar_FI'); ?>
+  <?!= include('ce_Sidebar_V1_VideoManager'); ?>
+
+  <div class="section-label">Output Pipeline</div>
+
+  <?!= include('ce_Sidebar_W4'); ?>
+  <?!= include('ce_Sidebar_W4_5'); ?>
+  <?!= include('ce_Sidebar_W5'); ?>
+  <?!= include('ce_Sidebar_W6'); ?>
+  <?!= include('ce_Sidebar_W7'); ?>
+  <?!= include('ce_Sidebar_W8'); ?>
+  <?!= include('ce_Sidebar_W9'); ?>
+  <?!= include('ce_Sidebar_Run_Analysis'); ?>
+  <?!= include('ce_Sidebar_W8E'); ?>
+  <?!= include('ce_Sidebar_W8E_Suggestions'); ?>
+  <?!= include('ce_Sidebar_W8PAR'); ?>
+
+</div><!-- end .container -->
+
+<?!= include('ce_Sidebar_JS'); ?>
+<?!= include('ce_Sidebar_JS_1_Core'); ?>
+<?!= include('ce_Sidebar_JS_2_W1'); ?>
+<?!= include('ce_Sidebar_JS_3_Stages'); ?>
+
+</body>
+</html>

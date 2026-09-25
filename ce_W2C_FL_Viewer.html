@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #fff;
+      color: #333;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+    }
+    h3 {
+      font-size: 13px;
+      color: #1565c0;
+      margin-bottom: 6px;
+      font-family: JetBrains Mono, monospace;
+    }
+    #statusMsg {
+      font-family: JetBrains Mono, monospace;
+      font-size: 11px;
+      color: #2e7d32;
+      min-height: 16px;
+      margin-bottom: 6px;
+    }
+    /* ── Tab bar ── */
+    #tabBar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 6px;
+    }
+    .tab-btn {
+      padding: 5px 14px;
+      font-size: 12px;
+      font-family: JetBrains Mono, monospace;
+      font-weight: bold;
+      border: none;
+      border-radius: 4px 4px 0 0;
+      cursor: pointer;
+      background: #cfd8dc;
+      color: #37474f;
+    }
+    .tab-btn.active {
+      background: #1565c0;
+      color: #fff;
+    }
+    /* ── Toolbar ── */
+    #toolbar {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    button.action {
+      padding: 5px 12px;
+      font-size: 11px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: JetBrains Mono, monospace;
+      font-weight: bold;
+    }
+    .btn-copy    { background: #1565c0; color: #fff; }
+    .btn-comment { background: #6a1b9a; color: #fff; }
+    .btn-close   { background: #37474f; color: #fff; }
+    /* ── Panels ── */
+    #panels {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+    #codePanel, #previewPanel {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+    }
+    #htmlBox {
+      width: 100%;
+      height: 100%;
+      font-family: JetBrains Mono, monospace;
+      font-size: 11px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 10px;
+      background: #f9f9f9;
+      resize: none;
+      white-space: pre;
+      overflow: auto;
+    }
+    #previewFrame {
+      width: 100%;
+      height: 100%;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h3>Column FL — HTML with Image Suggestions</h3>
+  <div id="statusMsg"></div>
+
+  <div id="tabBar">
+    <button class="tab-btn active" id="tab-code"    onclick="showTab('code')">📄 HTML Code</button>
+    <button class="tab-btn"        id="tab-preview" onclick="showTab('preview')">👁 Preview</button>
+  </div>
+
+  <div id="toolbar">
+    <button class="action btn-copy"    onclick="copyAll()">Copy All HTML</button>
+    <button class="action btn-comment" onclick="jumpToNext()">▼ Next Image Suggestion</button>
+    <button class="action btn-close"   onclick="google.script.host.close()">Close</button>
+  </div>
+
+  <div id="panels">
+    <div id="codePanel">
+      <textarea id="htmlBox" readonly><?= htmlContent ?></textarea>
+    </div>
+    <div id="previewPanel" class="hidden">
+      <iframe id="previewFrame" sandbox="allow-same-origin"></iframe>
+    </div>
+  </div>
+
+  <script>
+    var _commentPositions = [];
+    var _commentIndex     = -1;
+    var _activeTab        = 'code';
+    var _previewLoaded    = false;
+
+    window.onload = function() {
+      var box     = document.getElementById('htmlBox');
+      var content = box.value;
+
+      // Find all IMAGE SUGGESTION comment positions
+      var searchStr = '<!-- IMAGE SUGGESTION';
+      var pos = 0;
+      while (true) {
+        var idx = content.indexOf(searchStr, pos);
+        if (idx === -1) break;
+        _commentPositions.push(idx);
+        pos = idx + searchStr.length;
+      }
+
+      var count = _commentPositions.length;
+      document.getElementById('statusMsg').textContent =
+        count > 0
+          ? count + ' image suggestion comment' + (count > 1 ? 's' : '') + ' found.'
+          : 'No image suggestion comments found.';
+    };
+
+    function showTab(tab) {
+      _activeTab = tab;
+      document.getElementById('tab-code').classList.toggle('active',    tab === 'code');
+      document.getElementById('tab-preview').classList.toggle('active', tab === 'preview');
+      document.getElementById('codePanel').classList.toggle('hidden',    tab !== 'code');
+      document.getElementById('previewPanel').classList.toggle('hidden', tab !== 'preview');
+
+      if (tab === 'preview' && !_previewLoaded) {
+        loadPreview();
+      }
+    }
+
+    function loadPreview() {
+      var html    = document.getElementById('htmlBox').value;
+      var frame   = document.getElementById('previewFrame');
+      var preview =
+        '<!DOCTYPE html><html><head>' +
+        '<style>' +
+        'body{font-family:Georgia,serif;max-width:860px;margin:20px auto;padding:0 20px;color:#333;line-height:1.7;}' +
+        'h2{font-size:1.3em;color:#1a1a2e;margin:24px 0 10px;}' +
+        'h3{font-size:1.1em;color:#263238;margin:18px 0 8px;}' +
+        'p{margin:0 0 14px;}' +
+        'figure{margin:16px 0;text-align:center;}' +
+        'figure img{max-width:100%;height:auto;border-radius:4px;}' +
+        'figcaption{font-size:0.85em;color:#666;margin-top:6px;}' +
+        'blockquote{border-left:4px solid #1565c0;margin:16px 0;padding:10px 16px;background:#e3f2fd;color:#1a237e;font-style:italic;}' +
+        'footer{margin-top:32px;padding-top:16px;border-top:1px solid #ddd;color:#555;}' +
+        'a{color:#1565c0;}' +
+        'ol,ul{margin:0 0 14px 24px;}' +
+        '</style>' +
+        '</head><body>' +
+        html +
+        '</body></html>';
+
+      frame.contentDocument.open();
+      frame.contentDocument.write(preview);
+      frame.contentDocument.close();
+      _previewLoaded = true;
+    }
+
+    function copyAll() {
+      var box = document.getElementById('htmlBox');
+      box.select();
+      document.execCommand('copy');
+      document.getElementById('statusMsg').textContent = '✔ All HTML copied to clipboard.';
+    }
+
+    function jumpToNext() {
+      if (_commentPositions.length === 0) {
+        document.getElementById('statusMsg').textContent = 'No image suggestion comments found.';
+        return;
+      }
+      // Switch to code tab if not already there
+      if (_activeTab !== 'code') showTab('code');
+
+      _commentIndex = (_commentIndex + 1) % _commentPositions.length;
+      var box = document.getElementById('htmlBox');
+      var pos = _commentPositions[_commentIndex];
+
+      var textBefore = box.value.substring(0, pos);
+      var lineNumber  = textBefore.split('\n').length - 1;
+      box.scrollTop   = lineNumber * 16;
+
+      var endPos = box.value.indexOf('-->', pos);
+      if (endPos > -1) endPos += 3; else endPos = pos + 20;
+      box.setSelectionRange(pos, endPos);
+      box.focus();
+
+      document.getElementById('statusMsg').textContent =
+        'Image suggestion ' + (_commentIndex + 1) + ' of ' + _commentPositions.length + ' selected.';
+    }
+  </script>
+</body>
+</html>

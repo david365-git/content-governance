@@ -1,0 +1,222 @@
+<!-- ══ ce_Sidebar_W6.html - W6 — WordPress Export + Publication Log ══ -->
+<div id="window-16" class="window-card" style="display:none; border-top:3px solid #2e7d32">
+  <div class="window-header">
+    <span class="window-label" style="color:#2e7d32">W6 — WordPress Export + Publication Log</span>
+    <span class="tag" style="background:#2e7d32">Publish</span>
+  </div>
+  <div class="window-body">
+    <div id="statusW6" class="status-bar pending">Load row data to begin.</div>
+
+    <div class="btn-row" style="margin-top:6px">
+      <button style="background:#2e7d32;color:#fff" onclick="w6_load()">⬇ Load Row Data</button>
+    </div>
+
+    <!-- Current row summary -->
+    <div id="w6Summary" style="display:none;margin-top:10px">
+
+      <div class="step-label">Post Details</div>
+      <table style="font-size:10px;width:100%;border-collapse:collapse">
+        <tr><td style="color:#5f6368;width:40%">Post ID</td><td id="w6PostId" style="font-weight:bold"></td></tr>
+        <tr><td style="color:#5f6368">Title</td><td id="w6Title"></td></tr>
+        <tr><td style="color:#5f6368">Stone Type</td><td id="w6StoneType"></td></tr>
+        <tr><td style="color:#5f6368">Article Type</td><td id="w6ArticleType"></td></tr>
+        <tr><td style="color:#5f6368">URL</td><td id="w6Url" style="font-size:9px;word-break:break-all"></td></tr>
+      </table>
+
+      <div class="step-label" style="margin-top:8px">Old Values (from site-export)</div>
+      <table style="font-size:10px;width:100%;border-collapse:collapse">
+        <tr><td style="color:#5f6368;width:40%">Old Title</td><td id="w6OldTitle"></td></tr>
+        <tr><td style="color:#5f6368">Old Published Date</td><td id="w6OldDate" style="font-weight:bold;color:#b06000"></td></tr>
+        <tr><td style="color:#5f6368">Old Meta Title</td><td id="w6OldMetaTitle"></td></tr>
+        <tr><td style="color:#5f6368">Old Meta Desc</td><td id="w6OldMetaDesc" style="font-size:9px"></td></tr>
+        <tr><td style="color:#5f6368">Old Keyphrase</td><td id="w6OldKeyphrase"></td></tr>
+      </table>
+
+      <div class="step-label" style="margin-top:8px">New Values</div>
+      <table style="font-size:10px;width:100%;border-collapse:collapse">
+        <tr><td style="color:#5f6368;width:40%">New H1</td><td id="w6NewH1"></td></tr>
+        <tr><td style="color:#5f6368">New Meta Title</td><td id="w6NewMetaTitle"></td></tr>
+        <tr><td style="color:#5f6368">New Meta Desc</td><td id="w6NewMetaDesc" style="font-size:9px"></td></tr>
+        <tr><td style="color:#5f6368">Yoast Keyphrase</td><td id="w6Keyphrase"></td></tr>
+      </table>
+
+      <div class="step-label" style="margin-top:8px">Recall Scores</div>
+      <table style="font-size:10px;width:100%;border-collapse:collapse">
+        <tr><td style="color:#5f6368;width:40%">Previous Score</td><td id="w6RecallPrev" style="color:#b06000;font-weight:bold"></td></tr>
+        <tr><td style="color:#5f6368">New Score</td><td id="w6RecallNew" style="color:#1e8e3e;font-weight:bold"></td></tr>
+      </table>
+
+      <!-- New publication date input -->
+      <div class="step-label" style="margin-top:8px">New Publication Date</div>
+      <input type="datetime-local" id="w6NewDate"
+        style="width:100%;padding:5px;font-size:11px;border:1px solid #dadce0;border-radius:4px;box-sizing:border-box" />
+
+      <!-- WordPress export block -->
+      <div class="step-label" style="margin-top:8px">WordPress Export Block</div>
+      <textarea id="w6WpBlock" style="height:120px;font-size:8px;background:#f8f9fa" readonly></textarea>
+      <div class="btn-row" style="margin-top:4px">
+        <button style="background:#1a73e8;color:#fff" onclick="w6_copyForWordpress()">📋 Copy for WordPress</button>
+      </div>
+
+      <!-- Publication log -->
+      <div class="btn-row" style="margin-top:8px">
+        <button style="background:#2e7d32;color:#fff" onclick="w6_updateLog()">✔ Update Publication Log</button>
+        <button style="background:#1565c0;color:#fff" onclick="w6_updateSiteExport()">↻ Update Site Export</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  var _w6Data = null;
+
+  function w6_load() {
+    setStatus('statusW6', 'running', 'Loading row data...', true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res.success) {
+          setStatus('statusW6', 'fail', '❌ ' + res.message);
+          return;
+        }
+        _w6Data = res;
+
+        document.getElementById('w6PostId').textContent      = res.postId;
+        document.getElementById('w6Title').textContent       = res.title;
+        document.getElementById('w6StoneType').textContent   = res.stoneType;
+        document.getElementById('w6ArticleType').textContent = res.articleType;
+        document.getElementById('w6Url').textContent         = res.url;
+
+        document.getElementById('w6OldTitle').textContent      = res.oldTitle;
+        document.getElementById('w6OldDate').textContent       = res.oldDate;
+        document.getElementById('w6OldMetaTitle').textContent  = res.oldMetaTitle;
+        document.getElementById('w6OldMetaDesc').textContent   = res.oldMetaDesc;
+        document.getElementById('w6OldKeyphrase').textContent  = res.oldKeyphrase;
+
+        document.getElementById('w6NewH1').textContent        = res.newH1;
+        document.getElementById('w6NewMetaTitle').textContent = res.newMetaTitle;
+        document.getElementById('w6NewMetaDesc').textContent  = res.newMetaDesc;
+        document.getElementById('w6Keyphrase').textContent    = res.yoastKeyphrase;
+
+        document.getElementById('w6RecallPrev').textContent = res.recallScorePrev || 'n/a';
+        document.getElementById('w6RecallNew').textContent  = res.recallScore     || 'n/a';
+
+        // Set default new date to now
+        var now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('w6NewDate').value = now.toISOString().slice(0, 16);
+
+        // Build WordPress export block
+        var wpBlock =
+          'Post ID: ' + res.postId + '\n' +
+          'New H1: ' + res.newH1 + '\n' +
+          'New HTML: ' + res.newHtml + '\n' +
+          'New Meta Title: ' + res.newMetaTitle + '\n' +
+          'New Meta Description: ' + res.newMetaDesc + '\n' +
+          'Yoast Keyphrase: ' + res.yoastKeyphrase + '\n' +
+          'New Schema: ' + res.newSchema;
+
+        document.getElementById('w6WpBlock').value = wpBlock;
+
+        document.getElementById('w6Summary').style.display = 'block';
+        setStatus('statusW6', 'done', '✔ Row data loaded — confirm new date then copy or log.');
+      })
+      .withFailureHandler(function(e) {
+        setStatus('statusW6', 'fail', '❌ ' + e.message);
+      })
+      .ce_getW6Data();
+  }
+
+  function w6_copyForWordpress() {
+    var block = document.getElementById('w6WpBlock').value;
+    if (!block.trim()) {
+      setStatus('statusW6', 'fail', '❌ Load row data first.');
+      return;
+    }
+    navigator.clipboard.writeText(block)
+      .then(function() {
+        setStatus('statusW6', 'done', '✔ Copied — paste into WordPress importer.');
+        if (window._runMode !== 'TEST') {
+          google.script.run
+            .withSuccessHandler(function(res) {
+              setStatus('statusW6', 'done', '✔ Copied — ' + res);
+            })
+            .withFailureHandler(function(e) {
+              setStatus('statusW6', 'fail', '❌ WP progress write failed: ' + e.message);
+            })
+            .bc_writeWPToProgress();
+        }
+      })
+      .catch(function() {
+        var temp = document.createElement('textarea');
+        temp.value = block;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        setStatus('statusW6', 'done', '✔ Copied — paste into WordPress importer.');
+        if (window._runMode !== 'TEST') {
+          google.script.run
+            .withSuccessHandler(function(res) {
+              setStatus('statusW6', 'done', '✔ Copied — ' + res);
+            })
+            .withFailureHandler(function(e) {
+              setStatus('statusW6', 'fail', '❌ WP progress write failed: ' + e.message);
+            })
+            .bc_writeWPToProgress();
+        }
+      });
+  }
+
+  function w6_updateLog() {
+    if (!_w6Data) {
+      setStatus('statusW6', 'fail', '❌ Load row data first.');
+      return;
+    }
+    var newDate = document.getElementById('w6NewDate').value;
+    if (!newDate) {
+      setStatus('statusW6', 'fail', '❌ Enter the new publication date first.');
+      return;
+    }
+    _w6Data.newPublishedDate = newDate;
+    setStatus('statusW6', 'running', 'Updating publication log...', true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        setStatus('statusW6', res.success ? 'done' : 'fail',
+          (res.success ? '✔ ' : '❌ ') + res.message);
+
+        // Write CE to posts_progress if production run
+        if (window._runMode !== 'TEST') {
+          google.script.run
+            .withSuccessHandler(function(ceRes) {
+            setStatus('statusW6', 'done', '✔ ' + ceRes);
+          })
+            .withFailureHandler(function(e) {
+              setStatus('statusW6', 'fail', '❌ CE progress write failed: ' + e.message);
+            })
+            .bc_writeCEToProgress(window._postStage);
+        }
+      })
+      .withFailureHandler(function(e) {
+        setStatus('statusW6', 'fail', '❌ ' + e.message);
+      })
+      .ce_updatePublicationLog(_w6Data);
+  }
+  function w6_updateSiteExport() {
+    if (!_w6Data) {
+      setStatus('statusW6', 'fail', '❌ Load row data first.');
+      return;
+    }
+    setStatus('statusW6', 'running', 'Updating site-export sheet...', true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        setStatus('statusW6', res.success ? 'done' : 'fail',
+          (res.success ? '✔ ' : '❌ ') + res.message);
+      })
+      .withFailureHandler(function(e) {
+        setStatus('statusW6', 'fail', '❌ ' + e.message);
+      })
+      .ce_updateSiteExport();
+  }
+
+</script>

@@ -1,0 +1,29 @@
+<!-- ══ ce_Sidebar_W8E_Suggestions.html - W8E SUGGESTIONS REVIEW ══ -->
+<div id="window-w8es" class="window-card" style="display:none; border-top:3px solid #ef6c00">
+  <div class="window-header">
+    <span class="window-label" style="color:#ef6c00">W8E — Suggestions</span>
+    <span class="tag" style="background:#ef6c00">Review & Annotate</span>
+  </div>
+  <div class="window-body">
+    <div id="statusW8ES" class="status-bar pending">Loads the saved analysis for this row. Edit directly and mark each item done.</div>
+
+    <div class="btn-row" style="margin-top:6px">
+      <button style="background:#ef6c00;color:#fff" onclick="loadW8ESuggestions()">⟳ Load</button>
+      <button style="background:#546e7a;color:#fff" onclick="toggleW8ESView()" id="w8esToggleBtn">Show Rendered View</button>
+    </div>
+
+    <div id="w8esRenderedBlock" style="display:none;margin-top:10px;background:#fff3e0;border-radius:4px;padding:10px;font-size:13px;line-height:1.5;color:#333;max-height:400px;overflow-y:auto"></div>
+
+    <div style="margin-top:10px">
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">EDITABLE — add notes like "done" next to each item:</label>
+      <textarea id="w8esEditArea" style="height:400px;width:100%;font-size:12px;font-family:JetBrains Mono,monospace" placeholder="Click Load to fetch the saved analysis for this row."></textarea>
+    </div>
+
+    <div class="btn-row" style="margin-top:10px">
+      <button style="background:#2e7d32;color:#fff" onclick="saveW8ESuggestions()">💾 Save</button>
+      <button style="background:#c62828;color:#fff" onclick="closeW8ESuggestions()">✕ Close</button>
+    </div>
+
+    <div id="w8esSaveResult" style="display:none;margin-top:8px;font-family:JetBrains Mono,monospace;font-size:11px;background:#e8f5e9;border-radius:4px;padding:8px;color:#333"></div>
+  </div>
+</div>

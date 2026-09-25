@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+  </head>
+  <body>
+    <textarea id="copyArea" style="position:absolute;left:-9999px"></textarea>
+    <div id="msg" style="font-family:Arial, sans-serif;padding:10px;font-size:13px;">Copying…</div>
+    <script>
+      google.script.run.withSuccessHandler(function(text) {
+        const ta = document.getElementById('copyArea');
+        ta.value = text;
+        ta.select();
+        document.execCommand('copy');
+        document.getElementById('msg').textContent = '✔ Copied to clipboard.';
+        setTimeout(function() { google.script.host.close(); }, 700);
+      }).getB5Content();
+    </script>
+  </body>
+</html>

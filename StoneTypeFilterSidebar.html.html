@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: sans-serif; padding: 15px; }
+      label { font-weight: bold; font-size: 14px; }
+      select, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 4px; box-sizing: border-box; }
+      button { background-color: #4285f4; color: white; border: none; font-weight: bold; cursor: pointer; }
+      button:disabled { background-color: #ccc; cursor: not-allowed; }
+      .nav-btn { background-color: #666; margin-top: 25px; }
+      #status { color: #d93025; font-size: 13px; margin-top: 15px; text-align: center; font-weight: bold; min-height: 20px; }
+    </style>
+  </head>
+  <body>
+    <label>Select Stone Type:</label>
+    <select id="stoneSelect">
+      <option>Loading types...</option>
+    </select>
+    
+    <button id="applyBtn" onclick="runFilter()">Apply Filter & Mark Hub</button>
+    
+    <div id="status"></div>
+
+    <button class="nav-btn" onclick="google.script.run.openNavigator()">Close & Open Navigator</button>
+
+    <script>
+      window.onload = function() {
+        google.script.run.withSuccessHandler(opts => {
+          const s = document.getElementById('stoneSelect');
+          s.innerHTML = "";
+          opts.forEach(o => {
+            const e = document.createElement('option');
+            e.text = o;
+            s.add(e);
+          });
+        }).getStoneTypeOptions();
+      };
+
+      function runFilter() {
+        const val = document.getElementById('stoneSelect').value;
+        const btn = document.getElementById('applyBtn');
+        const status = document.getElementById('status');
+        
+        btn.disabled = true;
+        status.style.color = "#4285f4";
+        status.innerText = "Working on " + val + "...";
+        
+        google.script.run
+          .withSuccessHandler((response) => { 
+            btn.disabled = false;
+            if (response.startsWith("Error")) {
+              status.style.color = "#d93025";
+            } else {
+              status.style.color = "#0f9d58";
+            }
+            status.innerText = response; 
+          })
+          .applyStoneTypeSelection(val);
+      }
+    </script>
+  </body>
+</html>

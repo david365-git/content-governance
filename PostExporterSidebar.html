@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: 'Segoe UI', sans-serif; padding: 15px; font-size: 13px; color: #333; line-height: 1.4; }
+      h3 { border-bottom: 2px solid #4285f4; padding-bottom: 5px; color: #4285f4; margin-top: 0; }
+      .section-label { font-weight: bold; margin: 15px 0 5px 0; display: block; color: #555; }
+      select, #col-search { width: 100%; padding: 8px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+      #checklist { border: 1px solid #ddd; padding: 10px; max-height: 280px; overflow-y: auto; background: #fff; border-radius: 4px; }
+      .header-item { margin-bottom: 8px; display: flex; align-items: flex-start; }
+      input[type="checkbox"] { margin-right: 10px; margin-top: 2px; cursor: pointer; }
+      .controls { margin-bottom: 10px; display: flex; gap: 15px; }
+      .control-link { color: #4285f4; cursor: pointer; font-size: 11px; font-weight: bold; text-decoration: underline; }
+      #btn-container { margin-top: 20px; }
+      button { background: #4285f4; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; font-size: 14px; }
+      button:disabled { background: #ccc; cursor: not-allowed; }
+    </style>
+  </head>
+  <body>
+    <h3>Post Export Tool</h3>
+    
+    <label class="section-label">1. Select Prompt Template</label>
+    <select id="prompt-select" onchange="applyPromptTemplate()">
+      <option value="">-- Choose a Prompt --</option>
+    </select>
+
+    <label class="section-label">2. Search or Confirm Columns</label>
+    <input type="text" id="col-search" placeholder="Quick find columns..." onkeyup="filterColumns()">
+    
+    <div class="controls">
+      <span class="control-link" onclick="toggleAll(true)">Select All</span>
+      <span class="control-link" onclick="toggleAll(false)">Clear All</span>
+    </div>
+
+    <div id="checklist">Retrieving headers...</div>
+    
+    <div id="btn-container">
+      <button id="main-btn" onclick="runExport()">Extract Selected Rows</button>
+    </div>
+
+    <script>
+      let savedPrompts = [];
+
+      window.onload = function() {
+        google.script.run.withSuccessHandler(showHeaders).getPostsHeaders();
+        google.script.run.withSuccessHandler(populatePrompts).getSavedPrompts();
+      };
+
+      function populatePrompts(prompts) {
+        savedPrompts = prompts;
+        const select = document.getElementById('prompt-select');
+        prompts.forEach((p, index) => {
+          const opt = document.createElement('option');
+          opt.value = index;
+          opt.text = p.name;
+          select.appendChild(opt);
+        });
+      }
+
+      /**
+       * Splits by newline (\n) to handle your vertical list.
+       * Normalizes text to ensure a match even with case differences.
+       */
+      function applyPromptTemplate() {
+        const select = document.getElementById('prompt-select');
+        if (select.value === "") {
+          toggleAll(false);
+          return;
+        }
+
+        const template = savedPrompts[select.value];
+        const columnsToTick = template.columns.split('\n')
+          .map(c => c.trim().toLowerCase())
+          .filter(c => c !== "");
+
+        toggleAll(false);
+        const checkboxes = document.querySelectorAll('input[name="cols"]');
+        
+        checkboxes.forEach(cb => {
+          const headerName = cb.value.trim().toLowerCase();
+          if (columnsToTick.includes(headerName)) {
+            cb.checked = true;
+          }
+        });
+      }
+
+      function showHeaders(headers) {
+        const list = document.getElementById('checklist');
+        list.innerHTML = '';
+        headers.forEach(h => {
+          const div = document.createElement('div');
+          div.className = 'header-item';
+          div.innerHTML = `<label><input type="checkbox" name="cols" value="${h}"> ${h}</label>`;
+          list.appendChild(div);
+        });
+      }
+
+      function filterColumns() {
+        const query = document.getElementById('col-search').value.toLowerCase();
+        const items = document.querySelectorAll('.header-item');
+        items.forEach(item => {
+          item.style.display = item.innerText.toLowerCase().includes(query) ? 'flex' : 'none';
+        });
+      }
+
+      function toggleAll(checked) {
+        document.querySelectorAll('input[name="cols"]').forEach(cb => {
+          // Only toggle visible items if a search is active
+          if (cb.closest('.header-item').style.display !== 'none') {
+            cb.checked = checked;
+          }
+        });
+      }
+
+      function runExport() {
+        const btn = document.getElementById('main-btn');
+        const selected = Array.from(document.querySelectorAll('input[name="cols"]:checked')).map(cb => cb.value);
+        if (selected.length === 0) { alert("Please select columns first."); return; }
+        btn.disabled = true;
+        google.script.run.withSuccessHandler(msg => {
+          alert(msg);
+          btn.disabled = false;
+        }).processExtraction(selected);
+      }
+    </script>
+  </body>
+</html>

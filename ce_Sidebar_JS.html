@@ -1,0 +1,2637 @@
+<style>
+  /* ── ce_Sidebar_js.html ── */
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;600;700&display=swap');
+
+    :root {
+      --purple:  #673ab7;
+      --pink:    #e91e8c;
+      --blue:    #0277bd;
+      --green:   #2e7d32;
+      --orange:  #e65100;
+      --indigo:  #3f51b5;
+      --teal:    #00796b;
+      --red:     #c62828;
+      --bg:      #f0f2f5;
+      --surface: #ffffff;
+      --border:  #e0e0e0;
+      --text:    #1a1a2e;
+      --muted:   #777;
+      --radius:  6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      width: 100%;
+      overflow-x: hidden;
+    }
+
+    /* ── Top bar ── */
+    .top-bar {
+      background: #1a1a2e;
+      padding: 5px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .top-bar-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: #90a4ae;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+    .pipeline-header {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+    .pipeline-step {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 2px 4px;
+      border-radius: 3px;
+      color: white;
+      letter-spacing: 0.3px;
+      cursor: default;
+    }
+    .pipeline-step.confirmed {
+      outline: 2px solid #fff;
+      outline-offset: 1px;
+    }
+    .pipeline-arrow { color: #555; font-size: 15px; }
+
+    /* ── Main container ── */
+    .container { padding: 10px 12px; }
+
+    /* ── Section label ── */
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin: 14px 0 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Window cards ── */
+    .window-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+
+    .window-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 8px;
+      border-bottom: 1px solid var(--border);
+      background: #fafafa;
+    }
+    .window-label {
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      padding: 1px 4px;
+      border-radius: 2px;
+      color: white;
+      font-weight: 700;
+    }
+
+    .window-body { padding: 5px 8px 8px; }
+
+    /* ── Status bar ── */
+    .status-bar {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      padding: 3px 6px;
+      border-radius: 3px;
+      margin-bottom: 5px;
+      border-left: 3px solid var(--border);
+      background: #f8f8f8;
+      font-weight: 600;
+      min-height: 18px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s ease;
+    }
+    .status-bar.pending  { border-left-color: var(--muted);  color: var(--muted); }
+    .status-bar.running  { border-left-color: var(--orange); color: var(--orange); background: #fff3e0; }
+    .status-bar.done     { border-left-color: var(--green);  color: var(--green);  background: #e8f5e9; }
+    .status-bar.fail     { border-left-color: var(--red);    color: var(--red);    background: #ffebee; }
+    .status-bar.ready    { border-left-color: var(--blue);   color: var(--blue);   background: #e3f2fd; }
+    .status-bar.confirmed{ border-left-color: #1b5e20;       color: #1b5e20;       background: #c8e6c9; }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 9px; height: 9px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Textarea ── */
+    textarea {
+      width: 100%;
+      height: 80px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 4px;
+      background: #fafafa;
+      color: var(--text);
+      line-height: 1.4;
+      resize: vertical;
+      overflow: auto;
+      display: block;
+    }
+    textarea:focus { outline: none; border-color: #aaa; background: #fff; }
+
+    /* ── Button row — max 2 per line ── */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      margin-top: 5px;
+    }
+    .btn-row > button:only-child,
+    .btn-full { grid-column: 1 / -1; }
+
+    button {
+      padding: 5px 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+      transition: filter 0.1s, transform 0.1s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    button:hover   { filter: brightness(1.1); }
+    button:active  { box-shadow: 0 1px 0 rgba(0,0,0,0.2); transform: translateY(1px); }
+    button:disabled {
+      background: #c8c8c8 !important;
+      color: #888 !important;
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+      filter: none;
+    }
+
+    /* Confirm button */
+    .btn-confirm { background: #9e9e9e; }
+    .btn-confirm.active { background: #1b5e20; cursor: pointer; }
+    .btn-confirm.active:hover { filter: brightness(1.1); }
+
+    .btn-generate { background: var(--blue); }
+    .btn-copy     { background: var(--green); }
+    .btn-forensic { background: var(--purple); }
+    .btn-push     { background: var(--indigo); }
+    .btn-1b       { background: var(--teal); }
+    .btn-1c       { background: #5c6bc0; }
+    .btn-1d       { background: #7b1fa2; }
+    .btn-audit15  { background: var(--pink); }
+    .btn-plan     { background: #ad1457; }
+    .btn-2a       { background: var(--orange); }
+    .btn-mech     { background: #bf360c; }
+    .btn-full     { grid-column: 1 / -1; }
+
+    /* Audit textarea taller */
+    .audit-textarea { height: 150px; }
+    /* 2B — single column in sidebar */
+    .triple-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      margin-bottom: 0;
+    }
+    .triple-grid textarea { height: 90px; }
+
+</style>
+
+<script>
+
+  /* ── Status helpers ── */
+  function setStatus(id, state, msg, showSpinner) {
+    const el = document.getElementById(id);
+    el.className = 'status-bar ' + state;
+    el.innerHTML = showSpinner ? '<span class="spinner"></span>' + msg : msg;
+  }
+  function setGenerating(statusId, btnId, label) {
+    setStatus(statusId, 'running', 'Generating ' + label + '…', true);
+    const btn = document.getElementById(btnId);
+    if (btn) { btn.disabled = true; btn.innerText = 'Generating…'; }
+  }
+  function setDone(statusId, btnId, origLabel, msg, confirmBtnId) {
+    setStatus(statusId, 'done', '✔ ' + msg);
+    const btn = document.getElementById(btnId);
+    if (btn) { btn.disabled = false; btn.innerText = origLabel; }
+    // Enable the confirm button once content is ready
+    if (confirmBtnId) {
+      const cb = document.getElementById(confirmBtnId);
+      if (cb) { cb.disabled = false; cb.classList.add('active'); }
+    }
+  }
+  function setFail(statusId, btnId, origLabel, errMsg) {
+    setStatus(statusId, 'fail', '❌ ' + errMsg);
+    const btn = document.getElementById(btnId);
+    if (btn) { btn.disabled = false; btn.innerText = origLabel; }
+  }
+
+  /* ── Confirm button handler ── */
+  function markConfirmed(confirmBtnId, pipId, statusId, msg) {
+    const cb = document.getElementById(confirmBtnId);
+    if (!cb || cb.disabled) return;
+    cb.disabled = true;
+    cb.classList.remove('active');
+    cb.innerText = '✔ Sent';
+    setStatus(statusId, 'confirmed', '✔ ' + msg);
+    // Mark pipeline step as confirmed
+    const pip = document.getElementById(pipId);
+    if (pip) pip.classList.add('confirmed');
+  }
+
+  /* ── Chunking engine (ported from Python prompt splitter) ── */
+  var GENERIC_MAX = 15000;
+  var CHUNK_HARD_CEILING = 18000;
+
+  var CE_SPLIT_RULES = {
+    W0: {
+      detect: 'STAGE 0 — NEW ENTITY SEEDING',
+      splits: [
+        { after: '--- TECHNICAL SPECIFICATION MATRIX', label: 'Operating Frame + GSC Data' },
+        { after: '--- END SERVICE AUTHORITY ENTITY TABLE ---', label: 'Technical Matrix + Entity Tables' }
+      ],
+      finalLabel: 'Task + Governed Entity Profile + Execute'
+    }
+  };
+
+  function _genericSplit(text, maxChars) {
+    maxChars = maxChars || GENERIC_MAX;
+    var chunks = [];
+    var remaining = text.trim();
+    var n = 1;
+    while (remaining) {
+      if (remaining.length <= maxChars) {
+        chunks.push({ label: 'Part ' + n, text: remaining.trim() });
+        break;
+      }
+      var breakPoint = maxChars;
+      var paraBreak = remaining.lastIndexOf('\n\n', maxChars);
+      var lineBreak = remaining.lastIndexOf('\n', maxChars);
+      if (paraBreak > maxChars * 0.5) {
+        breakPoint = paraBreak + 2;
+      } else if (lineBreak > maxChars * 0.5) {
+        breakPoint = lineBreak + 1;
+      }
+      chunks.push({ label: 'Part ' + n, text: remaining.substring(0, breakPoint).trim() });
+      remaining = remaining.substring(breakPoint).trim();
+      n++;
+      if (n > 100) {
+        if (remaining) chunks.push({ label: 'Part ' + n + ' — Remaining Text', text: remaining });
+        break;
+      }
+    }
+    return chunks;
+  }
+
+  function _applyNamedSplit(text, ruleKey) {
+    var rule = CE_SPLIT_RULES[ruleKey];
+    if (!rule) return null;
+    var chunks = [];
+    var remaining = text;
+    for (var i = 0; i < rule.splits.length; i++) {
+      var marker = rule.splits[i].after;
+      var idx = remaining.indexOf(marker);
+      if (idx === -1) continue;
+      var cut = idx + marker.length;
+      var chunkText = remaining.substring(0, cut);
+      if (chunkText.trim()) chunks.push({ label: rule.splits[i].label, text: chunkText.trim() });
+      remaining = remaining.substring(cut);
+    }
+    if (remaining.trim()) chunks.push({ label: rule.finalLabel || 'Final', text: remaining.trim() });
+    return chunks;
+  }
+
+  function _buildSingleUploadPrompt(originalText, promptTitle, ruleKey) {
+    var chunks = ruleKey ? _applyNamedSplit(originalText, ruleKey) : null;
+    if (!chunks || chunks.length <= 1) chunks = _genericSplit(originalText, GENERIC_MAX);
+
+    var finalChunks = [];
+    chunks.forEach(function(chunk) {
+      if (chunk.text.length > CHUNK_HARD_CEILING) {
+        var subChunks = _genericSplit(chunk.text, GENERIC_MAX);
+        subChunks.forEach(function(sub, i) {
+          finalChunks.push({ label: chunk.label + ' — Part ' + (i + 1), text: sub.text });
+        });
+      } else {
+        finalChunks.push(chunk);
+      }
+    });
+
+    var today = new Date().toLocaleDateString('en-GB');
+    var total = finalChunks.length;
+    var lines = [];
+
+    lines.push('PROMPT TITLE:');
+    lines.push(promptTitle || 'Abbey Floor Care Pipeline Prompt');
+    lines.push('');
+    lines.push("TODAY'S DATE:");
+    lines.push(today);
+    lines.push('');
+    lines.push('MASTER INSTRUCTION:');
+    lines.push('This is a multi-stage prompt supplied as one uploaded text file.');
+    lines.push('Read the entire file before executing.');
+    lines.push('Treat each labelled CHUNK as a separate staged input.');
+    lines.push('Do not ask for the next chunk.');
+    lines.push('Do not summarise the chunks.');
+    lines.push('Do not execute early.');
+    lines.push('Execute only when you reach the final marker:');
+    lines.push('ALL CHUNKS LOADED — EXECUTE NOW');
+    lines.push('');
+    lines.push('NO CONFIRMATION REQUIRED (Hard Lock):');
+    lines.push('Do not ask the user whether to execute, check the format, or extract a section.');
+    lines.push('Do not ask any clarifying question before beginning.');
+    lines.push('The instructions in this file are complete and sufficient to execute immediately upon reading.');
+    lines.push('As soon as this file is fully uploaded and read, begin producing the final output directly.');
+    lines.push('');
+    lines.push('OUTPUT RULE:');
+    lines.push('Return only the requested final output.');
+    lines.push('Do not explain the prompt structure.');
+    lines.push('Do not mention the chunks unless the task specifically asks for them.');
+    lines.push('');
+    lines.push('CONFLICT RULE:');
+    lines.push('Apply hard locks and non-negotiable rules wherever they appear.');
+    lines.push('Use later instructions only where they do not override earlier hard locks.');
+    lines.push('If the original prompt contains its own output format, obey that output format exactly.');
+    lines.push('');
+
+    finalChunks.forEach(function(chunk, idx) {
+      lines.push('='.repeat(66));
+      lines.push('CHUNK ' + (idx + 1) + ' OF ' + total + ' — ' + chunk.label.toUpperCase());
+      lines.push('='.repeat(66));
+      lines.push('');
+      lines.push(chunk.text.trim());
+      lines.push('');
+    });
+
+    lines.push('='.repeat(66));
+    lines.push('FINAL EXECUTION COMMAND');
+    lines.push('='.repeat(66));
+    lines.push('');
+    lines.push('ALL CHUNKS LOADED — EXECUTE NOW');
+    lines.push('');
+    lines.push('Use all chunks above as one combined instruction set.');
+    lines.push('Read the full uploaded file before producing the answer.');
+    lines.push('Treat each labelled CHUNK as a separate stage.');
+    lines.push('Return the complete final output now.');
+
+    return lines.join('\n');
+  }
+
+  function copyTextChunked(id, statusId, msg, ruleKey) {
+    var ta = document.getElementById(id);
+    var val = ta.value;
+    if (!val.trim()) { alert('Nothing to copy — generate first.'); return; }
+    var chunkedText = _buildSingleUploadPrompt(val, 'Abbey Floor Care Pipeline Prompt', ruleKey);
+    var el = document.getElementById(statusId);
+    navigator.clipboard.writeText(chunkedText).then(function() {
+      if (el) setStatus(statusId, 'ready', '✔ ' + msg + ' — paste into ChatGPT');
+    }).catch(function() {
+      var temp = document.createElement('textarea');
+      temp.value = chunkedText;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+      if (el) setStatus(statusId, 'ready', '✔ ' + msg + ' — paste into ChatGPT');
+    });
+  }
+
+  /* ── Copy helper ── */
+  function copyText(id, statusId, msg) {
+    alert('copyText called');
+    const val = document.getElementById(id).value;
+    if (!val.trim()) { alert('Nothing to copy — generate first.'); return; }
+    const el = document.getElementById(statusId);
+    navigator.clipboard.writeText(val).then(function() {
+      if (el && !el.classList.contains('confirmed')) {
+        var postID = window._activePostID || '';
+        setStatus(statusId, 'ready', '✔ ' + msg + (postID ? ' [Row ID: ' + postID + ']' : '') + ' — paste into ChatGPT, then press Pasted to LLM');
+      }
+    }).catch(function() {
+      const temp = document.createElement('textarea');
+      temp.value = val;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+      if (el && !el.classList.contains('confirmed')) {
+        var postID = window._activePostID || '';
+        setStatus(statusId, 'ready', '✔ ' + msg + (postID ? ' [Row ID: ' + postID + ']' : '') + ' — paste into ChatGPT, then press Pasted to LLM'); 
+        
+      }
+    });
+  }
+
+  function clearAndFocus(textareaId, saveButtonId, statusId, msg) {
+    const textarea = document.getElementById(textareaId);
+    const saveBtn = document.getElementById(saveButtonId);
+    if (!textarea) return;
+    
+    // Clear the textarea (removes the prompt)
+    textarea.value = '';
+    
+    // Try to paste from clipboard automatically
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText()
+        .then(text => {
+          textarea.value = text;
+          // Trigger input event to enable save button
+          textarea.dispatchEvent(new Event('input'));
+          setStatus(statusId, 'ready', '✔ Pasted from clipboard! Check content and click Save.');
+        })
+        .catch(err => {
+          // If clipboard access fails, fall back to manual paste
+          textarea.focus();
+          setStatus(statusId, 'ready', '✔ ' + msg);
+        });
+    } else {
+      // Browser doesn't support clipboard API - manual paste required
+      textarea.focus();
+      setStatus(statusId, 'ready', '✔ ' + msg);
+    }
+    
+    // Disable save button until they paste (will be re-enabled by input event listener)
+    if (saveBtn) saveBtn.disabled = true;
+  }
+
+  /* ── W-1 — Authority Brief ── */
+  function runBuildAuthorityBrief() {
+    var btn = document.getElementById('authBriefBuildBtn');
+    btn.disabled = true; btn.innerText = 'Building…';
+    setStatus('statusAuthBrief', 'running', 'Reading entity analysis columns…', true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false; btn.innerText = '⚙ Build Authority Brief';
+        if (res.success) {
+          document.getElementById('authBriefText').value = res.brief;
+          document.getElementById('authBriefResult').style.display = 'block';
+          setStatus('statusAuthBrief', 'done', '✔ Authority Brief built — review, save to sheet, then select Problem Angle below');
+          // Show angle selector with primary cluster from brief
+          google.script.run
+            .withSuccessHandler(function(data) {
+              showAngleSelector(data.primaryCluster, data.locality);
+            })
+            .withFailureHandler(function() {})
+            .getProblemAngleData();
+        } else {
+          setStatus('statusAuthBrief', 'fail', '❌ ' + res.message);
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false; btn.innerText = '⚙ Build Authority Brief';
+        setStatus('statusAuthBrief', 'fail', '❌ ' + err.message);
+      })
+      .buildAuthorityBrief();
+  }
+
+  function pushAuthorityBrief() {
+    var brief = document.getElementById('authBriefText').value.trim();
+    if (!brief) {
+      document.getElementById('authBriefPushResult').textContent = '❌ No brief to save';
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(res) {
+        document.getElementById('authBriefPushResult').textContent =
+          res.success ? '✔ ' + res.message : '❌ ' + res.message;
+        if (res.success) {
+          setStatus('statusAuthBrief', 'done', '✔ Saved to col DN — proceed to W0B or W0');
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('authBriefPushResult').textContent = '❌ ' + err.message;
+      })
+      .pushAuthorityBriefToSheet(brief);
+  }
+
+  /* ── W-1 Problem Angle Selector ── */
+  var selectedAngleCode = "";
+  var selectedAngleStmt = "";
+
+  var ANGLE_DEFINITIONS = {
+    "WHY":     { label: "Material Explanation",   readerQ: "Why is this happening to my floor?",           template: "explains why [PROBLEM] occurs at material level, so you understand what you are actually dealing with" },
+    "ID":      { label: "Diagnosis",              readerQ: "Which specific condition do I have?",           template: "helps you identify which specific condition is causing [PROBLEM], so you choose the right solution" },
+    "FIX":     { label: "Method / Process",       readerQ: "How is this professionally corrected?",         template: "explains how [PROBLEM] is professionally corrected, stage by stage" },
+    "PREVENT": { label: "Maintenance",            readerQ: "How do I stop this happening again?",           template: "explains how to prevent [PROBLEM] recurring through correct ongoing maintenance" },
+    "CHOOSE":  { label: "Contractor Selection",   readerQ: "Who should I hire and how do I evaluate them?", template: "helps you find and evaluate the right specialist to correct [PROBLEM]" },
+    "LOCAL":   { label: "Geo Service",            readerQ: "Can someone fix this near me?",                 template: "offers professional correction of [PROBLEM] for homeowners in [LOCALITY]" },
+    "PROVE":   { label: "Case Study / Proof",     readerQ: "Has this actually been fixed for someone like me?", template: "shows how [PROBLEM] was corrected on a real floor, with before and after evidence" },
+    "DECIDE":  { label: "Value / Comparison",     readerQ: "Is professional intervention worth it?",        template: "helps you decide whether professional intervention is the right choice for [PROBLEM]" }
+  };
+
+  function showAngleSelector(primaryCluster, locality) {
+    var sel = document.getElementById('angleSelector');
+    var prob = document.getElementById('angleProblemDisplay');
+    if (!sel) return;
+    sel.style.display = 'block';
+    prob.textContent = 'Problem this article addresses: ' + (primaryCluster || 'not yet identified');
+
+    // Render angle list — all angles visible at once
+    var list = document.getElementById('angleList');
+    if (list) {
+      var codes = ['WHY','ID','FIX','PREVENT','CHOOSE','LOCAL','PROVE','DECIDE'];
+      list.innerHTML = codes.map(function(code) {
+        var def = ANGLE_DEFINITIONS[code];
+        if (!def) return '';
+        return '<div id="anglebox-' + code + '" onclick="selectAngle(\'' + code + '\')" style="' +
+          'cursor:pointer;border:1px solid #c5cae9;border-radius:3px;padding:5px 7px;margin-bottom:4px;' +
+          'background:#fff;transition:background 0.15s">' +
+          '<div style="font-family:JetBrains Mono,monospace;font-size:12px;font-weight:700;color:#1a237e">' +
+            code + ' — ' + def.label +
+          '</div>' +
+          '<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-top:2px">' +
+            '→ ' + def.readerQ +
+          '</div>' +
+          '<div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#333;margin-top:2px;font-style:italic">' +
+            def.template.replace('[PROBLEM]', primaryCluster || 'this problem').replace('[LOCALITY]', locality || 'your area') +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    // Pre-highlight any existing saved angle
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (data.angleCode) {
+          highlightAngleBox(data.angleCode);
+          selectedAngleCode = data.angleCode;
+          selectedAngleStmt = data.angleStatement;
+          var stmtEl = document.getElementById('angleStatement');
+          stmtEl.textContent = data.angleStatement;
+          stmtEl.style.display = 'block';
+          document.getElementById('angleSaveBtn').style.display = 'block';
+        }
+      })
+      .withFailureHandler(function() {})
+      .getProblemAngleData();
+  }
+
+  function highlightAngleBox(code) {
+    var codes = ['WHY','ID','FIX','PREVENT','CHOOSE','LOCAL','PROVE','DECIDE'];
+    codes.forEach(function(c) {
+      var box = document.getElementById('anglebox-' + c);
+      if (box) {
+        box.style.background = (c === code) ? '#e8eaf6' : '#fff';
+        box.style.borderColor = (c === code) ? '#1a237e' : '#c5cae9';
+        box.style.borderWidth = (c === code) ? '2px' : '1px';
+      }
+    });
+  }
+
+  function selectAngle(code) {
+    var def = ANGLE_DEFINITIONS[code];
+    if (!def) return;
+    selectedAngleCode = code;
+    var probEl = document.getElementById('angleProblemDisplay');
+    var probText = probEl ? probEl.textContent.replace('Problem this article addresses: ','').trim() : 'this problem';
+    var locality = document.getElementById('w0bLocality') ? document.getElementById('w0bLocality').value.trim() : '';
+    var stmt = "This article " + def.template
+      .replace('[PROBLEM]',  probText || 'this problem')
+      .replace('[LOCALITY]', locality || 'your area') + ".";
+    selectedAngleStmt = stmt;
+    highlightAngleBox(code);
+    var stmtEl = document.getElementById('angleStatement');
+    stmtEl.textContent = stmt;
+    stmtEl.style.display = 'block';
+    document.getElementById('angleSaveBtn').style.display = 'block';
+    document.getElementById('angleSaveResult').textContent = '';
+  }
+
+  function saveAngle() {
+    if (!selectedAngleCode) {
+      document.getElementById('angleSaveResult').textContent = 'Select an angle first';
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(res) {
+        document.getElementById('angleSaveResult').textContent =
+          res.success ? '✔ ' + res.message + ' — proceed to W0' : '❌ ' + res.message;
+        if (res.success) {
+          setStatus('statusAuthBrief', 'done', '✔ Authority Brief and Problem Angle saved — proceed to W0');
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('angleSaveResult').textContent = '❌ ' + err.message;
+      })
+      .pushProblemAngleToSheet(selectedAngleCode, selectedAngleStmt);
+  }
+
+  /* ── Problem Register ── */
+  function runBuildProblemRegister() {
+    setStatus('statusProblemReg', 'running', 'Building Problem Register from all posts rows…', true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res.success) {
+          setStatus('statusProblemReg', 'done', '✔ ' + res.message + ' — click Check This Problem');
+        } else {
+          setStatus('statusProblemReg', 'fail', '❌ ' + res.message);
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusProblemReg', 'fail', '❌ ' + err.message);
+      })
+      .buildProblemRegister();
+  }
+
+  function runCheckProblemRegister() {
+    var problem = '';
+    var probEl = document.getElementById('angleProblemDisplay');
+    if (probEl) {
+      problem = probEl.textContent.replace('Problem this article addresses: ', '').trim();
+    }
+    if (!problem) {
+      setStatus('statusProblemReg', 'fail', '❌ Build Authority Brief first to identify the problem');
+      return;
+    }
+
+    setStatus('statusProblemReg', 'running', 'Checking estate coverage…', true);
+
+    // Get active article type for tier-aware comparison
+    var activeArticleType = '';
+    try { activeArticleType = window._preload ? JSON.parse(window._preload).articleType || '' : ''; } catch(e) {}
+
+    google.script.run
+      .withSuccessHandler(function(info) {
+        var activeUrl = info.url || '';
+        var activeType = info.articleType || activeArticleType || '';
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (!res.success) {
+              setStatus('statusProblemReg', 'fail', '❌ ' + res.message);
+              return;
+            }
+            var resultEl  = document.getElementById('problemRegResult');
+            var summaryEl = document.getElementById('problemRegSummary');
+            var verdictEl = document.getElementById('problemRegVerdict');
+            var matchesEl = document.getElementById('problemRegMatches');
+            resultEl.style.display = 'block';
+
+            // Tier map for conflict assessment
+            var TIER_MAP = {
+              'Hub Page': 1, 'Educational Guide': 1,
+              'Method Guide': 2, 'Service Page': 2, 'Geo Service Page': 2,
+              'Diagnostic Guide': 3, 'Buyer Guide': 3, 'FAQ Spoke': 3,
+              'Case Study': 4
+            };
+
+            if (!res.found) {
+              setStatus('statusProblemReg', 'done', '✔ No other articles address this problem — new angle confirmed');
+              summaryEl.textContent = 'NEW ANGLE — no coverage conflict detected';
+              summaryEl.style.color = '#2e7d32';
+              verdictEl.style.display = 'none';
+              matchesEl.textContent = '';
+              return;
+            }
+
+            // Analyse matches for real conflicts vs tier differences
+            var activeTier = TIER_MAP[activeType] || 0;
+            var realConflicts = [];
+            var tierDifferences = [];
+
+            res.matches.forEach(function(m) {
+              var matchTier = TIER_MAP[m.articleType] || 0;
+              var isSecondary = (m.angleCode || '').indexOf('secondary') > -1;
+              if (activeTier > 0 && matchTier > 0 && activeTier !== matchTier) {
+                tierDifferences.push(m);
+              } else if (!isSecondary) {
+                realConflicts.push(m);
+              } else {
+                tierDifferences.push(m);
+              }
+            });
+
+            // Build verdict
+            var verdictText = '';
+            if (realConflicts.length === 0 && tierDifferences.length > 0) {
+              verdictText = 'NO CONFLICT — coverage exists at a different tier or as secondary.\n';
+              tierDifferences.forEach(function(m) {
+                var matchTier = TIER_MAP[m.articleType] || '?';
+                var isSecondary = (m.angleCode || '').indexOf('secondary') > -1;
+                if (isSecondary) {
+                  verdictText += '• "' + m.title + '" touches this topic as a secondary cluster (' + m.articleType + ') — not a primary conflict.\n';
+                } else {
+                  verdictText += '• "' + m.title + '" covers this at Tier ' + matchTier + ' (' + m.articleType + '). Your article is Tier ' + activeTier + ' (' + activeType + '). Different tiers serve different reader intents — proceed.\n';
+                }
+              });
+              verdictText += '\nYour article angle is distinct. Proceed to W0.';
+              setStatus('statusProblemReg', 'done', '✔ Coverage exists but no conflict — different tier or secondary');
+              summaryEl.textContent = res.count + ' ARTICLE(S) FOUND — NO CONFLICT';
+              summaryEl.style.color = '#2e7d32';
+            } else if (realConflicts.length > 0) {
+              verdictText = 'POTENTIAL CONFLICT — same tier coverage detected.\n';
+              realConflicts.forEach(function(m) {
+                verdictText += '• "' + m.title + '" (' + m.articleType + ') addresses this problem from angle: ' + (m.angleCode || 'unknown') + '.\n';
+                verdictText += '  Check your angle is genuinely different before proceeding.\n';
+              });
+              setStatus('statusProblemReg', res.count > 2 ? 'fail' : 'running',
+                res.count + ' article(s) already address this problem — check angles below');
+              summaryEl.textContent = res.count + ' ARTICLE(S) COVER THIS PROBLEM';
+              summaryEl.style.color = res.count > 2 ? '#b71c1c' : '#e65100';
+            }
+
+            if (verdictText) {
+              verdictEl.style.display = 'block';
+              verdictEl.style.whiteSpace = 'pre-wrap';
+              verdictEl.textContent = verdictText;
+            }
+
+            // Matches detail
+            var html = '';
+            res.matches.forEach(function(m) {
+              var matchTier = TIER_MAP[m.articleType] || '?';
+              var isConflict = realConflicts.indexOf(m) > -1;
+              html += '<div style="margin-bottom:4px;padding:3px;background:' + (isConflict ? '#ffebee' : '#f1f8e9') + ';border-radius:2px">';
+              html += '<strong>' + (m.angleCode || '— no angle set') + '</strong>';
+              html += ' — ' + (m.articleType || '') + ' (Tier ' + matchTier + ')<br>';
+              html += '<span style="color:#555;font-size:8px">' + (m.title || m.url) + '</span>';
+              html += '</div>';
+            });
+            matchesEl.innerHTML = html;
+          })
+          .withFailureHandler(function(err) {
+            setStatus('statusProblemReg', 'fail', '❌ ' + err.message);
+          })
+          .checkProblemRegister(problem, '', activeUrl);
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusProblemReg', 'fail', '❌ Could not read active row URL: ' + err.message);
+      })
+      .getActiveRowUrl();
+  }
+
+  /* ── Single Window Navigator ── */
+  var _currentWindow = 0;
+  var _totalWindows = 17;
+  var _windowNames = ['W-1 — Authority Brief', 'W0 — Forensic Analysis', 'W0B — Location Context', 'W1A — Data Loading', 'W1B — Structural Rules', 'W1C — Paragraph Rules', 'W1D — Output Quality', 'W1.5A — Audit', 'W1.5B — Section Plan', 'W2A — Pre-Write', 'W2B — Execute', 'W3 — Humanisation', 'W4B — Image Alt & Caption', 'W4 — Final HTML', 'W5 — H1 + Meta', 'W5C — Schema Builder', 'W5B — Schema Audit'];
+  var _windowNameMap = {
+    '8a':  'W1.5C — Enrichment',
+    '8b':  'W1.5D — Lateral Links',
+    '8c':  'W1.5E — Google Optimization',
+    '10c': 'W3 — Humanisation'
+  };
+
+  function _getWindowName(idx) {
+    if (_windowNameMap[idx]) return _windowNameMap[idx];
+    return _windowNames[idx] || '';
+  }
+  var _w0bWindowIdx = 2; // W0B is index 2 — only shown for Geo Service Pages
+
+  function navGoTo(idx) {
+    // Hide current
+    var cur = document.getElementById('window-' + _currentWindow);
+    if (cur) cur.style.display = 'none';
+    var curBtn = document.getElementById('navbtn-' + _currentWindow);
+    if (curBtn) { curBtn.style.background = '#37474f'; curBtn.style.color = '#90a4ae'; }
+
+    // Show new
+    _currentWindow = idx;
+    var next = document.getElementById('window-' + _currentWindow);
+    if (next) next.style.display = 'block';
+    var nextBtn = document.getElementById('navbtn-' + _currentWindow);
+    if (nextBtn) { nextBtn.style.background = '#1565c0'; nextBtn.style.color = '#fff'; }
+
+    // Update label
+    var label = document.getElementById('windowNavLabel');
+    if (label) label.textContent = _getWindowName(_currentWindow);
+  }
+
+  function navNext() {
+    var next = _currentWindow + 1;
+    if (next >= _totalWindows) next = 0;
+    // Skip W0B if not a Geo Service Page
+    if (next === _w0bWindowIdx) {
+      var w0b = document.getElementById('window-' + _w0bWindowIdx);
+      if (w0b && w0b.getAttribute('data-geo-only') === 'true' && !_isGeoPage) {
+        next++;
+      }
+    }
+    navGoTo(next);
+  }
+
+  function navPrev() {
+    var prev = _currentWindow - 1;
+    if (prev < 0) prev = _totalWindows - 1;
+    navGoTo(prev);
+  }
+
+  var _isGeoPage = false;
+  window._activePostID = '';
+
+  // Override toggleW0BVisibility to also set _isGeoPage flag
+  var _origToggleW0B = typeof toggleW0BVisibility === 'function' ? toggleW0BVisibility : null;
+
+  function toggleW0BVisibility(articleType) {
+    _isGeoPage = (articleType === 'Geo Service Page');
+    // W0B is now window-2 in navigator — show/hide via navGoTo logic
+    // Nav button for W0B shown/hidden based on geo status
+    var navBtn = document.getElementById('navbtn-2');
+    if (navBtn) {
+      navBtn.style.opacity = _isGeoPage ? '1' : '0.3';
+      navBtn.title = _isGeoPage ? 'W0B — Location Context' : 'W0B — Geo pages only';
+    }
+  }
+
+  function runStage0() {
+    setGenerating('status0','gen0btn','W0');
+    google.script.run
+      .withSuccessHandler(function(status) {
+        window._activePostID = String(status.postID || '');
+        if (status.success) {
+          toggleW0BVisibility(status.articleType);
+          google.script.run
+            .withSuccessHandler(function(p) {
+              document.getElementById('part0').value = p;
+              document.getElementById('windowNavLabel').innerText = 'W0 — Forensic Analysis [ID: ' + status.postID + ']';
+              document.getElementById('w0Header').innerText = 'W0 — Stage 0 [' + status.postID + ']';
+              setDone('status0','gen0btn','Generate','PASS | ' + (status.title || status.postID) + ' — copy then paste to ChatGPT','conf0btn');
+            })
+            .withFailureHandler(function(err) { setFail('status0','gen0btn','Generate',err.message); })
+            .generateForensicPrompt();
+        } else {
+          setFail('status0','gen0btn','Generate',status.error);
+        }
+      })
+      .withFailureHandler(function(err) { setFail('status0','gen0btn','Generate',err.message); })
+      .checkGSCDataStatus();
+  }
+
+  /* ── Stage 1A ── */
+  function runStage1A() {
+    setGenerating('status1a','gen1abtn','1A');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || res.startsWith('ERROR')) { setFail('status1a','gen1abtn','Generate',res||'No output'); return; }
+        document.getElementById('part1a').value = res;
+        setDone('status1a','gen1abtn','Generate','Stage 1A ready — copy then paste to ChatGPT','conf1abtn');
+      })
+      .withFailureHandler(function(err) { setFail('status1a','gen1abtn','Generate',err.message); })
+      .buildStage1APrompt();
+  }
+
+  /* ── Stage 1B ── */
+  function runStage1B() {
+    setGenerating('status1b','gen1bbtn','1B');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        document.getElementById('part1b').value = res;
+        setDone('status1b','gen1bbtn','Generate','Stage 1B ready — copy then paste to ChatGPT','conf1bbtn');
+      })
+      .withFailureHandler(function(err) { setFail('status1b','gen1bbtn','Generate',err.message); })
+      .buildStage1BPrompt();
+  }
+
+  /* ── Stage 1C ── */
+  function runStage1C() {
+    setGenerating('status1c','gen1cbtn','1C');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        document.getElementById('part1c').value = res;
+        setDone('status1c','gen1cbtn','Generate','Stage 1C ready — copy then paste to ChatGPT','conf1cbtn');
+      })
+      .withFailureHandler(function(err) { setFail('status1c','gen1cbtn','Generate',err.message); })
+      .buildStage1CPrompt();
+  }
+
+  /* ── Stage 1D ── */
+  function runStage1D() {
+    setGenerating('status1d','gen1dbtn','1D');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        document.getElementById('part1d').value = res;
+        setDone('status1d','gen1dbtn','Generate','Stage 1D ready — copy then paste to ChatGPT','conf1dbtn');
+      })
+      .withFailureHandler(function(err) { setFail('status1d','gen1dbtn','Generate',err.message); })
+      .buildStage1DPrompt();
+  }
+
+  /* ── Stage 1.5A — Structure Audit ── */
+  function runStage15A() {
+    setGenerating('status15a','gen15abtn','1.5A');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || res.trim()==='') { setFail('status15a','gen15abtn','Generate','No output. Check TSM sheet name.'); return; }
+        document.getElementById('part15a').value = res;
+        setDone('status15a','gen15abtn','Generate','1.5A ready — copy to ChatGPT, paste structure, then save','');
+      })
+      .withFailureHandler(function(err) { setFail('status15a','gen15abtn','Generate',err.message); })
+      .buildStage15APrompt();
+  }
+
+  function saveStage15AToSheet() {
+    var output = document.getElementById('part15a_output').value.trim();
+    if (!output) {
+      setStatus('status15a','fail','❌ No structure to save');
+      return;
+    }
+    setStatus('status15a','saving','Saving structure to Column CU...');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res.success) {
+          setStatus('status15a','done','✔ Structure saved to Column CU');
+          document.getElementById('save15abtn').innerText = '✔ Saved';
+          document.getElementById('save15abtn').disabled = true;
+        } else {
+          setStatus('status15a','fail','❌ ' + res.message);
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('status15a','fail','❌ Save failed: ' + err.message);
+      })
+      .saveStage15AStructure(output);
+  }
+
+  /* ── Stage 1.5B — H2 Generation ── */
+  function runStage15B() {
+    setGenerating('status15b','gen15bbtn','1.5B');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || res.trim()==='') { setFail('status15b','gen15bbtn','Generate','No structure found. Run W1.5A first.'); return; }
+        document.getElementById('part15b').value = res;
+        setDone('status15b','gen15bbtn','Generate','1.5B ready — copy to ChatGPT, paste H2s, then save','');
+      })
+      .withFailureHandler(function(err) { setFail('status15b','gen15bbtn','Generate',err.message); })
+      .buildStage15BPrompt();
+  }
+
+  function saveStage15BToSheet() {
+    var output = document.getElementById('part15b_output').value.trim();
+    if (!output) {
+      setStatus('status15b','fail','❌ No H2s to save');
+      return;
+    }
+    setStatus('status15b','saving','Saving H2s to Column CV...');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res.success) {
+          setStatus('status15b','done','✔ H2s saved to Column CV');
+          document.getElementById('save15bbtn').innerText = '✔ Saved';
+          document.getElementById('save15bbtn').disabled = true;
+        } else {
+          setStatus('status15b','fail','❌ ' + res.message);
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('status15b','fail','❌ Save failed: ' + err.message);
+      })
+      .saveStage15BH2s(output);
+  }
+
+  /* ── Stage 1.5C — Enrichment ── */
+  function runStage15C() {
+    setGenerating('status15c','gen15cbtn','1.5C');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || res.trim()==='') { setFail('status15c','gen15cbtn','Generate','No H2s found. Run W1.5B first.'); return; }
+        document.getElementById('part15c').value = res;
+        setDone('status15c','gen15cbtn','Generate','1.5C ready — copy to ChatGPT, paste enriched plan, then save','');
+      })
+      .withFailureHandler(function(err) { setFail('status15c','gen15cbtn','Generate',err.message); })
+      .buildStage15CPrompt();
+  }
+
+  function saveStage15CToSheet() {
+    var output = document.getElementById('part15c_output').value.trim();
+    if (!output) {
+      setStatus('status15c','fail','❌ No enriched plan to save');
+      return;
+    }
+    setStatus('status15c','saving','Saving enriched plan to Column CW...');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res.success) {
+          setStatus('status15c','done','✔ Enriched plan saved to Column CW');
+          document.getElementById('save15cbtn').innerText = '✔ Saved';
+          document.getElementById('save15cbtn').disabled = true;
+        } else {
+          setStatus('status15c','fail','❌ ' + res.message);
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('status15c','fail','❌ Save failed: ' + err.message);
+      })
+      .saveStage15CEnrichedPlan(output);
+  }
+
+  /* ── Stage 1.5D — Lateral Links ── */
+  function runStage15D() {
+    setGenerating('status15d','gen15dbtn','1.5D');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || res.trim()==='') { setFail('status15d','gen15dbtn','Generate','No enriched plan found. Run W1.5C first.'); return; }
+        document.getElementById('part15d').value = res;
+        setDone('status15d','gen15dbtn','Generate','1.5D ready — copy to ChatGPT, paste final plan, then save','');
+      })
+      .withFailureHandler(function(err) { setFail('status15d','gen15dbtn','Generate',err.message); })
+      .buildW15DPrompt();
+  }
+
+  function saveStage15DToSheet() {
+    var output = document.getElementById('part15d_output').value.trim();
+    if (!output) {
+      setStatus('status15d','fail','❌ No final plan to save');
+      return;
+    }
+    setStatus('status15d','saving','Saving final plan to Column CX...');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res.success) {
+          setStatus('status15d','done','✔ Final plan saved to Column CX');
+          document.getElementById('save15dbtn').innerText = '✔ Saved';
+          document.getElementById('save15dbtn').disabled = true;
+        } else {
+          setStatus('status15d','fail','❌ ' + res.message);
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('status15d','fail','❌ Save failed: ' + err.message);
+      })
+      .saveW15DUpdatedPlan(output);
+  }
+
+  /* ── Stage 1.5E — Google Optimization ── */
+  function runStage15E() {
+    setGenerating('status15e','gen15ebtn','1.5E');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res || res.trim()==='') { setFail('status15e','gen15ebtn','Generate','No approved plan found. Run W1.5D first.'); return; }
+        document.getElementById('part15e').value = res;
+        setDone('status15e','gen15ebtn','Generate','1.5E ready — copy to ChatGPT, paste optimizations, then save','');
+      })
+      .withFailureHandler(function(err) { setFail('status15e','gen15ebtn','Generate',err.message); })
+      .buildStage15EPrompt();
+  }
+
+  function saveStage15EToSheet() {
+    var output = document.getElementById('part15e_output').value.trim();
+    if (!output) {
+      setStatus('status15e','fail','❌ No optimizations to save');
+      return;
+    }
+    setStatus('status15e','saving','Saving optimizations to Column CY...');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res.success) {
+          setStatus('status15e','done','✔ Optimizations saved to Column CY');
+          document.getElementById('save15ebtn').innerText = '✔ Saved';
+          document.getElementById('save15ebtn').disabled = true;
+        } else {
+          setStatus('status15e','fail','❌ ' + res.message);
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('status15e','fail','❌ Save failed: ' + err.message);
+      })
+      .saveStage15EOptimizations(output);
+  }
+
+  function saveStage15AAuditToSheet() {
+    var audit = document.getElementById('part15a').value.trim();
+    if (!audit) { setStatus('status15a','fail','❌ No audit results to save — paste from ChatGPT first.'); return; }
+    var btn = document.getElementById('save15abtn');
+    btn.disabled = true; btn.innerText = 'Saving…';
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.success) {
+          setStatus('status15a','done','✔ Audit results saved to sheet — review then proceed to 1.5B');
+          btn.innerText = '✔ Saved';
+          // Enable confirm button after save
+          document.getElementById('conf15abtn').disabled = false;
+        } else {
+          setStatus('status15a','fail','❌ Save failed — ' + (result ? result.message : 'unknown error'));
+          btn.disabled = false; btn.innerText = '⬇ Save Audit';
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('status15a','fail','❌ Save failed — ' + err.message);
+        btn.disabled = false; btn.innerText = '⬇ Save Audit';
+      })
+      .saveStage15AAudit(audit);
+  }
+
+  /* ── Stage 2A ── */
+  function saveSectionPlanToSheet() {
+    var plan = document.getElementById('part15b_output').value.trim();
+    if (!plan) { setStatus('status15b','fail','❌ Paste section plan output first'); return; }
+    var btn = document.getElementById('save15bbtn');
+    btn.disabled = true; btn.innerText = 'Saving…';
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.success) {
+          setStatus('status15b','done','✔ Section plan saved to Column CV');
+          btn.innerText = '✔ Saved to CV';
+          // Mark window as confirmed
+          document.getElementById('pip-15b').classList.remove('pip-pending');
+          document.getElementById('pip-15b').classList.add('pip-confirmed');
+        } else {
+          setStatus('status15b','fail','❌ Save failed — ' + (result ? result.message : 'unknown error'));
+          btn.disabled = false; btn.innerText = '⬇ Save to Column CV';
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('status15b','fail','❌ Save failed — ' + err.message);
+        btn.disabled = false; btn.innerText = '⬇ Save to Column CV';
+      })
+      .saveSectionPlan(plan);
+  }
+
+  function runStage2A() {
+    // Stage gate — 1B, 1D must be confirmed and section plan must be saved
+    var conf1b = document.getElementById('conf1bbtn');
+    var conf1d = document.getElementById('conf1dbtn');
+    var save15b = document.getElementById('save15bbtn');
+    var missing = [];
+    if (!conf1b || !conf1b.disabled) missing.push('Stage 1B (Structural Rules)');
+    if (!conf1d || !conf1d.disabled) missing.push('Stage 1D (Output Quality Rules)');
+    if (!save15b || (save15b.innerText !== '✔ Saved' && !save15b.disabled)) missing.push('Section Plan (press ⬇ Save Plan in W1.5B)');
+    if (missing.length > 0) {
+      setStatus('status2a', 'fail', '❌ Cannot run 2A — complete these first: ' + missing.join(' | '));
+      return;
+    }
+    setGenerating('status2a','gen2abtn','2A');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        document.getElementById('part2a').value = res;
+        setDone('status2a','gen2abtn','Generate','Pre-write reminder ready — copy then paste to ChatGPT','conf2abtn');
+      })
+      .withFailureHandler(function(err) { setFail('status2a','gen2abtn','Generate',err.message); })
+      .getStage2AData();
+  }
+
+  /* ── Stage 2B ── */
+  function runStage2B() {
+    setGenerating('status2b','gen2bbtn','2B');
+    google.script.run
+      .withSuccessHandler(function(res) {
+        document.getElementById('part2b_p1').value = res.part1 || '';
+        document.getElementById('part2b_p2').value = res.part2 || '';
+        document.getElementById('part2b_p3a').value = res.part3a || '';
+        document.getElementById('part2b_p3b').value = res.part3b || '';
+        setStatus('status2b','done','✔ Generated — copy Step 1, paste to ChatGPT, wait for READY');
+        document.getElementById('gen2bbtn').disabled = false;
+        document.getElementById('gen2bbtn').innerText = 'Generate All Parts';
+      })
+      .withFailureHandler(function(err) { setFail('status2b','gen2bbtn','Generate All Parts',err.message); })
+      .getStage2BData();
+  }
+
+  function copyStep1Parts() {
+    const p1 = document.getElementById('part2b_p1').value;
+    const p2 = document.getElementById('part2b_p2').value;
+    const p3a = document.getElementById('part2b_p3a').value;
+    if (!p1 || !p2 || !p3a) { alert('Generate first'); return; }
+    const combined = p1 + '\n\n---\n\n' + p2 + '\n\n---\n\n' + p3a;
+    navigator.clipboard.writeText(combined).then(function() {
+      setStatus('status2b','ready','✔ Step 1 copied → paste to ChatGPT and wait for READY');
+    });
+  }
+
+  function copyStep2Part() {
+    const p3b = document.getElementById('part2b_p3b').value;
+    if (!p3b) { alert('Generate first'); return; }
+    navigator.clipboard.writeText(p3b).then(function() {
+      setStatus('status2b','ready','✔ Step 2 copied → paste to ChatGPT after it says READY');
+      document.getElementById('conf2bbtn').disabled = false;
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     GENERATE ALL — W0 through W2B
+     Chains all generate functions sequentially in one click.
+     Each stage fires after the previous completes successfully.
+     Individual generate buttons remain available throughout.
+  ══════════════════════════════════════════════════════════════ */
+  function runGenerateAll() {
+    const btn = document.getElementById('genAllBtn');
+    btn.disabled = true;
+    btn.innerText = 'Generating…';
+
+    function done() {
+      btn.disabled = false;
+      btn.innerText = '⚡ Generate All';
+    }
+
+    function fail(stage, msg) {
+      btn.disabled = false;
+      btn.innerText = '⚡ Generate All';
+      alert('Generate All stopped at ' + stage + ':\n' + msg);
+    }
+
+    // W0
+    setGenerating('status0','gen0btn','W0');
+    google.script.run
+      .withSuccessHandler(function(status) {
+        if (!status.success) { fail('W0', status.error); return; }
+        google.script.run
+          .withSuccessHandler(function(p) {
+            document.getElementById('part0').value = p;
+            setDone('status0','gen0btn','Generate','PASS | ID: ' + status.postID + ' — copy then paste to ChatGPT','conf0btn');
+
+            // 1A
+            setGenerating('status1a','gen1abtn','1A');
+            google.script.run
+              .withSuccessHandler(function(r1a) {
+                if (!r1a || r1a.startsWith('ERROR')) { fail('1A', r1a||'No output'); return; }
+                document.getElementById('part1a').value = r1a;
+                setDone('status1a','gen1abtn','Generate','Stage 1A ready — copy then paste to ChatGPT','conf1abtn');
+
+                // 1B
+                setGenerating('status1b','gen1bbtn','1B');
+                google.script.run
+                  .withSuccessHandler(function(r1b) {
+                    document.getElementById('part1b').value = r1b;
+                    setDone('status1b','gen1bbtn','Generate','Stage 1B ready — copy then paste to ChatGPT','conf1bbtn');
+
+                    // 1C
+                    setGenerating('status1c','gen1cbtn','1C');
+                    google.script.run
+                      .withSuccessHandler(function(r1c) {
+                        document.getElementById('part1c').value = r1c;
+                        setDone('status1c','gen1cbtn','Generate','Stage 1C ready — copy then paste to ChatGPT','conf1cbtn');
+
+                        // 1D
+                        setGenerating('status1d','gen1dbtn','1D');
+                        google.script.run
+                          .withSuccessHandler(function(r1d) {
+                            document.getElementById('part1d').value = r1d;
+                            setDone('status1d','gen1dbtn','Generate','Stage 1D ready — copy then paste to ChatGPT','conf1dbtn');
+
+                            // 1.5A
+                            setGenerating('status15a','gen15abtn','1.5A');
+                            google.script.run
+                              .withSuccessHandler(function(r15a) {
+                                if (!r15a || r15a.trim()==='') { fail('1.5A','No output. Check TSM sheet name.'); return; }
+                                document.getElementById('part15a').value = r15a;
+                                setDone('status15a','gen15abtn','Generate','1.5A ready — copy and submit.','conf15abtn');
+
+                                // 1.5B
+                                setGenerating('status15b','gen15bbtn','1.5B');
+                                google.script.run
+                                  .withSuccessHandler(function(r15b) {
+                                    if (!r15b || r15b.trim()==='') { fail('1.5B','No output. Check TSM sheet.'); return; }
+                                    document.getElementById('part15b').value = r15b;
+                                    setDone('status15b','gen15bbtn','Generate','Section plan ready','conf15bbtn');
+
+                                    // 2A
+                                    setGenerating('status2a','gen2abtn','2A');
+                                    google.script.run
+                                      .withSuccessHandler(function(r2a) {
+                                        document.getElementById('part2a').value = r2a;
+                                        setDone('status2a','gen2abtn','Generate','Pre-write reminder ready — copy then paste to ChatGPT','conf2abtn');
+
+                                        // 2B
+                                        setGenerating('status2b','gen2bbtn','2B');
+                                        google.script.run
+                                          .withSuccessHandler(function(r2b) {
+                                            document.getElementById('part2b_p1').value = r2b.part1 || '';
+                                            document.getElementById('part2b_p2').value = r2b.part2 || '';
+                                            document.getElementById('part2b_p3a').value = r2b.part3a || '';
+                                            setDone('status2b','gen2bbtn','Generate','Stage 2B ready — use Copy All then paste to ChatGPT','conf2bbtn');
+                                            done();
+                                          })
+                                          .withFailureHandler(function(e) { fail('2B', e.message); })
+                                          .getStage2BData();
+                                      })
+                                      .withFailureHandler(function(e) { fail('2A', e.message); })
+                                      .getStage2AData();
+                                  })
+                                  .withFailureHandler(function(e) { fail('1.5B', e.message); })
+                                  .buildStage15BPrompt();
+                              })
+                              .withFailureHandler(function(e) { fail('1.5A', e.message); })
+                              .buildStage15APrompt();
+                          })
+                          .withFailureHandler(function(e) { fail('1D', e.message); })
+                          .buildStage1DPrompt();
+                      })
+                      .withFailureHandler(function(e) { fail('1C', e.message); })
+                      .buildStage1CPrompt();
+                  })
+                  .withFailureHandler(function(e) { fail('1B', e.message); })
+                  .buildStage1BPrompt();
+              })
+              .withFailureHandler(function(e) { fail('1A', e.message); })
+              .buildStage1APrompt();
+          })
+          .withFailureHandler(function(e) { fail('W0 prompt', e.message); })
+          .generateForensicPrompt();
+      })
+      .withFailureHandler(function(e) { fail('W0 check', e.message); })
+      .checkGSCDataStatus();
+  }
+
+  /* ══ W5 — live length display ══ */
+  function updateGovLengths() {
+    var raw = document.getElementById('govPasteBlock').value;
+    var display = document.getElementById('govLengthDisplay');
+    function extract(label) {
+      var re = new RegExp(label + ':\\s*(.+)', 'i');
+      var m  = raw.match(re);
+      return m ? m[1].trim() : '';
+    }
+    function lenSpan(label, val, min, max) {
+      var len = val.length;
+      var ok  = len >= min && len <= max;
+      var col = val ? (ok ? '#2e7d32' : '#c62828') : '#999';
+      var note = val ? (ok ? '✔' : (len < min ? '▲ +'+(min-len) : '▼ -'+(len-max))) : '—';
+      return '<span style="color:' + col + ';font-weight:700">' + label + ': ' + len + ' chars ' + note + ' (' + min + '-' + max + ')</span>';
+    }
+    document.getElementById('govH1Len').innerHTML    = lenSpan('H1',    extract('New H1'),               40, 60);
+    document.getElementById('govTitleLen').innerHTML = lenSpan('Title',  extract('New Meta Title'),       50, 60);
+    document.getElementById('govDescLen').innerHTML  = lenSpan('Desc',   extract('New Meta Description'), 140, 160);
+    display.style.display = raw.trim() ? 'block' : 'none';
+  }
+
+  /* ══ W5 — Generate combined prompt ══ */
+  function generateGovernancePrompt() {
+    var btn = document.getElementById('govPromptBtn');
+    btn.disabled = true; btn.innerText = 'Generating…';
+    setStatus('statusGov','running','Building prompt from sheet data…',true);
+    google.script.run
+      .withSuccessHandler(function(prompt) {
+        document.getElementById('govPrompt').value = prompt;
+        document.getElementById('copyGovPromptBtn').disabled = false;
+        btn.disabled = false; btn.innerText = 'Generate Prompt';
+        setStatus('statusGov','done','✔ Prompt ready — copy into ChatGPT, paste H1/Meta output below');
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false; btn.innerText = 'Generate Prompt';
+        setStatus('statusGov','fail','❌ ' + err.message);
+      })
+      .getMetaPrompt();
+  }
+
+  /* ══ W5 — Push full output to sheet ══ */
+  function pushGovernanceToSheet() {
+    var raw = document.getElementById('govPasteBlock').value.trim();
+    if (!raw) { alert('Paste the ChatGPT output first.'); return; }
+    var btn = document.getElementById('pushGovBtn');
+    btn.disabled = true; btn.innerText = 'Pushing…';
+    setStatus('statusGov','running','Pushing to sheet…',true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false; btn.innerText = '💾 Push to Sheet';
+        var gridWrap = document.getElementById('stage2CResultGrid');
+        var grid     = document.getElementById('stage2CGrid');
+        var msg      = document.getElementById('stage2CMsg');
+        gridWrap.style.display = 'block';
+        var fields = ['New H1','New Meta Title','New Meta Description'];
+        grid.innerHTML = fields.map(function(f) {
+          var ok = res.written  && res.written.indexOf(f)  > -1;
+          var nf = res.notFound && res.notFound.indexOf(f) > -1;
+          var bg = ok ? '#e8f5e9' : nf ? '#fff3e0' : '#ffebee';
+          var ic = ok ? '✔' : nf ? '⚠' : '✘';
+          var cl = ok ? '#2e7d32' : nf ? '#e65100' : '#c62828';
+          return '<div style="background:' + bg + ';border-radius:3px;padding:4px 6px;font-family:JetBrains Mono,monospace;font-size:13px;display:flex;gap:5px;align-items:center">' +
+                 '<span style="color:' + cl + ';font-weight:700">' + ic + '</span><span>' + f + '</span></div>';
+        }).join('');
+        msg.innerText = res.message || '';
+        setStatus('statusGov', res.success ? 'done' : 'fail',
+          res.success ? '✔ ' + (res.written ? res.written.length : 0) + '/3 fields pushed to sheet'
+                      : '❌ Push failed — ' + (res.message || 'unknown error'));
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false; btn.innerText = '💾 Push to Sheet';
+        setStatus('statusGov','fail','❌ Push failed — ' + err.message);
+      })
+      .pushGovernanceFieldsToActiveRow(raw);
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     W4 — AUDIT THEN PUSH HTML
+     Runs mechanical audit on content in sidebar.
+     Pass → pushes to sheet. Fail → shows fix prompt, no push.
+  ══════════════════════════════════════════════════════════════ */
+  function auditThenPushHTML() {
+    const html = document.getElementById('finalHtmlPreview').value;
+    if (!html.trim()) { alert('No HTML to push — paste Stage 2B HTML first.'); return; }
+
+    const btn = document.getElementById('btnPush');
+    btn.disabled = true; btn.innerText = 'Auditing…';
+    setStatus('statusFinal','running','Running HTML audit…',true);
+
+    google.script.run
+      .withSuccessHandler(function(report) {
+        document.getElementById('htmlAuditBlock').style.display = 'block';
+        document.getElementById('auditResult').value = report;
+
+        const hasFail = report.includes('FAIL');
+        const allPass = !hasFail;
+
+        if (allPass) {
+          // Audit passed — now push
+          setStatus('statusFinal','running','✔ Audit passed — pushing to sheet…',true);
+          google.script.run
+            .withSuccessHandler(function(msg) {
+              setStatus('statusFinal','done','✔ Pushed — ' + msg);
+              document.getElementById('htmlFixSection').style.display = 'none';
+              btn.disabled = false; btn.innerText = 'Audit + Push to Sheet';
+            })
+            .withFailureHandler(function(err) {
+              setStatus('statusFinal','fail','❌ Push failed — ' + err.message);
+              btn.disabled = false; btn.innerText = 'Audit + Push to Sheet';
+            })
+            .pushHtmlToActiveRow(html);
+        } else {
+          // Audit failed — show fix prompt, do not push
+          var failLines = report.split('\n').filter(function(l){ return l.includes('FAIL'); });
+          
+          // Check if CHECK 3F media failure exists
+          var mediaFailure = failLines.find(function(l){ return l.includes('CHECK 3F'); });
+          var mediaInstruction = '';
+          
+          if (mediaFailure) {
+            var hasMissing = mediaFailure.includes('MISSING:');
+            var hasHallucinated = mediaFailure.includes('HALLUCINATED:');
+            
+            if (hasMissing && hasHallucinated) {
+              mediaInstruction = 'CRITICAL MEDIA RULES:\n' +
+                '1. RESTORE: Re-add all MISSING original media elements exactly as they were\n' +
+                '2. REMOVE: Delete all HALLUCINATED media elements (they do not exist in your media library)\n\n';
+            } else if (hasMissing) {
+              mediaInstruction = 'CRITICAL MEDIA RULE: RESTORE all MISSING original media elements exactly as they were.\n\n';
+            } else if (hasHallucinated) {
+              mediaInstruction = 'CRITICAL MEDIA RULE: REMOVE all HALLUCINATED media elements (they do not exist in your media library).\n\n';
+            }
+          } else {
+            // Non-media failures - preserve all media
+            mediaInstruction = 'CRITICAL — DO NOT remove, alter, reorder, or rewrite any <figure>, <img>, <video>, <iframe>, or <source> element. Media elements must be returned exactly as they appear in the input HTML. Only fix the specific failures listed below.\n\n';
+          }
+          
+          var fixPrompt =
+            'The following mechanical audit checks FAILED on the HTML you just generated.\n' +
+            'Correct every failure and return THE COMPLETE REVISED HTML — not just the affected section.\n' +
+            'Your entire output must be the full revised HTML body, first opening tag to last closing tag.\n' +
+            'No explanation, preamble, or markdown.\n\n' +
+            mediaInstruction +
+            'FAILURES TO FIX:\n' + failLines.join('\n') + '\n\n' +
+            'Return the complete corrected HTML now.';
+          document.getElementById('htmlFixPrompt').value = fixPrompt;
+          document.getElementById('htmlFixSection').style.display = 'block';
+          setStatus('statusFinal','fail','❌ Audit failed — fix issues, re-paste HTML, then push again.');
+          btn.disabled = false; btn.innerText = 'Audit + Push to Sheet';
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusFinal','fail','❌ Audit error — ' + err.message);
+        btn.disabled = false; btn.innerText = 'Audit + Push to Sheet';
+      })
+      .runMechanicalAuditWithContext(html);
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     W4 — LOAD HTML FROM SHEET
+     Reads New HTML (col 98) for the active row and populates
+     the W4 textarea so the audit + push flow can be re-run,
+     and W5 has the HTML it needs for schema generation.
+  ══════════════════════════════════════════════════════════════ */
+  function loadHtmlFromSheet() {
+    setStatus('statusFinal', 'running', 'Loading HTML from sheet…', true);
+    google.script.run
+      .withSuccessHandler(function(html) {
+        if (!html || html.indexOf('ERROR') === 0) {
+          setStatus('statusFinal', 'fail', '❌ ' + (html || 'No HTML found in sheet for this row.'));
+          return;
+        }
+        document.getElementById('finalHtmlPreview').value = html;
+        setStatus('statusFinal', 'done', '✔ HTML loaded from sheet — review then Audit + Push, or proceed to W5.');
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusFinal', 'fail', '❌ Load failed — ' + err.message);
+      })
+      .getHtmlFromActiveRow();
+  }
+
+  /* ── Push to sheet ── */
+  function pushToSheet() {
+    const content = document.getElementById('finalHtmlPreview').value;
+    if (!content.trim()) { alert('No content to push.'); return; }
+    const btn = document.getElementById('btnPush');
+    btn.innerText = 'Pushing…'; btn.disabled = true;
+    setStatus('statusFinal','running','Pushing to sheet…',true);
+    google.script.run
+      .withSuccessHandler(function(msg) {
+        setStatus('statusFinal','done','✔ ' + msg + ' — run audit in W5, then push governance fields in W6');
+        btn.innerText = 'Push to Sheet'; btn.disabled = false;
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusFinal','fail','❌ ' + err.message);
+        btn.innerText = 'Push to Sheet'; btn.disabled = false;
+      })
+      .pushHtmlToActiveRow(content);
+  }
+
+  /* ── Mechanical Audit ── */
+  function runAudit() {
+    const btn = document.getElementById('auditBtn');
+    btn.disabled = true; btn.innerText = 'Running…';
+    setStatus('statusAudit','running','Running mechanical audit…',true);
+    google.script.run
+      .withSuccessHandler(function(report) {
+        document.getElementById('auditResult').value = report;
+        const hasFail = report.includes('FAIL');
+        const allPass = /MECHANICAL AUDIT: \d+\/\d+ PASS/.test(report) && !hasFail;
+        if (allPass) {
+          setStatus('statusAudit','done','✔ All checks clear — proceed to W6.');
+          document.getElementById('htmlFixSection').style.display = 'none';
+        } else if (hasFail) {
+          setStatus('statusAudit','fail','❌ Failures found — use fix prompt below, then re-push HTML and re-run.');
+          // Extract FAIL lines for the fix prompt
+          var failLines = report.split('\n').filter(function(l){ return l.includes('FAIL'); });
+          var fixPrompt =
+            'The following mechanical audit checks FAILED on the HTML you just generated.\n' +
+            'You must correct every failure listed below and return THE COMPLETE REVISED HTML — ' +
+            'not just the affected section. Your entire output must be the full revised HTML body, ' +
+            'starting with the first opening HTML tag and ending with the last closing tag. ' +
+            'Do not include any explanation, preamble, or markdown.\n\n' +
+            'CRITICAL — DO NOT remove, alter, reorder, or rewrite any <figure>, <img>, <video>, <iframe>, or <source> element. Media elements must be returned exactly as they appear in the input HTML. Only fix the specific failures listed below.\n\n' +
+            'FAILURES TO FIX:\n' + failLines.join('\n') + '\n\n' +
+            'Return the complete corrected HTML now.';
+          document.getElementById('htmlFixPrompt').value = fixPrompt;
+          document.getElementById('htmlFixSection').style.display = 'block';
+        } else {
+          setStatus('statusAudit','ready','Audit complete — review report.');
+          document.getElementById('htmlFixSection').style.display = 'none';
+        }
+        btn.disabled = false; btn.innerText = 'Run Audit';
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusAudit','fail','❌ ' + err.message);
+        btn.disabled = false; btn.innerText = 'Run Audit';
+      })
+      .runMechanicalAudit();
+  }
+
+  /* ── W7 Stage 2C Governance Audit — reads fields from sheet ── */
+  function runGovernanceAudit() {
+    const btn = document.getElementById('govAuditBtn');
+    btn.disabled = true; btn.innerText = 'Running…';
+    setStatus('statusGovAudit','running','Reading fields from sheet…',true);
+
+    google.script.run
+      .withSuccessHandler(function(fields) {
+        if (fields.error) {
+          setStatus('statusGovAudit','fail','❌ ' + fields.error);
+          btn.disabled = false; btn.innerText = 'Run Audit';
+          return;
+        }
+
+        var h1        = fields.h1        || '';
+        var metaTitle = fields.metaTitle || '';
+        var metaDesc  = fields.metaDesc  || '';
+        var schemaRaw = fields.schema    || '';
+
+        // Strip <script> wrapper
+        var schemaJSON = schemaRaw;
+        var scriptMatch = schemaRaw.match(/<script[^>]*>([\s\S]*?)<\/script>/i);
+        if (scriptMatch) schemaJSON = scriptMatch[1].trim();
+
+        const results = [];
+        var passCount = 0;
+        var total = 0;
+        var failures = [];
+
+        /* ── H1 ── */
+        results.push('── H1 ───────────────────────────────────────────');
+        total++;
+        if (!h1) {
+          results.push('CHECK H1 [Present]: FAIL — H1 field empty in sheet');
+          failures.push('H1 is empty — add a valid H1.');
+        } else {
+          results.push('CHECK H1 [Present]: PASS — "' + h1.substring(0,80) + '"');
+          passCount++;
+        }
+        total++;
+        if (/\*\*|__|\*[^*]|_[^_]|`/.test(h1)) {
+          results.push('CHECK H1 [No markdown]: FAIL — markdown detected. Fix: remove ** _ `');
+          failures.push('H1 contains markdown — current value: "' + h1 + '" — rewrite without ** _ `');
+        } else {
+          results.push('CHECK H1 [No markdown]: PASS');
+          passCount++;
+        }
+
+        /* ── META TITLE ── */
+        results.push('');
+        results.push('── META TITLE ───────────────────────────────────');
+        total++;
+        if (!metaTitle) {
+          results.push('CHECK Meta Title [Present]: FAIL — field empty in sheet');
+          failures.push('Meta Title is empty — add a valid meta title.');
+        } else {
+          results.push('CHECK Meta Title [Present]: PASS — "' + metaTitle.substring(0,80) + '"');
+          passCount++;
+          var mtLen = metaTitle.length;
+          total++;
+          if (mtLen >= 50 && mtLen <= 60) {
+            results.push('CHECK Meta Title [Length ' + mtLen + ' chars]: PASS');
+            passCount++;
+          } else {
+            var mtFix = mtLen < 50 ? 'too short — expand by ' + (50-mtLen) + ' chars' : 'too long — shorten by ' + (mtLen-60) + ' chars';
+            results.push('CHECK Meta Title [Length ' + mtLen + ' chars]: FAIL — ' + mtFix);
+            failures.push('Meta Title is ' + mtLen + ' chars (' + mtFix + '). Current value: "' + metaTitle + '"');
+          }
+          total++;
+          if (/\*\*|__|\*[^*]|_[^_]|`/.test(metaTitle)) {
+            results.push('CHECK Meta Title [No markdown]: FAIL');
+            failures.push('Meta Title contains markdown — rewrite without ** _ `');
+          } else {
+            results.push('CHECK Meta Title [No markdown]: PASS');
+            passCount++;
+          }
+        }
+
+        /* ── META DESCRIPTION ── */
+        results.push('');
+        results.push('── META DESCRIPTION ─────────────────────────────');
+        total++;
+        if (!metaDesc) {
+          results.push('CHECK Meta Description [Present]: FAIL — field empty in sheet');
+          failures.push('Meta Description is empty — add a valid meta description.');
+        } else {
+          results.push('CHECK Meta Description [Present]: PASS — "' + metaDesc.substring(0,100) + '"');
+          passCount++;
+          var mdLen = metaDesc.length;
+          total++;
+          if (mdLen >= 140 && mdLen <= 160) {
+            results.push('CHECK Meta Description [Length ' + mdLen + ' chars]: PASS');
+            passCount++;
+          } else {
+            var mdFix = mdLen < 140 ? 'too short — expand by ' + (140-mdLen) + ' chars' : 'too long — shorten by ' + (mdLen-160) + ' chars';
+            results.push('CHECK Meta Description [Length ' + mdLen + ' chars]: FAIL — ' + mdFix);
+            failures.push('Meta Description is ' + mdLen + ' chars (' + mdFix + '). Current value: "' + metaDesc + '"');
+          }
+          total++;
+          if (/\*\*|__|\*[^*]|_[^_]|`/.test(metaDesc)) {
+            results.push('CHECK Meta Description [No markdown]: FAIL');
+            failures.push('Meta Description contains markdown — rewrite without ** _ `');
+          } else {
+            results.push('CHECK Meta Description [No markdown]: PASS');
+            passCount++;
+          }
+        }
+
+        /* ── SCHEMA ── */
+        results.push('');
+        results.push('── SCHEMA ───────────────────────────────────────');
+        if (!schemaJSON) {
+          results.push('CHECK 10–16 [Schema]: NOT IN SHEET — push fields in W6 first.');
+          total += 7;
+          failures.push('Schema (JSON-LD) field is empty in sheet — generate and push in W6.');
+        } else {
+          total++;
+          var parsed = null;
+          try {
+            parsed = JSON.parse(schemaJSON);
+            results.push('CHECK 10 [Valid JSON]: PASS');
+            passCount++;
+          } catch(e) {
+            results.push('CHECK 10 [Valid JSON]: FAIL — ' + e.message);
+            failures.push('Schema is not valid JSON. Raw value:\n' + schemaJSON.substring(0,300));
+          }
+
+          if (parsed) {
+            var root = (parsed['@graph'] && parsed['@graph'].length > 0) ? parsed['@graph'][0] : parsed;
+
+            total++;
+            var ctx = parsed['@context'] || '';
+            if (ctx === 'https://schema.org') {
+              results.push('CHECK 11 [@context]: PASS');
+              passCount++;
+            } else {
+              results.push('CHECK 11 [@context]: FAIL — "' + ctx + '"');
+              failures.push('@context is "' + ctx + '" — must be exactly "https://schema.org" with no brackets.');
+            }
+
+            total++;
+            var type = root['@type'] || '';
+            if (type) {
+              results.push('CHECK 12 [@type]: PASS — "' + type + '"');
+              passCount++;
+            } else {
+              results.push('CHECK 12 [@type]: FAIL — @type missing');
+              failures.push('@type is missing from schema root.');
+            }
+
+            total++;
+            var isService = (type === 'Service');
+            var reqFields = isService ? ['name','url'] : ['headline','mainEntityOfPage'];
+            var missing13 = reqFields.filter(function(f){ return !root[f]; });
+            if (missing13.length === 0) {
+              results.push('CHECK 13 [Required fields]: PASS');
+              passCount++;
+            } else {
+              results.push('CHECK 13 [Required fields]: FAIL — missing: ' + missing13.join(', '));
+              failures.push('Schema missing required fields: ' + missing13.join(', '));
+            }
+
+            total++;
+            var encoded14 = schemaJSON.match(/(%22|%3A|%2F|%7B|%7D|&amp;|&quot;)/g);
+            if (!encoded14) {
+              results.push('CHECK 14 [HTML encoding]: PASS');
+              passCount++;
+            } else {
+              var uniq14 = encoded14.filter(function(v,i,a){return a.indexOf(v)===i;});
+              results.push('CHECK 14 [HTML encoding]: FAIL — ' + uniq14.join(', '));
+              failures.push('Schema contains HTML-encoded characters: ' + uniq14.join(', ') + ' — output clean unencoded JSON-LD only.');
+            }
+
+            total++;
+            var badURLs = [];
+            function walkURLs(obj) {
+              if (typeof obj === 'string') {
+                if (obj.indexOf('http') === 0 && obj.indexOf('https://www.abbeyfloorcare.co.uk') !== 0 &&
+                    obj !== 'https://schema.org' && obj !== 'http://schema.org')
+                  badURLs.push(obj.substring(0,80));
+              } else if (typeof obj === 'object' && obj !== null) {
+                Object.keys(obj).forEach(function(k){ walkURLs(obj[k]); });
+              }
+            }
+            walkURLs(parsed);
+            if (badURLs.length === 0) {
+              results.push('CHECK 15 [URL domain]: PASS');
+              passCount++;
+            } else {
+              results.push('CHECK 15 [URL domain]: FAIL — ' + badURLs.join(' | '));
+              failures.push('Schema contains non-domain URLs: ' + badURLs.join(' | ') + ' — all URLs must start with https://www.abbeyfloorcare.co.uk');
+            }
+
+            total++;
+            var brackets16 = schemaJSON.match(/"\[https?:\/\//g);
+            if (!brackets16) {
+              results.push('CHECK 16 [Bracket URLs]: PASS');
+              passCount++;
+            } else {
+              results.push('CHECK 16 [Bracket URLs]: FAIL — ' + brackets16.length + ' bracket-wrapped URL(s)');
+              failures.push('Schema has ' + brackets16.length + ' bracket-wrapped URL(s) — remove the leading [ character from each URL value.');
+            }
+
+          } else {
+            results.push('CHECK 11–16: BLOCKED — fix invalid JSON first.');
+            total += 6;
+          }
+        }
+
+        /* ── Summary ── */
+        results.push('');
+        results.push('GOVERNANCE AUDIT: ' + passCount + '/' + total + ' PASS');
+        var allPass = (passCount === total);
+
+        results.push('');
+        results.push('DEFERRED TO STAGE 3B (LLM):');
+        results.push('  Check 17 — Schema type vs article type');
+        results.push('  Check 18 — Prohibited schema types absent');
+        results.push('  Check 19 — Entity role fields match governed entity');
+
+        document.getElementById('govAuditResult').value = results.join('\n');
+
+        if (allPass) {
+          setStatus('statusGovAudit','done','✔ ' + passCount + '/' + total + ' PASS — all checks clear.');
+          document.getElementById('govFixSection').style.display = 'none';
+        } else {
+          setStatus('statusGovAudit','fail','❌ Failures found — use fix prompt below, correct in W6, re-push, then re-run audit.');
+
+          // Build fix prompt with current broken values and specific failures
+          var fixPrompt =
+            'The following governance fields have been audited and contain errors.\n' +
+            'Correct every failure listed below and return all four fields using these exact labels:\n\n' +
+            'New H1:\nNew Meta Title:\nNew Meta Description:\nSchema (JSON-LD):\n\n' +
+            'RULES:\n' +
+            '- Plain text only — no markdown, no ** _ ` formatting\n' +
+            '- Meta Title: 50–60 characters exactly\n' +
+            '- Meta Description: 140–160 characters exactly\n' +
+            '- Schema: valid JSON-LD only — no <script> wrapper, no markdown, no HTML encoding\n' +
+            '- @context must be exactly "https://schema.org" — no brackets, no encoding\n' +
+            '- All URLs must start with https://www.abbeyfloorcare.co.uk\n' +
+            '- No bracket-wrapped URLs — never "[https://..."\n\n' +
+            'CURRENT VALUES IN SHEET:\n' +
+            'New H1: ' + (h1 || '[empty]') + '\n' +
+            'New Meta Title: ' + (metaTitle || '[empty]') + '\n' +
+            'New Meta Description: ' + (metaDesc || '[empty]') + '\n' +
+            'Schema (JSON-LD): ' + (schemaRaw.substring(0,500) || '[empty]') + '\n\n' +
+            'FAILURES TO FIX:\n' + failures.join('\n') + '\n\n' +
+            'Return all four corrected fields now using the exact labels above.';
+
+          document.getElementById('govFixPrompt').value = fixPrompt;
+          document.getElementById('govFixSection').style.display = 'block';
+        }
+
+        btn.disabled = false; btn.innerText = 'Run Audit';
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusGovAudit','fail','❌ ' + err.message);
+        btn.disabled = false; btn.innerText = 'Run Audit';
+      })
+      .getGovernanceFieldsForAudit();
+  }
+
+  /* ── Clear + Paste helper ── */
+  function clearAndPaste(id) {
+    var el = document.getElementById(id);
+    el.value = '';
+    navigator.clipboard.readText().then(function(text) {
+      el.value = sanitisePastedText(text);
+      el.focus();
+      el.dispatchEvent(new Event('input'));
+    }).catch(function() {
+      el.focus();
+      document.execCommand('paste');
+    });
+  }
+
+  /* ── W0B — Location Context Generator (Geo Service Pages only) ── */
+  function runW0BGenerate() {
+    var locality   = document.getElementById('w0bLocality').value.trim();
+    var parentArea = document.getElementById('w0bParentArea').value.trim();
+    if (!locality || !parentArea) {
+      setStatus('statusW0B', 'fail', '❌ Enter both Locality and Parent Area first');
+      return;
+    }
+    // Save locality and parent area to sheet first
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (!res.success) {
+          setStatus('statusW0B', 'fail', '❌ ' + res.message);
+          return;
+        }
+        // Now build the prompt
+        google.script.run
+          .withSuccessHandler(function(result) {
+            if (!result.success) {
+              setStatus('statusW0B', 'fail', '❌ ' + result.message);
+              return;
+            }
+            document.getElementById('w0bPrompt').value = result.prompt;
+            document.getElementById('w0bPromptBlock').style.display = 'block';
+            document.getElementById('w0bPasteBlock').style.display = 'block';
+            setStatus('statusW0B', 'done', '✔ Locality and Parent Area saved — copy prompt → paste into ChatGPT → paste response below');
+          })
+          .withFailureHandler(function(err) {
+            setStatus('statusW0B', 'fail', '❌ ' + err.message);
+          })
+          .buildLocationContextPrompt();
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusW0B', 'fail', '❌ ' + err.message);
+      })
+      .pushLocationContextToSheet(locality, parentArea, '');
+  }
+
+  function pushW0BToSheet() {
+    var locality        = document.getElementById('w0bLocality').value.trim();
+    var parentArea      = document.getElementById('w0bParentArea').value.trim();
+    var locationContext = document.getElementById('w0bContext').value.trim();
+    if (!locationContext) {
+      setStatus('statusW0B', 'fail', '❌ Paste location context first');
+      return;
+    }
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res.success) {
+          setStatus('statusW0B', 'done', '✔ ' + res.message + ' — proceed to W0 Stage 0');
+          document.getElementById('window-2').style.background = '#e8f5e9';
+        } else {
+          setStatus('statusW0B', 'fail', '❌ ' + res.message);
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusW0B', 'fail', '❌ ' + err.message);
+      })
+      .pushLocationContextToSheet(locality, parentArea, locationContext);
+  }
+
+  /* ── Stage 0 — Push 5 analytical fields ── */
+  function pushStage0Fields() {
+    const raw = document.getElementById('stage0PushInput').value;
+    if (!raw.trim()) { alert('Paste Stage 0 ChatGPT output first.'); return; }
+
+    const btn = document.getElementById('stage0PushBtn');
+    btn.disabled = true; btn.innerText = 'Pushing…';
+    setStatus('status0Push', 'running', 'Writing 5 fields to sheet…', true);
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false; btn.innerText = 'Push 5 Fields to Sheet';
+
+        const gridWrap = document.getElementById('stage0ResultGrid');
+        const gridDisplay = document.getElementById('stage0Grid');
+        const msg = document.getElementById('stage0Msg');
+        gridWrap.style.display = 'block';
+
+        const fields = [
+          'Primary Search Term', 'Strategic Reasoning',
+          'Topical Intent', 'Matrix Role', 'Key Decisions Explained'
+        ];
+
+        gridDisplay.innerHTML = fields.map(function(f) {
+          const ok  = res.written  && res.written.indexOf(f)  > -1;
+          const nf  = res.notFound && res.notFound.indexOf(f) > -1;
+          const bg  = ok ? '#e8f5e9' : nf ? '#fff3e0' : '#ffebee';
+          const ic  = ok ? '✔' : nf ? '⚠' : '✘';
+          const col = ok ? '#2e7d32' : nf ? '#e65100' : '#c62828';
+          return '<div style="background:' + bg + ';border-radius:3px;padding:4px 6px;' +
+                 'font-family:JetBrains Mono,monospace;font-size:13px;display:flex;gap:5px;align-items:center">' +
+                 '<span style="color:' + col + ';font-weight:700">' + ic + '</span><span>' + f + '</span></div>';
+        }).join('');
+
+        msg.innerText = res.message || '';
+        
+        setStatus('status0Push',
+          res.success ? 'done' : 'fail',
+          res.success
+            ? '✔ ' + (res.written ? res.written.length : 0) + '/5 fields written to sheet'
+            : '❌ Push failed — ' + (res.message || 'unknown error')
+        );
+
+        // --- THE FIX: 1 second delay and clear elements ---
+        if (res.success) {
+          setTimeout(function() {
+            const inputField = document.getElementById('stage0PushInput');
+            const resultWindow = document.getElementById('stage0ResultGrid');
+            
+            if (inputField) inputField.value = '';
+            if (resultWindow) resultWindow.style.display = 'none';
+            
+            setStatus('status0Push', 'pending', 'Paste Stage 0 ChatGPT output then click Push to Sheet');
+          }, 1000); // 1000ms = 1 Second
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false; btn.innerText = 'Push 5 Fields to Sheet';
+        setStatus('status0Push', 'fail', '❌ ' + err.message);
+      })
+      .pushStage0FieldsToActiveRow(raw);
+  }
+
+  /* ── Paste sanitiser ──────────────────────────────────────────
+     Fires on manual Ctrl+V into any of the three paste textareas.
+     Grabs plain text from clipboard, sanitises it, inserts it.
+     Prevents the browser corrupting schema JSON with %22 encoding,
+     bracket-wrapped URLs, and script wrappers.
+  ────────────────────────────────────────────────────────────── */
+  function sanitisePastedText(text) {
+    // 1. Strip JSON-LD script wrapper if present
+    text = text.replace(/<script[^>]*>([\s\S]*?)<\/scr' + 'ipt>/gi, function(m, inner) {
+      return inner.trim();
+    });
+
+    // 2. Remove ChatGPT markdown-link corruption inside JSON.
+    var prev;
+    do {
+      prev = text;
+      text = text.replace(/\]\(https?:\/\/[^)]+\)/g, '');
+    } while (text !== prev);
+
+    // 3. Decode URL-encoded characters
+    try {
+      text = decodeURIComponent(text.replace(/%2B/g, '__PLUS__').replace(/\+/g, '%20'))
+             .replace(/__PLUS__/g, '+');
+    } catch(e) {
+      text = text
+        .replace(/%22/g, '"').replace(/%3A/g, ':').replace(/%2F/g, '/')
+        .replace(/%7B/g, '{').replace(/%7D/g, '}').replace(/%5B/g, '[')
+        .replace(/%5D/g, ']').replace(/%2C/g, ',').replace(/%20/g, ' ');
+    }
+    // Restore + in ld+json if it was corrupted to a space during paste
+    text = text.replace(/application\/ld\s+json/gi, 'application/ld+json');
+
+    // 4. Remove bracket-wrapped URLs: ["https://... → "https://...
+    text = text.replace(/\[("?https?:\/\/[^\]"]*"?)\]/g, '$1');
+    // 5. Remove bare bracket prefix on URLs: [https:// → https://
+    text = text.replace(/\[(https?:\/\/)/g, '$1');
+
+    // 6. If text looks like JSON, collapse any embedded newlines/spaces
+    var trimmed = text.trim();
+    if (trimmed.charAt(0) === '{' || trimmed.charAt(0) === '[') {
+      text = text.replace(/(\r\n|\n|\r)\s*/g, ' ').trim();
+    }
+
+    return text;
+  }
+
+  ['stage0PushInput', 'stage2html', 'govPasteBlock', 'w5bPasteArea'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('paste', function(e) {
+      e.preventDefault();
+      var text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      text = sanitisePastedText(text);
+      // Insert at cursor position
+      var start = el.selectionStart;
+      var end   = el.selectionEnd;
+      var current = el.value;
+      el.value = current.substring(0, start) + text + current.substring(end);
+      el.selectionStart = el.selectionEnd = start + text.length;
+      el.dispatchEvent(new Event('input'));
+    });
+  });
+
+  /* ── Enable save buttons when content is pasted ── */
+  var part15a_output = document.getElementById('part15a_output');
+  if (part15a_output) {
+    part15a_output.addEventListener('input', function() {
+      var saveBtn = document.getElementById('save15abtn');
+      if (saveBtn && part15a_output.value.trim().length > 100) {
+        saveBtn.disabled = false;
+      }
+    });
+  }
+
+  var part15b_output = document.getElementById('part15b_output');
+  if (part15b_output) {
+    part15b_output.addEventListener('input', function() {
+      var saveBtn = document.getElementById('save15bbtn');
+      if (saveBtn && part15b_output.value.trim().length > 100) {
+        saveBtn.disabled = false;
+      }
+    });
+  }
+
+  var part15c_output = document.getElementById('part15c_output');
+  if (part15c_output) {
+    part15c_output.addEventListener('input', function() {
+      var saveBtn = document.getElementById('save15cbtn');
+      if (saveBtn && part15c_output.value.trim().length > 100) {
+        saveBtn.disabled = false;
+      }
+    });
+  }
+
+  var part15d_output = document.getElementById('part15d_output');
+  if (part15d_output) {
+    part15d_output.addEventListener('input', function() {
+      var saveBtn = document.getElementById('save15dbtn');
+      if (saveBtn && part15d_output.value.trim().length > 100) {
+        saveBtn.disabled = false;
+      }
+    });
+  }
+
+  var part15e_output = document.getElementById('part15e_output');
+  if (part15e_output) {
+    part15e_output.addEventListener('input', function() {
+      var saveBtn = document.getElementById('save15ebtn');
+      if (saveBtn && part15e_output.value.trim().length > 100) {
+        saveBtn.disabled = false;
+      }
+    });
+  }
+
+  var w3OutputHtml = document.getElementById('w3OutputHtml');
+  if (w3OutputHtml) {
+    function enableW3SaveBtn() {
+      var saveBtn = document.getElementById('w3SaveBtn');
+      if (saveBtn && w3OutputHtml.value.trim().length > 100) {
+        saveBtn.disabled = false;
+      }
+    }
+    w3OutputHtml.addEventListener('input', enableW3SaveBtn);
+    w3OutputHtml.addEventListener('paste', function() {
+      setTimeout(enableW3SaveBtn, 50);
+    });
+  }
+
+  function loadMaterialList() {
+    var btn = document.querySelector('[onclick="loadMaterialList()"]');
+    if (btn) { btn.disabled = true; btn.innerText = 'Loading…'; }
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (btn) { btn.disabled = false; btn.innerText = 'Load Materials'; }
+        if (!result || !result.success) {
+          alert('Could not load materials: ' + (result ? result.message : 'unknown error'));
+          return;
+        }
+        var picker = document.getElementById('materialPicker');
+        picker.innerHTML = '<option value="">— Select material —</option>';
+        result.materials.forEach(function(m) {
+          var opt = document.createElement('option');
+          opt.value = m;
+          opt.textContent = m;
+          picker.appendChild(opt);
+        });
+        var buildBtn = document.getElementById('buildLibBtn');
+        picker.onchange = function() {
+          if (buildBtn) buildBtn.disabled = !picker.value;
+        };
+      })
+      .withFailureHandler(function(err) {
+        if (btn) { btn.disabled = false; btn.innerText = 'Load Materials'; }
+        alert('Load Materials failed: ' + err.message);
+      })
+      .getMaterialList();
+  }
+
+  /* ══ W3 — Humanisation ══ */
+
+  function runBuildHumanisationPrompt() {
+    var html = document.getElementById('w3InputHtml').value.trim();
+    if (!html) {
+      setStatus('statusW3', 'fail', '❌ Paste W2B HTML first');
+      return;
+    }
+    setStatus('statusW3', 'running', 'Building humanisation prompt…', true);
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (!result.success) {
+          setStatus('statusW3', 'fail', '❌ ' + result.message);
+          return;
+        }
+        document.getElementById('w3Prompt').value = result.prompt;
+        document.getElementById('w3PromptBlock').style.display = 'block';
+        document.getElementById('w3PasteBlock').style.display = 'block';
+        setStatus('statusW3', 'fail', '⚠ OPEN A NEW CHATGPT CHAT — copy prompt and paste into fresh session');
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusW3', 'fail', '❌ ' + err.message);
+      })
+      .buildHumanisationPrompt(html);
+  }
+
+  function saveHumanisedOutput() {
+    var html = document.getElementById('w3OutputHtml').value.trim();
+    if (!html) {
+      setStatus('statusW3', 'fail', '❌ No humanised HTML to save');
+      return;
+    }
+    var btn = document.getElementById('w3SaveBtn');
+    btn.disabled = true; btn.innerText = 'Saving…';
+    setStatus('statusW3', 'running', 'Saving to Column CZ…', true);
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.success) {
+          setStatus('statusW3', 'done', '✔ ' + result.message);
+          btn.innerText = '✔ Saved to CZ';
+          document.getElementById('w3SaveResult').style.display = 'block';
+          document.getElementById('w3SaveResult').textContent = '✔ Saved — proceed to W4B';
+        } else {
+          setStatus('statusW3', 'fail', '❌ ' + result.message);
+          btn.disabled = false; btn.innerText = '⬇ Save to Column CZ';
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusW3', 'fail', '❌ Save failed — ' + err.message);
+        btn.disabled = false; btn.innerText = '⬇ Save to Column CZ';
+      })
+      .saveHumanisedHtml(html);
+  }
+
+  /* ══ W5B — Schema Correction Audit ══ */
+  function runW5BAudit() {
+    setStatus('statusW5B', 'running', 'Auditing schema…', true);
+    document.getElementById('w5bAuditBtn').disabled = true;
+    document.getElementById('w5bAuditResult').style.display = 'none';
+    document.getElementById('w5bPromptBlock').style.display = 'none';
+    document.getElementById('w5bPasteBlock').style.display = 'none';
+    document.getElementById('w5bPushBlock').style.display = 'none';
+    document.getElementById('w5bPushResult').style.display = 'none';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('w5bAuditBtn').disabled = false;
+
+        if (result.status === 'error') {
+          setStatus('statusW5B', 'fail', '❌ ' + result.message);
+          return;
+        }
+
+        // Show audit result
+        document.getElementById('w5bAuditResult').style.display = 'block';
+        document.getElementById('w5bResultText').textContent = result.message;
+
+        if (result.status === 'clear') {
+          setStatus('statusW5B', 'done', '✔ Schema passed all checks — no corrections needed');
+          return;
+        }
+
+        // Failures — show correction prompt and paste area
+        setStatus('statusW5B', 'fail', '❌ ' + result.failCount + ' failure(s) found — copy prompt → correct → paste → push');
+        document.getElementById('w5bPrompt').value = result.prompt;
+        document.getElementById('w5bPromptBlock').style.display = 'block';
+        document.getElementById('w5bPasteBlock').style.display = 'block';
+        document.getElementById('w5bPushBlock').style.display = 'block';
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('w5bAuditBtn').disabled = false;
+        setStatus('statusW5B', 'fail', '❌ Script error: ' + err.message);
+      })
+      .runSchemaAuditForCorrection();
+  }
+
+  function pushW5BCorrectedSchema() {
+    var raw = document.getElementById('w5bPasteArea').value.trim();
+    if (!raw) {
+      setStatus('statusW5B', 'fail', '❌ Paste corrected schema first');
+      return;
+    }
+    setStatus('statusW5B', 'running', 'Pushing corrected schema…', true);
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        var el = document.getElementById('w5bPushResult');
+        el.style.display = 'block';
+        el.textContent = result.message;
+        if (result.success) {
+          setStatus('statusW5B', 'done', '✔ ' + result.message);
+          // Re-run audit automatically to confirm
+          setTimeout(runW5BAudit, 800);
+        } else {
+          setStatus('statusW5B', 'fail', '❌ ' + result.message);
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusW5B', 'fail', '❌ Push error: ' + err.message);
+      })
+      .pushCorrectedSchemaToActiveRow(raw);
+  }
+
+  /* ══ W5C — Deterministic Schema Builder ══ */
+  function runW5CBuild() {
+    // Pre-flight: check if Geo Service Page needs Parent Area
+    setStatus('statusW5C', 'running', 'Checking row data…', true);
+    document.getElementById('w5cBuildBtn').disabled = true;
+    document.getElementById('w5cResultBlock').style.display  = 'none';
+    document.getElementById('w5cPreviewBlock').style.display = 'none';
+    document.getElementById('w5cAuditPrompt').style.display  = 'none';
+
+    google.script.run
+      .withSuccessHandler(function(pre) {
+        if (pre && pre.needsParentArea) {
+          // Show parent area input — block build until resolved
+          document.getElementById('w5cParentAreaBlock').style.display = 'block';
+          document.getElementById('w5cPageUrl').textContent = pre.pageUrl || '—';
+          document.getElementById('w5cLocalityInput').value = '';
+          document.getElementById('w5cParentAreaInput').value = '';
+          document.getElementById('w5cParentAreaStatus').textContent = '';
+          setStatus('statusW5C', 'fail', '⚠ Parent Area required — enter and save before building schema');
+          document.getElementById('w5cBuildBtn').disabled = false;
+          return;
+        }
+        // No parent area needed — proceed to build
+        document.getElementById('w5cParentAreaBlock').style.display = 'none';
+        executW5CBuild();
+      })
+      .withFailureHandler(function() {
+        // Pre-flight failed — proceed anyway
+        document.getElementById('w5cParentAreaBlock').style.display = 'none';
+        executW5CBuild();
+      })
+      .getW5CPreflightData();
+  }
+
+  function pushParentArea() {
+    var locality   = document.getElementById('w5cLocalityInput').value.trim();
+    var parentArea = document.getElementById('w5cParentAreaInput').value.trim();
+    if (!parentArea) {
+      document.getElementById('w5cParentAreaStatus').textContent = '❌ Parent Area is required';
+      return;
+    }
+    document.getElementById('w5cParentAreaStatus').textContent = 'Saving…';
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.success) {
+          document.getElementById('w5cParentAreaStatus').textContent = '✔ ' + result.message + ' — building schema…';
+          document.getElementById('w5cParentAreaBlock').style.background = '#e8f5e9';
+          setTimeout(function() {
+            document.getElementById('w5cParentAreaBlock').style.display = 'none';
+            executW5CBuild();
+          }, 1200);
+        } else {
+          document.getElementById('w5cParentAreaStatus').textContent = '❌ Save failed — ' + (result ? result.message : 'unknown error');
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('w5cParentAreaStatus').textContent = '❌ ' + err.message;
+      })
+      .pushParentAreaToSheet(locality, parentArea);
+  }
+
+  function executW5CBuild() {
+    setStatus('statusW5C', 'running', 'Building schema from sheet data…', true);
+    document.getElementById('w5cBuildBtn').disabled = true;
+    document.getElementById('w5cResultBlock').style.display  = 'none';
+    document.getElementById('w5cPreviewBlock').style.display = 'none';
+    document.getElementById('w5cAuditPrompt').style.display  = 'none';
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        document.getElementById('w5cBuildBtn').disabled = false;
+        document.getElementById('w5cResultBlock').style.display = 'block';
+        document.getElementById('w5cResultText').textContent = result.message;
+
+        if (!result.success) {
+          setStatus('statusW5C', 'fail', '❌ ' + result.message);
+          return;
+        }
+
+        setStatus('statusW5C', 'running', '✔ Schema built and pushed — running audit…', true);
+        document.getElementById('w5cAuditPrompt').style.display = 'block';
+
+        // Auto-run W5B audit immediately after schema push
+        setTimeout(function() {
+          setStatus('statusW5C', 'running', 'Running schema audit…', true);
+          document.getElementById('w5bAuditBtn').disabled = true;
+          document.getElementById('w5bAuditResult').style.display = 'none';
+          google.script.run
+            .withSuccessHandler(function(auditResult) {
+              document.getElementById('w5bAuditBtn').disabled = false;
+              if (!auditResult) {
+                setStatus('statusW5C', 'done', '✔ Schema built and pushed — audit returned no result');
+                return;
+              }
+              var status  = auditResult.status || '';
+              var message = auditResult.message || '';
+              var passed  = status === 'clear';
+              document.getElementById('w5bAuditResult').style.display = 'block';
+
+              // If audit returned a correction prompt, show it in W5B
+              if (auditResult.prompt) {
+                var promptEl = document.getElementById('w5bCorrectionPrompt');
+                if (promptEl) promptEl.value = auditResult.prompt;
+              }
+              // Show audit message in W5B result area
+              var w5bText = document.getElementById('w5bAuditText');
+              if (w5bText) w5bText.textContent = message;
+
+              if (passed) {
+                setStatus('statusW5C', 'done', '✔ Schema built and pushed — ' + message.split('\n')[0]);
+                setStatus('statusW5B', 'done', '✔ Schema passed all checks — no corrections needed');
+              } else {
+                setStatus('statusW5C', 'fail', '⚠ Schema built — audit issues found — see W5B for correction prompt');
+                setStatus('statusW5B', 'fail', '⚠ Schema audit failed — correction prompt generated');
+              }
+            })
+            .withFailureHandler(function(err) {
+              document.getElementById('w5bAuditBtn').disabled = false;
+              setStatus('statusW5C', 'done', '✔ Schema built and pushed — audit failed to run: ' + err.message);
+            })
+            .runSchemaAuditForCorrection();
+        }, 500);
+
+        if (result.preview) {
+          document.getElementById('w5cPreview').value = result.preview;
+          document.getElementById('w5cPreviewBlock').style.display = 'block';
+          document.getElementById('w5cToggleBtn').textContent = 'Show';
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('w5cBuildBtn').disabled = false;
+        setStatus('statusW5C', 'fail', '❌ Script error: ' + err.message);
+      })
+      .generateSchemaForActiveRow();
+  }
+
+  function toggleW5CPreview() {
+    var ta  = document.getElementById('w5cPreview');
+    var btn = document.getElementById('w5cToggleBtn');
+    if (ta.style.display === 'none') {
+      ta.style.display = 'block';
+      btn.textContent  = 'Hide';
+    } else {
+      ta.style.display = 'none';
+      btn.textContent  = 'Show';
+    }
+  }
+
+  /* ══ W4B — Image Alt & Caption ══ */
+  function runW4BBuild() {
+    var html = document.getElementById('w4bInputHtml').value.trim();
+    if (!html) {
+      setStatus('statusW4B', 'fail', '❌ Paste Stage 2B HTML into Step 1 first.');
+      return;
+    }
+    var imgCount = (html.match(/<img[^>]+>/gi) || []).length;
+    if (imgCount === 0) {
+      setStatus('statusW4B', 'fail', '❌ No <img> tags found in the pasted HTML.');
+      return;
+    }
+    setStatus('statusW4B', 'running', 'Fetching metadata and building prompt…', true);
+
+    google.script.run
+      .withSuccessHandler(function(meta) {
+        var prompt = [
+          'You are an SEO image specialist working on a UK natural stone floor restoration website.',
+          '',
+          'TASK: Review every <img> tag in the HTML below.',
+          'For each image:',
+          '- If alt text is missing or empty, write a descriptive alt based on the surrounding paragraph context.',
+          '- If alt text exists but is generic (e.g. "image", "photo", a filename, or unrelated to content), rewrite it.',
+          '- If alt text is already accurate and contextual, keep it unchanged.',
+          '- Wrap each content image in <figure> and add a <figcaption> (1 sentence, max 15 words).',
+          '- Decorative images or icons: set alt="" and do not add a figcaption.',
+          '',
+          'CONTEXT:',
+          '  Stone type: ' + (meta.stoneType || 'unknown'),
+          '  Article type: ' + (meta.articleType || 'unknown'),
+          '  Primary search term: ' + (meta.primaryTerm || 'unknown'),
+          '',
+          'RULES:',
+          '- Alt text: descriptive, specific, under 125 characters. No keyword stuffing.',
+          '- Captions: plain text only inside figcaption, max 15 words.',
+          '- Return the COMPLETE HTML with ONLY alt attributes and figure/figcaption elements changed.',
+          '- Do NOT change any other content, headings, paragraphs, links, or structure.',
+          '- Do NOT add markdown. Return raw HTML only.',
+          '',
+          'HTML:',
+          html
+        ].join('\n');
+
+        document.getElementById('w4bPrompt').value = prompt;
+        document.getElementById('w4bPromptBlock').style.display = 'block';
+        setStatus('statusW4B', 'done',
+          '✔ ' + imgCount + ' image(s) found — copy prompt → paste into ChatGPT → paste corrected HTML into W4');
+      })
+      .withFailureHandler(function(err) {
+        // Build prompt without metadata if sheet call fails
+        var prompt = [
+          'You are an SEO image specialist working on a UK natural stone floor restoration website.',
+          '',
+          'TASK: Review every <img> tag in the HTML below.',
+          'For each image:',
+          '- If alt text is missing or empty, write a descriptive alt based on surrounding paragraph context.',
+          '- If alt text exists but is generic, rewrite it. If already accurate, keep it.',
+          '- Wrap each content image in <figure> and add a <figcaption> (1 sentence, max 15 words).',
+          '- Decorative images: set alt="" and omit figcaption.',
+          '',
+          'RULES:',
+          '- Alt under 125 characters. No keyword stuffing.',
+          '- Captions plain text, max 15 words.',
+          '- Return COMPLETE HTML with ONLY alt and figure/figcaption changed. Nothing else.',
+          '- Raw HTML only, no markdown.',
+          '',
+          'HTML:',
+          html
+        ].join('\n');
+
+        document.getElementById('w4bPrompt').value = prompt;
+        document.getElementById('w4bPromptBlock').style.display = 'block';
+        setStatus('statusW4B', 'done', '✔ ' + imgCount + ' image(s) — prompt ready');
+      })
+      .getW4BMetadata();
+  }
+
+  function runBuildImageLibrary() {
+    var stoneType = document.getElementById('materialPicker').value;
+    if (!stoneType) {
+      document.getElementById('statusImageLib').innerText = '❌ Select a stone type first';
+      return;
+    }
+    var btn = document.getElementById('buildLibBtn');
+    btn.disabled = true; btn.innerText = 'Building…';
+    document.getElementById('statusImageLib').innerText = 'Scanning ' + stoneType + ' rows — please wait…';
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.success) {
+          document.getElementById('statusImageLib').innerText = '✔ ' + result.message;
+        } else {
+          document.getElementById('statusImageLib').innerText = '❌ ' + (result ? result.message : 'Build failed');
+        }
+        btn.disabled = false; btn.innerText = '⬇ Build';
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('statusImageLib').innerText = '❌ ' + err.message;
+        btn.disabled = false; btn.innerText = '⬇ Build';
+      })
+      .buildImageLibrary(stoneType);
+  }
+
+  function runStoreFigures() {
+    setStatus('statusW4B', 'running', 'Storing figure inventory from col 98…', true);
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result && result.success) {
+          setStatus('statusW4B', 'done', '✔ ' + result.message);
+        } else {
+          setStatus('statusW4B', 'fail', '❌ ' + (result ? result.message : 'Store figures failed'));
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusW4B', 'fail', '❌ ' + err.message);
+      })
+      .storeFigureInventory();
+  }
+
+  function loadHtmlToW4B() {
+    setStatus('statusW4B', 'running', 'Loading humanised HTML from Column CZ…', true);
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (!result || !result.success) {
+          setStatus('statusW4B', 'fail', '❌ ' + (result ? result.message : 'No HTML found in Column CZ — run W3 first.'));
+          return;
+        }
+        document.getElementById('w4bInputHtml').value = result.html;
+        var imgCount = (result.html.match(/<img[^>]+>/gi) || []).length;
+        setStatus('statusW4B', 'done', '✔ Humanised HTML loaded from CZ — ' + imgCount + ' image(s) found. Store Figures, then build prompt.');
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusW4B', 'fail', '❌ Load failed — ' + err.message);
+      })
+      .getHumanisedHtmlForW4B();
+  }
+
+  function copyW4BtoW4() {
+    var corrected = document.getElementById('w4bOutputHtml').value.trim();
+    if (!corrected) { alert('No corrected HTML — paste LLM alt/caption output first.'); return; }
+    document.getElementById('finalHtmlPreview').value = corrected;
+    document.getElementById('w4bStatus').style.display = 'block';
+    setStatus('statusW4B', 'done', '\u2714 Copied to W4 — proceed to audit');
+  }
+
+  function pushAltCaptionJson() {
+    var json = document.getElementById('w4bOutputHtml').value.trim();
+    if (!json) { setStatus('statusW4B', 'fail', '❌ Paste the JSON response first.'); return; }
+    setStatus('statusW4B', 'running', 'Updating alt text and captions in CZ…', true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        var statusEl = document.getElementById('w4bStatus');
+        statusEl.style.display = 'block';
+        if (res.success) {
+          statusEl.textContent = '✔ ' + res.message;
+          setStatus('statusW4B', 'done', '✔ ' + res.message + ' — now load updated HTML into W4');
+        } else {
+          statusEl.textContent = '❌ ' + res.message;
+          setStatus('statusW4B', 'fail', '❌ ' + res.message);
+        }
+      })
+      .withFailureHandler(function(err) {
+        setStatus('statusW4B', 'fail', '❌ ' + err.message);
+      })
+      .pushAltCaptionUpdates(json);
+  }
+function saveAllW1ToSheet() {
+  var btn = document.getElementById('saveW1AllBtn');
+  var status = document.getElementById('saveW1AllStatus');
+  btn.disabled = true;
+  btn.innerText = 'Saving…';
+  status.textContent = '';
+  google.script.run
+    .withSuccessHandler(function(res) {
+      btn.disabled = false;
+      btn.innerText = '⬇ Save W1A–W1D to Sheet';
+      if (res.success) {
+        status.textContent = '✔ ' + res.message;
+        status.style.color = '#2e7d32';
+      } else {
+        status.textContent = '❌ ' + res.message;
+        status.style.color = '#c62828';
+      }
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      btn.innerText = '⬇ Save W1A–W1D to Sheet';
+      status.textContent = '❌ ' + err.message;
+      status.style.color = '#c62828';
+    })
+    .saveAllW1Outputs();
+}
+
+</script>

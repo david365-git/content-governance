@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 15px; font-size: 13px; color: #333; background-color: #f8f9fa; }
+      #status { color: #1a73e8; font-weight: bold; margin-bottom: 8px; display: flex; justify-content: space-between; }
+      textarea { 
+        width: 100%; height: 320px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; 
+        font-size: 11px; margin-bottom: 15px; border: 1px solid #ced4da; padding: 10px;
+        box-sizing: border-box; background: #ffffff; border-radius: 4px; resize: none;
+      }
+      .button-group { display: flex; gap: 8px; }
+      .copy-btn { 
+        background-color: #1a73e8; color: white; border: none; padding: 12px;
+        border-radius: 4px; cursor: pointer; flex: 2; font-weight: bold;
+      }
+      .reload-btn {
+        background-color: #6c757d; color: white; border: none; padding: 12px;
+        border-radius: 4px; cursor: pointer; flex: 1; font-weight: bold;
+      }
+      .copy-btn:hover { background-color: #174ea6; }
+      .reload-btn:hover { background-color: #5a6268; }
+    </style>
+  </head>
+  <body>
+    <div id="status">
+      <span>Data Status:</span>
+      <span id="indicator" style="color: #d93025;">Loading...</span>
+    </div>
+    <textarea id="outputBox" readonly placeholder="Processing sheets..."></textarea>
+    
+    <div class="button-group">
+      <button class="reload-btn" onclick="fetchData()">🔄 Reload</button>
+      <button class="copy-btn" id="mainBtn" onclick="copyAndClose()">📋 Copy & Close</button>
+    </div>
+
+    <script>
+      // Load data immediately on startup
+      window.onload = fetchData;
+
+      function fetchData() {
+        const box = document.getElementById('outputBox');
+        const ind = document.getElementById('indicator');
+        
+        box.value = "";
+        box.placeholder = "Fetching from sheets...";
+        ind.innerText = "Processing...";
+        ind.style.color = "#f29900";
+
+        google.script.run
+          .withSuccessHandler(function(data) {
+            box.value = data;
+            ind.innerText = "Ready";
+            ind.style.color = "#188038";
+            
+            // Auto-focus and select for instant Ctrl+C
+            box.focus();
+            box.select();
+          })
+          .withFailureHandler(function(err) {
+            box.value = "Error: " + err;
+            ind.innerText = "Failed";
+            ind.style.color = "#d93025";
+          })
+          .getPostAnalysisTSV();
+      }
+
+      function copyAndClose() {
+        const copyText = document.getElementById("outputBox");
+        const btn = document.getElementById("mainBtn");
+        
+        if (!copyText.value) return;
+
+        copyText.select();
+        document.execCommand("copy"); // Fallback for Apps Script sidebar environment
+        
+        btn.innerText = "✓ Copied!";
+        btn.style.backgroundColor = "#188038";
+        
+        setTimeout(() => {
+          google.script.host.close();
+        }, 600);
+      }
+    </script>
+  </body>
+</html>

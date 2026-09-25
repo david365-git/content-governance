@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+        padding: 15px; 
+        background-color: #f8f9fa; 
+      }
+
+      textarea { 
+        width: 100%; 
+        height: 250px; 
+        font-family: "Courier New", monospace; 
+        font-size: 12px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+
+      .controls { 
+        margin-bottom: 12px; 
+        display: flex; 
+        gap: 8px; 
+        align-items: center; 
+        flex-wrap: wrap; 
+      }
+
+      .below-textarea {
+        margin-top: 12px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      button { 
+        padding: 8px 16px; 
+        cursor: pointer; 
+        border-radius: 4px; 
+        border: 1px solid #007bff; 
+        background: #007bff; 
+        color: white; 
+        font-weight: bold; 
+      }
+
+      button:hover { 
+        opacity: 0.9; 
+      }
+
+      .purple { background:#6f42c1; border-color:#6f42c1; }
+      .green { background:#28a745; border-color:#28a745; }
+      .red { background:#dc3545; border-color:#dc3545; width:100%; margin-top:15px; }
+
+      #status { 
+        font-size: 12px; 
+        color: #666; 
+      }
+    </style>
+  </head>
+
+  <body>
+
+    <div class="controls">
+      <button onclick="refreshData()">Refresh Data For Claud Analysis</button>
+      <button class="green" onclick="copyText()">Copy Data For Claud Analysis</button>
+      <span id="status">Ready</span>
+    </div>
+
+    <textarea id="tdfOutput" placeholder="Data will appear here..."></textarea>
+
+    <!-- MOVED BUTTON BELOW TEXTAREA -->
+    <div class="below-textarea">
+       <button class="purple" onclick="loadCoreFields()">Generate Wordpress Post Fields</button>
+       <button class="green" onclick="copyPostFields()">Copy Wordpress Post Fields To Update Wordpress and the Sheet Column time</button>
+    </div>
+
+    <button class="red" onclick="updateSiteExportRow()">
+     Update Site Export Sheet Row, & Current Headings Row This Sheet
+      </button>
+
+      <div id="updateMessage" style="margin-top:8px; font-size:13px; font-weight:bold;"></div>
+
+    <script>
+
+      function refreshData() {
+        const status = document.getElementById('status');
+        const output = document.getElementById('tdfOutput');
+
+        status.innerText = "Processing Sheets...";
+        output.value = "Fetching data...";
+
+        google.script.run
+          .withSuccessHandler(function(data) {
+            output.value = data;
+            status.innerText = "Last updated: " + new Date().toLocaleTimeString();
+          })
+          .withFailureHandler(function(err) {
+            output.value = "ERROR: " + err.message;
+            status.innerText = "Failed.";
+          })
+          .getActiveRowTDFData();
+      }
+
+      function loadCoreFields() {
+        const status = document.getElementById('status');
+        const output = document.getElementById('tdfOutput');
+
+        status.innerText = "Extracting core fields...";
+        output.value = "Reading active row...";
+
+        google.script.run
+          .withSuccessHandler(function(data) {
+            output.value = data;
+            status.innerText = "Core fields loaded.";
+          })
+          .withFailureHandler(function(err) {
+            output.value = "ERROR: " + err.message;
+            status.innerText = "Failed.";
+          })
+          .getCoreFieldExportFromActiveRow();
+      }
+
+      function copyText() {
+        const textarea = document.getElementById('tdfOutput');
+        const status = document.getElementById('status');
+
+        textarea.select();
+        document.execCommand('copy');
+
+        status.innerText = "Copied to clipboard!";
+      }
+
+  function copyPostFields() {
+  const textarea = document.getElementById('tdfOutput');
+  const status = document.getElementById('status');
+
+  textarea.select();
+  document.execCommand('copy');
+
+  status.innerText = "Post Fields copied. Updating WordPress date...";
+
+  google.script.run
+    .withSuccessHandler(function() {
+      status.innerText = "Post Fields copied. WordPress Update Date set.";
+    })
+    .withFailureHandler(function(err) {
+      status.innerText = "Date update failed: " + err.message;
+    })
+    .updateWordPressUpdateDateFromActiveRow();
+}
+
+      function updateSiteExportRow() {
+        const status = document.getElementById('status');
+
+        if (!confirm("Are you sure you want to update the matching row in 'site-export'?")) {
+          return;
+        }
+
+        status.innerText = "Updating site-export row...";
+
+        google.script.run
+          .withSuccessHandler(function(response) {
+            status.innerText = response;
+          })
+          .withFailureHandler(function(err) {
+            status.innerText = "Update failed: " + err.message;
+          })
+          .updateSiteExportRowFromActiveRow();
+      }
+
+      // Auto-load on open
+      refreshData();
+
+    </script>
+
+  </body>
+</html>

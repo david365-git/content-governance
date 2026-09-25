@@ -1,0 +1,150 @@
+<div id="window-vm" class="window-card" style="display:none; border-top:3px solid #546e7a">
+  <div class="window-title">V1 — Video Manager</div>
+  <div class="window-body">
+    <p style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:8px;">
+      Scans existing article HTML for videos. Set a placement decision for each video before running the pipeline.
+    </p>
+    <button onclick="vm_scan()" style="width:100%;padding:8px;background:#546e7a;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer">Scan Article for Videos</button>
+    <div id="statusVM" class="status-box"></div>
+    <div id="vmNoVideos" style="display:none;margin-top:8px;padding:8px;background:#e6f4ea;color:#2e7d32;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:11px;">No videos found in this article.</div>
+    <div id="vmCards" style="margin-top:8px;"></div>
+    <div id="vmHtmlWrap" style="display:none;margin-top:8px;">
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:bold;margin-bottom:4px;">Highlighted HTML</div>
+      <span onclick="vm_toggleHtml()" style="font-family:JetBrains Mono,monospace;font-size:11px;color:#1565c0;cursor:pointer;text-decoration:underline;">Show / Hide HTML</span>
+      <textarea id="vmHtml" style="display:none;width:100%;height:150px;font-family:JetBrains Mono,monospace;font-size:10px;margin-top:4px;" readonly></textarea>
+      <p style="font-family:JetBrains Mono,monospace;font-size:10px;color:#888;margin-top:4px;">Copy and paste into a WYSIWYG editor to preview each video in context.</p>
+    </div>
+    <div id="vmConfirmWrap" style="display:none;margin-top:8px;">
+      <button onclick="vm_confirm()" style="width:100%;padding:8px;background:#2e7d32;color:#fff;border:none;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:bold;cursor:pointer">✔ Confirm &amp; Save Decisions</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  var _vmData = null;
+  var _vmDecisions = {};
+  var _vmBadgeColours = ['#f57f17','#1565c0','#2e7d32','#c62828','#6a1b9a'];
+
+  function vm_scan() {
+    setStatus('statusVM', 'running', 'Scanning article HTML...', true);
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) { setStatus('statusVM', 'fail', '❌ ' + result.error); return; }
+        _vmData = result;
+        _vmDecisions = {};
+        if (result.existingDecisions && result.existingDecisions.decisions) {
+          result.existingDecisions.decisions.forEach(function(d) {
+            _vmDecisions[d.index] = { action: d.action, section_number: d.section_number, section_title: d.section_title };
+          });
+        }
+        if (!result.videos || result.videos.length === 0) {
+          document.getElementById('vmNoVideos').style.display = 'block';
+          document.getElementById('vmCards').innerHTML = '';
+          document.getElementById('vmConfirmWrap').style.display = 'none';
+          setStatus('statusVM', 'done', '✔ Scan complete — no videos found.');
+          return;
+        }
+        document.getElementById('vmNoVideos').style.display = 'none';
+        setStatus('statusVM', 'done', '✔ ' + result.videos.length + ' video(s) found — set an action for each.');
+        vm_renderCards(result.videos, result.sections);
+        if (result.highlightedHtml) {
+          document.getElementById('vmHtml').value = result.highlightedHtml;
+          document.getElementById('vmHtmlWrap').style.display = 'block';
+        }
+        document.getElementById('vmConfirmWrap').style.display = 'block';
+      })
+      .withFailureHandler(function(e) { setStatus('statusVM', 'fail', '❌ ' + e.message); })
+      .scanVideosForActiveRow();
+  }
+
+  function vm_renderCards(videos, sections) {
+    var container = document.getElementById('vmCards');
+    container.innerHTML = '';
+    videos.forEach(function(video) {
+      var colour = _vmBadgeColours[video.index % _vmBadgeColours.length];
+      var thumbHtml = video.youtube_id
+        ? '<img src="https://img.youtube.com/vi/' + video.youtube_id + '/default.jpg" style="width:60px;height:45px;object-fit:cover;border-radius:3px;flex-shrink:0;" onerror="this.style.display=\'none\'">'
+        : '';
+      var sectionOptions = '<option value="">-- select section --</option>';
+      (sections || []).forEach(function(s) {
+        sectionOptions += '<option value="' + s.number + '">Section ' + s.number + ' — ' + s.title + '</option>';
+      });
+      var card = document.createElement('div');
+      card.id = 'vmcard-' + video.index;
+      card.style.cssText = 'background:#fff;border:1px solid #ddd;border-radius:4px;padding:8px;margin-bottom:8px;';
+      card.innerHTML =
+        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">' +
+          '<span style="background:' + colour + ';color:#fff;padding:2px 6px;border-radius:3px;font-family:JetBrains Mono,monospace;font-size:10px;font-weight:bold;">Video ' + (video.index+1) + '</span>' +
+          thumbHtml +
+          '<div style="flex:1;font-family:JetBrains Mono,monospace;font-size:10px;color:#555;">Currently in: <strong>' + video.position + '</strong></div>' +
+        '</div>' +
+        '<div style="font-family:JetBrains Mono,monospace;font-size:10px;color:#777;margin-bottom:6px;word-break:break-all;">' + video.url + '</div>' +
+        '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">' +
+          '<button onclick="vm_setAction(' + video.index + ',\'header\')" id="vmact-' + video.index + '-header" style="padding:3px 7px;border:1px solid #1565c0;border-radius:3px;background:#1565c0;color:#fff;font-family:JetBrains Mono,monospace;font-size:10px;cursor:pointer;font-weight:bold;">📌 Header</button>' +
+          '<button onclick="vm_setAction(' + video.index + ',\'keep\')" id="vmact-' + video.index + '-keep" style="padding:3px 7px;border:1px solid #2e7d32;border-radius:3px;background:#2e7d32;color:#fff;font-family:JetBrains Mono,monospace;font-size:10px;cursor:pointer;font-weight:bold;">✅ Keep</button>' +
+          '<button onclick="vm_setAction(' + video.index + ',\'move\')" id="vmact-' + video.index + '-move" style="padding:3px 7px;border:1px solid #f57f17;border-radius:3px;background:#f57f17;color:#fff;font-family:JetBrains Mono,monospace;font-size:10px;cursor:pointer;font-weight:bold;">↕ Move</button>' +
+          '<button onclick="vm_setAction(' + video.index + ',\'remove\')" id="vmact-' + video.index + '-remove" style="padding:3px 7px;border:1px solid #c62828;border-radius:3px;background:#c62828;color:#fff;font-family:JetBrains Mono,monospace;font-size:10px;cursor:pointer;font-weight:bold;">🗑 Remove</button>' +
+        '</div>' +
+        '<select id="vmsel-' + video.index + '" onchange="vm_setSection(' + video.index + ',this)" style="display:none;width:100%;font-family:JetBrains Mono,monospace;font-size:11px;padding:4px;border:1px solid #ccc;border-radius:3px;margin-top:4px;">' + sectionOptions + '</select>' +
+        '<div id="vmsum-' + video.index + '" style="font-family:JetBrains Mono,monospace;font-size:10px;color:#555;margin-top:4px;font-style:italic;"></div>';
+      container.appendChild(card);
+      if (_vmDecisions[video.index]) vm_setAction(video.index, _vmDecisions[video.index].action, true);
+    });
+  }
+
+  function vm_setAction(idx, action, silent) {
+    _vmDecisions[idx] = _vmDecisions[idx] || {};
+    _vmDecisions[idx].action = action;
+    var actions = ['header','keep','move','remove'];
+    var colours = { header:'#1565c0', keep:'#2e7d32', move:'#f57f17', remove:'#c62828' };
+    actions.forEach(function(a) {
+      var btn = document.getElementById('vmact-' + idx + '-' + a);
+      if (btn) btn.style.background = (a === action) ? colours[a] : '#f8f8f8';
+      if (btn) btn.style.color = (a === action) ? '#fff' : '#333';
+      if (btn) btn.style.borderColor = (a === action) ? colours[a] : '#ccc';
+    });
+    var sel = document.getElementById('vmsel-' + idx);
+    if (sel) sel.style.display = (action === 'move') ? 'block' : 'none';
+    var sum = document.getElementById('vmsum-' + idx);
+    if (sum) {
+      var msgs = { header:'Will be placed in the article header.', keep:'Will remain in its current position.', remove:'Will be removed. YouTube backlink retained.', move:'Select a target section above.' };
+      sum.textContent = msgs[action] || '';
+    }
+  }
+
+  function vm_setSection(idx, sel) {
+    _vmDecisions[idx] = _vmDecisions[idx] || {};
+    _vmDecisions[idx].section_number = sel.value ? parseInt(sel.value) : null;
+    _vmDecisions[idx].section_title = sel.value ? sel.options[sel.selectedIndex].text : null;
+    var sum = document.getElementById('vmsum-' + idx);
+    if (sum) sum.textContent = sel.value ? 'Will be moved to ' + sel.options[sel.selectedIndex].text : 'Select a target section above.';
+  }
+
+  function vm_confirm() {
+    if (!_vmData) return;
+    var missing = [];
+    _vmData.videos.forEach(function(v) {
+      var d = _vmDecisions[v.index];
+      if (!d || !d.action) missing.push('Video ' + (v.index+1));
+      if (d && d.action === 'move' && !d.section_number) missing.push('Video ' + (v.index+1) + ' (no section selected)');
+    });
+    if (missing.length > 0) { setStatus('statusVM', 'fail', '❌ Set an action for: ' + missing.join(', ')); return; }
+    var decisionsArray = _vmData.videos.map(function(v) {
+      var d = _vmDecisions[v.index] || {};
+      return { index: v.index, url: v.url, youtube_id: v.youtube_id, iframe_html: v.iframe_html, current_position: v.position, action: d.action, section_number: d.section_number || null, section_title: d.section_title || null };
+    });
+    setStatus('statusVM', 'running', 'Saving decisions...', true);
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (result.error) { setStatus('statusVM', 'fail', '❌ ' + result.error); return; }
+        setStatus('statusVM', 'done', '✔ Decisions saved for ' + result.saved + ' video(s).');
+      })
+      .withFailureHandler(function(e) { setStatus('statusVM', 'fail', '❌ ' + e.message); })
+      .saveVideoDecisions(_vmData.row, decisionsArray);
+  }
+
+  function vm_toggleHtml() {
+    var el = document.getElementById('vmHtml');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+</script>

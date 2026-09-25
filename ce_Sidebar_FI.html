@@ -1,0 +1,75 @@
+<!-- ══ ce_Sidebar_FI.html - FEATURED IMAGE ══ -->
+<div id="window-fi" class="window-card" style="display:none;border-top:3px solid #546e7a">
+  <div class="window-header">
+    <span class="window-label" style="color:#546e7a">FI — Featured Image</span>
+    <span class="tag" style="background:#546e7a">Image Generation</span>
+  </div>
+  <div class="window-body">
+
+    <div id="fi-status" class="status-bar pending">Load data to generate image prompt</div>
+
+    <div style="margin-top:8px;">
+      <label class="section-label">Middle Title (editable before generating)</label>
+      <input type="text" id="fi-middle-title" placeholder="Generated automatically — edit if needed..." style="width:100%;font-size:11px;padding:4px;box-sizing:border-box;" />
+      <div style="font-family:JetBrains Mono,monospace;font-size:10px;color:#546e7a;margin-top:3px;line-height:1.5;">
+        Optional: click Suggest Title Prompt to get a prompt to paste into ChatGPT, then paste the result here.
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:6px;">
+      <button type="button" class="btn-generate" style="background:#37474f;color:#fff;" onclick="window.fiSuggestTitlePrompt()">⚙ Suggest Title Prompt</button>
+      <button class="btn-generate" onclick="window.fiGenerate()">⚙ Generate Image Prompt</button>
+    </div>
+
+    <div id="fi-title-prompt-block" style="display:none;margin-top:6px;">
+      <textarea id="fi-title-prompt-text" style="width:100%;height:80px;font-family:JetBrains Mono,monospace;font-size:10px;padding:6px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px;resize:vertical;" readonly></textarea>
+      <button type="button" class="btn-copy btn-full" style="margin-top:4px;" onclick="navigator.clipboard.writeText(document.getElementById('fi-title-prompt-text').value)">⚙ Copy Title Prompt</button>
+    </div>
+
+    <div id="fi-output-block" style="display:none;margin-top:8px;">
+
+      <label class="section-label">ChatGPT Image Prompt</label>
+      <textarea id="fi-prompt" rows="8" style="width:100%;font-size:11px;" readonly></textarea>
+      <div class="btn-row">
+        <button class="btn-copy btn-full" onclick="copyText('fi-prompt','fi-status','Image prompt copied')">⚙ Copy Prompt</button>
+      </div>
+
+      <label class="section-label" style="margin-top:8px;">Governed Filename</label>
+      <input type="text" id="fi-filename" readonly style="width:100%;font-size:11px;padding:4px;box-sizing:border-box;" />
+      <div class="btn-row">
+        <button class="btn-copy btn-full" onclick="copyField('fi-filename','fi-status','Filename copied')">⚙ Copy Filename</button>
+      </div>
+
+      <label class="section-label" style="margin-top:8px;">Alt Text</label>
+      <input type="text" id="fi-alttext" readonly style="width:100%;font-size:11px;padding:4px;box-sizing:border-box;" />
+      <div class="btn-row">
+        <button class="btn-copy btn-full" onclick="copyField('fi-alttext','fi-status','Alt text copied')">⚙ Copy Alt Text</button>
+      </div>
+
+      <div style="margin-top:10px;padding:8px;background:#fff3e0;border:1px solid #e65100;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:10px;color:#37474f;line-height:1.8;">
+        <strong style="color:#e65100;">⚠ BEFORE YOU PASTE INTO CHATGPT:</strong><br>
+        Attach a photograph of the actual floor from this job.<br>
+        The prompt instructs ChatGPT to use it as the exact reference for tile pattern, colour, grout tone and surface condition.<br>
+        Without a seed image the floor will be generic — not specific to this article.
+      </div>
+      <div style="margin-top:8px;padding:8px;background:#f0f4f8;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:10px;color:#37474f;line-height:1.8;">
+        <strong>Next steps:</strong><br>
+        1. Attach a floor photograph to your ChatGPT message<br>
+        2. Copy prompt → paste into ChatGPT with the photograph attached<br>
+        3. Save generated image as the governed filename above (webp, 1270px, under 100kb)<br>
+        4. Upload to WordPress Media Library<br>
+        5. Copy the image URL from WordPress<br>
+        6. Paste URL below and click Save to Sheet
+      </div>
+
+      <label class="section-label" style="margin-top:8px;">WordPress Image URL</label>
+      <input type="text" id="fi-url" placeholder="Paste WordPress media URL here..." style="width:100%;font-size:11px;padding:4px;box-sizing:border-box;" />
+      <div class="btn-row" style="margin-top:6px;">
+        <button class="btn-push btn-full" onclick="window.fiSaveToSheet()">⚙ Save to Sheet</button>
+      </div>
+
+      <div id="fi-save-status" class="status-bar pending" style="margin-top:6px;display:none;"></div>
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,233 @@
+<!-- ══ ce_Sidebar_PreAC.html - PRE-AC GAP CHECK ══ -->
+<div id="window-pre-ac" class="window-card" style="display:none;border-top:3px solid #e65100">
+  <div class="window-header">
+    <span class="window-label" style="color:#e65100">Pre-AC — Gap Check</span>
+    <span class="tag" style="background:#e65100">Optional Step</span>
+  </div>
+  <div class="window-body">
+    <div id="pre-ac-status" class="status-bar pending">Build prompt to begin</div>
+
+    <div style="margin-bottom:8px;">
+      <button type="button" class="btn-generate btn-full" onclick="window.preAcBuildPrompt()">⚙ Build Gap Check Prompt</button>
+      <div id="pre-ac-prompt-output" style="display:none;margin-top:6px;">
+        <textarea id="pre-ac-prompt-text" style="width:100%;height:160px;font-family:JetBrains Mono,monospace;font-size:10px;padding:6px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px;resize:vertical;" readonly></textarea>
+        <button type="button" class="btn-generate btn-full" style="margin-top:4px;" onclick="navigator.clipboard.writeText(document.getElementById('pre-ac-prompt-text').value)">⚙ Copy Prompt</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:8px;border:1px solid #ccc;border-radius:4px;padding:8px;">
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;margin-bottom:6px;">Paste Gap Check Output</div>
+      <textarea id="pre-ac-llm-input" style="width:100%;height:120px;font-family:JetBrains Mono,monospace;font-size:10px;padding:6px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px;resize:vertical;" placeholder="Paste LLM output here..."></textarea>
+      <button type="button" class="btn-generate btn-full" style="margin-top:4px;" onclick="document.getElementById('pre-ac-llm-input').value='';navigator.clipboard.readText().then(function(t){document.getElementById('pre-ac-llm-input').value=t;});">⚙ Clear &amp; Paste</button>
+      <button type="button" id="preAcAutoBtn" class="btn-generate btn-full" style="margin-top:4px;background:#0b8043;color:#fff;" onclick="window.preAcRunAutomated()">⚡ Run Pre-AC Automated</button>
+      <div id="pre-ac-auto-status" style="font-size:10px;margin-top:4px;"></div>
+      <button
+      type="button"
+      id="runGovernanceBtn"
+      class="btn-generate btn-full"
+      style="margin-top:8px;background:#1565c0;color:#fff;"
+      onclick="runGovernanceAutomation()"
+    >
+      ▶ Run Pre-AC → W2B.3 Automation
+    </button>
+        <button
+      type="button"
+      id="stopGovernanceBtn"
+      class="btn-generate btn-full"
+      style="margin-top:4px;background:#c62828;color:#fff;"
+      onclick="stopGovernanceAutomation()"
+    >
+      ■ KILL / Stop Automation
+    </button>
+
+    <div
+      id="runGovernanceStatus"
+      style="font-size:10px;margin-top:4px;white-space:pre-line;"
+    ></div>
+
+    <div
+      id="preAcPipelinePanel"
+      style="
+        margin-top:8px;
+        padding:8px;
+        border:1px solid #d0d0d0;
+        border-radius:6px;
+        background:#f7f7f7;
+        font-size:11px;
+        line-height:1.5;
+        min-height:92px;
+        max-height:92px;
+        overflow:hidden;
+      "
+    >
+      <div><strong>Current stage:</strong> <span id="preAcPipelineStage">Ready</span></div>
+      <div><strong>Progress:</strong> <span id="preAcPipelineProgress">0 / 14</span></div>
+      <div><strong>Elapsed:</strong> <span id="preAcPipelineElapsed">0s</span></div>
+      <div><strong>AI cost:</strong> <span id="preAcPipelineCost">$0.0000</span></div>
+      <div><strong>Last completed:</strong> <span id="preAcPipelineLast">—</span></div>
+    </div>
+
+      <button type="button" class="btn-generate btn-full" style="margin-top:4px;" onclick="window.preAcParseGaps()">⚙ Parse Manual Pasted Gap Report</button>
+    </div>
+
+    <div id="pre-ac-gaps" style="margin-top:8px;"></div>
+
+  </div>
+</div>
+
+<script>
+window.preAcBuildPrompt = function() {
+  var statusEl = document.getElementById('pre-ac-status');
+  statusEl.textContent = 'Building prompt...';
+  statusEl.className = 'status-bar pending';
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.error) {
+        statusEl.textContent = result.error;
+        statusEl.className = 'status-bar error';
+        return;
+      }
+      document.getElementById('pre-ac-prompt-text').value = result.prompt;
+      document.getElementById('pre-ac-prompt-output').style.display = 'block';
+      statusEl.textContent = 'Prompt ready — copy and paste into ChatGPT.';
+      statusEl.className = 'status-bar success';
+    })
+    .withFailureHandler(function(err) {
+      statusEl.textContent = 'Error: ' + err.message;
+      statusEl.className = 'status-bar error';
+    })
+    .preAcBuildGapCheckPrompt();
+};
+
+window.preAcRunAutomated = function() {
+  var btn = document.getElementById('preAcAutoBtn');
+  var statusDiv = document.getElementById('pre-ac-auto-status');
+  btn.disabled = true;
+  btn.innerText = 'Running…';
+  statusDiv.innerText = 'Calling API…';
+  statusDiv.style.color = '';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      btn.disabled = false;
+      btn.innerText = '⚡ Run Pre-AC Automated';
+      if (!res.success) {
+        statusDiv.innerText = '❌ ' + res.message;
+        statusDiv.style.color = '#c5221f';
+        return;
+      }
+      document.getElementById('pre-ac-llm-input').value = res.text;
+
+        setTimeout(function() {
+          window.preAcParseGaps();
+
+          statusDiv.innerText =
+            '✔ Loaded and parsed — review gaps below. Cost: $' +
+            Number(res.cost || 0).toFixed(4);
+        }, 100);
+    })
+    .withFailureHandler(function(e) {
+      btn.disabled = false;
+      btn.innerText = '⚡ Run Pre-AC Automated';
+      statusDiv.innerText = '❌ ' + e.message;
+      statusDiv.style.color = '#c5221f';
+    })
+    .bc_runPreACPromptAutomated();
+};
+
+  window.preAcParseGaps = function() {
+    var raw = document.getElementById('pre-ac-llm-input').value.trim();
+    var statusEl = document.getElementById('pre-ac-status');
+    var container = document.getElementById('pre-ac-gaps');
+    container.innerHTML = '';
+
+    if (!raw) {
+      statusEl.textContent = 'No output pasted.';
+      statusEl.className = 'status-bar error';
+      return;
+    }
+
+    var data;
+    try {
+      raw = raw.replace(/`/g, '').replace(/^json\s*/i, '').trim();
+      data = JSON.parse(raw);
+    } catch(e) {
+      statusEl.textContent = 'Invalid JSON — check LLM output.';
+      statusEl.className = 'status-bar error';
+      return;
+    }
+
+    var gapCount = 0;
+    data.forEach(function(entry) {
+      if (!entry.gap) return;
+      gapCount++;
+
+      var block = document.createElement('div');
+      block.style.cssText = 'border:1px solid #e65100;border-radius:4px;padding:8px;margin-bottom:8px;background:#fff3e0;';
+
+      var fieldLabel = document.createElement('div');
+      fieldLabel.style.cssText = 'font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#e65100;margin-bottom:4px;';
+      fieldLabel.textContent = entry.field;
+      block.appendChild(fieldLabel);
+
+      var suggestionLabel = document.createElement('div');
+      suggestionLabel.style.cssText = 'font-family:JetBrains Mono,monospace;font-size:11px;color:#333;margin-bottom:2px;';
+      suggestionLabel.textContent = 'Suggested:';
+      block.appendChild(suggestionLabel);
+
+      var suggestionInput = document.createElement('input');
+      suggestionInput.type = 'text';
+      suggestionInput.value = entry.suggested_option;
+      suggestionInput.style.cssText = 'width:100%;font-family:JetBrains Mono,monospace;font-size:11px;padding:4px;box-sizing:border-box;border:1px solid #ccc;border-radius:3px;margin-bottom:4px;';
+      block.appendChild(suggestionInput);
+
+      var scope = document.createElement('div');
+      scope.style.cssText = 'font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:4px;';
+      scope.textContent = 'Scope: ' + entry.scope + ' — ' + entry.scope_reason;
+      block.appendChild(scope);
+
+      var reason = document.createElement('div');
+      reason.style.cssText = 'font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px;';
+      reason.textContent = 'Why: ' + entry.gap_reason;
+      block.appendChild(reason);
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn-push';
+      btn.textContent = '⚙ Accept & Add to Sheet';
+      btn.style.cssText = 'width:100%;';
+      btn.onclick = (function(e, b) {
+        return function() {
+          b.disabled = true;
+          b.textContent = 'Adding...';
+          google.script.run
+            .withSuccessHandler(function(result) {
+              if (result.success) {
+                b.textContent = '✔ Added';
+                b.style.background = 'var(--green)';
+              } else {
+                b.disabled = false;
+                b.textContent = '⚠ Failed: ' + result.message;
+              }
+            })
+            .withFailureHandler(function(err) {
+              b.disabled = false;
+              b.textContent = '⚠ Error: ' + err.message;
+            })
+            .preAcAddGapToSheet(Object.assign({}, e, {suggested_option: suggestionInput.value.trim()}));
+        };
+      })(entry, btn);
+      block.appendChild(btn);
+      container.appendChild(block);
+    });
+
+    if (gapCount === 0) {
+      statusEl.textContent = 'No gaps flagged — proceed to AC.';
+      statusEl.className = 'status-bar success';
+      google.script.run.logPipelineResume('Pre-AC — No Gaps Found', '');
+    } else {
+      statusEl.textContent = gapCount + ' gap(s) found — review and accept before running AC.';
+      statusEl.className = 'status-bar pending';
+    }
+  };
+</script>

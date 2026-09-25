@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: sans-serif; padding: 15px; font-size: 13px; }
+      textarea { width: 100%; height: 250px; margin-bottom: 10px; font-family: monospace; }
+      button { 
+        background-color: #1a73e8; color: white; border: none; padding: 10px 20px; 
+        border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="status">Loading Writing Hub Data...</div>
+    <textarea id="dataBox" readonly></textarea>
+    <button id="copyBtn" onclick="copyAndClose()">Copy & Close</button>
+
+    <script>
+      google.script.run.withSuccessHandler(function(data) {
+        document.getElementById('dataBox').value = data;
+        document.getElementById('status').innerText = "Rows found:";
+      }).getWritingHubData(); // Matches function in WritingHub.gs
+
+      function copyAndClose() {
+        const copyText = document.getElementById("dataBox");
+        copyText.select();
+        navigator.clipboard.writeText(copyText.value).then(() => {
+          google.script.host.close();
+        });
+      }
+    </script>
+  </body>
+</html>

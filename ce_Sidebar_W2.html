@@ -1,0 +1,359 @@
+
+
+  <!-- ══ W2B EXECUTE ══ -->
+  <div id="window-10" class="window-card" style="display:none" style="border-top:3px solid var(--green)">
+    <div class="window-header">
+      <span class="window-label" style="color:var(--green)">W2B — Stage 2B</span>
+      <span class="tag" style="background:red;color:yellow">No Splitter</span><span class="tag" style="background:var(--green)">Execute (2-Step)</span>
+    </div>
+    <div class="window-body">
+      <div id="status2b" class="status-bar pending">Generate → Copy Full Prompt → Paste to ChatGPT → HTML output directly</div>
+      
+      <!-- STEP 1: Context Load -->
+      <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #ddd">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 1 — COPY FULL PROMPT AND PASTE TO CHATGPT:</label>
+        <div class="triple-grid">
+          <textarea id="part2b_p1" style="height:80px" placeholder="Part 1 — Editorial Principles"></textarea>
+          <textarea id="part2b_p2" style="height:80px" placeholder="Part 2 — Estate Context"></textarea>
+          <textarea id="part2b_p3" style="height:80px" placeholder="Part 3 — Page Context + Execute"></textarea>
+        </div>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-generate" id="gen2bbtn" onclick="runStage2B()">Generate All Parts</button>
+          <button class="btn-copy" onclick="copyStep1Parts()" style="background:#558b2f;color:#fff">Copy Full Prompt</button>
+          <button class="btn-copy" onclick="splitW2BForChatGPT()" style="background:#0277bd;color:#fff">Split Into Chunks</button>
+        </div>
+        <div id="w2bChunkSummary" style="display:none;margin-top:6px;background:#e3f2fd;border:1px solid #90caf9;border-radius:4px;padding:6px 8px;font-family:JetBrains Mono,monospace;font-size:10px;color:#0277bd"></div>
+        <div id="w2bChunksOutput" style="margin-top:6px"></div>
+      </div>
+
+      <!-- STEP 2: Execute -->
+      <div style="margin-top:12px">
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-confirm" id="conf2bbtn" onclick="markConfirmed('conf2bbtn','pip-2b','status2b','2B executed ✔');google.script.run.logPipelineResume('W2B — HTML Generated','')" disabled>HTML Generated</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Paste HTML output and check Section 1 image -->
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 3 — PASTE CHATGPT HTML OUTPUT HERE:</label>
+        <textarea id="part2b_html_output" style="height:120px" placeholder="Paste the full HTML output from ChatGPT here"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="clearAndFocus('part2b_html_output','section1_check_result','status2b','Cleared - now paste HTML')" style="background:#2e7d32;color:#fff">Paste from Clipboard</button>
+          <button class="btn-generate" onclick="checkSection1Image()" style="background:#6a1b9a;color:#fff">Check Section 1 Image</button>
+        </div>
+        <div id="section1_check_result" style="margin-top:8px;font-size:12px;display:none"></div>
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn-generate" id="auto2bbtn" onclick="run2BAutomated()" style="background:#0b8043;color:#fff">⚡ Run W2B Automated +  location integration</button>
+        </div>
+        <div id="auto2bStatus" style="font-size:10px;margin-top:4px;"></div>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn-copy" onclick="saveW2BToSheet()" style="background:#37474f;color:#fff">⬇ Save to Sheet</button>
+        </div>
+        <div id="w2bSaveResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+      </div>
+
+      <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+        <label style="font-size:11px;color:#0b8043;font-weight:600;display:block;margin-bottom:3px">OPTIONAL — LOCATION INTEGRATION (run before Fact Check, if this row has a Locality set):</label>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-plan" onclick="runLocationIntegrationPromptW2B()" style="background:#0b8043">Generate Location Integration Prompt</button>
+          <button class="btn-copy" onclick="copyText('locationIntegrationPromptW2B','statusLocationW2B','Prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+        </div>
+        <textarea id="locationIntegrationPromptW2B" style="height:100px;margin-top:6px" placeholder="Click Generate — adds natural local variety without location stuffing or fabrication"></textarea>
+        <div style="margin-top:10px">
+          <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">CORRECTED HTML (paste ChatGPT's response here):</label>
+          <textarea id="locationIntegrationOutputW2B" style="height:120px" placeholder="Paste the complete corrected HTML here"></textarea>
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn-copy" onclick="applyLocationIntegrationW2B()" style="background:#0b8043;color:#fff">Save to EU</button>
+          </div>
+          <div id="locationIntegrationResultW2B" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+        </div>
+        <div id="statusLocationW2B" style="font-size:10px;margin-top:4px;"></div>
+      </div>
+
+      </div>
+  </div>
+
+  <!-- ══ W2B.05 — FACT CHECK AGAINST SOURCE ══ -->
+  <div id="window-10fact" class="window-card" style="display:none; border-top:3px solid #c62828">
+    <div class="window-header">
+      <span class="window-label" style="color:#c62828">W2B.05 — Fact Check</span>
+      <span class="tag" style="background:#c62828">vs. Original Source</span>
+    </div>
+    <div class="window-body">
+      <div style="margin-bottom:8px;padding:8px;background:#fce8e6;border-radius:4px;">
+        <div style="font-size:11px;font-weight:700;color:#c62828;margin-bottom:4px;">WORKING COLUMN</div>
+        <label style="font-size:11px;margin-right:12px;">
+          <input type="radio" name="factCheckColumn" value="EU" checked> W2B Raw HTML (EU)
+        </label>
+        <label style="font-size:11px;">
+          <input type="radio" name="factCheckColumn" value="CT"> New HTML (CT)
+        </label>
+      </div>
+
+      <div id="statusFactCheck" class="status-bar pending">Compares the selected column's content against the original site-export article, flagging fabricated facts and unsupported embellishments.</div>
+
+      <div class="btn-row" style="margin-top:6px">
+        <button class="btn-plan" onclick="runFactCheckGenerate()">⚙ Generate Fact-Check Prompt</button>
+      </div>
+      <div class="btn-row" style="margin-top:6px">
+        <button class="btn-generate" id="autoFactCheckBtn" onclick="runFactCheckAutomated()" style="background:#0b8043;color:#fff">⚡ Run Fact-Check Automated - INC Fix Prompt</button>
+      </div>
+      <div id="autoFactCheckStatus" style="font-size:10px;margin-top:4px;"></div>
+
+      <div id="factCheckPromptBlock" style="display:none;margin-top:10px">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PROMPT:</label>
+        <textarea id="factCheckPrompt" style="height:150px" readonly></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="copyText('factCheckPrompt','statusFactCheck','Prompt copied — paste into ChatGPT or Gemini')">Copy Prompt</button>
+        </div>
+      </div>
+
+      <div id="factCheckPasteBlock" style="display:none;margin-top:10px">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PASTE RESPONSE:</label>
+        <textarea id="factCheckPasteArea" style="height:150px" placeholder="Paste the full fact-check response here…"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="clearAndPaste('factCheckPasteArea')">⌫ Clear + Paste</button>
+        </div>
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn-copy" onclick="passThroughFactCheckClick()" style="background:#2e7d32;color:#fff">✔ PASS — Copy Unchanged to GE</button>
+        </div>
+        <div id="statusFactPassThrough" style="font-size:10px;margin-top:4px;"></div>
+      </div>
+
+      <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #ccc">
+        <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#c62828;letter-spacing:1px;margin-bottom:6px">FIX FLAGGED ISSUES</div>
+        <div id="statusFactFix" class="status-bar pending">Builds a fix prompt from the pasted findings above.</div>
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn-plan" onclick="runFactCheckFixGenerate()">⚙ Build Fix Prompt</button>
+        </div>
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn-generate" id="autoFactFixBtn" onclick="runFactCheckFixAutomated()" style="background:#0b8043;color:#fff">⚡ Run Fix Automated</button>
+        </div>
+        <div id="autoFactFixStatus" style="font-size:10px;margin-top:4px;"></div>
+
+        <div id="factFixPromptBlock" style="display:none;margin-top:10px">
+          <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">FIX PROMPT:</label>
+          <textarea id="factFixPrompt" style="height:150px" readonly></textarea>
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn-copy" onclick="copyText('factFixPrompt','statusFactFix','Fix prompt copied — paste into ChatGPT')">Copy Prompt</button>
+          </div>
+        </div>
+
+        <div id="factFixPasteBlock" style="display:none;margin-top:10px">
+          <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PASTE JSON FIX RESPONSE:</label>
+          <textarea id="factFixPasteArea" style="height:150px" placeholder="Paste ChatGPT's JSON array of {fixLabel, old, new} fragments here…"></textarea>
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn-copy" onclick="clearAndPaste('factFixPasteArea')">⌫ Clear + Paste</button>
+            <button class="btn-copy" onclick="applyFactCheckFixClick()" style="background:#2e7d32;color:#fff">✔ Apply to Selected Column</button>
+          </div>
+        </div>
+
+        <div id="factFixResultBlock" style="display:none;margin-top:10px">
+          <div id="factFixResultText" style="font-family:JetBrains Mono,monospace;font-size:12px;background:#e8f5e9;border-radius:4px;padding:8px;color:#333"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ W2B.1 — CROSS-ARTICLE SIMILARITY CHECK ══ -->
+  <div id="window-10sim" class="window-card" style="display:none; border-top:3px solid #6a1b9a">
+    <div class="window-header">
+      <span class="window-label" style="color:#6a1b9a">W2B.1 — Similarity Check</span>
+      <span class="tag" style="background:#6a1b9a">Same-Material Repetition</span>
+    </div>
+    <div class="window-body">
+      <div style="margin-bottom:8px;padding:8px;background:#f3e5f5;border-radius:4px;">
+        <div style="font-size:11px;font-weight:700;color:#6a1b9a;margin-bottom:4px;">WORKING COLUMN</div>
+        <label style="font-size:11px;margin-right:12px;">
+          <input type="radio" name="simCheckColumn" value="EU" checked> W2B Raw HTML (EU)
+        </label>
+        <label style="font-size:11px;">
+          <input type="radio" name="simCheckColumn" value="CT"> New HTML (CT)
+        </label>
+      </div>
+
+      <div id="statusSimCheck" class="status-bar pending">Builds a prompt comparing this article's saved HTML against other same-material Case Studies.</div>
+      <div class="btn-row" style="margin-top:6px">
+        <button class="btn-plan" onclick="runSimilarityCheckGenerate()">⚙ Generate Similarity Check Prompt</button>
+      </div>
+      <div class="btn-row" style="margin-top:6px">
+        <button class="btn-generate" id="autoSimCheckBtn" onclick="runSimilarityFullAutomated()" style="background:#0b8043;color:#fff">⚡ Run Similarity Check Automated</button>
+      </div>
+      <div id="autoSimCheckStatus" style="font-size:10px;margin-top:4px;"></div>
+
+      <div id="simCheckPromptBlock" style="display:none;margin-top:10px">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PROMPT:</label>
+        <textarea id="simCheckPrompt" style="height:150px" readonly></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="copyText('simCheckPrompt','statusSimCheck','Prompt copied — paste into ChatGPT or Gemini')">Copy Prompt</button>
+        </div>
+      </div>
+
+      <div id="simCheckPasteBlock" style="display:none;margin-top:10px">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PASTE RESPONSE:</label>
+        <textarea id="simCheckPasteArea" style="height:150px" placeholder="Paste the full similarity check response here…"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="clearAndPaste('simCheckPasteArea')">⌫ Clear + Paste</button>
+        </div>
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn-copy" onclick="passThroughSimilarityCheckClick()" style="background:#2e7d32;color:#fff">✔ PASS — Copy Unchanged to GF</button>
+        </div>
+        <div id="statusSimPassThrough" style="font-size:10px;margin-top:4px;"></div>
+      </div>
+
+      <div id="simCheckResultBlock" style="display:none;margin-top:10px">
+        <div id="simCheckResultText" style="font-family:JetBrains Mono,monospace;font-size:12px;background:#f3e5f5;border-radius:4px;padding:8px;white-space:pre-wrap;color:#333;max-height:250px;overflow-y:auto"></div>
+      </div>
+
+      <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #ccc">
+        <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#6a1b9a;letter-spacing:1px;margin-bottom:6px">FIX FLAGGED REPETITION</div>
+        <div id="statusSimFix" class="status-bar pending">Builds a fix prompt from the pasted findings above (GENUINE RISK items only).</div>
+
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn-plan" onclick="runSimilarityFixGenerate()">⚙ Build Fix Prompt</button>
+        </div>
+
+        <div id="simFixPromptBlock" style="display:none;margin-top:10px">
+          <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">FIX PROMPT:</label>
+          <textarea id="simFixPrompt" style="height:150px" readonly></textarea>
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn-copy" onclick="copyText('simFixPrompt','statusSimFix','Fix prompt copied — paste into ChatGPT')">Copy Prompt</button>
+          </div>
+        </div>
+
+        <div id="simFixPasteBlock" style="display:none;margin-top:10px">
+          <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PASTE JSON FIX RESPONSE:</label>
+          <textarea id="simFixPasteArea" style="height:150px" placeholder="Paste ChatGPT's JSON array of {fixLabel, old, new} fragments here…"></textarea>
+          <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="clearAndPaste('simFixPasteArea')">⌫ Clear + Paste</button>
+          <button class="btn-copy" id="simFixApplyBtn" onclick="applySimilarityFixClick()" style="background:#2e7d32;color:#fff">✔ Apply to Selected Column</button>
+        </div>
+        </div>
+
+        <div id="simFixResultBlock" style="display:none;margin-top:10px">
+          <div id="simFixResultText" style="font-family:JetBrains Mono,monospace;font-size:12px;background:#e8f5e9;border-radius:4px;padding:8px;color:#333"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ W2B.2 — REWRITE BRIEF COMPLIANCE CHECK ══ -->
+  <div id="window-10compliance" class="window-card" style="display:none; border-top:3px solid #37474f">
+    <div class="window-header">
+      <span class="window-label" style="color:#37474f">W2B.2 — Rewrite Brief Compliance</span>
+    </div>
+    <div class="window-body">
+      <div id="w2bGateBanner" style="display:none;padding:8px 10px;border-radius:5px;font-size:11px;font-weight:600;margin-bottom:10px;"></div>
+
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">REWRITE BRIEF COMPLIANCE CHECK (after saving to sheet):</label>
+      <textarea id="rewriteBriefCompliancePromptW2B" style="height:80px" placeholder="Click Generate to build rewrite brief compliance prompt"></textarea>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-plan" onclick="runRewriteBriefComplianceCheckW2B()">Generate Compliance Check Prompt</button>
+        <button class="btn-copy" onclick="copyText('rewriteBriefCompliancePromptW2B','status2b','Prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+      </div>
+      <textarea id="rewriteBriefComplianceResponseW2B" style="height:100px;margin-top:6px" placeholder="Paste ChatGPT compliance check response here"></textarea>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-copy" onclick="clearAndPaste('rewriteBriefComplianceResponseW2B')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
+        <button class="btn-copy" onclick="saveRewriteBriefComplianceResultW2B()" style="background:#37474f;color:#fff">⬇ Save Compliance Result to FO</button>
+      </div>
+      <div id="rewriteBriefComplianceResultW2B" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+      <div class="btn-row" style="margin-top:6px">
+        <button class="btn-copy" onclick="passThroughRewriteBriefCheckClick()" style="background:#2e7d32;color:#fff">✔ PASS — Copy Unchanged to GG</button>
+      </div>
+      <div id="statusW2BPassThrough" style="font-size:10px;margin-top:4px;"></div>
+      <div class="btn-row" style="margin-top:6px">
+        <button class="btn-generate" id="autoW2BComplianceBtn" onclick="runW2BComplianceAutomated()" style="background:#0b8043;color:#fff">⚡ Run Compliance Check Automated</button>
+      </div>
+      <div id="autoW2BComplianceStatus" style="font-size:10px;margin-top:4px;"></div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+        <label style="font-size:11px;color:#c62828;font-weight:600;display:block;margin-bottom:3px">IF FAILED — GENERATE FIX PROMPT:</label>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-plan" onclick="runRewriteBriefFixPromptW2B()" style="background:#c62828">Generate Fix Prompt</button>
+          <button class="btn-copy" onclick="copyText('rewriteBriefFixPromptW2B','status2b','Fix prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+        </div>
+        <textarea id="rewriteBriefFixPromptW2B" style="height:100px;margin-top:6px" placeholder="Click Generate Fix Prompt (only works after a saved FAIL result)"></textarea>
+        <div style="font-size:10px;color:#666;margin-top:4px">This sends ONLY the failing section(s) to ChatGPT — not the full article — so passing sections cannot be changed.</div>
+
+        <div style="margin-top:10px">
+          <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">CORRECTED SECTION(S) (paste ChatGPT's response here):</label>
+          <textarea id="rewriteBriefFixOutputW2B" style="height:150px" placeholder="Paste the corrected section(s) from ChatGPT here"></textarea>
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn-copy" onclick="clearAndPaste('rewriteBriefFixOutputW2B')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
+            <button class="btn-copy" onclick="applyRewriteBriefFixW2B()" style="background:#c62828;color:#fff">✔ Apply Fix + Save to GG</button>
+          </div>
+          <div id="rewriteBriefFixResultW2B" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+          <div style="font-size:10px;color:#666;margin-top:4px">Splices the corrected section(s) into GF by section id and saves the result to GG (W2B.2 Fixed HTML), then re-run the compliance check above.</div>
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+          <label style="font-size:11px;color:#2e7d32;font-weight:600;display:block;margin-bottom:3px">ONCE CONFIRMED PASS — PROMOTE TO EU:</label>
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn-copy" onclick="promoteW2B2ToEUClick()" style="background:#0b8043;color:#fff">✔ Promote GG → EU (W2B Raw HTML)</button>
+          </div>
+          <div id="statusPromoteEU" style="font-size:10px;margin-top:4px;"></div>
+          <div style="font-size:10px;color:#666;margin-top:4px">Only proceeds if the saved compliance result is a confirmed PASS.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ W2B.3 — WHOLE-ARTICLE COHERENCE & DEPTH CHECK ══ -->
+  <div id="window-10coherence" class="window-card" style="display:none; border-top:3px solid #6a1b9a">
+    <div class="window-header">
+      <span class="window-label" style="color:#6a1b9a">W2B.3 — Coherence & Depth Check</span>
+    </div>
+    <div class="window-body">
+        <button id="autoCoherenceBtn" onclick="runCoherenceAutomated()">
+          ⚡ Run Coherence Automated
+        </button>
+
+        <div id="autoCoherenceStatus" style="margin-top:8px;font-size:12px;"></div>
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">COHERENCE CHECK (reads GG, or GI if a fix was already applied):</label>
+      <textarea id="coherenceCheckPrompt" style="height:80px" placeholder="Click Generate to build the coherence check prompt"></textarea>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-plan" onclick="runCoherenceCheckGenerate()">Generate Check Prompt</button>
+        <button class="btn-copy" onclick="copyText('coherenceCheckPrompt','statusCoherence','Prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+      </div>
+      <textarea id="coherenceCheckPasteArea" style="height:150px;margin-top:6px" placeholder="Paste the full coherence check response here…"></textarea>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-copy" onclick="clearAndPaste('coherenceCheckPasteArea')" style="background:#37474f;color:#fff">⌫ Clear + Paste</button>
+        <button class="btn-copy" onclick="saveCoherenceCheckClick()" style="background:#37474f;color:#fff">⬇ Save Result to GH</button>
+      </div>
+      <div id="statusCoherence" class="status-bar pending" style="margin-top:6px">Builds a coherence check prompt for the current row.</div>
+      <div class="btn-row" style="margin-top:6px">
+        <button class="btn-copy" onclick="passThroughCoherenceClick()" style="background:#2e7d32;color:#fff">✔ PASS — Copy Unchanged to GI</button>
+      </div>
+      <div id="statusCoherencePassThrough" style="font-size:10px;margin-top:4px;"></div>
+
+      <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+        <label style="font-size:11px;color:#c62828;font-weight:600;display:block;margin-bottom:3px">IF FAILED — GENERATE FIX PROMPT:</label>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-plan" onclick="runCoherenceFixGenerate()" style="background:#c62828">Generate Fix Prompt</button>
+          <button class="btn-copy" onclick="copyText('coherenceFixPrompt','statusCoherenceFix','Fix prompt copied → paste to ChatGPT')">Copy to ChatGPT</button>
+        </div>
+        <textarea id="coherenceFixPrompt" style="height:100px;margin-top:6px" placeholder="Click Generate Fix Prompt (only works after a saved FAIL result)"></textarea>
+        <div id="statusCoherenceFix" style="font-size:10px;margin-top:4px;"></div>
+
+        <div style="margin-top:10px">
+          <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">CORRECTED JSON (paste ChatGPT's response here):</label>
+          <textarea id="coherenceFixPasteArea" style="height:150px" placeholder="Paste the JSON fix response from ChatGPT here"></textarea>
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn-copy" onclick="clearAndPaste('coherenceFixPasteArea')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
+            <button class="btn-copy" onclick="applyCoherenceFixClick()" style="background:#c62828;color:#fff">✔ Apply Fix + Save to GI</button>
+          </div>
+          <div id="coherenceFixResultBlock" style="display:none;margin-top:10px">
+            <div id="coherenceFixResultText" style="font-family:JetBrains Mono,monospace;font-size:12px;background:#e8f5e9;border-radius:4px;padding:8px;color:#333"></div>
+          </div>
+          <div style="font-size:10px;color:#666;margin-top:4px">You can run this fix cycle more than once — each run reads your latest saved version in GI and overwrites it with the next round of corrections.</div>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+        <label style="font-size:11px;color:#2e7d32;font-weight:600;display:block;margin-bottom:3px">ONCE YOU ARE HAPPY WITH GI — PROMOTE TO EU:</label>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="promoteCoherenceToEUClick()" style="background:#0b8043;color:#fff">✔ Promote GI → EU (W2B Raw HTML)</button>
+        </div>
+        <div id="statusPromoteCoherenceEU" style="font-size:10px;margin-top:4px;"></div>
+        <div style="font-size:10px;color:#666;margin-top:4px">This makes GI the new source of truth in EU. No automated PASS check required — this is your manual final sign-off.</div>
+      </div>
+    </div>
+  </div>

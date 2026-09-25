@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: 'Segoe UI', sans-serif; padding: 5px; background-color: #f1f3f4; }
+      h3 { color: #5f6368; font-size: 12px; border-bottom: 1px solid #dadce0; padding-bottom: 8px; }
+      .sheet-button {
+        display: block;
+        width: 100%;
+        padding: 5px 5px;
+        margin-bottom: 5px;
+        background-color: white;
+        border: 1px solid #dadce0;
+        border-radius: 4px;
+        text-align: left;
+        cursor: pointer;
+        color: #3c4043;
+        font-weight: 500;
+        transition: background 0.2s;
+      }
+      .sheet-button:hover {
+        background-color: #e8f0fe;
+        border-color: #1a73e8;
+        color: #1a73e8;
+      }
+    </style>
+  </head>
+  <body>
+    <h3>Jump to Sheet (A-Z)</h3>
+    <div id="button-container">Loading tabs...</div>
+
+    <script>
+      // Load sheet names when sidebar opens
+      window.onload = function() {
+        google.script.run.withSuccessHandler(renderButtons).getSheetNames();
+      };
+
+      function renderButtons(names) {
+        const container = document.getElementById('button-container');
+        container.innerHTML = '';
+        
+        // --- ADDED SORTING LOGIC ---
+        // localeCompare makes sure the sort is naturally alphabetical regardless of case
+        const sortedNames = names.sort((a, b) => a.localeCompare(b));
+
+        sortedNames.forEach(name => {
+          const btn = document.createElement('button');
+          btn.className = 'sheet-button';
+          btn.innerText = name;
+          btn.onclick = function() {
+            google.script.run.setActiveSheetByName(name);
+          };
+          container.appendChild(btn);
+        });
+      }
+    </script>
+  </body>
+</html>

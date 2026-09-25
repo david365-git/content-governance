@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+  <style>
+    body { padding: 15px; font-family: sans-serif; background-color: #f8f9fa; }
+    .version-header { font-size: 14px; font-weight: bold; color: #444; margin-bottom: 10px; border-bottom: 2px solid #4285f4; padding-bottom: 5px; }
+    textarea { width: 100%; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; font-size: 11px; padding: 8px; white-space: pre; box-sizing: border-box; }
+    #masterPrompt { height: 600px; }
+    #postReference { height: 35px; background: #e9ecef; font-weight: bold; margin-top: 10px; }
+    
+    /* Fixed Responsive Button Grid */
+    .button-row { 
+      display: flex; 
+      gap: 6px; 
+      margin: 10px 0;
+      width: 100%;
+      justify-content: space-between;
+    }
+    button { 
+      flex: 1;
+      min-width: 0; /* Critical for flex-shrink text containment */
+      height: 42px; /* Fixed height for consistency */
+      padding: 2px 4px; 
+      border-radius: 4px; 
+      border: none; 
+      cursor: pointer; 
+      font-weight: 600; 
+      font-size: 11px; 
+      line-height: 1.1; /* Allows multi-line text if needed */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+      color: white;
+    }
+    button:active {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+    .btn-main { background: #1a73e8; }
+    .btn-main:hover { background: #1557b0; }
+    
+    .btn-refresh { background: #1e8e3e; }
+    .btn-refresh:hover { background: #137333; }
+    
+    .btn-copy { background: #f9ab00; }
+    .btn-copy:hover { background: #e37a00; }
+  </style>
+</head>
+<body>
+
+<div class="version-header">v4.0 - Master Governance HTML (Exact-Priority)</div>
+<textarea id="masterPrompt" placeholder="Select row in 'posts' and click Full Load"></textarea>
+
+<div class="button-row">
+  <button class="btn-main" onclick="updateRow()">Load</button>
+  <button class="btn-refresh" onclick="refreshRowOnly()">Refresh Row</button>
+  <button class="btn-copy" onclick="copyText()">Copy All</button>
+</div>
+
+<textarea id="postReference" readonly placeholder="Post Title Reference"></textarea>
+
+<script>
+  const ANCHORS = {
+    1: '%%REFRESH_START_P1A%%',
+    2: '%%REFRESH_START_P1B%%',
+    3: '%%REFRESH_START_P2%%',
+    4: '%%REFRESH_START_P3%%'
+  };
+
+  const REFRESH_FNS = {
+    1: 'bc_refreshPrompt1AData',
+    2: 'bc_refreshPrompt1BData',
+    3: 'bc_refreshPrompt2Data',
+    4: 'bc_refreshPrompt3Data'
+  };
+
+  const LOADERS = [
+    null,
+    'bc_getPrompt1A',
+    'bc_getPrompt1B',
+    'bc_getPrompt2',
+    'bc_getPrompt3'
+  ];
+
+  function showTab(n) {
+    for (let i = 1; i <= 4; i++) {
+      document.getElementById('tp' + i).classList.toggle('active', i === n);
+      document.getElementById('tb' + i).classList.toggle('active', i === n);
+    }
+  }
+
+  function showStep(n) {
+    for (let i = 1; i <= 3; i++) {
+      document.getElementById('stp' + i).classList.toggle('active', i === n);
+      document.getElementById('stb' + i).classList.toggle('active', i === n);
+    }
+    _status(1, "", false);
+  }
+
+  function _extractRankedIntents(text) {
+    const lines   = text.split(/\r?\n/);
+    const intents = [];
+    let inRanked  = false;
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+
+      if (!inRanked) {
+        if (line === 'RANKED INTENT LIST:') inRanked = true;
+        continue;
+      }
+
+      if (/^QUESTION\b/i.test(line)      ||
+          /^H2 INTENT MAP\b/i.test(line) ||
+          /^H2:/i.test(line)             ||
+          /^AMBIGUITY\b/i.test(line)) {
+        break;
+      }
+
+      if (!line) continue;
+
+      const m = line.match(/^(\d+)\.\s+(.+)$/);
+      if (m) intents.push({ num: m[1], name: m[2].trim() });
+    }
+
+    return intents;
+  }
+
+  function w_paste(n) {
+    const ta = document.getElementById('window' + n);
+    ta.focus();
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText()
+        .then(text => {
+          ta.value = text;
+          _status(1, "Pasted into Window " + n + ".", false);
+        })
+        .catch(() => {
+          _status(1, "Click Window " + n + " and press Ctrl+V to paste.", false);
+        });
+    } else {
+      _status(1, "Click Window " + n + " and press Ctrl+V to paste.", false);
+    }
+  }
+
+  function w_clear(n) {
+    document.getElementById('window' + n).value = "";
+    _status(1, "", false);
+  }
+
+  function w_clearStep2() {
+    const el = document.getElementById('step2-content');
+    el.innerHTML =
+      '<div id="step2-placeholder" style="font-size:10px;color:#9aa0a6;padding:8px 0;">Click Build Questions in Step 1 first.</div>';
+    window._step2Q1Selected  = null;
+    window._step2Q2Answers   = {};
+    window._step2Q2Items     = [];
+    window._step2RankedIntents = [];
+    window._enrichedSecondaryDecisions = [];
+    _status(1, "", false);
+  }
+
+  function w_buildQuestions() {
+    const w1 = (document.getElementById('window1').value || "").trim();
+    if (!w1) {
+      _status(1, "Paste ChatGPT output into Window 1 first.", true);
+      return;
+    }
+
+    _status(1, "Building review cards...", false);
+
+    google.script.run
+      .withSuccessHandler(function(model) {
+        if (!model || !model.ok) {
+          _status(1, (model && model.message) || "Could not build review cards.", true);
+          return;
+        }
+
+        window._step2RankedIntents = model.ranked || [];
+        window._step2Q2Items       = model.q2items || [];
+        window._step2Q2Answers     = {};
+        window._step2Q1Selected    = null;
+        window._enrichedSecondaryDecisions = [];
+
+        if (model.q1rec && model.q1rec.rec) {
+          for (let i = 0; i < model.ranked.length; i++) {
+            if (model.ranked[i].name.toLowerCase() === model.q1rec.rec.toLowerCase()) {
+              window._step2Q1Selected = model.ranked[i].num;
+              break;
+            }
+          }
+        }
+
+        if (!window._step2Q1Selected && model.ranked.length) {
+          window._step2Q1Selected = model.ranked[0].num;
+        }
+
+        for (let i = 0; i < window._step2Q2Items.length; i++) {
+          const item = window._step2Q2Items[i];
+          if (item.rec === 'Y' || item.rec === 'N') {
+            window._step2Q2Answers[item.num] = item.rec;
+          }
+        }
+
+        renderStep2(model);
+        _status(1, "Intent review built — confirm Y/N decisions, then Copy Answers.", false);
+        showStep(2);
+      })
+      .withFailureHandler(function(e) {
+        _status(1, "Error: " + e.message, true);
+      })
+      .bc_buildIntentReviewModel(w1);
+  }
+
+  function renderStep2(model) {
+    const container = document.getElementById('step2-content');
+    container.innerHTML = '';
+
+    const context = model.context || {};
+    const ranked  = model.ranked || [];
+    const q1rec   = model.q1rec || {};
+    const q2items = model.q2items || [];
+
+    if (context.gscSignal || context.plainEnglish) {
+      const ctx = document.createElement('div');
+      ctx.className = 'context-panel';
+
+      let ctxHtml = '<div class="context-title">Classification Context</div>';
+
+      if (context.gscSignal) {
+        ctxHtml += '<div class="context-summary"><strong>GSC Signal:</strong> ' + _esc(context.gscSignal);
+        if (context.gscDominant) {
+          ctxHtml += ' · <strong>Dominant intent:</strong> ' + _esc(context.gscDominant);
+        }
+        if (context.gscImpressions) {
+          ctxHtml += ' · ' + _esc(context.gscImpressions);
+        }
+        if (context.confidence) {
+          ctxHtml += ' · <strong>Confidence:</strong> ' + _esc(context.confidence);
+        }
+        ctxHtml += '</div>';
+      }
+
+      if (context.plainEnglish) {
+        ctxHtml += '<div class="context-summary" style="margin-top:5px;"><strong>Summary:</strong> ' +
+          _esc(context.plainEnglish) + '</div>';
+      }
+
+      ctx.innerHTML = ctxHtml;
+      container.appendChild(ctx);
+    }
+
+    const q1card = document.createElement('div');
+    q1card.className = 'q1-card';
+
+    let q1html = '<div class="q1-title">Question 1 — Primary Intent</div>';
+
+    if (q1rec.rec) {
+      q1html += '<div class="q1-rec">Recommended: ' + _esc(q1rec.rec) + '</div>';
+    }
+
+    if (q1rec.reason) {
+      q1html += '<div class="q1-reason">' + _esc(q1rec.reason) + '</div>';
+    }
+
+    q1html += '<div class="q1-options">';
+    for (let i = 0; i < ranked.length; i++) {
+      const r = ranked[i];
+      const selected = (window._step2Q1Selected === r.num) ? ' selected' : '';
+      q1html += '<button class="q1-option' + selected + '" onclick="selectQ1(\'' +
+        _esc(r.num) + '\')" id="q1opt_' + r.num + '">' +
+        r.num + '. ' + _esc(r.name) + '</button>';
+    }
+    q1html += '</div>';
+
+    q1card.innerHTML = q1html;
+    container.appendChild(q1card);
+
+    if (q2items.length) {
+      const q2title = document.createElement('div');
+      q2title.style.cssText =
+        'font-size:10px;font-weight:bold;color:#3c4043;margin:8px 0 4px 0;text-transform:uppercase;letter-spacing:0.3px;';
+      q2title.textContent = 'Question 2 — Secondary Intent Decisions';
+      container.appendChild(q2title);
+
+      for (let i = 0; i < q2items.length; i++) {
+        const item = q2items[i];
+        const card = document.createElement('div');
+        card.className = 'intent-card';
+        card.id = 'q2card_' + item.num;
+
+        const isY = window._step2Q2Answers[item.num] === 'Y';
+        const isN = window._step2Q2Answers[item.num] === 'N';
+
+        let html = '<div class="intent-title">' + item.num + '. ' + _esc(item.name) + '</div>';
+
+        if (item.step) {
+          html += '<div class="intent-detail"><strong>Decision tree:</strong> ' + _esc(item.step) + '</div>';
+        }
+
+        if (item.gscEvidence) {
+          html += '<div class="intent-detail"><strong>GSC evidence:</strong> ' +
+            _esc(item.gscEvidence.substring(0, 180)) +
+            (item.gscEvidence.length > 180 ? '…' : '') +
+            '</div>';
+        }
+
+        if (item.gscModifier && item.gscModifier.indexOf('CAUTION') > -1) {
+          html += '<div class="intent-caution">' +
+            _esc(item.gscModifier.replace(/^—\s*/, '')) + '</div>';
+        }
+
+        if (item.rec === 'Y' || item.rec === 'N') {
+          const recClass = item.rec === 'Y' ? 'rec-y' : 'rec-n';
+          html += '<div class="intent-rec ' + recClass + '">Recommended: ' + item.rec + '</div>';
+        }
+
+        if (item.reason) {
+          html += '<div class="intent-detail">' + _esc(item.reason) + '</div>';
+        }
+
+        if (item.permitted) {
+          html += '<div class="intent-permitted">✓ If Y: ' + _esc(item.permitted) + '</div>';
+        }
+
+        if (item.excluded) {
+          html += '<div class="intent-excluded">✗ Not allowed: ' + _esc(item.excluded) + '</div>';
+        }
+
+        html +=
+          '<div class="intent-answer">' +
+          '<label>Your answer:</label>' +
+          '<button class="yn-btn' + (isY ? ' selected-y' : '') +
+          '" onclick="selectYN(\'' + item.num + '\',\'Y\')" id="ybtn_' + item.num + '">Y</button>' +
+          '<button class="yn-btn' + (isN ? ' selected-n' : '') +
+          '" onclick="selectYN(\'' + item.num + '\',\'N\')" id="nbtn_' + item.num + '">N</button>' +
+          '</div>';
+
+        card.innerHTML = html;
+        container.appendChild(card);
+      }
+    }
+  }
+
+  function selectQ1(num) {
+    window._step2Q1Selected = num;
+    const ranked = window._step2RankedIntents || [];
+    for (let i = 0; i < ranked.length; i++) {
+      const btn = document.getElementById('q1opt_' + ranked[i].num);
+      if (btn) btn.className =
+        'q1-option' + (ranked[i].num === num ? ' selected' : '');
+    }
+  }
+
+  function selectYN(num, answer) {
+    window._step2Q2Answers[num] = answer;
+    const yBtn = document.getElementById('ybtn_' + num);
+    const nBtn = document.getElementById('nbtn_' + num);
+    if (yBtn) yBtn.className =
+      'yn-btn' + (answer === 'Y' ? ' selected-y' : '');
+    if (nBtn) nBtn.className =
+      'yn-btn' + (answer === 'N' ? ' selected-n' : '');
+  }
+
+  function w_copyAnswers() {
+    const primaryAnswer = window._step2Q1Selected;
+    if (!primaryAnswer) {
+      _status(1, "Select a primary intent in Question 1 first.", true);
+      return;
+    }
+
+    const q2items   = window._step2Q2Items || [];
+    const q2answers = window._step2Q2Answers || {};
+
+    const enriched = [];
+    for (let i = 0; i < q2items.length; i++) {
+      const item = q2items[i];
+      const answer = q2answers[item.num];
+      if (!answer) continue;
+      enriched.push({
+        num: item.num,
+        name: item.name,
+        answer: answer,
+        reason: item.reason || "Confirmed in sidebar review.",
+        permitted: item.permitted || "",
+        excluded: item.excluded || ""
+      });
+    }
+
+    window._enrichedSecondaryDecisions = enriched;
+    window._primaryAnswerNum = primaryAnswer;
+
+    const rerunLines = [
+      "CONFIRMED INTENT: " + primaryAnswer,
+      "SECONDARY INTENT DECISIONS:"
+    ];
+    for (let i = 0; i < enriched.length; i++) {
+      rerunLines.push(
+        enriched[i].num + ": " + enriched[i].answer + " — " + enriched[i].name
+      );
+    }
+    const rerunText = rerunLines.join('\n');
+
+    navigator.clipboard.writeText(rerunText)
+      .then(() => {
+        _status(1, "Answers copied — paste into ChatGPT then paste confirmed result into Step 3.", false);
+        setTimeout(() => _status(1, "", false), 3000);
+      })
+      .catch(() => {
+        const temp = document.createElement('textarea');
+        temp.value = rerunText;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        _status(1, "Answers copied — paste into ChatGPT then paste confirmed result into Step 3.", false);
+        setTimeout(() => _status(1, "", false), 3000);
+      });
+  }
+
+  function _extractConfirmedBlock(text) {
+    const lines          = text.split(/\r?\n/);
+    const confirmed      = [];
+    const secondary      = [];
+    let inSecondaryBlock = false;
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (line.startsWith('CONFIRMED ARTICLE TYPE:') ||
+          line.startsWith('CONFIRMED INTENT:')) {
+        confirmed.push(line);
+        continue;
+      }
+      if (line.startsWith('SECONDARY INTENT DECISIONS:')) {
+        inSecondaryBlock = true;
+        secondary.push(line);
+        continue;
+      }
+      if (inSecondaryBlock) {
+        if (line) secondary.push(line);
+        else inSecondaryBlock = false;
+      }
+    }
+
+    if (!confirmed.length) return text.trim();
+
+    let rankedBlock  = "";
+    let secondaryOut = "";
+
+    if (window._enrichedSecondaryDecisions &&
+        window._enrichedSecondaryDecisions.length) {
+
+      const w1        = (document.getElementById('window1').value || "");
+      const allRanked = _extractRankedIntents(w1);
+
+      if (allRanked.length) {
+        const rankedLines = ["RANKED INTENT LIST:"];
+        for (let i = 0; i < allRanked.length; i++) {
+          rankedLines.push(
+            allRanked[i].num + '. ' + allRanked[i].name
+          );
+        }
+        rankedBlock = rankedLines.join('\n');
+      }
+
+      const secLines = ["SECONDARY INTENT DECISIONS:"];
+      for (let i = 0; i < window._enrichedSecondaryDecisions.length; i++) {
+        const r = window._enrichedSecondaryDecisions[i];
+        secLines.push(
+          r.num + ': ' + r.answer +
+          ' — ' + r.name +
+          ' — ' + r.reason
+        );
+      }
+      secondaryOut = secLines.join('\n');
+
+    } else if (secondary.length) {
+      secondaryOut = secondary.join('\n');
+    }
+
+    let block =
+      "===== CONFIRMED INTENT LOCK FROM PROMPT 1A =====\n" +
+      confirmed.join('\n');
+
+    if (rankedBlock)  block += "\n\n" + rankedBlock;
+    if (secondaryOut) block += "\n\n" + secondaryOut;
+
+    block +=
+      "\n===== END LOCK =====\n\n" +
+      "HARD RULE: The values above are locked inputs from Prompt 1A.\n" +
+      "Do NOT redetect, reinterpret, validate, or override Article Type or Intent\n" +
+      "from HTML, title, slug, meta title, schema, or any other source.\n" +
+      "Use them exactly as supplied for all downstream field population.\n" +
+      "Secondary Intent Decisions marked Y are retained supporting layers.\n" +
+      "Secondary Intent Decisions marked N are removed from the content structure.\n" +
+      "The reason supplied for each decision must be reflected in the Page Rewrite Brief.";
+
+    return block;
+  }
+
+  function _extractSecondaryDecisions() {
+    if (!window._enrichedSecondaryDecisions ||
+        !window._enrichedSecondaryDecisions.length) {
+      return "";
+    }
+
+    const allRanked =
+      window._step2RankedIntents ||
+      _extractRankedIntents(document.getElementById('window1').value || "");
+
+    const rankedLines = ["RANKED INTENT LIST:"];
+    for (let i = 0; i < allRanked.length; i++) {
+      rankedLines.push(
+        allRanked[i].num + '. ' + allRanked[i].name
+      );
+    }
+
+    const secLines = ["SECONDARY INTENT DECISIONS:"];
+    for (let i = 0; i < window._enrichedSecondaryDecisions.length; i++) {
+      const r = window._enrichedSecondaryDecisions[i];
+      secLines.push(
+        r.num + ': ' + r.answer +
+        ' — ' + r.name +
+        ' — ' + r.reason
+      );
+    }
+
+    return rankedLines.join('\n') + '\n\n' + secLines.join('\n');
+  }
+
+  function p_load(n) {
+    _status(n, "Loading...", false);
+    _val('prompt' + n, "Loading — please wait...");
+
+    if (n === 2) {
+      const lockText = (document.getElementById('window3').value || "").trim();
+      if (!lockText) {
+        _status(n, "Paste confirmed Prompt 1A output into Step 3 first.", true);
+        _val('prompt' + n, "");
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(r => {
+          const confirmedBlock = _extractConfirmedBlock(lockText);
+          const fullPrompt = confirmedBlock + "\n\n" + r.fullPrompt;
+          _val('prompt' + n, fullPrompt);
+          _val('ref' + n, r.title || "");
+          _status(n, "Loaded with confirmed intent lock. Copy → ChatGPT.", false);
+          _badge(n, "● Loaded");
+        })
+        .withFailureHandler(e => {
+          _val('prompt' + n, "");
+          _status(n, "Error: " + e.message, true);
+        })
+        [LOADERS[n]]();
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(r => {
+        _val('prompt' + n, r.fullPrompt);
+        _val('ref' + n, r.title || "");
+        _status(n, "Loaded. Copy prompt → paste into ChatGPT.", false);
+        _badge(n, "● Loaded");
+      })
+      .withFailureHandler(e => {
+        _val('prompt' + n, "");
+        _status(n, "Error: " + e.message, true);
+      })
+      [LOADERS[n]]();
+  }
+
+  function p_refresh(n) {
+    const ta = document.getElementById('prompt' + n);
+
+    if (!ta.value || !ta.value.trim()) {
+      _status(n, "Load this prompt first before refreshing.", true);
+      return;
+    }
+
+    const anchor    = ANCHORS[n];
+    const anchorPos = ta.value.indexOf(anchor);
+
+    if (anchorPos === -1) {
+      _status(n, "Refresh anchor not found — click Load instead.", true);
+      return;
+    }
+
+    _status(n, "Refreshing row data...", false);
+
+    google.script.run
+      .withSuccessHandler(r => {
+        const framework = ta.value.substring(0, anchorPos + anchor.length);
+        ta.value = framework + "\n" + r.dataBlock;
+        _val('ref' + n, r.title || "");
+        _val('result' + n, "");
+        _status(n, "Refreshed. Copy prompt → paste into ChatGPT.", false);
+        _badge(n, "● Refreshed");
+      })
+      .withFailureHandler(e => {
+        _status(n, "Refresh error: " + e.message, true);
+      })
+      [REFRESH_FNS[n]]();
+  }
+
+  function p_copy(n) {
+    const ta = document.getElementById('prompt' + n);
+    if (!ta.value || !ta.value.trim()) {
+      _status(n, "Nothing to copy — run Load first.", true);
+      return;
+    }
+
+    const anchor  = ANCHORS[n];
+    const cleaned = ta.value.replace(anchor + "\n", "").replace(anchor, "");
+
+    navigator.clipboard.writeText(cleaned)
+      .then(() => {
+        _status(n, "Prompt copied!", false);
+        setTimeout(() => _status(n, "", false), 2000);
+      })
+      .catch(() => {
+        const temp = document.createElement('textarea');
+        temp.value = cleaned;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        _status(n, "Prompt copied!", false);
+        setTimeout(() => _status(n, "", false), 2000);
+      });
+  }
+
+  function p_paste(n) {
+    const ta = document.getElementById('result' + n);
+    ta.focus();
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText()
+        .then(text => {
+          ta.value = text;
+          _status(n, "Pasted.", false);
+        })
+        .catch(() => {
+          _status(n, "Click the result box and press Ctrl+V to paste.", false);
+        });
+    } else {
+      _status(n, "Click the result box and press Ctrl+V to paste.", false);
+    }
+  }
+
+  function p_write(n) {
+    const raw = document.getElementById('result' + n).value.trim();
+    if (!raw) {
+      _status(n, "Paste LLM result first.", true);
+      return;
+    }
+
+    const pairs = _parsePairs(raw);
+    if (!Object.keys(pairs).length) {
+      _status(n, "Could not parse Label: Value pairs.", true);
+      return;
+    }
+
+    if (n === 2) {
+      const secondaryBlock = _extractSecondaryDecisions();
+      if (secondaryBlock) {
+        pairs['Secondary Intent Decisions'] = secondaryBlock;
+      }
+    }
+
+    _status(n, "Writing to row...", false);
+    google.script.run
+      .withSuccessHandler(r => {
+        _status(n, "✅ " + r, false);
+        _badge(n, "● Written ✅");
+      })
+      .withFailureHandler(e =>
+        _status(n, "Error: " + e.message, true)
+      )
+      .bc_writeLLMOutputToRow(pairs);
+  }
+
+  function p_clear(n) {
+    _val('result' + n, "");
+    _status(n, "", false);
+  }
+
+  function _parsePairs(raw) {
+    const pairs  = {};
+    const marker = '=== VERTICAL OUTPUT — PASTE INTO PANEL 2 ===';
+    const start  = raw.indexOf(marker);
+    const text   = start > -1 ? raw.substring(start + marker.length) : raw;
+
+    for (const line of text.split('\n')) {
+      const colonIdx = line.indexOf(':');
+      if (colonIdx === -1) continue;
+      const label = line.substring(0, colonIdx).trim();
+      let value   = line.substring(colonIdx + 1).trim();
+      if (!label) continue;
+      if (label.startsWith('=') ||
+          label.startsWith('-')) continue;
+      if (label.startsWith('If ')) continue;
+      if (label.startsWith('Before ')) continue;
+      if (label.match(/^\d+\./)) continue;
+      if (label === 'Rules') continue;
+      if (label === 'After the vertical block output exactly') continue;
+      if (label === 'Waiting for Input') continue;
+      if (label.startsWith('CONFIRMED')) continue;
+      if (label.startsWith('AMBIGUITY')) continue;
+      if (label.startsWith('QUESTION')) continue;
+      if (label.startsWith('RANKED')) continue;
+      if (label.startsWith('SECONDARY')) continue;
+      if (label.startsWith('HARD RULE')) continue;
+      value = _stripMarkdownUrl(value);
+      pairs[label] = value;
+    }
+    return pairs;
+  }
+
+  function _stripMarkdownUrl(value) {
+    if (!value) return value;
+    const selfLink = /^\[(https?:\/\/[^\]]+)\]\(\1\)$/;
+    const mdLink   = /^\[([^\]]*)\]\((https?:\/\/[^)\s"]+)[^)]*\)$/;
+    const m1 = value.match(selfLink);
+    if (m1) return m1[1];
+    const m2 = value.match(mdLink);
+    if (m2) return m2[2];
+    return value;
+  }
+
+  function _esc(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function _val(id, text) {
+    document.getElementById(id).value = text;
+  }
+
+  function _status(n, msg, isError) {
+    const el = document.getElementById('st' + n);
+    if (!el) return;
+    el.innerText = msg;
+    el.className = 'status-msg' + (isError ? ' error' : '');
+  }
+
+  function _badge(n, text) {
+    const el = document.getElementById('b' + n);
+    if (el) el.innerText = text;
+  }
+</script>
+</body>
+</html>

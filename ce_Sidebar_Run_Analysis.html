@@ -1,0 +1,201 @@
+<!-- ══ ce_Sidebar_Run_Analysis.html - W7 — RUN ANALYSIS ══ -->
+<div id="window-run-analysis" class="window-card" style="display:none; border-top:3px solid #37474f">
+  <div class="window-header">
+    <span class="window-label" style="color:#37474f">W7 — Run Analysis</span>
+    <span class="tag" style="background:#37474f">Publish Decision</span>
+  </div>
+  <div class="window-body">
+    <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #ddd">
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#2e7d32;letter-spacing:1px;margin-bottom:6px">PUBLICATION LOG (from W6)</div>
+      <div id="statusRAW6" class="status-bar pending">Load row data, then update the publication log — same as W6.</div>
+      <div class="btn-row" style="margin-top:4px">
+        <button style="background:#2e7d32;color:#fff" onclick="ra_loadRowData()">⬇ Load Row Data</button>
+        <button style="background:#2e7d32;color:#fff" onclick="ra_updateLog()">✔ Update Publication Log</button>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#6a1b9a;letter-spacing:1px;margin-bottom:6px">SEMANTIC ALIGNMENT SCORE</div>
+      <div id="status15f" class="status-bar pending">Scores finished HTML against target query cluster — run before finalising.</div>
+      <div class="btn-row" style="margin-top:4px">
+        <button style="background:#6a1b9a;color:#fff" onclick="runStage15F()">⚙ Generate Alignment Score</button>
+      </div>
+      <div id="stage15fResultBlock" style="margin-top:10px">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">OVERALL SCORE:</label>
+        <div id="stage15fOverall" style="font-family:JetBrains Mono,monospace;font-size:16px;font-weight:700;color:#6a1b9a;margin-bottom:8px"></div>
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PER-SECTION BREAKDOWN:</label>
+        <div id="stage15fBreakdown" style="font-family:JetBrains Mono,monospace;font-size:11px;background:#f3e5f5;border-radius:4px;padding:8px;white-space:pre-wrap;color:#333"></div>
+      </div>
+
+      <div id="stage15fFTBlock" style="margin-top:14px;padding-top:14px;border-top:1px dashed #ccc">
+        <div class="btn-row" style="margin-top:8px">
+          <button style="background:#c62828;color:#fff" onclick="buildSemanticFixPrompt()">Generate Fix Prompt for LOW Sections</button>
+        </div>
+        <textarea id="stage15fFixPrompt" style="height:150px;margin-top:6px" readonly></textarea>
+        <div class="btn-row" id="stage15fFixCopyRow" style="margin-top:4px">
+          <button class="btn-copy" onclick="copyText('stage15fFixPrompt','status15f','Fix prompt copied')">Copy to ChatGPT</button>
+        </div>
+
+        <div id="stage15fResponseBlock" style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+          <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PASTE CHATGPT REVISED SECTIONS:</label>
+          <textarea id="stage15fResponse" style="height:150px" placeholder="Paste the revised sections from ChatGPT here"></textarea>
+          <div class="btn-row" style="margin-top:4px">
+            <button class="btn-copy" onclick="clearAndPaste('stage15fResponse')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
+            <button class="btn-copy" onclick="applySemanticFix()" style="background:#c62828;color:#fff">Apply Fix</button>
+          </div>
+        </div>
+
+        <div style="font-size:12px;font-weight:700;color:#1a237e;margin-top:14px;margin-bottom:6px;padding-top:14px;border-top:1px dashed #ccc">FT ALIGNMENT SCORE (New HTML With Semantic Adjustment)</div>
+        <div style="font-size:11px;color:#666;margin-bottom:6px">Scores column FT independently — does not read or affect the New HTML score above.</div>
+        <div class="btn-row">
+          <button style="background:#1a237e;color:#fff" onclick="runStage15FOnFT()">⚙ Generate FT Alignment Score</button>
+        </div>
+        <div id="status15fFT" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px">Not run yet.</div>
+        <div id="stage15fFTResultBlock" style="margin-top:10px">
+          <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">FT OVERALL SCORE:</label>
+          <div id="stage15fFTOverall" style="font-family:JetBrains Mono,monospace;font-size:16px;font-weight:700;color:#1a237e;margin-bottom:8px">Not run yet.</div>
+          <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">FT PER-SECTION BREAKDOWN:</label>
+          <div id="stage15fFTBreakdown" style="font-family:JetBrains Mono,monospace;font-size:11px;background:#e8eaf6;border-radius:4px;padding:8px;white-space:pre-wrap;color:#333">Not run yet.</div>
+        </div>
+
+        <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #ccc">
+          <div class="btn-row">
+            <button style="background:#1a237e;color:#fff" onclick="buildSemanticFixPromptForFT()">📝 Build Fix Prompt (FT)</button>
+          </div>
+          <textarea id="stage15fFTFixPrompt" style="height:150px;width:100%;margin-top:6px;font-size:11px" readonly placeholder="FT fix prompt will appear here — requires FT Alignment Score to be run first."></textarea>
+          <div class="btn-row" style="margin-top:4px;">
+            <button class="btn-copy" onclick="(function(){var ta=document.getElementById('stage15fFTFixPrompt'); if(!ta.value){alert('Generate the FT fix prompt first.');return;} navigator.clipboard.writeText(ta.value); setStatus('status15fFT','ready','✔ FT fix prompt copied — paste into ChatGPT');})()">Copy Prompt</button>
+          </div>
+
+          <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+            <div style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:600;color:#333;">Paste ChatGPT's revised FT section(s) here:</div>
+            <textarea id="stage15fFTResponse" style="height:150px;width:100%;font-size:11px;margin-top:4px;" placeholder="Paste ChatGPT's full response here…"></textarea>
+            <div class="btn-row" style="margin-top:4px;">
+              <button class="btn-copy" onclick="clearAndPaste('stage15fFTResponse')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
+              <button style="background:#1a237e;color:#fff" onclick="applySemanticFixForFT()">✔ Apply FT Fix</button>
+            </div>
+            <div id="status15fFTApply" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px">Not applied yet.</div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+          <div style="font-size:11px;color:#666;margin-bottom:6px">Before committing, compare Current New HTML against the FT draft for search quality and structural integrity:</div>
+          <div class="btn-row">
+            <button style="background:#1a237e;color:#fff" onclick="runGenerateComparisonPrompt()">⚖ Compare vs Gemini</button>
+          </div>
+          <div id="comparisonPromptBlock" style="margin-top:8px;">
+            <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#1a237e;margin-bottom:4px;">📋 COMPARISON PROMPT (send to Gemini)</div>
+            <textarea id="comparisonPrompt" style="height:100px;width:100%;font-size:10px;" readonly></textarea>
+            <div class="btn-row" style="margin-top:4px;">
+              <button class="btn-copy" onclick="copyComparisonPrompt()">Copy Prompt</button>
+            </div>
+          </div>
+          <div id="comparisonResponseBlock" style="margin-top:8px;">
+            <div style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:600;color:#333;">Paste Gemini's response here:</div>
+            <textarea id="comparisonResponse" style="height:100px;width:100%;font-size:10px;margin-top:4px;" placeholder="Paste Gemini's full response here…"></textarea>
+            <div class="btn-row" style="margin-top:4px;">
+              <button class="btn-copy" onclick="clearAndPaste('comparisonResponse')" style="background:#37474f;color:#fff">⌫ Clear & Paste</button>
+              <button class="btn-push" onclick="displayComparisonResult()" style="background:#1a237e;color:#fff;">✔ Review Response</button>
+            </div>
+            <div id="comparisonResult" style="margin-top:8px;font-size:12px;"></div>
+            <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+              <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#1a237e;margin-bottom:6px">APPLY ALL RECOMMENDATIONS (paste in the SAME chat as the review)</div>
+              <div class="btn-row">
+                <button style="background:#1a237e;color:#fff" onclick="showApplyRecommendationsPrompt()">📋 Generate Continuation Prompt</button>
+              </div>
+              <textarea id="applyRecommendationsPrompt" style="height:140px;width:100%;margin-top:6px;font-size:10px" readonly></textarea>
+              <div class="btn-row" style="margin-top:4px">
+                <button class="btn-copy" onclick="copyText('applyRecommendationsPrompt','statusApplyRecs','Prompt copied — paste in the same chat as the review')">Copy Prompt</button>
+              </div>
+              <div id="statusApplyRecs" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+              <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #ccc">
+                <div style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:600;color:#333">Paste the LLM's complete rewritten article HTML here:</div>
+                <textarea id="applyRecommendationsResponse" style="height:150px;width:100%;font-size:10px;margin-top:4px" placeholder="Paste the complete rewritten article HTML here…"></textarea>
+                <div class="btn-row" style="margin-top:4px">
+                  <button class="btn-copy" onclick="clearAndPaste('applyRecommendationsResponse')" style="background:#37474f;color:#fff">⌫ Clear & Paste</button>
+                  <button style="background:#2e7d32;color:#fff" onclick="saveAppliedRecommendations()">✔ Save to FT</button>
+                </div>
+              </div>
+            </div>
+            <div id="unverifiedFixSection" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+              <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#c62828;margin-bottom:6px">FIX UNVERIFIED ADDITIONS (removes flagged items from FT)</div>
+              <div class="btn-row">
+                <button style="background:#c62828;color:#fff" onclick="buildUnverifiedFixPrompt()">📝 Build Fix Prompt for Unverified Additions</button>
+              </div>
+              <textarea id="unverifiedFixPrompt" style="height:120px;width:100%;margin-top:6px;font-size:10px" readonly></textarea>
+              <div class="btn-row" style="margin-top:4px">
+                <button class="btn-copy" onclick="copyText('unverifiedFixPrompt','statusUnverifiedFix','Fix prompt copied — paste into ChatGPT')">Copy Prompt</button>
+              </div>
+              <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #ccc">
+                <div style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:600;color:#333">Paste ChatGPT's JSON response here:</div>
+                <textarea id="unverifiedFixResponse" style="height:100px;width:100%;font-size:10px;margin-top:4px" placeholder="Paste ChatGPT's JSON response here…"></textarea>
+                <div class="btn-row" style="margin-top:4px">
+                  <button class="btn-copy" onclick="clearAndPaste('unverifiedFixResponse')" style="background:#37474f;color:#fff">⌫ Clear & Paste</button>
+                  <button style="background:#c62828;color:#fff" onclick="applyUnverifiedFix()">✔ Apply Fix</button>
+                </div>
+                <div id="statusUnverifiedFix" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px dashed #ccc">
+          <div style="font-size:11px;color:#666;margin-bottom:4px">Once you're happy with the changes in New HTML With Semantic Adjustment (col FT), commit them to New HTML:</div>
+          <div class="btn-row">
+            <button style="background:#2e7d32;color:#fff" onclick="copySemanticAdjustment()">✔ Copy to New HTML</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+      <div id="statusW7" class="status-bar pending">Click Analyse to check whether another pipeline run is needed.</div>
+      <div class="btn-row" style="margin-top:6px">
+        <button style="background:#37474f;color:#fff" onclick="runW7Analysis()">⚙ Analyse</button>
+      </div>
+    </div>
+
+    <div id="w7Result" style="display:none;margin-top:12px">
+
+      <!-- Recommendation Banner -->
+      <div id="w7Banner" style="padding:12px;border-radius:6px;margin-bottom:12px;font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;text-align:center"></div>
+
+      <!-- Recommendation Detail -->
+      <div id="w7Detail" style="font-size:12px;color:#444;margin-bottom:12px;line-height:1.5"></div>
+
+      <!-- Signals Table -->
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#37474f;letter-spacing:1px;margin-bottom:6px">SIGNAL BREAKDOWN</div>
+      <div id="w7Signals" style="margin-bottom:16px"></div>
+
+      <!-- Bio Check Section — shown after analysis -->
+      <div id="w7BioSection" style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+        <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#37474f;letter-spacing:1px;margin-bottom:6px">BIO BOX CHECK</div>
+        <div id="w7BioStatus" style="font-size:11px;margin-bottom:8px"></div>
+
+        <div style="margin-bottom:8px">
+          <label style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;color:#666;display:block;margin-bottom:3px">CURRENT BIO:</label>
+          <textarea id="w7CurrentBio" style="height:60px;font-size:10px;background:#f5f5f5;color:#666" readonly></textarea>
+        </div>
+
+        <div style="margin-bottom:8px">
+          <label style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;color:#1565c0;display:block;margin-bottom:3px">SUGGESTED BIO — edit before saving:</label>
+          <textarea id="w7SuggestedBio" style="height:80px;font-size:10px;border-color:#1565c0"></textarea>
+        </div>
+
+        <div class="btn-row">
+          <button style="background:#1565c0;color:#fff" onclick="saveW7Bio()">✔ Use This Bio</button>
+          <button style="background:#546e7a;color:#fff" onclick="skipW7Bio()">Skip — Keep Current</button>
+        </div>
+        <div id="w7BioSaveResult" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px;color:#2e7d32">No bio saved yet.</div>
+      </div>
+
+      <!-- Finalise and Log Button — shown after bio check -->
+      <div id="w7FinaliseSection" style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+        <div style="font-size:11px;color:#444;margin-bottom:8px">Bio check complete. Click below to update the publication log and site export in one step.</div>
+        <div class="btn-row">
+          <button style="background:#2e7d32;color:#fff;font-weight:700" onclick="runFinaliseAndLog()">⬆ Finalise and Log</button>
+        </div>
+        <div id="w7FinaliseResult" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px">Not finalised yet.</div>
+      </div>
+
+    </div>
+  </div>
+</div>

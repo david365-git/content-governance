@@ -1,0 +1,65 @@
+<!-- ══ ce_Sidebar_W8E.html - W8E — AUTHORITY & CTR ANALYSIS ══ -->
+<div id="window-w8e" class="window-card" style="display:none; border-top:3px solid #00695c">
+  <div class="window-header">
+    <span class="window-label" style="color:#00695c">W8E — Authority & CTR Analysis</span>
+    <span class="tag" style="background:#00695c">Pre-Publish Check</span>
+  </div>
+  <div class="window-body">
+    <div id="statusW8E" class="status-bar pending">Generate prompt → paste into ChatGPT/Gemini → paste result back.</div>
+
+    <div class="btn-row" style="margin-top:6px">
+      <button style="background:#00695c;color:#fff" id="w8eGenerateBtn" onclick="runW8EGenerate()">⚙ Generate Analysis Prompt</button>
+    </div>
+
+    <div id="w8ePromptBlock" style="display:none;margin-top:12px">
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PROMPT:</label>
+      <textarea id="w8ePrompt" style="height:150px;width:100%;font-size:11px" readonly></textarea>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-copy" onclick="copyText('w8ePrompt','statusW8E','Prompt copied — paste into ChatGPT or Gemini')">Copy Prompt</button>
+      </div>
+    </div>
+
+    <div id="w8ePasteBlock" style="display:none;margin-top:12px">
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PASTE RESPONSE:</label>
+      <textarea id="w8ePasteArea" style="height:150px;width:100%;font-size:11px" placeholder="Paste the full analysis response here…"></textarea>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-copy" onclick="clearAndPaste('w8ePasteArea')">⌫ Clear + Paste</button>
+        <button style="background:#2e7d32;color:#fff" onclick="saveW8EResult()">✔ Save Result</button>
+      </div>
+    </div>
+
+    <div id="w8eResultBlock" style="display:none;margin-top:10px">
+      <div id="w8eResultText" style="font-family:JetBrains Mono,monospace;font-size:12px;background:#e0f2f1;border-radius:4px;padding:8px;white-space:pre-wrap;color:#333;max-height:200px;overflow-y:auto"></div>
+    </div>
+
+    <div style="margin-top:16px;padding-top:12px;border-top:1px dashed #ccc">
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#00695c;letter-spacing:1px;margin-bottom:6px">AUTO-FIX AUTO-FIXABLE ITEMS</div>
+      <div id="statusW8EFix" class="status-bar pending">Builds a fix prompt from [AUTO-FIXABLE] items in the saved analysis.</div>
+
+      <div class="btn-row" style="margin-top:6px">
+        <button style="background:#00695c;color:#fff" onclick="runW8EFixGenerate()">⚙ Build Auto-Fix Prompt</button>
+      </div>
+
+      <div id="w8eFixPromptBlock" style="display:none;margin-top:10px">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">FIX PROMPT:</label>
+        <textarea id="w8eFixPrompt" style="height:150px;width:100%;font-size:11px" readonly></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="copyText('w8eFixPrompt','statusW8EFix','Fix prompt copied — paste into ChatGPT')">Copy Prompt</button>
+        </div>
+      </div>
+
+      <div id="w8eFixPasteBlock" style="display:none;margin-top:10px">
+        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">PASTE JSON FIX RESPONSE:</label>
+        <textarea id="w8eFixPasteArea" style="height:150px;width:100%;font-size:11px" placeholder="Paste ChatGPT's JSON array of {fixLabel, old, new} fragments here…"></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" onclick="clearAndPaste('w8eFixPasteArea')">⌫ Clear + Paste</button>
+          <button style="background:#2e7d32;color:#fff" onclick="applyW8EFix()">✔ Apply to New HTML</button>
+        </div>
+      </div>
+
+      <div id="w8eFixResultBlock" style="display:none;margin-top:10px">
+        <div id="w8eFixResultText" style="font-family:JetBrains Mono,monospace;font-size:12px;background:#e8f5e9;border-radius:4px;padding:8px;color:#333"></div>
+      </div>
+    </div>
+  </div>
+</div>

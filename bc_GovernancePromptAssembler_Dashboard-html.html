@@ -1,0 +1,2670 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="source-file" content="bc_GovernancePromptAssembler_Dashboard-html-v1.4">
+  <script>const FILENAME = "bc_GovernancePromptAssembler_Dashboard-html";</script>
+  <base target="_top">
+  <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0; padding: 0;
+      background: #f8f9fa;
+      color: #3c4043;
+      overflow-x: hidden;
+      overflow-y: auto;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tab-bar {
+      display: flex;
+      flex-direction: row;
+      background: #1a73e8;
+      border-bottom: 3px solid #1558b0;
+      flex-shrink: 0;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 6px 2px;
+      font-size: 9px;
+      font-weight: bold;
+      color: rgba(255,255,255,0.7);
+      background: transparent;
+      border: none;
+      border-right: 1px solid rgba(255,255,255,0.15);
+      cursor: pointer;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0px;
+      transition: background 0.15s, color 0.15s;
+      line-height: 1.3;
+    }
+
+    .tab-btn:last-child { border-right: none; }
+    .tab-btn:hover { background: rgba(255,255,255,0.12); color: white; }
+
+    .tab-btn.active {
+      background: white;
+      color: #1a73e8;
+      border-bottom: 3px solid white;
+      margin-bottom: -3px;
+    }
+
+    .tab-btn .badge {
+      display: block;
+      font-size: 8px;
+      font-weight: normal;
+      opacity: 0.8;
+      margin-top: 2px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .tab-btn.active .badge { opacity: 0.6; color: #1a73e8; }
+
+    .tab-panel {
+      display: none;
+      flex-direction: column;
+      padding: 10px 12px 14px 12px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .tab-panel.active { display: flex; }
+
+    .step-bar {
+      display: flex;
+      flex-direction: row;
+      background: #e8f0fe;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .step-btn {
+      flex: 1;
+      padding: 7px 4px;
+      font-size: 9px;
+      font-weight: bold;
+      color: #5f6368;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      transition: background 0.15s, color 0.15s;
+      line-height: 1.3;
+    }
+
+    .step-btn:hover { background: #c5d8fb; color: #1a73e8; }
+
+    .step-btn.active {
+      background: #1a73e8;
+      color: white;
+    }
+
+    .step-btn .step-badge {
+      display: block;
+      font-size: 8px;
+      font-weight: normal;
+      opacity: 0.8;
+      margin-top: 1px;
+      text-transform: none;
+    }
+
+    .step-btn.active .step-badge { opacity: 0.8; }
+
+    .step-panel {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .step-panel.active { display: flex; }
+
+    .sub-label {
+      font-size: 10px;
+      color: #5f6368;
+      margin-bottom: 7px;
+    }
+
+    textarea {
+      width: 100%;
+      border: 1px solid #dadce0;
+      border-radius: 5px;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 10px;
+      padding: 8px;
+      box-sizing: border-box;
+      background: white;
+      resize: vertical;
+    }
+    .prompt-ta   { height: 34vh; min-height: 65px; }
+    .result-ta   { height: 14vh; background: #f8fffe; border-color: #0f6e56; }
+    .step-ta     { height: 46vh; }
+    .step-ta-w1  { background: #f8f9fa; border-color: #9aa0a6; }
+    .step-ta-w3  { background: #f8fffe; border-color: #0f6e56; }
+    .ref-ta      {
+      height: 78px!important; background: #e9ecef;
+      margin-top: 5px; font-weight: bold;
+      font-size: 8px; resize: none;
+      min-height: 36px!important;
+    }
+
+    .step-label {
+      font-size: 9px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin: 0 0 5px 0;
+      padding: 3px 6px;
+      border-radius: 3px;
+    }
+
+    .step-label.grey  { background: #e8eaed; color: #5f6368; }
+    .step-label.amber { background: #fff8e1; color: #b06000; }
+    .step-label.teal  { background: #e6f4f1; color: #0f6e56; }
+
+    .divider {
+      font-size: 10px;
+      font-weight: bold;
+      color: #0f6e56;
+      margin: 8px 0 4px 0;
+      border-top: 1px solid #c8e6c9;
+      padding-top: 6px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 4px;
+      margin: 4px 0 3px 0;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 7px 2px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 10px;
+      color: white;
+      transition: opacity 0.15s;
+      text-align: center;
+    }
+
+    .btn:hover  { opacity: 0.88; }
+    .btn:active { transform: translateY(1px); }
+
+    .btn-blue   { background: #1a73e8; }
+    .btn-teal   { background: #0f6e56; }
+    .btn-orange { background: #e37400; }
+    .btn-green  { background: #1e8e3e; }
+    .btn-yellow { background: #f9ab00; color: #333; }
+    .btn-gray   { background: #80868b; }
+    .btn-amber  { background: #f9ab00; color: #333; }
+    .btn-purple { background: #7c4dff; }
+    .btn-next   { background: #1a73e8; }
+
+    .status-msg {
+      font-size: 10px;
+      text-align: center;
+      margin-top: 3px;
+      min-height: 13px;
+      color: #188038;
+      font-weight: 500;
+    }
+
+    .status-msg.error { color: #c5221f; }
+
+    .context-panel {
+      background: #e8f0fe;
+      border: 1px solid #b3c7f5;
+      border-radius: 5px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      font-size: 10px;
+      color: #1a3a6b;
+      flex-shrink: 0;
+      max-height: 22vh;
+      overflow-y: auto;
+    }
+
+    .context-panel .context-title {
+      font-weight: bold;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 5px;
+      color: #1558b0;
+    }
+
+    .context-panel .context-summary {
+      font-size: 10px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .intent-card {
+      background: white;
+      border: 1px solid #dadce0;
+      border-radius: 5px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      font-size: 10px;
+    }
+
+    .intent-card .intent-title {
+      font-weight: bold;
+      font-size: 10px;
+      color: #1a73e8;
+      margin-bottom: 4px;
+    }
+
+    .intent-card .intent-rec {
+      font-size: 10px;
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
+
+    .intent-card .intent-rec.rec-y { color: #1e8e3e; }
+    .intent-card .intent-rec.rec-n { color: #c5221f; }
+
+    .intent-card .intent-detail {
+      font-size: 9.5px;
+      color: #5f6368;
+      line-height: 1.5;
+      margin-bottom: 4px;
+      white-space: pre-wrap;
+    }
+
+    .intent-card .intent-caution {
+      font-size: 9.5px;
+      color: #b06000;
+      background: #fff8e1;
+      border-radius: 3px;
+      padding: 3px 6px;
+      margin-bottom: 4px;
+    }
+
+    .intent-card .intent-permitted {
+      font-size: 9.5px;
+      color: #1e8e3e;
+      background: #e6f4ea;
+      border-radius: 3px;
+      padding: 3px 6px;
+      margin-bottom: 3px;
+    }
+
+    .intent-card .intent-excluded {
+      font-size: 9.5px;
+      color: #c5221f;
+      background: #fce8e6;
+      border-radius: 3px;
+      padding: 3px 6px;
+      margin-bottom: 4px;
+    }
+
+    .intent-card .intent-answer {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 5px;
+    }
+
+    .intent-card .intent-answer label {
+      font-size: 10px;
+      font-weight: bold;
+      color: #3c4043;
+    }
+
+    .intent-card .yn-btn {
+      padding: 4px 12px;
+      border-radius: 4px;
+      border: 2px solid #dadce0;
+      background: white;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 10px;
+      color: #5f6368;
+      transition: all 0.15s;
+    }
+
+    .intent-card .yn-btn.selected-y {
+      background: #1e8e3e;
+      border-color: #1e8e3e;
+      color: white;
+    }
+
+    .intent-card .yn-btn.selected-n {
+      background: #c5221f;
+      border-color: #c5221f;
+      color: white;
+    }
+
+    .q1-card {
+      background: white;
+      border: 2px solid #1a73e8;
+      border-radius: 5px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      font-size: 10px;
+    }
+
+    .q1-card .q1-title {
+      font-weight: bold;
+      font-size: 10px;
+      color: #1558b0;
+      margin-bottom: 4px;
+    }
+
+    .q1-card .q1-rec {
+      font-size: 10px;
+      color: #1e8e3e;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .q1-card .q1-reason {
+      font-size: 9.5px;
+      color: #5f6368;
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+
+    .q1-options {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .q1-option {
+      padding: 5px 8px;
+      border-radius: 4px;
+      border: 1px solid #dadce0;
+      background: white;
+      cursor: pointer;
+      font-size: 10px;
+      color: #3c4043;
+      text-align: left;
+      transition: all 0.15s;
+    }
+
+    .q1-option:hover { background: #e8f0fe; border-color: #1a73e8; }
+
+    .q1-option.selected {
+      background: #1a73e8;
+      border-color: #1558b0;
+      color: white;
+      font-weight: bold;
+    }
+
+    .step2-scroll {
+      flex: 1;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+<div id="run-mode-banner" style="padding:8px 10px;text-align:center;font-weight:bold;font-size:12px;flex-shrink:0;">
+  Checking run mode...
+</div>
+<div style="display:flex;flex-direction:column;gap:2px;padding:4px 10px;background:#fef7e0;font-size:10px;flex-shrink:0;">
+  <div style="display:flex;gap:6px;align-items:center;">
+    <span style="font-weight:bold;color:#b06000;">Opened on Row:</span>
+    <span id="row-on-open" style="font-weight:bold;">—</span>
+    <span style="margin-left:auto;font-weight:bold;color:#b06000;">Current Row:</span>
+    <span id="row-current" style="font-weight:bold;">—</span>
+  </div>
+  <div id="row-on-open-title" style="font-size:9px;color:#5f6368;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+</div>
+
+<script>
+(function() {
+  var mode = null;
+
+  function initRunMode() {
+    var banner = document.getElementById('run-mode-banner');
+    banner.innerHTML =
+      '<span style="margin-right:8px;">Select run type:</span>' +
+      '<button onclick="setMode(\'PRODUCTION\')" style="margin-right:4px;padding:4px 10px;background:#1a73e8;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Production</button>' +
+      '<button onclick="setMode(\'TEST\')" style="padding:4px 10px;background:#c5221f;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Test</button>';
+    banner.style.backgroundColor = '#e8f0fe';
+    banner.style.color = '#1a3a6b';
+  }
+
+  window.setMode = function(selectedMode) {
+    mode = selectedMode;
+    window._runMode = mode;
+
+    if (mode === 'TEST') {
+      setBanner('TEST RUN — posts sheet writes active — post_progress will not be updated', '#c5221f', 'white');
+      p_load(1);
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        window._postStage = data.stage;
+        window._postProgressExists = data.exists;
+        setBanner(data.label, data.bgColor, data.textColor);
+        p_load(1);
+      })
+      .withFailureHandler(function(e) {
+        setBanner('PRODUCTION — could not read stage: ' + e.message, '#e37400', 'white');
+        p_load(1);
+      })
+      .bc_getPostProgressStatus();
+  };
+
+  function setBanner(label, bg, text) {
+    var el = document.getElementById('run-mode-banner');
+    el.textContent = label;
+    el.style.backgroundColor = bg;
+    el.style.color = text;
+  }
+
+  window.addEventListener('load', function() {
+    recordRowOnOpen();
+    setTimeout(initRunMode, 600);
+  });
+
+  window.recordRowOnOpen = function() {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res.success) {
+          document.getElementById('row-on-open').textContent = res.row;
+          document.getElementById('row-current').textContent = res.row;
+          document.getElementById('row-on-open-title').textContent = res.title || '';
+        } else {
+          document.getElementById('row-on-open').textContent = 'error';
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('row-on-open').textContent = 'error: ' + err.message;
+      })
+      .bc_getActiveRowNumberAndTitle();
+  };
+
+  window._rowMismatchAlerted = false;
+  window._rowCheckInFlight = false;
+
+  window.checkCurrentRow = function() {
+    if (window._rowCheckInFlight) return;
+    window._rowCheckInFlight = true;
+    google.script.run
+      .withSuccessHandler(function(res) {
+        window._rowCheckInFlight = false;
+        if (res.success) {
+          document.getElementById('row-current').textContent = res.row;
+          const openRow = document.getElementById('row-on-open').textContent;
+          var rowCurrentEl = document.getElementById('row-current');
+          if (openRow !== '—' && String(res.row) !== String(openRow)) {
+            rowCurrentEl.style.color = '#c62828';
+            rowCurrentEl.style.background = '#fce8e6';
+          } else {
+            rowCurrentEl.style.color = '';
+            rowCurrentEl.style.background = '';
+          }
+        } else {
+          document.getElementById('row-current').textContent = 'error';
+        }
+      })
+      .withFailureHandler(function(err) {
+        window._rowCheckInFlight = false;
+        document.getElementById('row-current').textContent = 'error: ' + err.message;
+      })
+      .bc_getActiveRowNumber();
+  };
+
+  })();
+</script>
+  <div style="background:#1a73e8;padding:10px;flex-shrink:0;">
+    <button id="runGovernanceBtn" onclick="runFullGovernanceChain()"
+      style="width:100%;background:white;color:#1a73e8;border:none;border-radius:4px;
+             padding:10px;font-size:11px;font-weight:bold;text-transform:uppercase;
+             letter-spacing:0.3px;cursor:pointer;text-decoration:none;">
+      ⚡ Run Full Governance Chain (P1A → SERP Bridg) Insert Locality before running
+    </button>
+    <div
+  id="contentIntelligenceResult"
+  style="
+    margin-top:8px;
+    padding:8px;
+    background:#f7f7f7;
+    border:1px solid #ccc;
+    border-radius:4px;
+    font-size:12px;
+    white-space:pre-wrap;
+    display:none;
+  "
+></div>
+    <div id="runGovernanceStatus" class="status-msg" style="color:white;margin-top:4px;"></div>
+  </div>
+
+  <div style="background:#1a73e8;padding:8px 10px;flex-shrink:0;">
+    <select id="prompt-selector" onchange="showTab(parseInt(this.value))"
+      style="width:100%;padding:6px 8px;font-size:11px;font-weight:bold;
+             border:none;border-radius:4px;background:white;color:#1a73e8;
+             cursor:pointer;">
+      <option value="1">P1A — Article Type + Intent</option>
+      <option value="2">P1B — Entity Classification</option>
+      <option value="3">P2 — GSC + Governance</option>
+      <option value="4">P3 — Rewrite Governance</option>
+      <option value="5">SERP — Entity Bridge</option>
+      <option value="6">Combined — 1A+1B+2+3</option>
+    </select>
+  </div>
+
+  <div class="tab-panel active" id="tp1">
+    <div style="background:#e8f0fe;border:1px solid #b3c7f5;border-radius:5px;padding:8px 10px;margin-bottom:8px;">
+      <div style="font-size:9px;font-weight:bold;color:#1558b0;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:5px;">P1 — GSC Sync (run before P1A)</div>
+      <div class="button-row">
+        <button class="btn btn-blue" id="p1SyncBtn" onclick="runP1GscSync()">⚡ Run GSC Full Sync + Row Stats</button>
+      </div>
+      <div id="p1SyncStatus" class="status-msg"></div>
+    </div>
+
+    <div class="sub-label">Article Type confirmation · Intent detection · Ambiguity rule · HTML only. <span style="background:red;color:yellow;font-size:14px">Run Prompt Splitter</span></div>
+
+    <textarea id="prompt1" class="prompt-ta"
+      placeholder="Select a row in the Posts sheet, then click Load."></textarea>
+    <div class="button-row">
+      <button class="btn btn-blue"   onclick="p_load(1)">Load</button>
+      <button class="btn btn-orange" onclick="p_refresh(1)">Ref</button>
+      <button class="btn btn-yellow" onclick="p_copy(1)">Copy</button>
+      <button class="btn btn-purple" onclick="p_copyChunked(1)">Copy Chunked</button>
+      <button class="btn btn-gray"  onclick="doReset()">Clear</button>
+    </div>
+    <textarea id="ref1" class="ref-ta" readonly rows="5"
+      placeholder="Post title appears here after Load"></textarea>
+
+    <div class="button-row">
+      <button class="btn btn-teal" id="p1ApiBtn" onclick="p_sendViaAPI(1)">Send via API (gpt-4o-mini)</button>
+    </div>
+    <textarea id="apiResult1" class="result-ta" readonly
+      placeholder="API response appears here after Send via API."></textarea>
+    <div id="apiCost1" class="status-msg"></div>
+
+    <div class="button-row">
+      <button class="btn btn-green" id="p1AutoBtn" onclick="runP1AAutomated()">Run P1A Automated (write to row)</button>
+    </div>
+    <div id="p1AutoStatus" class="status-msg"></div>
+
+    <div class="divider">↓ INTENT REVIEW WORKFLOW — USE STEPS BELOW WHEN MULTIPLE INTENTS ARE PRESENT</div>
+
+    <div class="step-bar">
+      <button class="step-btn active" id="stb1" onclick="showStep(1)">
+        STEP 1
+        <span class="step-badge">Paste output</span>
+      </button>
+      <button class="step-btn" id="stb2" onclick="showStep(2)">
+        STEP 2
+        <span class="step-badge">Review intents</span>
+      </button>
+      <button class="step-btn" id="stb3" onclick="showStep(3)">
+        STEP 3
+        <span class="step-badge">Paste confirmed</span>
+      </button>
+    </div>
+
+    <div class="step-panel active" id="stp1">
+      <div class="step-label grey">Window 1 — Paste Prompt 1A ChatGPT output here</div>
+      <textarea id="window1" class="step-ta step-ta-w1"
+        placeholder="Paste the full Prompt 1A ChatGPT output here. Contains GSC assessment, classification justification, ranked intent list, and sometimes questions."></textarea>
+      <div class="button-row">
+        <button class="btn btn-gray"   onclick="w_paste(1)">Paste</button>
+        <button class="btn btn-purple" onclick="w_buildQuestions()">Build Questions</button>
+        <button class="btn btn-gray"   onclick="w_clear(1)">Clear</button>
+        <button class="btn btn-next"   onclick="showStep(2)">Next →</button>
+      </div>
+      <div class="button-row">
+        <button class="btn btn-green" onclick="w_autoWriteFromWindow1()">Auto Write to Row</button>
+      </div>
+    </div>
+
+    <div class="step-panel" id="stp2">
+      <div class="step-label amber">Step 2 — Review context and confirm intent decisions</div>
+
+      <div class="step2-scroll" id="step2-content">
+        <div id="step2-placeholder" style="font-size:10px;color:#9aa0a6;padding:8px 0;">
+          Click Build Questions in Step 1 first.
+        </div>
+      </div>
+
+      <div class="button-row" style="margin-top:6px;">
+        <button class="btn btn-amber" onclick="w_copyAnswers()">Copy Answers</button>
+        <button class="btn btn-gray"  onclick="w_clearStep2()">Clear</button>
+        <button class="btn btn-next"  onclick="showStep(3)">Next →</button>
+      </div>
+    </div>
+
+    <div class="step-panel" id="stp3">
+      <div class="step-label teal">Window 3 — Paste confirmed Prompt 1A result here (used by Prompt 1B on Load)</div>
+      <textarea id="window3" class="step-ta step-ta-w3"
+        placeholder="Paste the confirmed Prompt 1A ChatGPT output here. Must contain CONFIRMED ARTICLE TYPE and CONFIRMED INTENT lines."></textarea>
+      <div class="button-row">
+        <button class="btn btn-teal" onclick="w_paste(3)">Paste</button>
+        <button class="btn btn-green" onclick="w_writeLockToRow()">Write Lock to Row</button>
+        <button class="btn btn-gray" onclick="w_clear(3)">Clear</button>
+      </div>
+    </div>
+
+    <div id="st1" class="status-msg"></div>
+  </div>
+
+  <div class="tab-panel" id="tp2">
+    <div class="sub-label">Cols 1–13 · Uses confirmed intent from Panel 1A Step 3 · No reclassification</div>
+    <textarea id="prompt2" class="prompt-ta"
+      placeholder="Complete Prompt 1A and paste result into Step 3 first, then click Load."></textarea>
+    <div class="button-row">
+      <button class="btn btn-blue"   onclick="p_load(2)">Load</button>
+      <button class="btn btn-orange" onclick="p_refresh(2)">Refresh</button>
+      <button class="btn btn-yellow" onclick="p_copy(2)">Copy</button>
+    </div>
+    <textarea id="ref2" class="ref-ta" readonly
+      placeholder="Post title appears here after Load"></textarea>
+    <div class="divider">↓ LLM RESULT — PASTE AND WRITE</div>
+    <textarea id="result2" class="result-ta"
+      placeholder="Paste ChatGPT output here, then click Write to Row."></textarea>
+    <div class="button-row">
+      <button class="btn btn-teal"  onclick="p_paste(2)">Paste</button>
+      <button class="btn btn-green" onclick="p_write(2)">Write to Row</button>
+      <button class="btn btn-gray"  onclick="p_clear(2)">Clear</button>
+    </div>
+    <div id="st2" class="status-msg"></div>
+
+    <div class="button-row">
+      <button class="btn btn-green" id="p1BAutoBtn" onclick="runP1BAutomated()">Run P1B Automated (write to row)</button>
+    </div>
+    <div id="p1BAutoStatus" class="status-msg"></div>
+  </div>
+
+  <div class="tab-panel" id="tp3">
+    <div class="sub-label">Module 2 · Module 3 · GSC data · Cols 1–13 from row</div>
+    <textarea id="prompt3" class="prompt-ta"
+      placeholder="Complete Prompt 1B and Write to Row first, then click Load."></textarea>
+    <div class="button-row">
+      <button class="btn btn-blue"   onclick="p_load(3)">Load</button>
+      <button class="btn btn-orange" onclick="p_refresh(3)">Refresh</button>
+      <button class="btn btn-yellow" onclick="p_copy(3)">Copy</button>
+    </div>
+    <textarea id="ref3" class="ref-ta" readonly
+      placeholder="Post title appears here after Load"></textarea>
+    <div class="divider">↓ LLM RESULT — PASTE AND WRITE</div>
+    <textarea id="result3" class="result-ta"
+      placeholder="Paste ChatGPT output here, then click Write to Row."></textarea>
+    <div class="button-row">
+      <button class="btn btn-teal"  onclick="p_paste(3)">Paste</button>
+      <button class="btn btn-green" onclick="p_write(3)">Write to Row</button>
+      <button class="btn btn-gray"  onclick="p_clear(3)">Clear</button>
+    </div>
+    <div id="st3" class="status-msg"></div>
+
+    <div class="button-row">
+      <button class="btn btn-green" id="p2AutoBtn" onclick="runP2Automated()">Run P2 Automated (write to row)</button>
+    </div>
+    <div id="p2AutoStatus" class="status-msg"></div>
+  </div>
+
+  <div class="tab-panel" id="tp4">
+    <div class="sub-label">Module 4 · Cols 1–17 from row only — no HTML</div>
+    <textarea id="prompt4" class="prompt-ta"
+      placeholder="Complete Prompts 1B and 2 and Write to Row first, then click Load."></textarea>
+    <div class="button-row">
+      <button class="btn btn-blue"   onclick="p_load(4)">Load</button>
+      <button class="btn btn-orange" onclick="p_refresh(4)">Refresh</button>
+      <button class="btn btn-yellow" onclick="p_copy(4)">Copy</button>
+    </div>
+    <textarea id="ref4" class="ref-ta" readonly
+      placeholder="Post title appears here after Load"></textarea>
+    <div class="divider">↓ LLM RESULT — PASTE AND WRITE</div>
+    <textarea id="result4" class="result-ta"
+      placeholder="Paste ChatGPT output here, then click Write to Row."></textarea>
+    <div class="button-row">
+      <button class="btn btn-teal"  onclick="p_paste(4)">Paste</button>
+      <button class="btn btn-green" onclick="p_write(4)">Write to Row</button>
+      <button class="btn btn-gray"  onclick="p_clear(4)">Clear</button>
+    </div>
+    <div id="st4" class="status-msg"></div>
+
+    <div class="button-row">
+      <button class="btn btn-green" id="p3AutoBtn" onclick="runP3Automated()">Run P3 Automated (write to row)</button>
+    </div>
+    <div id="p3AutoStatus" class="status-msg"></div>
+
+    <div class="button-row">
+      <button class="btn btn-green" id="w0AutoBtn" onclick="runW0Automated()">Run W0 Automated (write to row)</button>
+    </div>
+    <div id="w0AutoStatus" class="status-msg"></div>
+  </div>
+
+  <div class="tab-panel" id="tp5">
+    <div class="sub-label">Run after Prompt 2 Load · Validates SERP entities against Recovery Blueprint · col DP</div>
+    <div id="serp-prereqs" style="background:#f8f9fa;border:1px solid #dadce0;border-radius:5px;padding:8px 10px;margin-bottom:8px;font-size:10px;"></div>
+    <div class="button-row">
+      <button class="btn btn-gray" onclick="serp_checkPrereqs()">Check Prerequisites</button>
+    </div>
+    <textarea id="prompt5" class="prompt-ta"
+      placeholder="Click Load to build the SERP Bridge prompt. Paste into ChatGPT Plus with web search enabled."></textarea>
+    <div class="button-row">
+      <button class="btn btn-blue"   onclick="serp_load()">Load</button>
+      <button class="btn btn-yellow" onclick="serp_copy()">Copy</button>
+    </div>
+    <textarea id="ref5" class="ref-ta" readonly
+      placeholder="Post title appears here after Load"></textarea>
+    <div class="divider">↓ LLM RESULT — PASTE, PUSH, THEN ADD TO BLUEPRINT</div>
+    <textarea id="result5" class="result-ta"
+      placeholder="Paste ChatGPT output here."></textarea>
+    <div class="button-row">
+      <button class="btn btn-teal"   onclick="serp_paste()">Paste</button>
+      <button class="btn btn-green"  onclick="serp_push()">Push to Sheet</button>
+      <button class="btn btn-gray"   onclick="serp_clear()">Clear</button>
+    </div>
+    <div class="button-row">
+      <button class="btn btn-purple" onclick="serp_pushNodeMapOnly()">Push Node Map Only</button>
+    </div>
+    <div class="divider">↓ ACTION REQUIRED — UPDATE TECHNICAL SHEET</div>
+    <textarea id="action5" class="result-ta" readonly
+      placeholder="Action instructions appear here after Push to Sheet."></textarea>
+    <div class="button-row">
+      <button class="btn btn-orange" onclick="serp_copyTSMRows()">Push to TSM</button>
+      <button class="btn btn-purple" onclick="serp_addToBlueprint()">Add to Blueprint</button>
+    </div>
+    <div id="st5" class="status-msg"></div>
+
+    <div class="button-row">
+      <button class="btn btn-green" id="serpAutoBtn" onclick="runSerpBridgeAutomated()">Run SERP Bridge Automated</button>
+    </div>
+    <div id="serpAutoStatus" class="status-msg"></div>
+  </div>
+
+  <div class="tab-panel" id="tp6">
+    <div class="sub-label">Combined — Article Type + Intent + Entity Classification + GSC/Drift + Rewrite Governance in one pass</div>
+    <textarea id="prompt6" class="prompt-ta"
+      placeholder="Select a row in the Posts sheet, then click Load."></textarea>
+    <div class="button-row">
+      <button class="btn btn-blue"   onclick="p_load(6)">Load</button>
+      <button class="btn btn-yellow" onclick="p_copy(6)">Copy</button>
+      <button class="btn btn-purple" onclick="p_copyChunked(6)">Copy Chunked</button>
+    </div>
+    <textarea id="ref6" class="ref-ta" readonly rows="5"
+      placeholder="Post title appears here after Load"></textarea>
+    <div class="divider">↓ LLM RESULT — PASTE AND WRITE</div>
+    <textarea id="result6" class="result-ta"
+      placeholder="Paste ChatGPT output here, then click Write to Row."></textarea>
+    <div class="button-row">
+      <button class="btn btn-teal"  onclick="p_paste(6)">Paste</button>
+      <button class="btn btn-green" onclick="p_writeCombined()">Write to Row</button>
+      <button class="btn btn-gray"  onclick="p_clear(6)">Clear</button>
+    </div>
+    <div id="st6" class="status-msg"></div>
+  </div>
+
+  <script>
+    const ANCHORS = {
+      1: '%%REFRESH_START_P1A%%',
+      2: '%%REFRESH_START_P1B%%',
+      3: '%%REFRESH_START_P2%%',
+      4: '%%REFRESH_START_P3%%'
+    };
+
+    const REFRESH_FNS = {
+      1: 'bc_refreshPrompt1AData',
+      2: 'bc_refreshPrompt1BData',
+      3: 'bc_refreshPrompt2Data',
+      4: 'bc_refreshPrompt3Data'
+    };
+
+    const LOADERS = [
+      null,
+      'bc_getPrompt1A',
+      'bc_getPrompt1B',
+      'bc_getPrompt2',
+      'bc_getPrompt3',
+      null,
+      'bc_getPromptCombined'
+    ];
+
+    const GENERIC_MAX = 15000;
+    const CHUNK_HARD_CEILING = 18000;
+
+    function _genericSplit(text, maxChars) {
+      maxChars = maxChars || GENERIC_MAX;
+      const chunks = [];
+      let remaining = text.trim();
+      let n = 1;
+      while (remaining) {
+        if (remaining.length <= maxChars) {
+          chunks.push({ label: 'Part ' + n, text: remaining.trim() });
+          break;
+        }
+        let breakPoint = maxChars;
+        const paraBreak = remaining.lastIndexOf('\n\n', maxChars);
+        const lineBreak = remaining.lastIndexOf('\n', maxChars);
+        if (paraBreak > maxChars * 0.5) {
+          breakPoint = paraBreak + 2;
+        } else if (lineBreak > maxChars * 0.5) {
+          breakPoint = lineBreak + 1;
+        }
+        chunks.push({ label: 'Part ' + n, text: remaining.substring(0, breakPoint).trim() });
+        remaining = remaining.substring(breakPoint).trim();
+        n++;
+        if (n > 100) {
+          if (remaining) chunks.push({ label: 'Part ' + n + ' — Remaining Text', text: remaining });
+          break;
+        }
+      }
+      return chunks;
+    }
+
+    function _applyP1ASplit(text) {
+      const markers = [
+        { after: '===== END SYSTEM ROLE =====', label: 'Operating Frame + Classification Rules' },
+        { after: '===== END GOVERNANCE INPUTS =====', label: 'Governance Matrices + GSC Data + Metadata' }
+      ];
+      const chunks = [];
+      let remaining = text;
+      for (let i = 0; i < markers.length; i++) {
+        const marker = markers[i].after;
+        const idx = remaining.indexOf(marker);
+        if (idx === -1) continue;
+        const cut = idx + marker.length;
+        const chunkText = remaining.substring(0, cut);
+        if (chunkText.trim()) chunks.push({ label: markers[i].label, text: chunkText.trim() });
+        remaining = remaining.substring(cut);
+      }
+      if (remaining.trim()) chunks.push({ label: 'HTML Payload', text: remaining.trim() });
+      return chunks;
+    }
+
+    function _buildSingleUploadPrompt(originalText, promptTitle) {
+      let chunks = _applyP1ASplit(originalText);
+      if (chunks.length <= 1) chunks = _genericSplit(originalText, GENERIC_MAX);
+
+      const finalChunks = [];
+      chunks.forEach(function(chunk) {
+        if (chunk.text.length > CHUNK_HARD_CEILING) {
+          const subChunks = _genericSplit(chunk.text, GENERIC_MAX);
+          subChunks.forEach(function(sub, i) {
+            finalChunks.push({ label: chunk.label + ' — Part ' + (i + 1), text: sub.text });
+          });
+        } else {
+          finalChunks.push(chunk);
+        }
+      });
+
+      const today = new Date().toLocaleDateString('en-GB');
+      const total = finalChunks.length;
+      const lines = [];
+
+      lines.push('PROMPT TITLE:');
+      lines.push(promptTitle || 'Abbey Floor Care Pipeline Prompt');
+      lines.push('');
+      lines.push("TODAY'S DATE:");
+      lines.push(today);
+      lines.push('');
+      lines.push('MASTER INSTRUCTION:');
+      lines.push('This is a multi-stage prompt supplied as one uploaded text file.');
+      lines.push('Read the entire file before executing.');
+      lines.push('Treat each labelled CHUNK as a separate staged input.');
+      lines.push('Do not ask for the next chunk.');
+      lines.push('Do not summarise the chunks.');
+      lines.push('Do not execute early.');
+      lines.push('Execute only when you reach the final marker:');
+      lines.push('ALL CHUNKS LOADED — EXECUTE NOW');
+      lines.push('');
+      lines.push('NO CONFIRMATION REQUIRED (Hard Lock):');
+      lines.push('Do not ask the user whether to execute, check the format, or extract a section.');
+      lines.push('Do not ask any clarifying question before beginning.');
+      lines.push('The instructions in this file are complete and sufficient to execute immediately upon reading.');
+      lines.push('As soon as this file is fully uploaded and read, begin producing the final output directly.');
+      lines.push('');
+      lines.push('OUTPUT RULE:');
+      lines.push('Return only the requested final output.');
+      lines.push('Do not explain the prompt structure.');
+      lines.push('Do not mention the chunks unless the task specifically asks for them.');
+      lines.push('');
+      lines.push('CONFLICT RULE:');
+      lines.push('Apply hard locks and non-negotiable rules wherever they appear.');
+      lines.push('Use later instructions only where they do not override earlier hard locks.');
+      lines.push('If the original prompt contains its own output format, obey that output format exactly.');
+      lines.push('');
+
+      finalChunks.forEach(function(chunk, idx) {
+        lines.push('='.repeat(66));
+        lines.push('CHUNK ' + (idx + 1) + ' OF ' + total + ' — ' + chunk.label.toUpperCase());
+        lines.push('='.repeat(66));
+        lines.push('');
+        lines.push(chunk.text.trim());
+        lines.push('');
+      });
+
+      lines.push('='.repeat(66));
+      lines.push('FINAL EXECUTION COMMAND');
+      lines.push('='.repeat(66));
+      lines.push('');
+      lines.push('ALL CHUNKS LOADED — EXECUTE NOW');
+      lines.push('');
+      lines.push('Use all chunks above as one combined instruction set.');
+      lines.push('Read the full uploaded file before producing the answer.');
+      lines.push('Treat each labelled CHUNK as a separate stage.');
+      lines.push('Return the complete final output now.');
+
+      return lines.join('\n');
+    }
+
+    function p_copyChunked(n) {
+      const ta = document.getElementById('prompt' + n);
+      if (!ta.value || !ta.value.trim()) {
+        _status(n, 'Nothing to copy — run Load first.', true);
+        return;
+      }
+      const anchor = ANCHORS[n];
+      const cleaned = anchor ? ta.value.replace(anchor + '\n', '').replace(anchor, '') : ta.value;
+      const chunkedText = _buildSingleUploadPrompt(cleaned, 'Abbey Floor Care Pipeline Prompt');
+
+      navigator.clipboard.writeText(chunkedText)
+        .then(function() {
+          _status(n, 'Chunked prompt copied — paste into ChatGPT.', false);
+          setTimeout(function() { _status(n, '', false); }, 2500);
+        })
+        .catch(function() {
+          const temp = document.createElement('textarea');
+          temp.value = chunkedText;
+          document.body.appendChild(temp);
+          temp.select();
+          document.execCommand('copy');
+          document.body.removeChild(temp);
+          _status(n, 'Chunked prompt copied — paste into ChatGPT.', false);
+          setTimeout(function() { _status(n, '', false); }, 2500);
+        });
+    }
+
+  function p_sendViaAPI(n) {
+    const ta = document.getElementById('prompt' + n);
+    if (!ta.value || !ta.value.trim()) {
+      _status(n, 'Nothing to send — run Load first.', true);
+      return;
+    }
+    const anchor = ANCHORS[n];
+    const cleaned = anchor ? ta.value.replace(anchor + '\n', '').replace(anchor, '') : ta.value;
+
+    const btn = document.getElementById('p1ApiBtn');
+    if (btn) { btn.disabled = true; btn.innerText = 'Sending…'; }
+    document.getElementById('apiResult' + n).value = '';
+    document.getElementById('apiCost' + n).innerText = 'Waiting for response…';
+    document.getElementById('apiCost' + n).className = 'status-msg';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (btn) { btn.disabled = false; btn.innerText = 'Send via API (gpt-4o-mini)'; }
+        if (!res || !res.success) {
+          document.getElementById('apiCost' + n).innerText = '❌ ' + (res ? res.message : 'Unknown error');
+          document.getElementById('apiCost' + n).className = 'status-msg error';
+          return;
+        }
+        document.getElementById('apiResult' + n).value = res.text;
+        document.getElementById('apiCost' + n).innerText =
+          'Cost: $' + res.cost.toFixed(4) + ' (' + res.promptTokens + ' prompt / ' + res.completionTokens + ' completion tokens)';
+      })
+      .withFailureHandler(function(e) {
+        if (btn) { btn.disabled = false; btn.innerText = 'Send via API (gpt-4o-mini)'; }
+        document.getElementById('apiCost' + n).innerText = '❌ ' + e.message;
+        document.getElementById('apiCost' + n).className = 'status-msg error';
+      })
+      .bc_sendPromptViaOpenAI(cleaned);
+  }
+
+  function runP1AAutomated() {
+    const btn = document.getElementById('p1AutoBtn');
+    btn.disabled = true;
+    btn.innerText = 'Running…';
+    document.getElementById('p1AutoStatus').innerText = 'Calling API and writing to row…';
+    document.getElementById('p1AutoStatus').className = 'status-msg';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false;
+        btn.innerText = 'Run P1A Automated (write to row)';
+        document.getElementById('p1AutoStatus').innerText =
+          '✔ ' + res.message + ' — Cost: $' + res.cost.toFixed(4);
+      })
+      .withFailureHandler(function(e) {
+        btn.disabled = false;
+        btn.innerText = 'Run P1A Automated (write to row)';
+        document.getElementById('p1AutoStatus').innerText = '❌ ' + e.message;
+        document.getElementById('p1AutoStatus').className = 'status-msg error';
+      })
+      .bc_runP1AAutomated();
+  }
+
+  function runP1BAutomated() {
+    const btn = document.getElementById('p1BAutoBtn');
+    btn.disabled = true;
+    btn.innerText = 'Running…';
+    document.getElementById('p1BAutoStatus').innerText = 'Calling API and writing to row…';
+    document.getElementById('p1BAutoStatus').className = 'status-msg';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false;
+        btn.innerText = 'Run P1B Automated (write to row)';
+        document.getElementById('p1BAutoStatus').innerText =
+          '✔ ' + res.message + ' — Cost: $' + res.cost.toFixed(4);
+      })
+      .withFailureHandler(function(e) {
+        btn.disabled = false;
+        btn.innerText = 'Run P1B Automated (write to row)';
+        document.getElementById('p1BAutoStatus').innerText = '❌ ' + e.message;
+        document.getElementById('p1BAutoStatus').className = 'status-msg error';
+      })
+      .bc_runP1BAutomated();
+  }
+
+  function runP2Automated() {
+    const btn = document.getElementById('p2AutoBtn');
+    btn.disabled = true;
+    btn.innerText = 'Running…';
+    document.getElementById('p2AutoStatus').innerText = 'Calling API and writing to row…';
+    document.getElementById('p2AutoStatus').className = 'status-msg';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false;
+        btn.innerText = 'Run P2 Automated (write to row)';
+        document.getElementById('p2AutoStatus').innerText =
+          '✔ ' + res.message + ' — Cost: $' + res.cost.toFixed(4);
+      })
+      .withFailureHandler(function(e) {
+        btn.disabled = false;
+        btn.innerText = 'Run P2 Automated (write to row)';
+        document.getElementById('p2AutoStatus').innerText = '❌ ' + e.message;
+        document.getElementById('p2AutoStatus').className = 'status-msg error';
+      })
+      .bc_runP2Automated();
+  }
+
+  function runP3Automated() {
+    const btn = document.getElementById('p3AutoBtn');
+    btn.disabled = true;
+    btn.innerText = 'Running…';
+    document.getElementById('p3AutoStatus').innerText = 'Calling API and writing to row…';
+    document.getElementById('p3AutoStatus').className = 'status-msg';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false;
+        btn.innerText = 'Run P3 Automated (write to row)';
+        document.getElementById('p3AutoStatus').innerText =
+          '✔ ' + res.message + ' — Cost: $' + res.cost.toFixed(4);
+      })
+      .withFailureHandler(function(e) {
+        btn.disabled = false;
+        btn.innerText = 'Run P3 Automated (write to row)';
+        document.getElementById('p3AutoStatus').innerText = '❌ ' + e.message;
+        document.getElementById('p3AutoStatus').className = 'status-msg error';
+      })
+      .bc_runP3Automated();
+  }
+
+  function runW0Automated() {
+    const btn = document.getElementById('w0AutoBtn');
+    btn.disabled = true;
+    btn.innerText = 'Running…';
+    document.getElementById('w0AutoStatus').innerText = 'Calling API and writing to row…';
+    document.getElementById('w0AutoStatus').className = 'status-msg';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false;
+        btn.innerText = 'Run W0 Automated (write to row)';
+        document.getElementById('w0AutoStatus').innerText =
+          '✔ ' + res.message + ' — Cost: $' + res.cost.toFixed(4);
+      })
+      .withFailureHandler(function(e) {
+        btn.disabled = false;
+        btn.innerText = 'Run W0 Automated (write to row)';
+        document.getElementById('w0AutoStatus').innerText = '❌ ' + e.message;
+        document.getElementById('w0AutoStatus').className = 'status-msg error';
+      })
+      .bc_runW0Automated();
+  }
+
+  function runSerpBridgeAutomated() {
+    const btn = document.getElementById('serpAutoBtn');
+    btn.disabled = true;
+    btn.innerText = 'Running…';
+    document.getElementById('serpAutoStatus').innerText = 'Calling Gemini and updating sheet…';
+    document.getElementById('serpAutoStatus').className = 'status-msg';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        btn.disabled = false;
+        btn.innerText = 'Run SERP Bridge Automated';
+        document.getElementById('serpAutoStatus').innerText =
+          '✔ ' + res.message + ' — Cost: $' + res.cost.toFixed(4);
+      })
+      .withFailureHandler(function(e) {
+        btn.disabled = false;
+        btn.innerText = 'Run SERP Bridge Automated';
+        document.getElementById('serpAutoStatus').innerText = '❌ ' + e.message;
+        document.getElementById('serpAutoStatus').className = 'status-msg error';
+      })
+      .bc_runSerpBridgeAutomated();
+  }
+
+ function runFullGovernanceChain() {
+
+  const btn =
+    document.getElementById('runGovernanceBtn');
+
+  const resultBox =
+    document.getElementById('contentIntelligenceResult');
+
+  const startTime = Date.now();
+
+  btn.disabled = true;
+
+  resultBox.style.display = 'block';
+  resultBox.style.color = '#555';
+  resultBox.textContent =
+    'Running Content Intelligence… 0s';
+
+  const timer = setInterval(function() {
+
+    const elapsed =
+      Math.floor(
+        (Date.now() - startTime) / 1000
+      );
+
+    btn.innerText =
+      'Running Content Intelligence… ' +
+      elapsed +
+      's';
+
+    resultBox.textContent =
+      'Running Content Intelligence… ' +
+      elapsed +
+      's';
+
+  }, 1000);
+
+  google.script.run
+
+    .withSuccessHandler(function(res) {
+
+      clearInterval(timer);
+
+      btn.disabled = false;
+      btn.innerText =
+        'Run Content Intelligence';
+
+      const elapsed =
+        Math.floor(
+          (Date.now() - startTime) / 1000
+        );
+
+      if (res && res.success) {
+
+        resultBox.style.color = '#2e7d32';
+
+        var formattedLog = '';
+
+      if (res.log) {
+        formattedLog = res.log
+          .split(' | ')
+          .join('\n');
+      }
+
+      resultBox.textContent =
+        res.message +
+        '\n\nBrowser elapsed: ' +
+        elapsed +
+        's' +
+        (
+          formattedLog
+            ? '\n\n' + formattedLog
+            : ''
+        );
+
+      } else {
+
+        resultBox.style.color = '#c62828';
+
+        resultBox.textContent =
+          '❌ ' +
+          (
+            res && res.message
+              ? res.message
+              : 'Content Intelligence failed.'
+          );
+      }
+    })
+
+    .withFailureHandler(function(err) {
+
+      clearInterval(timer);
+
+      btn.disabled = false;
+      btn.innerText =
+        'Run Content Intelligence';
+
+      resultBox.style.display = 'block';
+      resultBox.style.color = '#c62828';
+
+      resultBox.textContent =
+        '❌ ' + err.message;
+    })
+
+    .bc_runFullGovernanceChainAutomated();
+}
+
+  function showTab(n) {
+      for (let i = 1; i <= 6; i++) {
+        document.getElementById('tp' + i).classList.toggle('active', i === n);
+      }
+      const sel = document.getElementById('prompt-selector');
+      if (sel) sel.value = String(n);
+    }
+
+    function showStep(n) {
+      for (let i = 1; i <= 3; i++) {
+        document.getElementById('stp' + i).classList.toggle('active', i === n);
+        document.getElementById('stb' + i).classList.toggle('active', i === n);
+      }
+      _status(1, "", false);
+    }
+
+    function w_paste(n) {
+      const ta = document.getElementById('window' + n);
+      ta.focus();
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        navigator.clipboard.readText()
+          .then(function(text) {
+            ta.value = text;
+            _status(1, "Pasted into Window " + n + ".", false);
+          })
+          .catch(function() {
+            _status(1, "Click Window " + n + " and press Ctrl+V to paste.", false);
+          });
+      } else {
+        _status(1, "Click Window " + n + " and press Ctrl+V to paste.", false);
+      }
+    }
+
+    function w_clear(n) {
+      document.getElementById('window' + n).value = "";
+      _status(1, "", false);
+    }
+
+    function w_clearStep2() {
+      const el = document.getElementById('step2-content');
+      el.innerHTML =
+        '<div id="step2-placeholder" style="font-size:10px;color:#9aa0a6;padding:8px 0;">Click Build Questions in Step 1 first.</div>';
+      window._step2Q1Selected  = null;
+      window._step2Q2Answers   = {};
+      window._step2Q2Items     = [];
+      window._step2RankedIntents = [];
+      window._retainedSupportingDecisions = [];
+      _status(1, "", false);
+    }
+
+    function w_buildQuestions() {
+      const w1 = (document.getElementById('window1').value || "").trim();
+      if (!w1) {
+        _status(1, "Paste ChatGPT output into Window 1 first.", true);
+        return;
+      }
+
+      _status(1, "Building review cards...", false);
+
+      google.script.run
+        .withSuccessHandler(function(model) {
+          if (!model || !model.ok) {
+            _status(1, (model && model.message) || "Could not build review cards.", true);
+            return;
+          }
+
+          window._step2RankedIntents = model.ranked || [];
+          window._step2Q2Items       = model.q2items || [];
+          window._step2Q2Answers     = {};
+          window._step2Q1Selected    = null;
+          window._retainedSupportingDecisions = [];
+
+          if (model.q1rec && model.q1rec.rec) {
+            for (let i = 0; i < model.ranked.length; i++) {
+              if (model.ranked[i].name.toLowerCase() === model.q1rec.rec.toLowerCase()) {
+                window._step2Q1Selected = model.ranked[i].num;
+                break;
+              }
+            }
+          }
+
+          if (!window._step2Q1Selected && model.ranked.length) {
+            window._step2Q1Selected = model.ranked[0].num;
+          }
+
+          for (let i = 0; i < window._step2Q2Items.length; i++) {
+            const item = window._step2Q2Items[i];
+            if (item.rec === 'Y' || item.rec === 'N') {
+              window._step2Q2Answers[item.num] = item.rec;
+            }
+          }
+
+          renderStep2(model);
+          _status(1, "Intent review built — confirm Y/N decisions, then Copy Answers.", false);
+          showStep(2);
+        })
+        .withFailureHandler(function(e) {
+          _status(1, "Error: " + e.message, true);
+        })
+        .bc_buildIntentReviewModel(w1);
+    }
+
+    function renderStep2(model) {
+      const container = document.getElementById('step2-content');
+      container.innerHTML = '';
+
+      const context = model.context || {};
+      const ranked  = model.ranked || [];
+      const q1rec   = model.q1rec || {};
+      const q2items = model.q2items || [];
+
+      if (context.gscSignal || context.plainEnglish) {
+        const ctx = document.createElement('div');
+        ctx.className = 'context-panel';
+
+        let ctxHtml = '<div class="context-title">Classification Context</div>';
+
+        if (context.gscSignal) {
+          ctxHtml += '<div class="context-summary"><strong>GSC Signal:</strong> ' + _esc(context.gscSignal);
+          if (context.gscDominant) {
+            ctxHtml += ' · <strong>Dominant intent:</strong> ' + _esc(context.gscDominant);
+          }
+          if (context.gscImpressions) {
+            ctxHtml += ' · ' + _esc(context.gscImpressions);
+          }
+          if (context.confidence) {
+            ctxHtml += ' · <strong>Confidence:</strong> ' + _esc(context.confidence);
+          }
+          ctxHtml += '</div>';
+        }
+
+        if (context.plainEnglish) {
+          ctxHtml += '<div class="context-summary" style="margin-top:5px;"><strong>Summary:</strong> ' +
+            _esc(context.plainEnglish) + '</div>';
+        }
+
+        ctx.innerHTML = ctxHtml;
+        container.appendChild(ctx);
+      }
+
+      const q1card = document.createElement('div');
+      q1card.className = 'q1-card';
+
+      let q1html = '<div class="q1-title">Question 1 — Primary Intent</div>';
+
+      if (q1rec.rec) {
+        q1html += '<div class="q1-rec">Recommended: ' + _esc(q1rec.rec) + '</div>';
+      }
+
+      if (q1rec.reason) {
+        q1html += '<div class="q1-reason">' + _esc(q1rec.reason) + '</div>';
+      }
+
+      q1html += '<div class="q1-options">';
+      for (let i = 0; i < ranked.length; i++) {
+        const r = ranked[i];
+        const selected = (window._step2Q1Selected === r.num) ? ' selected' : '';
+        q1html += '<button class="q1-option' + selected + '" onclick="selectQ1(\'' +
+          _esc(r.num) + '\')" id="q1opt_' + r.num + '">' +
+          r.num + '. ' + _esc(r.name) + '</button>';
+      }
+      q1html += '</div>';
+
+      q1card.innerHTML = q1html;
+      container.appendChild(q1card);
+
+      if (q2items.length) {
+        const q2title = document.createElement('div');
+        q2title.style.cssText =
+          'font-size:10px;font-weight:bold;color:#3c4043;margin:8px 0 4px 0;text-transform:uppercase;letter-spacing:0.3px;';
+        q2title.textContent = 'Question 2 — Secondary Intent Decisions';
+        container.appendChild(q2title);
+
+        for (let i = 0; i < q2items.length; i++) {
+          const item = q2items[i];
+          const card = document.createElement('div');
+          card.className = 'intent-card';
+          card.id = 'q2card_' + item.num;
+
+          const isY = window._step2Q2Answers[item.num] === 'Y';
+          const isN = window._step2Q2Answers[item.num] === 'N';
+
+          let html = '<div class="intent-title">' + item.num + '. ' + _esc(item.name) + '</div>';
+
+          if (item.step) {
+            html += '<div class="intent-detail"><strong>Decision tree:</strong> ' + _esc(item.step) + '</div>';
+          }
+
+          if (item.gscEvidence) {
+            html += '<div class="intent-detail"><strong>GSC evidence:</strong> ' +
+              _esc(item.gscEvidence.substring(0, 180)) +
+              (item.gscEvidence.length > 180 ? '…' : '') +
+              '</div>';
+          }
+
+          if (item.gscModifier && item.gscModifier.indexOf('CAUTION') > -1) {
+            html += '<div class="intent-caution">' +
+              _esc(item.gscModifier.replace(/^—\s*/, '')) + '</div>';
+          }
+
+          if (item.rec === 'Y' || item.rec === 'N') {
+            const recClass = item.rec === 'Y' ? 'rec-y' : 'rec-n';
+            html += '<div class="intent-rec ' + recClass + '">Recommended: ' + item.rec + '</div>';
+          }
+
+          if (item.reason) {
+            html += '<div class="intent-detail">' + _esc(item.reason) + '</div>';
+          }
+
+          if (item.permitted) {
+            html += '<div class="intent-permitted">✓ If Y: ' + _esc(item.permitted) + '</div>';
+          }
+
+          if (item.excluded) {
+            html += '<div class="intent-excluded">✗ Not allowed: ' + _esc(item.excluded) + '</div>';
+          }
+
+          html +=
+            '<div class="intent-answer">' +
+            '<label>Your answer:</label>' +
+            '<button class="yn-btn' + (isY ? ' selected-y' : '') +
+            '" onclick="selectYN(\'' + item.num + '\',\'Y\')" id="ybtn_' + item.num + '">Y</button>' +
+            '<button class="yn-btn' + (isN ? ' selected-n' : '') +
+            '" onclick="selectYN(\'' + item.num + '\',\'N\')" id="nbtn_' + item.num + '">N</button>' +
+            '</div>';
+
+          card.innerHTML = html;
+          container.appendChild(card);
+        }
+      }
+    }
+
+    function selectQ1(num) {
+      window._step2Q1Selected = num;
+      const ranked = window._step2RankedIntents || [];
+      for (let i = 0; i < ranked.length; i++) {
+        const btn = document.getElementById('q1opt_' + ranked[i].num);
+        if (btn) btn.className =
+          'q1-option' + (ranked[i].num === num ? ' selected' : '');
+      }
+    }
+
+    function selectYN(num, answer) {
+      window._step2Q2Answers[num] = answer;
+      const yBtn = document.getElementById('ybtn_' + num);
+      const nBtn = document.getElementById('nbtn_' + num);
+      if (yBtn) yBtn.className =
+        'yn-btn' + (answer === 'Y' ? ' selected-y' : '');
+      if (nBtn) nBtn.className =
+        'yn-btn' + (answer === 'N' ? ' selected-n' : '');
+    }
+
+function w_writeLockToRow() {
+    const w3 = (document.getElementById('window3').value || "").trim();
+    if (!w3) {
+    _status(1, "Paste the confirmed Prompt 1A result into Step 3 first.", true);
+      return;
+  }
+
+  const articleTypeMatch = w3.match(/CONFIRMED ARTICLE TYPE:\s*(.+)/);
+  const primaryIntentMatch = w3.match(/CONFIRMED PRIMARY INTENT:\s*(.+)/);
+
+  const confirmedArticleType = articleTypeMatch ? articleTypeMatch[1].trim() : "";
+  const confirmedPrimaryIntent = primaryIntentMatch ? primaryIntentMatch[1].trim() : "";
+
+  if (!confirmedArticleType || !confirmedPrimaryIntent) {
+    _status(1, "Could not find CONFIRMED ARTICLE TYPE and CONFIRMED PRIMARY INTENT in Step 3.", true);
+    return;
+  }
+
+  const classificationContext = (document.getElementById('window1').value || "").trim();
+// Prefer the decisions already confirmed in Step 2's review UI — reliable
+// regardless of how ChatGPT reformats the confirmed reply. Only fall back
+// to re-parsing window3 if Step 2 was skipped entirely.
+if (!window._retainedSupportingDecisions || !window._retainedSupportingDecisions.length) {
+  const secondaryLines = w3.match(/(\d+):\s*([YN])\s*—\s*(.+)/g) || [];
+  window._retainedSupportingDecisions = [];
+  secondaryLines.forEach(function(line) {
+    const match = line.match(/(\d+):\s*([YN])\s*—\s*(.+)/);
+    if (match && match[2] === 'Y') {
+      window._retainedSupportingDecisions.push({
+        num: match[1],
+        name: match[3].trim(),
+        answer: 'Y',
+        reason: 'Confirmed in rerun lock.'
+      });
+    }
+  });
+}
+  _status(1, "Writing Prompt 1A lock to row...", false);
+
+  const secondaryBlock = _extractSecondaryDecisions();
+  google.script.run
+  .withSuccessHandler(function(msg) {
+    _status(1, "✅ " + msg, false);
+    // Build rerun lock and populate Window 3
+    const rerunLock = "===== RERUN LOCK =====\nCONFIRMED ARTICLE TYPE: " + confirmedArticleType + "\nCONFIRMED PRIMARY INTENT: " + confirmedPrimaryIntent + "\n===== END LOCK =====";
+    _val('window3', rerunLock);
+    setTimeout(function() { showTab(2); p_load(2); }, 1500);
+  })
+  .withFailureHandler(function(e) {
+    _status(1, "Error: " + e.message, true);
+  })
+  .bc_writePrompt1ALockToRow(confirmedArticleType, confirmedPrimaryIntent, classificationContext, secondaryBlock, null, (window._lockedRows || {})[1]);
+}
+
+    function w_copyAnswers() {
+  const primaryAnswerNum = window._step2Q1Selected;
+  if (!primaryAnswerNum) {
+    _status(1, "Select a primary intent in Question 1 first.", true);
+    return;
+  }
+
+  
+
+
+  const ranked = window._step2RankedIntents || [];
+  const q2items = window._step2Q2Items || [];
+  const q2answers = window._step2Q2Answers || {};
+
+  let primaryIntentName = '';
+  for (let i = 0; i < ranked.length; i++) {
+    if (String(ranked[i].num) === String(primaryAnswerNum)) {
+      primaryIntentName = ranked[i].name;
+      break;
+    }
+  }
+
+  if (!primaryIntentName) {
+    _status(1, "Could not resolve the selected primary intent name.", true);
+    return;
+  }
+
+  const retained = [];
+  const allForRerun = [];
+
+  for (let i = 0; i < q2items.length; i++) {
+    const item = q2items[i];
+    const answer = q2answers[item.num];
+    if (!answer) continue;
+
+    const record = {
+      num: item.num,
+      name: item.name,
+      answer: answer,
+      reason: item.reason || "Confirmed in sidebar review."
+    };
+
+    allForRerun.push(record);
+    if (answer === 'Y') retained.push(record);
+  }
+
+  window._retainedSupportingDecisions = retained;
+  window._primaryAnswerNum = primaryAnswerNum;
+  window._primaryIntentName = primaryIntentName;
+
+const articleTypeMatch = (document.getElementById('window1').value.match(/CONFIRMED ARTICLE TYPE:\s*(.+)/i) || []);
+const articleType = articleTypeMatch[1] ? articleTypeMatch[1].trim() : "";
+
+let rerunText = `===== RERUN LOCK =====
+CONFIRMED ARTICLE TYPE: ${articleType}
+CONFIRMED PRIMARY INTENT: ${primaryIntentName}
+SECONDARY INTENT DECISIONS:
+`;
+
+for (let i = 0; i < allForRerun.length; i++) {
+  rerunText += `${allForRerun[i].num}: ${allForRerun[i].answer} — ${allForRerun[i].name}\n`;
+}
+
+rerunText += "===== END LOCK =====";
+
+  navigator.clipboard.writeText(rerunText)
+    .then(function() {
+      _status(1, "Answers copied — paste into ChatGPT then paste confirmed result into Step 3.", false);
+      setTimeout(function() { _status(1, "", false); }, 3000);
+    })
+    .catch(function() {
+      const temp = document.createElement('textarea');
+      temp.value = rerunText;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+      _status(1, "Answers copied — paste into ChatGPT then paste confirmed result into Step 3.", false);
+      setTimeout(function() { _status(1, "", false); }, 3000);
+    });
+}
+
+    function _extractRetainedSupportingBlock() {
+      if (!window._retainedSupportingDecisions ||
+          !window._retainedSupportingDecisions.length) {
+        return "";
+      }
+
+      const lines = ["RETAINED SUPPORTING INTENTS:"];
+      for (let i = 0; i < window._retainedSupportingDecisions.length; i++) {
+        const r = window._retainedSupportingDecisions[i];
+        lines.push(
+          r.num + ". " + r.name + " — " + (r.reason || "Retained in sidebar review.")
+        );
+      }
+
+      return lines.join("\n");
+    }
+
+    function _extractConfirmedBlock(text) {
+  const lines = text.split(/\r?\n/);
+  let articleTypeLine = '';
+  let intentLine = '';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    if (!articleTypeLine && line.startsWith('CONFIRMED ARTICLE TYPE:')) {
+      articleTypeLine = line;
+      continue;
+    }
+
+    if (!intentLine && line.startsWith('CONFIRMED PRIMARY INTENT:')) {
+      intentLine = line;
+      continue;
+    }
+
+    if (!intentLine && line.startsWith('CONFIRMED INTENT:')) {
+      intentLine = line.replace('CONFIRMED INTENT:', 'CONFIRMED PRIMARY INTENT:');
+    }
+  }
+
+  const confirmed = [];
+  if (articleTypeLine) confirmed.push(articleTypeLine);
+  if (intentLine) confirmed.push(intentLine);
+
+  if (!articleTypeLine || !intentLine) return text.trim();
+
+let block =
+  "===== CONFIRMED PRIMARY INTENT LOCK FROM PROMPT 1A =====\n" +
+  confirmed.join('\n');
+
+  block +=
+    "\n===== END LOCK =====\n\n" +
+    "HARD RULE: The values above are locked inputs from Prompt 1A.\n" +
+    "Do NOT redetect, reinterpret, validate, or override Article Type or Intent\n" +
+    "from HTML, title, slug, meta title, schema, or any other source.\n" +
+    "Use them exactly as supplied for all downstream field population.\n" +
+    "Only retained supporting intents listed above may be used downstream.";
+
+  return block;
+}
+
+    function _extractSecondaryDecisions() {
+      if (!window._retainedSupportingDecisions ||
+          !window._retainedSupportingDecisions.length) {
+        return "";
+      }
+
+      const lines = ["RETAINED SUPPORTING INTENTS:"];
+      for (let i = 0; i < window._retainedSupportingDecisions.length; i++) {
+        const r = window._retainedSupportingDecisions[i];
+        lines.push(
+          r.num + ". " + r.name + " — " + (r.reason || "Retained in sidebar review.")
+        );
+      }
+
+      return lines.join("\n");
+    }
+
+    function runP1GscSync() {
+      const btn = document.getElementById('p1SyncBtn');
+      btn.disabled = true;
+      btn.innerText = 'Syncing…';
+      document.getElementById('p1SyncStatus').innerText = 'Running GSC full sync + row stats…';
+      document.getElementById('p1SyncStatus').className = 'status-msg';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.innerText = '⚡ Run GSC Full Sync + Row Stats';
+          document.getElementById('p1SyncStatus').innerText = '✔ ' + (res && res.message ? res.message : 'Sync complete — proceed to Load P1A.');
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.innerText = '⚡ Run GSC Full Sync + Row Stats';
+          document.getElementById('p1SyncStatus').innerText = '❌ ' + err.message;
+          document.getElementById('p1SyncStatus').className = 'status-msg error';
+        })
+        .runGSCFullSyncThenRowStats();
+    }
+
+    function _startProgressBar(n) {
+      const el = document.getElementById('st' + n);
+      if (!el) return;
+      let pct = 0;
+      const bar = document.createElement('div');
+      bar.id = 'progressbar' + n;
+      bar.style.cssText = 'height:4px;background:#e8eaed;border-radius:2px;overflow:hidden;margin-top:4px;';
+      const fill = document.createElement('div');
+      fill.style.cssText = 'height:100%;width:0%;background:#1a73e8;transition:width 0.3s ease;';
+      bar.appendChild(fill);
+      el.parentNode.insertBefore(bar, el.nextSibling);
+
+      window._progressTimers = window._progressTimers || {};
+      window._progressTimers[n] = setInterval(function() {
+        pct = pct + (95 - pct) * 0.04;
+        fill.style.width = Math.min(pct, 95) + '%';
+      }, 400);
+    }
+
+    function _stopProgressBar(n) {
+      if (window._progressTimers && window._progressTimers[n]) {
+        clearInterval(window._progressTimers[n]);
+        delete window._progressTimers[n];
+      }
+      const bar = document.getElementById('progressbar' + n);
+      if (bar) {
+        const fill = bar.firstChild;
+        if (fill) fill.style.width = '100%';
+        setTimeout(function() {
+          if (bar.parentNode) bar.parentNode.removeChild(bar);
+        }, 400);
+      }
+    }
+
+    function p_load(n) {
+  if (!window._runMode) {
+    _val('prompt' + n, "⚠ Select a run type first — press Production or Test above.");
+    _status(n, "⚠ Select a run type first — press Production or Test above.", true);
+    return;
+  }
+  const _loadStart = Date.now();
+  _status(n, "Loading...", false);
+  _val('prompt' + n, "Loading — please wait...");
+  _startProgressBar(n);
+
+  if (n === 2) {
+    const lockText = (document.getElementById('window3').value || "").trim();
+    if (!lockText) {
+      _status(n, "Paste confirmed Prompt 1A output into Step 3 first.", true);
+      _val('prompt' + n, "");
+      return;
+    }
+
+    const confirmedBlock = _extractConfirmedBlock(lockText);
+
+    google.script.run
+      .withSuccessHandler(function(r) {
+        const fullPrompt = confirmedBlock + "\n\n" + r.fullPrompt;
+        _val('prompt' + n, fullPrompt);
+        _val('ref' + n, r.title || "");
+        _status(n, "Loaded in " + ((Date.now() - _loadStart) / 1000).toFixed(1) + "s. Copy → ChatGPT.", false);
+        _badge(n, "● Loaded");
+        if (typeof r.lockedRow !== 'undefined') {
+          window._lockedRows = window._lockedRows || {};
+          window._lockedRows[n] = r.lockedRow;
+        }
+      })
+      .withFailureHandler(function(e) {
+        _val('prompt' + n, "");
+        _status(n, "Error: " + e.message, true);
+      })
+      .bc_getPrompt1B(confirmedBlock);
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+      _stopProgressBar(n);
+      _val('prompt' + n, r.fullPrompt);
+      _val('ref' + n, r.title || "");
+      const _elapsed = (Date.now() - _loadStart) / 1000;
+      window._totalLoadTime = (window._totalLoadTime || 0) + _elapsed;
+      _status(n, "Loaded in " + _elapsed.toFixed(1) + "s (session total: " + window._totalLoadTime.toFixed(1) + "s). Copy prompt → paste into ChatGPT.", false);
+      _badge(n, "● Loaded");
+
+      if (typeof r.lockedRow !== 'undefined') {
+        window._lockedRows = window._lockedRows || {};
+        window._lockedRows[n] = r.lockedRow;
+      }
+
+      if (n === 3 || n === 6) {
+        const _loadStatusMsg = "Loaded in " + _elapsed.toFixed(1) + "s (session total: " + window._totalLoadTime.toFixed(1) + "s). Copy prompt → paste into ChatGPT.";
+        google.script.run
+          .withSuccessHandler(function(writeResult) {
+            _status(n, _loadStatusMsg + " | " + writeResult, false);
+          })
+          .withFailureHandler(function(e) {
+            _status(n, _loadStatusMsg + " | Write failed: " + e.message, true);
+          })
+          .bc_writeLLMOutputToRow({ "GSC Query List": r.gscQueryList || "no valid GSC queries" }, null, null, r.lockedRow);
+      }
+    })
+    .withFailureHandler(function(e) {
+      _stopProgressBar(n);
+      _val('prompt' + n, "");
+      _status(n, "Error: " + e.message, true);
+    })
+    [LOADERS[n]]();
+}
+
+function p_refresh(n) {
+  if (!window._runMode) {
+    _val('prompt' + n, "⚠ Select a run type first — press Production or Test above.");
+    _status(n, "⚠ Select a run type first — press Production or Test above.", true);
+    return;
+  }
+  const _refreshStart = Date.now();
+  const ta = document.getElementById('prompt' + n);
+
+  if (n === 1) {
+  _val('window1', "");
+  _val('window3', "");
+  w_clearStep2();
+  _status(1, "Loading new row...", false);
+  _val('prompt1', "Loading — please wait...");
+
+  const _refreshStart = Date.now();
+  google.script.run
+    .withSuccessHandler(function(r) {
+      _val('prompt1', r.fullPrompt);
+      _val('ref1', r.title || "");
+      _status(1, "Loaded in " + ((Date.now() - _refreshStart) / 1000).toFixed(1) + "s. Copy prompt → paste into ChatGPT.", false);
+    })
+    .withFailureHandler(function(e) {
+      _status(1, "Error: " + e.message, true);
+    })
+    .bc_getPrompt1A();
+  return;
+  } 
+
+  if (!ta.value || !ta.value.trim()) {
+    _status(n, "Load this prompt first before refreshing.", true);
+    return;
+  }
+
+  const anchor    = ANCHORS[n];
+  const anchorPos = ta.value.indexOf(anchor);
+
+  if (anchorPos === -1) {
+    _status(n, "Refresh anchor not found — click Load instead.", true);
+    return;
+  }
+
+  _status(n, "Refreshing row data...", false);
+
+  if (n === 2) {
+    const lockText = (document.getElementById('window3').value || "").trim();
+    if (!lockText) {
+      _status(n, "Paste confirmed Prompt 1A output into Step 3 first.", true);
+      _val('prompt' + n, "");
+      return;
+    }
+
+    if (!lockText.includes('CONFIRMED ARTICLE TYPE:') || !lockText.includes('CONFIRMED PRIMARY INTENT:')) {
+      _status(n, "Step 3 is incomplete. Paste a confirmed Prompt 1A result containing both CONFIRMED ARTICLE TYPE and CONFIRMED PRIMARY INTENT.", true);
+      _val('prompt' + n, "");
+      return;
+    }
+
+    const confirmedBlock = _extractConfirmedBlock(lockText);
+
+    google.script.run
+      .withSuccessHandler(function(r) {
+        const fullPrompt = confirmedBlock + "\n\n" + r.fullPrompt;
+        _val('prompt' + n, fullPrompt);
+        _val('ref' + n, r.title || "");
+        _status(n, "Refreshed in " + ((Date.now() - _refreshStart) / 1000).toFixed(1) + "s. Copy → ChatGPT.", false);
+        _badge(n, "● Refreshed");
+      })
+      .withFailureHandler(function(e) {
+        _val('prompt' + n, "");
+        _status(n, "Error: " + e.message, true);
+      })
+      .bc_getPrompt1B(confirmedBlock);
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(r) {
+      const framework = ta.value.substring(0, anchorPos + anchor.length);
+      ta.value = framework + "\n" + r.dataBlock;
+      _val('ref' + n, r.title || "");
+      _val('result' + n, "");
+      _status(n, "Refreshed in " + ((Date.now() - _refreshStart) / 1000).toFixed(1) + "s. Copy prompt → paste into ChatGPT.", false);
+      _badge(n, "● Refreshed");
+
+      if (n === 3) {
+        const writePayload = { "Recovery Blueprint": r.recoveryBlueprint };
+        writePayload["GSC Query List"] = r.gscQueryList || "no valid GSC queries";
+        google.script.run
+          .withSuccessHandler(function() {})
+          .withFailureHandler(function(e) {
+            _status(3, "DR write failed: " + e.message, true);
+          })
+          .bc_writeLLMOutputToRow(writePayload, null, null, (window._lockedRows || {})[3]);
+      }
+    })
+    .withFailureHandler(function(e) {
+      _status(n, "Refresh error: " + e.message, true);
+    })
+    [REFRESH_FNS[n]]();
+}
+
+    function p_copy(n) {
+      const ta = document.getElementById('prompt' + n);
+      if (!ta.value || !ta.value.trim()) {
+        _status(n, "Nothing to copy — run Load first.", true);
+        return;
+      }
+
+      const anchor  = ANCHORS[n];
+      const cleaned = ta.value.replace(anchor + "\n", "").replace(anchor, "");
+
+      navigator.clipboard.writeText(cleaned)
+        .then(function() {
+          _status(n, "Prompt copied!", false);
+          setTimeout(function() { _status(n, "", false); }, 2000);
+        })
+        .catch(function() {
+          const temp = document.createElement('textarea');
+          temp.value = cleaned;
+          document.body.appendChild(temp);
+          temp.select();
+          document.execCommand('copy');
+          document.body.removeChild(temp);
+          _status(n, "Prompt copied!", false);
+          setTimeout(function() { _status(n, "", false); }, 2000);
+        });
+    }
+
+    function p_paste(n) {
+      const ta = document.getElementById('result' + n);
+      ta.focus();
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        navigator.clipboard.readText()
+          .then(function(text) {
+            ta.value = text;
+            _status(n, "Pasted.", false);
+          })
+          .catch(function() {
+            _status(n, "Click the result box and press Ctrl+V to paste.", false);
+          });
+      } else {
+        _status(n, "Click the result box and press Ctrl+V to paste.", false);
+      }
+    }
+
+  function p_write(n) {
+  const raw = document.getElementById('result' + n).value.trim();
+  if (!raw) {
+    _status(n, "Paste LLM result first.", true);
+    return;
+  }
+
+  const pairs = _parsePairs(raw);
+  if (!Object.keys(pairs).length) {
+    _status(n, "Could not parse Label: Value pairs.", true);
+    return;
+  }
+
+  if (n === 2) {
+    const secondaryBlock = _extractSecondaryDecisions();
+    if (secondaryBlock) {
+      pairs['Secondary Intent Decisions'] = secondaryBlock;
+    }
+  }
+
+  _status(n, "Writing to row...", false);
+  google.script.run
+    .withSuccessHandler(function(r) {
+      _status(n, "✅ " + r, false);
+      _badge(n, "● Written ✅");
+
+      if (n === 4) {
+        setTimeout(function() {
+          _status(n, "Calculating query vector...", false);
+          const lockedRow4 = (window._lockedRows || {})[4];
+          google.script.run
+            .withSuccessHandler(function(msg) {
+              _status(n, "✅ " + msg + " — Running governance validation...", false);
+              setTimeout(function() {
+                google.script.run
+                  .withSuccessHandler(function(vRes) {
+                    showGovernanceValidation(vRes);
+                    // P3 — Rewrite Governance is complete. Open Content Engine W0 automatically.
+                    _status(n, "✅ Governance validated — Opening W0…", false);
+                    google.script.run
+                      .withFailureHandler(function(e) {
+                        _status(n, "✅ Governance validated. Could not open W0: " + e.message, true);
+                      })
+                      .openContentEngineW0Sidebar();
+                  })
+                  .withFailureHandler(function(e) {
+                    _status(n, "✅ Written. Validation error: " + e.message, false);
+                  })
+                  .bc_validateGovernanceColumns(lockedRow4);
+              }, 800);
+            })
+            .withFailureHandler(function(e) {
+              _status(n, "Query vector error: " + e.message, true);
+            })
+            .bc_calculateQueryVector(lockedRow4);
+        }, 100);
+      } else if (n === 2 || n === 3) {
+        setTimeout(function() { showTab(n + 1); p_load(n + 1); }, 1500);
+      }
+    })
+    .withFailureHandler(function(e) {
+      _status(n, "Error: " + e.message, true);
+    })
+    .bc_writeLLMOutputToRow(pairs, raw, 
+      n === 2 ? 'P1B Response' : 
+      n === 3 ? 'P2 Response' : 
+      n === 4 ? 'P3 Response' : null,
+      (window._lockedRows || {})[n]);
+}
+
+    function p_clear(n) {
+      _val('result' + n, "");
+      _status(n, "", false);
+    }
+
+    function p_writeCombined() {
+      const raw = document.getElementById('result6').value.trim();
+      if (!raw) {
+        _status(6, "Paste ChatGPT output first.", true);
+        return;
+      }
+      _status(6, "Writing all columns to row...", false);
+      google.script.run
+        .withSuccessHandler(function(res) {
+          _status(6, "✅ " + res.message, false);
+          showGovernanceValidation6(res.governance);
+          _status(6, "✅ Governance validated — Opening W0…", false);
+          google.script.run
+            .withFailureHandler(function(e) {
+              _status(6, "✅ Governance validated. Could not open W0: " + e.message, true);
+            })
+            .openContentEngineW0Sidebar();
+        })
+        .withFailureHandler(function(e) {
+          _status(6, "Error: " + e.message, true);
+        })
+        .bc_writeCombinedOutputToRow(raw, (window._lockedRows || {})[6]);
+    }
+
+    function showGovernanceValidation6(res) {
+      if (!res || !res.success) {
+        _status(6, "✅ Written. Validation could not run: " + (res ? res.message : "unknown error"), false);
+        return;
+      }
+
+      var el = document.getElementById('st6');
+
+      if (res.clean) {
+        el.innerHTML = '✅ All ' + res.totalChecked + ' governed columns passed — no [value] placeholders or empty fields found.';
+        el.className = 'status-msg';
+        return;
+      }
+
+      var html = '⚠ ' + res.failCount + ' column(s) need attention:<br><br>';
+      html += '<table style="width:100%;font-size:9px;border-collapse:collapse;">';
+      html += '<tr style="background:#f1f3f4;font-weight:bold;">' +
+              '<td style="padding:3px 5px;">Stage</td>' +
+              '<td style="padding:3px 5px;">Column</td>' +
+              '<td style="padding:3px 5px;">Issue</td>' +
+              '</tr>';
+
+      res.failures.forEach(function(f) {
+        html += '<tr style="border-top:1px solid #e0e0e0;">' +
+                '<td style="padding:3px 5px;color:#1a73e8;font-weight:bold;">' + f.stage + '</td>' +
+                '<td style="padding:3px 5px;color:#c5221f;">' + f.col + '</td>' +
+                '<td style="padding:3px 5px;color:#b06000;">' + f.reason + '</td>' +
+                '</tr>';
+      });
+
+      html += '</table><br>';
+      html += '<span style="color:#5f6368;">Re-run the flagged stage(s) to correct.</span>';
+
+      el.innerHTML = html;
+      el.className = 'status-msg error';
+    }
+
+    function doReset() {
+      _status(1, "Clearing columns H–AG and AW...", false);
+      google.script.run
+        .withSuccessHandler(function(msg) {
+          _status(1, msg, false);
+          setTimeout(function() { _status(1, "", false); }, 3000);
+        })
+        .withFailureHandler(function(e) {
+          _status(1, "Error: " + e.message, true);
+        })
+        .bc_clearRowOutput();
+    }
+
+    function _parsePairs(raw) {
+      const pairs  = {};
+      const marker = '=== VERTICAL OUTPUT — PASTE INTO PANEL 2 ===';
+      const start  = raw.indexOf(marker);
+      const text   = start > -1 ? raw.substring(start + marker.length) : raw;
+
+      for (const line of text.split('\n')) {
+        if (line.startsWith('CLUSTERS:')) {
+          pairs['Observed Query Cluster'] = line.substring('CLUSTERS:'.length).trim();
+          continue;
+        }
+        const colonIdx = line.indexOf(':');
+        if (colonIdx === -1) continue;
+        const label = line.substring(0, colonIdx).trim();
+        let value   = line.substring(colonIdx + 1).trim();
+        if (!label) continue;
+        if (label.startsWith('=') ||
+            label.startsWith('-')) continue;
+        if (label.startsWith('If ')) continue;
+        if (label.startsWith('Before ')) continue;
+        if (label.match(/^\d+\./)) continue;
+        if (label === 'Rules') continue;
+        if (label === 'After the vertical block output exactly') continue;
+        if (label === 'Waiting for Input') continue;
+        if (label.startsWith('CONFIRMED')) continue;
+        if (label.startsWith('AMBIGUITY')) continue;
+        if (label.startsWith('QUESTION')) continue;
+        if (label.startsWith('RANKED')) continue;
+        if (label.startsWith('SECONDARY')) continue;
+        if (label.startsWith('HARD RULE')) continue;
+        value = _stripMarkdownUrl(value);
+        pairs[label] = value;
+      }
+      return pairs;
+    }
+
+    function _stripMarkdownUrl(value) {
+  if (!value) return value;
+
+  value = String(value).trim();
+
+  const selfLink = /^\[(https?:\/\/[^\]]+)\]\(\1\)$/;
+  const mdLink = /^\[([^\]]*)\]\((https?:\/\/[^)\s"]+)[^)]*\)$/;
+  const bareBracketUrl = /^\[(https?:\/\/[^\]]+)\]$/;
+
+  const m1 = value.match(selfLink);
+  if (m1) return m1[1];
+
+  const m2 = value.match(mdLink);
+  if (m2) return m2[2];
+
+  const m3 = value.match(bareBracketUrl);
+  if (m3) return m3[1];
+
+  return value;
+}
+
+    function _esc(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function _val(id, text) {
+      document.getElementById(id).value = text;
+    }
+
+    function _status(n, msg, isError) {
+      const el = document.getElementById('st' + n);
+      if (!el) return;
+      el.innerText = msg;
+      el.className = 'status-msg' + (isError ? ' error' : '');
+    }
+
+    function _badge(n, text) {
+      const el = document.getElementById('b' + n);
+      if (el) el.innerText = text;
+    }
+
+    function serp_load() {
+      document.getElementById('st5').innerText = 'Loading...';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res.success) {
+            document.getElementById('st5').innerText = '❌ ' + res.message;
+            return;
+          }
+          document.getElementById('prompt5').value = res.prompt;
+          document.getElementById('ref5').value = res.title || '';
+          document.getElementById('st5').innerText = '✔ Prompt ready — copy to ChatGPT Plus with web search enabled';
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('st5').innerText = '❌ ' + err.message;
+        })
+        .bc_buildSerpBridgePrompt();
+    }
+
+    function serp_copy() {
+      const ta = document.getElementById('prompt5');
+      if (!ta.value) { document.getElementById('st5').innerText = '❌ Nothing to copy'; return; }
+      ta.select();
+      document.execCommand('copy');
+      document.getElementById('st5').innerText = '✔ Copied to clipboard';
+    }
+
+    function serp_paste() {
+      navigator.clipboard.readText().then(function(text) {
+        document.getElementById('result5').value = text;
+        document.getElementById('st5').innerText = '✔ Pasted';
+      }).catch(function() {
+        document.getElementById('st5').innerText = '❌ Paste failed — paste manually into the box';
+      });
+    }
+
+    function serp_push() {
+  const raw = document.getElementById('result5').value.trim();
+  if (!raw) { document.getElementById('st5').innerText = '❌ Paste output first'; return; }
+  document.getElementById('st5').innerText = 'Pushing to sheet...';
+
+  const actionMatch = raw.match(/---ACTION REQUIRED---([\s\S]*?)---END ACTION---/i);
+  if (actionMatch) {
+    document.getElementById('action5').value = actionMatch[1].trim();
+  } else {
+    document.getElementById('action5').value = 'No action block found in output.';
+  }
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res.success) {
+        document.getElementById('st5').innerText = '❌ ' + res.message;
+        return;
+      }
+      document.getElementById('st5').innerText = '✔ Pushed to sheet. Pushing to TSM...';
+
+      // Step 2 — Push to TSM
+      const action = document.getElementById('action5').value.trim();
+      const lines = action.split('\n');
+      const tsmRows = lines.filter(function(line) {
+        const trimmed = line.trim();
+        return trimmed.indexOf('|') > -1 &&
+               !trimmed.startsWith('Open') &&
+               !trimmed.startsWith('Find') &&
+               !trimmed.startsWith('Add') &&
+               !trimmed.startsWith('After') &&
+               !trimmed.startsWith('Then') &&
+               !trimmed.startsWith('[') &&
+               !trimmed.startsWith('---') &&
+               !trimmed.startsWith('Exact') &&
+               trimmed.length > 10;
+      });
+
+      if (!tsmRows.length) {
+        // No TSM rows — skip to blueprint
+        document.getElementById('st5').innerText = '✔ No TSM rows found. Adding to Blueprint...';
+        runAddToBlueprint();
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(function(tsmRes) {
+          document.getElementById('st5').innerText = '✔ ' + tsmRes.message + '. Adding to Blueprint...';
+          runAddToBlueprint();
+        })
+        .withFailureHandler(function(e) {
+          document.getElementById('st5').innerText = '❌ TSM push failed: ' + e.message;
+        })
+        .bc_pushEntitiesToTSM(tsmRows.join('\n'));
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('st5').innerText = '❌ ' + err.message;
+    })
+    .bc_pushSerpBridgeToSheet(raw, true);
+}
+
+function runAddToBlueprint() {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      document.getElementById('st5').innerText = res.success
+        ? '✔ FINISHED — ' + res.message
+        : '✔ TSM updated. Blueprint: ' + res.message + ' — FINISHED';
+
+      // Write ELG to posts_progress if production run
+      if (window._runMode === 'PRODUCTION') {
+        google.script.run
+          .withSuccessHandler(function(elgRes) {
+            document.getElementById('st5').innerText += ' | ' + elgRes;
+          })
+          .withFailureHandler(function(e) {
+            document.getElementById('st5').innerText += ' | ELG write failed: ' + e.message;
+          })
+          .bc_writeELGToProgress(window._postStage);
+
+        google.script.run
+          .withSuccessHandler(function(colourRes) {
+            if (colourRes && colourRes.message) {
+              document.getElementById('st5').innerText += ' | ' + colourRes.message;
+            }
+          })
+          .withFailureHandler(function(e) {
+            document.getElementById('st5').innerText += ' | Colour cycle failed: ' + e.message;
+          })
+          .bc_cycleRunColour();
+      }
+
+      setTimeout(function() {
+        document.getElementById('prompt5').value = '';
+        document.getElementById('result5').value = '';
+        document.getElementById('action5').removeAttribute('readonly');
+        document.getElementById('action5').value = '';
+        document.getElementById('action5').setAttribute('readonly', true);
+        document.getElementById('ref5').value = '';
+        document.getElementById('serp-prereqs').innerHTML = '';
+      }, 4000);
+    })
+    .withFailureHandler(function(e) {
+      document.getElementById('st5').innerText = '❌ Blueprint error: ' + e.message;
+    })
+    .bc_addSerpEntitiesToBlueprint();
+}
+
+
+
+    function serp_clear() {
+      document.getElementById('result5').value = '';
+      document.getElementById('st5').innerText = '';
+    }
+
+    function serp_pushNodeMapOnly() {
+      const raw = document.getElementById('result5').value.trim();
+      if (!raw) { document.getElementById('st5').innerText = '❌ Paste output first'; return; }
+      document.getElementById('st5').innerText = 'Pushing node map only...';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('st5').innerText = res.success ? '✔ ' + res.message : '❌ ' + res.message;
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('st5').innerText = '❌ ' + err.message;
+        })
+        .bc_pushNodeMapOnly(raw);
+    }
+
+    function serp_copyTSMRows() {
+      const action = document.getElementById('action5').value.trim();
+      if (!action) { document.getElementById('st5').innerText = '❌ No action content — Push output first'; return; }
+
+      const lines = action.split('\n');
+      const tsmRows = lines.filter(function(line) {
+        const trimmed = line.trim();
+        return trimmed.indexOf('|') > -1 &&
+               !trimmed.startsWith('Open') &&
+               !trimmed.startsWith('Find') &&
+               !trimmed.startsWith('Add') &&
+               !trimmed.startsWith('After') &&
+               !trimmed.startsWith('Then') &&
+               !trimmed.startsWith('[') &&
+               !trimmed.startsWith('---') &&
+               !trimmed.startsWith('Exact') &&
+               trimmed.length > 10;
+      });
+
+      if (!tsmRows.length) {
+        document.getElementById('st5').innerText = '❌ No TSM rows found in action block';
+        return;
+      }
+
+      document.getElementById('st5').innerText = 'Pushing to TSM...';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('st5').innerText = res.success ? '✔ ' + res.message : '❌ ' + res.message;
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('st5').innerText = '❌ ' + err.message;
+        })
+        .bc_pushEntitiesToTSM(tsmRows.join('\n'));
+    }
+
+    function serp_checkPrereqs() {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          const panel = document.getElementById('serp-prereqs');
+
+          const ceFields = [
+            { label: 'Primary Search Term', value: res.primaryTerm },
+            { label: 'Strategic Reasoning', value: res.strategicReasoning },
+            { label: 'Topical Intent', value: res.topicalIntent },
+            { label: 'Matrix Role', value: res.matrixRole },
+            { label: 'Key Decisions Explained', value: res.keyDecisions }
+          ];
+
+          const ceMissing = ceFields.filter(function(f) {
+            return !f.value || f.value.trim().length === 0 ||
+                   f.value.indexOf('not yet evidenced') > -1;
+          });
+
+          const blueprintOk = res.recoveryBlueprint &&
+                              res.recoveryBlueprint.trim().length > 0 &&
+                              res.recoveryBlueprint.indexOf('RECOVERY BLUEPRINT MISSING') === -1;
+
+          let html = '<div style="font-weight:bold;margin-bottom:6px;color:#3c4043;">PREREQUISITES</div>';
+          let allGood = true;
+
+          if (ceMissing.length > 0) {
+            allGood = false;
+            html += '<div style="color:#c5221f;margin-bottom:6px;">';
+            html += '<strong>❌ Missing:</strong> ';
+            html += ceMissing.map(function(f) { return f.label; }).join(', ');
+            html += '</div>';
+            html += '<div style="color:#b06000;margin-bottom:6px;">These columns are populated by the Content Engine W0 prompt. Opening W0 now...</div>';
+              setTimeout(function() {
+                google.script.run
+                  .withSuccessHandler(function() {})
+                  .withFailureHandler(function(e) {
+                    document.getElementById('st5').innerText = '❌ Could not open W0: ' + e.message;
+                  })
+                  .openContentEngineW0Sidebar();
+              }, 800);
+            setTimeout(function() {
+              google.script.run
+                .withSuccessHandler(function() {})
+                .withFailureHandler(function(e) {
+                  document.getElementById('st5').innerText = '❌ Could not open W0: ' + e.message;
+                })
+                .openContentEngineW0Sidebar();
+            }, 800);
+          }
+
+          if (!blueprintOk) {
+            allGood = false;
+            html += '<div style="color:#c5221f;margin-bottom:6px;">❌ Recovery Blueprint is not populated.</div>';
+            html += '<div style="color:#b06000;margin-bottom:6px;">Go to the P2 tab, click Load, run the prompt, then click Write to Row. Then return to this tab.</div>';
+          }
+
+          if (allGood) {
+            html += '<div style="color:#1e8e3e;font-weight:bold;">✅ All prerequisites met — ready to Load.</div>';
+          }
+
+          panel.innerHTML = html;
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('serp-prereqs').innerHTML =
+            '<span style="color:#c5221f;">❌ Error checking prerequisites: ' + err.message + '</span>';
+        })
+        .bc_getSerpBridgePrereqs();
+    }
+
+    function serp_addToBlueprint() {
+      document.getElementById('st5').innerText = 'Updating Recovery Blueprint...';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          document.getElementById('st5').innerText = res.success ? '✔ ' + res.message : '❌ ' + res.message;
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('st5').innerText = '❌ ' + err.message;
+        })
+        .bc_addSerpEntitiesToBlueprint();
+    }
+     // Auto-load P1A when sidebar opens
+       window.addEventListener('load', function() {
+      setTimeout(function() { initRunMode(); }, 500);
+      });
+
+    function w_autoWriteFromWindow1() {
+  const w1 = (document.getElementById('window1').value || "").trim();
+  if (!w1) {
+    _status(1, "Paste ChatGPT output into Window 1 first.", true);
+    return;
+  }
+
+  // Parse CONFIRMED ARTICLE TYPE
+  const articleTypeMatch = w1.match(/CONFIRMED ARTICLE TYPE:\s*(.+)/);
+  const primaryIntentMatch = w1.match(/CONFIRMED PRIMARY INTENT:\s*(.+)/);
+
+  if (!articleTypeMatch || !primaryIntentMatch) {
+    _status(1, "Could not find CONFIRMED ARTICLE TYPE or CONFIRMED PRIMARY INTENT in Window 1.", true);
+    return;
+  }
+
+  const confirmedArticleType = articleTypeMatch[1].trim();
+  const confirmedPrimaryIntent = primaryIntentMatch[1].trim();
+
+  // Parse RANKED INTENTS block
+  // Handles both formats: one intent per line ("1. Cleaning") and a single
+  // space-separated line ("Cleaning Sealing / Resealing") that ChatGPT now
+  // sometimes returns instead of a numbered list.
+  const rankedMatch = w1.match(/BLOCK 4[^\n]*\n([\s\S]*?)(?:BLOCK 5|$)/);
+  const rankedBlockText = rankedMatch ? rankedMatch[1].trim() : '';
+  let rankedLines = rankedBlockText.split('\n').filter(function(l) { return l.trim(); });
+
+  // If parsing produced a single flattened line, split on the known intent
+  // names instead — match against the permitted intent list so "Sealing /
+  // Resealing" (which itself contains a space) is not split incorrectly.
+  const KNOWN_INTENTS = [
+    'Method Safety / Risk Validation',
+    'DIY / Task-Led Instruction',
+    'Stain Removal',
+    'Damage Cause / Diagnosis',
+    'Sealing / Resealing',
+    'Honing / Polishing / Finish Recovery',
+    'Grout Cleaning / Sealing',
+    'Maintenance / Aftercare',
+    'Cleaning'
+  ];
+
+  if (rankedLines.length === 1 && rankedLines[0].indexOf('\n') === -1) {
+    const flatText = rankedLines[0];
+    const found = [];
+    let remaining = flatText;
+    // Greedily match longest known intent names first so compound names
+    // ("Grout Cleaning / Sealing") aren't matched as their shorter substrings.
+    const sortedIntents = KNOWN_INTENTS.slice().sort(function(a, b) { return b.length - a.length; });
+    let guard = 0;
+    while (remaining.trim() && guard < 20) {
+      guard++;
+      let matchedOne = false;
+      for (let k = 0; k < sortedIntents.length; k++) {
+        const name = sortedIntents[k];
+        if (remaining.trim().indexOf(name) === 0) {
+          found.push(name);
+          remaining = remaining.trim().substring(name.length);
+          matchedOne = true;
+          break;
+        }
+      }
+      if (!matchedOne) break; // unrecognised token — stop rather than mis-split
+    }
+    if (found.length > 1) {
+      rankedLines = found;
+    }
+    // If found.length <= 1, leave rankedLines as the original single flattened
+    // line — better to write nothing than to guess wrong.
+  }
+
+  // Build Y/N decisions — primary intent = Y, all others = Y if in ranked list
+  window._retainedSupportingDecisions = [];
+  var retainedCount = 0;
+  for (let i = 0; i < rankedLines.length; i++) {
+    const intentName = rankedLines[i].replace(/^\d+\.\s*/, '').trim();
+    if (!intentName || intentName.toLowerCase() === confirmedPrimaryIntent.toLowerCase()) continue;
+    retainedCount++;
+    window._retainedSupportingDecisions.push({
+      num: String(retainedCount),
+      name: intentName,
+      answer: 'Y',
+      reason: 'Confirmed in auto-parse.'
+    });
+  }
+
+  const secondaryBlock = _extractSecondaryDecisions();
+  const classificationContext = w1;
+
+  _status(1, "Writing to row...", false);
+
+  const _at = confirmedArticleType;
+  const _pi = confirmedPrimaryIntent;
+  google.script.run
+    .withSuccessHandler(function(msg) {
+      _status(1, "✅ " + msg, false);
+      const rerunLock = "===== RERUN LOCK =====\nCONFIRMED ARTICLE TYPE: " + _at + "\nCONFIRMED PRIMARY INTENT: " + _pi + "\n===== END LOCK =====";
+      _val('window3', rerunLock);
+      setTimeout(function() { showTab(2); p_load(2); }, 1500);
+    })
+    .withFailureHandler(function(e) {
+      _status(1, "Error: " + e.message, true);
+    })
+    .bc_writePrompt1ALockToRow(_at, _pi, classificationContext, secondaryBlock, w1, (window._lockedRows || {})[1]);
+}
+function showGovernanceValidation(res) {
+  if (!res || !res.success) {
+    _status(4, "✅ Written. Validation could not run: " + (res ? res.message : "unknown error"), false);
+    return;
+  }
+
+  var el = document.getElementById('st4');
+
+  if (res.clean) {
+    el.innerHTML = '✅ All ' + res.totalChecked + ' governed columns passed — no [value] placeholders or empty fields found.';
+    el.className = 'status-msg';
+    return;
+  }
+
+  var html = '⚠ ' + res.failCount + ' column(s) need attention:<br><br>';
+  html += '<table style="width:100%;font-size:9px;border-collapse:collapse;">';
+  html += '<tr style="background:#f1f3f4;font-weight:bold;">' +
+          '<td style="padding:3px 5px;">Stage</td>' +
+          '<td style="padding:3px 5px;">Column</td>' +
+          '<td style="padding:3px 5px;">Issue</td>' +
+          '</tr>';
+
+  res.failures.forEach(function(f) {
+    html += '<tr style="border-top:1px solid #e0e0e0;">' +
+            '<td style="padding:3px 5px;color:#1a73e8;font-weight:bold;">' + f.stage + '</td>' +
+            '<td style="padding:3px 5px;color:#c5221f;">' + f.col + '</td>' +
+            '<td style="padding:3px 5px;color:#b06000;">' + f.reason + '</td>' +
+            '</tr>';
+  });
+
+  html += '</table><br>';
+  html += '<span style="color:#5f6368;">Re-run the flagged stage(s) to correct.</span>';
+
+  el.innerHTML = html;
+  el.className = 'status-msg error';
+}
+  </script>
+
+</body>
+</html>

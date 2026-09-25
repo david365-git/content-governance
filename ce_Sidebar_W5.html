@@ -1,0 +1,149 @@
+  <!-- ══ ce_Sidebar_W5.html - W5 — H1 + META ══ -->
+  <div id="window-13" class="window-card" style="display:none" style="border-top:3px solid #1a237e">
+    <div class="window-header">
+      <span class="window-label" style="color:#1a237e">W5 — H1 &amp; Meta</span>
+      <span class="tag" style="background:#1a237e">Generate → Paste → Push</span>
+    </div>
+    <div class="window-body">
+      <div id="statusGov" class="status-bar pending">Generate prompt → paste into ChatGPT → paste output → push. Schema is built by W5C.</div>
+
+      <!-- Step 1: Generate -->
+      <div class="btn-row">
+        <button style="background:#1a237e" id="govPromptBtn" onclick="generateGovernancePrompt()">Generate Prompt</button>
+      </div>
+      <textarea id="govPrompt" placeholder="Prompt will appear here — copy and paste into ChatGPT..."></textarea>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-copy" id="copyGovPromptBtn" disabled onclick="copyText('govPrompt','statusGov','Prompt copied — paste into ChatGPT')">Copy Prompt</button>
+      </div>
+
+      <!-- Step 2: Paste LLM output -->
+      <div style="margin-top:12px">
+        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#1a237e;margin-bottom:4px;letter-spacing:1px">PASTE CHATGPT OUTPUT HERE</div>
+        <textarea id="govPasteBlock" style="height:160px" placeholder="New H1: [value]&#10;New Meta Title: [value]&#10;New Meta Description: [value]" oninput="updateGovLengths()"></textarea>
+        <div class="btn-row" style="margin-top:3px">
+          <button class="btn-copy" onclick="clearAndPaste('govPasteBlock')">⌫ Clear + Paste</button>
+        </div>
+        <div id="govLengthDisplay" style="font-family:JetBrains Mono,monospace;font-size:13px;margin-top:6px;line-height:1.8;display:none">
+          <span id="govH1Len"></span><br>
+          <span id="govTitleLen"></span><br>
+          <span id="govDescLen"></span>
+        </div>
+      </div>
+
+      <!-- Step 3: Push -->
+      <button style="background:#2e7d32;width:100%;margin-top:10px;padding:9px;font-size:11px;font-weight:700;border:none;border-radius:5px;color:white;cursor:pointer" id="pushGovBtn" onclick="pushGovernanceToSheet()">💾 Push to Sheet</button>
+      <div id="stage2CResultGrid" style="display:none;margin-top:8px">
+        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#2e7d32;margin-bottom:5px;letter-spacing:1px">PUSH RESULT</div>
+        <div id="stage2CGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px"></div>
+        <div id="stage2CMsg" style="font-family:JetBrains Mono,monospace;font-size:13px;background:#e8f5e9;border-radius:4px;padding:8px;white-space:pre-wrap;color:#333"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ W5C — DETERMINISTIC SCHEMA BUILDER ══ -->
+  <div id="window-14" class="window-card" style="display:none" style="border-top:3px solid #bf360c">
+    <div class="window-header">
+      <span class="window-label" style="color:#bf360c">W5C — Schema Builder</span>
+      <span class="tag" style="background:#bf360c">Script — No LLM</span>
+    </div>
+    <div class="window-body">
+      <div id="statusW5C" class="status-bar pending">Builds schema from sheet data. Run W5 first to ensure H1 and Meta Description are populated.</div>
+
+      <!-- Parent Area block — shown only for Geo Service Pages with empty col DL -->
+      <div id="w5cParentAreaBlock" style="display:none;margin-top:8px;background:#fff8e1;border:1px solid #ffb300;border-radius:4px;padding:8px">
+        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#e65100;margin-bottom:6px;letter-spacing:1px">⚠ LOCALITY &amp; PARENT AREA REQUIRED</div>
+        <div style="font-family:JetBrains Mono,monospace;font-size:13px;color:#333;margin-bottom:6px">
+          URL: <span id="w5cPageUrl" style="color:#bf360c;word-break:break-all">—</span><br><br>
+          <a href="https://postcodes.io" target="_blank" style="color:#e65100">🔍 postcodes.io</a> &nbsp;|&nbsp;
+          <a href="https://geoportal.statistics.gov.uk" target="_blank" style="color:#e65100">ONS Geography Portal</a>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr;gap:6px;margin-bottom:6px">
+          <div>
+            <div style="font-family:JetBrains Mono,monospace;font-size:13px;color:#666;margin-bottom:2px">LOCALITY (col DK)</div>
+            <input type="text" id="w5cLocalityInput"
+              placeholder="e.g. Bonaly, Willowbrae"
+              style="width:100%;box-sizing:border-box;font-family:JetBrains Mono,monospace;font-size:13px;padding:4px 6px;border:1px solid #ccc;border-radius:3px" />
+          </div>
+          <div>
+            <div style="font-family:JetBrains Mono,monospace;font-size:13px;color:#666;margin-bottom:2px">PARENT AREA (col DL)</div>
+            <input type="text" id="w5cParentAreaInput"
+              placeholder="e.g. Edinburgh, Glasgow"
+              style="width:100%;box-sizing:border-box;font-family:JetBrains Mono,monospace;font-size:13px;padding:4px 6px;border:1px solid #ccc;border-radius:3px" />
+          </div>
+        </div>
+        <button onclick="pushParentArea()"
+          style="background:#e65100;color:#fff;font-family:JetBrains Mono,monospace;font-size:13px;padding:4px 12px;border:none;border-radius:3px;cursor:pointer;width:100%">
+          ⬆ Save Both to Sheet
+        </button>
+        <div id="w5cParentAreaStatus" style="font-family:JetBrains Mono,monospace;font-size:13px;margin-top:4px;color:#555"></div>
+      </div>
+
+      <div class="btn-row" style="margin-top:8px">
+        <button style="background:#bf360c" id="w5cBuildBtn" onclick="runW5CBuild()">⚙ Build &amp; Push Schema</button>
+      </div>
+
+      <div id="w5cResultBlock" style="display:none;margin-top:10px">
+        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#bf360c;margin-bottom:4px;letter-spacing:1px">BUILD RESULT</div>
+        <div id="w5cResultText" style="font-family:JetBrains Mono,monospace;font-size:13px;background:#fbe9e7;border-radius:4px;padding:8px;white-space:pre-wrap;color:#333;max-height:120px;overflow-y:auto"></div>
+      </div>
+
+      <div id="w5cPreviewBlock" style="display:none;margin-top:10px">
+        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#bf360c;margin-bottom:4px;letter-spacing:1px">
+          SCHEMA PREVIEW
+          <button onclick="toggleW5CPreview()" id="w5cToggleBtn" style="margin-left:8px;font-size:13px;background:#bf360c;color:white;border:none;border-radius:3px;padding:2px 6px;cursor:pointer">Show</button>
+        </div>
+        <textarea id="w5cPreview" style="display:none;height:100px;font-size:8px" readonly></textarea>
+      </div>
+
+      <div id="w5cAuditPrompt" style="display:none;margin-top:8px;font-family:JetBrains Mono,monospace;font-size:13px;color:#555;background:#fff3e0;border-radius:4px;padding:6px">
+        ✔ Schema pushed — run W5B audit to verify structure.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ W5B — SCHEMA CORRECTION AUDIT ══ -->
+  <div id="window-15" class="window-card" style="display:none" style="border-top:3px solid #6a1b9a">
+    <div class="window-header">
+      <span class="window-label" style="color:#6a1b9a">W5B — Schema Correction Audit</span>
+      <span class="tag" style="background:#6a1b9a">Audit → Copy Prompt → Paste → Push</span>
+    </div>
+    <div class="window-body">
+      <div id="statusW5B" class="status-bar pending">Run audit to check schema in active row</div>
+
+      <!-- Step 1: Audit -->
+      <div class="btn-row">
+        <button style="background:#6a1b9a" id="w5bAuditBtn" onclick="runW5BAudit()">🔍 Audit Schema</button>
+      </div>
+
+      <!-- Audit result display -->
+      <div id="w5bAuditResult" style="display:none;margin-top:10px">
+        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#6a1b9a;margin-bottom:4px;letter-spacing:1px">AUDIT RESULT</div>
+        <div id="w5bResultText" style="font-family:JetBrains Mono,monospace;font-size:13px;background:#f3e5f5;border-radius:4px;padding:8px;white-space:pre-wrap;color:#333;max-height:160px;overflow-y:auto"></div>
+      </div>
+
+      <!-- Step 2: Correction prompt (shown only if failures) -->
+      <div id="w5bPromptBlock" style="display:none;margin-top:12px">
+        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#6a1b9a;margin-bottom:4px;letter-spacing:1px">CORRECTION PROMPT — COPY TO CHATGPT</div>
+        <textarea id="w5bPrompt" style="height:120px;font-size:9px" readonly></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button class="btn-copy" id="w5bCopyBtn" onclick="copyText('w5bPrompt','statusW5B','Correction prompt copied — paste into ChatGPT')">Copy Prompt</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Paste corrected schema -->
+      <div id="w5bPasteBlock" style="display:none;margin-top:12px">
+        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#6a1b9a;margin-bottom:4px;letter-spacing:1px">PASTE CORRECTED SCHEMA HERE</div>
+        <textarea id="w5bPasteArea" style="height:120px;font-size:9px" placeholder="&lt;script type=&quot;application/ld+json&quot;&gt;...&lt;/script&gt;"></textarea>
+        <div class="btn-row" style="margin-top:3px">
+          <button class="btn-copy" onclick="clearAndPaste('w5bPasteArea')">⌫ Clear + Paste</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Push -->
+      <div id="w5bPushBlock" style="display:none;margin-top:10px">
+        <button style="background:#2e7d32;width:100%;padding:9px;font-size:11px;font-weight:700;border:none;border-radius:5px;color:white;cursor:pointer" onclick="pushW5BCorrectedSchema()">💾 Push Corrected Schema</button>
+      </div>
+
+      <div id="w5bPushResult" style="display:none;margin-top:8px;font-family:JetBrains Mono,monospace;font-size:13px;background:#e8f5e9;border-radius:4px;padding:8px;white-space:pre-wrap;color:#333"></div>
+    </div>
+  </div>

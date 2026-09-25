@@ -1,0 +1,85 @@
+<!-- CanonicalMaterialSidebar.html -->
+<!doctype html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; padding: 12px; }
+      label { display:block; margin: 0 0 6px; font-weight: 600; }
+      select, button { width: 100%; padding: 8px; box-sizing: border-box; }
+      button { margin-top: 10px; cursor: pointer; }
+      .status { margin-top: 10px; font-size: 12px; white-space: pre-wrap; }
+      .muted { color: #666; font-size: 12px; margin-top: 6px; }
+    </style>
+  </head>
+  <body>
+    <label for="material">Canonical Material Name</label>
+    <select id="material"></select>
+
+    <button id="runBtn" onclick="run()">Run</button>
+
+    <div class="muted">
+      Target sheet: gid=835712004
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <script>
+      const CANONICAL_MATERIALS = [
+        'Ceramic Tile',
+        'Grout',
+        'Limestone',
+        'Marble',
+        'Porcelain Tile',
+        'Quarry Tile',
+        'Sandstone',
+        'Slate',
+        'Terracotta Tile',
+        'Terrazzo',
+        'Travertine',
+        'Victorian Encaustic Clay Tile'
+      ];
+
+      function setStatus(msg) {
+        document.getElementById('status').textContent = msg || '';
+      }
+
+      function load() {
+        const sel = document.getElementById('material');
+        sel.innerHTML = '';
+        sel.appendChild(new Option('— Select —', ''));
+
+        CANONICAL_MATERIALS.forEach(function(name) {
+          sel.appendChild(new Option(name, name));
+        });
+
+        setStatus('');
+      }
+
+      function run() {
+        const chosen = document.getElementById('material').value;
+
+        if (!chosen) {
+          setStatus('Please select a Canonical Material Name.');
+          return;
+        }
+
+        document.getElementById('runBtn').disabled = true;
+        setStatus('Running…');
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            setStatus(res && res.message ? res.message : 'Done.');
+            document.getElementById('runBtn').disabled = false;
+          })
+          .withFailureHandler(function(err) {
+            setStatus('Error: ' + (err && err.message ? err.message : err));
+            document.getElementById('runBtn').disabled = false;
+          })
+          .runCanonicalMaterialHide_(chosen);
+      }
+
+      load();
+    </script>
+  </body>
+</html>

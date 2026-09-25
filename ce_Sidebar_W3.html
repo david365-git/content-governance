@@ -1,0 +1,48 @@
+<!-- ══ ce_Sidebar_W3.html - W3 — HUMANISATION ══ -->
+  <div id="window-10c" class="window-card" style="display:none" style="border-top:3px solid #00695c">
+    <div class="window-header">
+      <span class="window-label" style="color:#00695c">W3 — Humanisation</span>
+      <span class="tag" style="background:#00695c">New Chat Required</span>
+    </div>
+    <div class="window-body">
+      <div id="statusW3" class="status-bar pending">Step 1: Copy rules → Step 2: Copy HTML → Step 3: Paste output → Save</div>
+
+      <!-- Step 1: Copy humanisation rules -->
+      <div class="step-label" style="margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#00695c;letter-spacing:1px">STEP 1 — COPY HUMANISATION RULES TO CHATGPT</div>
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#c62828;font-weight:700;margin-bottom:4px">⚠ OPEN A NEW CHATGPT CHAT — DO NOT USE THE CURRENT SESSION</div>
+      <div class="btn-row" style="margin-top:3px">
+        <button style="background:#00695c;color:#fff" onclick="runGetHumanisationRules()">⚙ Load Rules</button>
+      </div>
+      <div id="w3RulesBlock" style="display:none;margin-top:6px">
+        <textarea id="w3Rules" style="height:60px;font-size:8px" readonly></textarea>
+        <div class="btn-row" style="margin-top:3px">
+          <button class="btn-copy" onclick="copyText('w3Rules','statusW3','Rules copied — paste into NEW ChatGPT chat and wait for confirmation')">Copy Rules</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Paste W2B HTML and copy to ChatGPT -->
+      <div class="step-label" style="margin-top:8px;font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#00695c;letter-spacing:1px">STEP 2 — PASTE W2B HTML THEN COPY TO CHATGPT</div>
+      <textarea id="w3InputHtml" placeholder="Paste W2B HTML output here..." style="height:80px;font-size:8px"></textarea>
+      <div class="btn-row" style="margin-top:3px">
+        <button class="btn-copy" onclick="clearAndPaste('w3InputHtml')">⌫ Clear + Paste</button>
+        <button class="btn-copy" onclick="loadW2BFromSheet()" style="background:#37474f;color:#fff">⬆ Load W2B Raw HTML from column EU</button>
+        <button class="btn-copy" onclick="loadW2CFinalFromSheet()" style="background:#6a1b9a;color:#fff">⬆ Load HTML with Image Suggestions from column FL</button>
+        <button class="btn-copy" onclick="copyText('w3InputHtml','statusW3','HTML copied — paste into the SAME ChatGPT chat')" style="background:#00695c;color:#fff">Copy HTML to ChatGPT</button>
+      </div>
+
+      <!-- Step 3: Paste humanised output + save to CZ -->
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+        <div class="step-label" style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#00695c;letter-spacing:1px;margin-bottom:4px">STEP 3 — PASTE HUMANISED OUTPUT</div>
+        <textarea id="w3OutputHtml" placeholder="Paste humanised HTML from ChatGPT here..." style="height:80px;font-size:8px"></textarea>
+        <div class="btn-row" style="margin-top:3px">
+          <button class="btn-copy" onclick="clearAndPaste('w3OutputHtml')">⌫ Clear + Paste</button>
+          <button class="btn-copy" id="w3SaveBtn" onclick="saveHumanisedOutput()" style="background:#00695c;color:#fff" disabled>⬇ Save to Column CZ</button>
+        </div>
+        <div id="w3SaveResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:13px;color:#00695c"></div>
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn-copy" id="autoW3Btn" onclick="run3Automated()" style="background:#0b8043;color:#fff">⚡ Run W3 Automated</button>
+        </div>
+        <div id="autoW3Status" style="font-size:10px;margin-top:4px;"></div>
+      </div>
+    </div>
+  </div>

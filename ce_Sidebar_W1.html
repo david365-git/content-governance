@@ -1,0 +1,86 @@
+  <!-- ══ ce_Sidebar_W1.html - W1A DATA ══ -->
+  <div id="window-3" class="window-card" style="display:none" style="border-top:3px solid var(--blue)">
+    <div class="window-header">
+      <span class="window-label" style="color:var(--blue)">W1A — Stage 1A</span>
+      <span class="tag" style="background:red;color:yellow">Run Splitter</span><span class="tag" style="background:var(--blue)">Data Loading</span>
+    </div>
+    <div class="window-body">
+      <div id="status1a" class="status-bar pending">Pending — governance, matrix, silo map, original HTML</div>
+      <textarea id="part1a"></textarea>
+      <div class="btn-row">
+        <button class="btn-generate" id="gen1abtn"    onclick="runStage1A()">Generate</button>
+        <button class="btn-copy"     onclick="copyText('part1a','status1a','1A copied')">Copy</button>
+        <button class="btn-confirm"  id="conf1abtn"   onclick="markConfirmed('conf1abtn','pip-1a','status1a','1A pasted to ChatGPT ✔');google.script.run.logPipelineResume('W1A — Pasted to LLM','')" disabled>Pasted to LLM</button>
+      </div>
+      <div class="btn-row" style="margin-top:4px">
+        <button class="btn-push btn-full" id="saveW1AllBtn" onclick="saveAllW1ToSheet()">⬇ Save W1A–W1D to Sheet</button>
+
+        <button class="btn-push btn-full" id="runGovernanceBtn" onclick="runGovernanceAutomation()" style="margin-top:6px">
+          ▶ Run W1 → W2B.3 Automation
+        </button>
+
+        <button
+            class="btn-push btn-full"
+            id="stopGovernanceBtn"
+            onclick="stopGovernanceAutomation()"
+            style="margin-top:6px;background:#c62828;color:white"
+          >
+            ■ STOP AUTOMATION
+        </button>
+
+        <div id="saveW1AllStatus" style="font-family:JetBrains Mono,monospace;font-size:11px;color:#2e7d32;margin-top:3px"></div>
+        <div id="runGovernanceStatus" style="font-family:JetBrains Mono,monospace;font-size:11px;color:#2e7d32;margin-top:3px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ W1B STRUCTURAL ══ -->
+  <div id="window-4" class="window-card" style="display:none" style="border-top:3px solid var(--teal)">
+    <div class="window-header">
+      <span class="window-label" style="color:var(--teal)">W1B — Stage 1B</span>
+      <span class="tag" style="background:var(--teal)">Structural Rules</span>
+    </div>
+    <div class="window-body">
+      <div id="status1b" class="status-bar pending">Pending — H2, ID mapping, HTML structure, hub-intro</div>
+      <textarea id="part1b"></textarea>
+      <div class="btn-row">
+        <button class="btn-1b"      id="gen1bbtn"     onclick="runStage1B()">Generate</button>
+        <button class="btn-copy"    onclick="copyText('part1b','status1b','1B copied')">Copy</button>
+        <button class="btn-confirm" id="conf1bbtn"    onclick="markConfirmed('conf1bbtn','pip-1b','status1b','1B pasted to ChatGPT ✔');google.script.run.logPipelineResume('W1B — Pasted to LLM','')" disabled>Pasted to LLM</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ W1C PARAGRAPH ══ -->
+  <div id="window-5" class="window-card" style="display:none" style="border-top:3px solid #5c6bc0">
+    <div class="window-header">
+      <span class="window-label" style="color:#5c6bc0">W1C — Stage 1C</span>
+      <span class="tag" style="background:#5c6bc0">Paragraph Rules</span>
+    </div>
+    <div class="window-body">
+      <div id="status1c" class="status-bar pending">Pending — topic sentence, framing verbs, bold, noun repetition</div>
+      <textarea id="part1c"></textarea>
+      <div class="btn-row">
+        <button class="btn-1c"      id="gen1cbtn"     onclick="runStage1C()">Generate</button>
+        <button class="btn-copy"    onclick="copyText('part1c','status1c','1C copied')">Copy</button>
+        <button class="btn-confirm" id="conf1cbtn"    onclick="markConfirmed('conf1cbtn','pip-1c','status1c','1C pasted to ChatGPT ✔');google.script.run.logPipelineResume('W1C — Pasted to LLM','')" disabled>Pasted to LLM</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ W1D OUTPUT QUALITY ══ -->
+  <div id="window-6" class="window-card" style="display:none" style="border-top:3px solid #7b1fa2">
+    <div class="window-header">
+      <span class="window-label" style="color:#7b1fa2">W1D — Stage 1D</span>
+      <span class="tag" style="background:#7b1fa2">Output Quality Rules</span>
+    </div>
+    <div class="window-body">
+      <div id="status1d" class="status-bar pending">Pending — signposting, images, defect completion, cluster tone, footer</div>
+      <textarea id="part1d"></textarea>
+      <div class="btn-row">
+        <button class="btn-1d"      id="gen1dbtn"     onclick="runStage1D()">Generate</button>
+        <button class="btn-copy"    onclick="copyText('part1d','status1d','1D copied')">Copy</button>
+        <button class="btn-confirm" id="conf1dbtn"    onclick="markConfirmed('conf1dbtn','pip-1d','status1d','1D pasted to ChatGPT ✔');google.script.run.logPipelineResume('W1D — Pasted to LLM','')" disabled>Pasted to LLM</button>
+      </div>
+    </div>
+  </div>

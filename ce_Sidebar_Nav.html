@@ -1,0 +1,216 @@
+<!-- ══ SINGLE WINDOW NAVIGATOR - ce_Sidebar_Nav.html ══ -->
+<div id="windowNav" style="background:#cfd8dc;padding:6px 10px;position:sticky;top:0;z-index:99;border-bottom:1px solid #b0bec5">
+
+  <!-- ── Prev / Current / Next ── -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <button onclick="navPrev()" style="background:#37474f;color:#fff;border:none;border-radius:3px;padding:3px 10px;font-family:JetBrains Mono,monospace;font-size:11px;cursor:pointer">◀</button>
+    <span id="windowNavLabel" style="font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;color:#1a1a2e;text-align:center;flex:1;padding:0 8px">W-1 — Authority Brief</span>
+    <button onclick="navNext()" style="background:#37474f;color:#fff;border:none;border-radius:3px;padding:3px 10px;font-family:JetBrains Mono,monospace;font-size:11px;cursor:pointer">▶</button>
+  </div>
+
+  <!-- ── Group buttons row ── -->
+  <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:5px">
+    <button id="grpbtn-classify"     onclick="selectGroup('classify')"     style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">CLASSIFY</button>
+    <button id="grpbtn-analysis"     onclick="selectGroup('analysis')"     style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">ANALYSIS</button>
+    <button id="grpbtn-governance"   onclick="selectGroup('governance')"   style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">GOVERNANCE</button>
+    <button id="grpbtn-humanisation" onclick="selectGroup('humanisation')" style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">HUMAN</button>
+    <button id="grpbtn-output"       onclick="selectGroup('output')"       style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">OUTPUT</button>
+    <button id="grpbtn-publish"      onclick="selectGroup('publish')"      style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">PUBLISH</button>
+    <button id="grpbtn-media"        onclick="selectGroup('media')"        style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">MEDIA</button>
+    <button id="grpbtn-refinement"   onclick="selectGroup('refinement')"   style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#6a1b9a;color:#fff;letter-spacing:0.5px">REFINE</button>
+  </div>
+
+  <!-- ── Thread indicator ── -->
+  <div id="threadIndicator" style="font-family:JetBrains Mono,monospace;font-size:11px;margin-bottom:5px;min-height:16px;color:#37474f"></div>
+
+  <!-- ── Stage buttons — shown per group ── -->
+  <div id="stageButtons" style="display:flex;gap:2px;flex-wrap:wrap;min-height:24px">
+    <!-- populated by selectGroup() -->
+  </div>
+
+</div>
+
+<!-- ══ UTILITY BAR ══ -->
+<div style="background:#263238;padding:6px 10px;border-radius:4px;margin-bottom:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+    <span style="color:#90a4ae;font-family:JetBrains Mono,monospace;font-size:11px;font-weight:700;letter-spacing:1px">IMAGE LIBRARY</span>
+    <button class="btn-copy" onclick="loadMaterialList()" style="background:#37474f;color:#cfd8dc;font-size:11px;padding:2px 8px">LOAD MATERIALS</button>
+  </div>
+  <div style="display:flex;gap:4px;align-items:center">
+    <select id="materialPicker" style="font-family:JetBrains Mono,monospace;font-size:11px;background:#37474f;color:#cfd8dc;border:1px solid #546e7a;padding:2px 4px;flex:1;min-width:0">
+      <option value="">— Load Materials first —</option>
+    </select>
+    <button class="btn-copy" id="buildLibBtn" onclick="runBuildImageLibrary()" style="background:#1565c0;color:#fff;font-size:11px;padding:2px 8px;white-space:nowrap" disabled>⬇ BUILD</button>
+  </div>
+  <div id="statusImageLib" style="color:#90a4ae;font-family:JetBrains Mono,monospace;font-size:11px;margin-top:4px"></div>
+</div>
+
+<script>
+  /* ── Group definitions ── */
+  var _groups = {
+    classify: {
+      label:  'ARTICLE CLASSIFICATION',
+      thread: '🔵 Run before Analysis — classifies donor article into governed axes',
+      threadColor: '#1565c0',
+      first:  'pre-ac',
+      stages: [
+        { id: 'pre-ac', label: 'Pre-AC' },
+        { id: 'ac', label: 'AC' }
+      ]
+    },
+    analysis: {
+      label:  'ANALYSIS',
+      thread: '🔵 New thread each stage',
+      threadColor: '#1565c0',
+      first:  0,
+      stages: [
+        { id: 0, label: 'W-1' },
+        { id: 1, label: 'W0'  },
+        { id: 2, label: 'W0B' }
+      ]
+    },
+    governance: {
+      label:  'GOVERNANCE · PLANNING · GENERATION',
+      thread: '🔴 One continuous thread — do not break',
+      threadColor: '#c62828',
+      first:  3,
+      stages: [
+        { id: 3,    label: 'W1A'   },
+        { id: 7,    label: 'W1.5A' },
+        { id: 8,    label: 'W1.5B' },
+        { id: '8gov', label: 'W1.5B.1' },
+        { id: '8a', label: 'W1.5C' },
+        { id: '8b', label: 'W1.5D' },
+        { id: '8c', label: 'W1.5E' },
+        { id: 10,   label: 'W2B'   },
+        { id: '10fact', label: 'W2B.05' },
+        { id: '10sim', label: 'W2B.1' },
+        { id: '10compliance', label: 'W2B.2' },
+        { id: '10coherence', label: 'W2B.3' },
+        { id: '10b', label: 'W2C'  }
+      ]
+    },
+    humanisation: {
+      label:  'HUMANISATION',
+      thread: '🟡 New thread recommended',
+      threadColor: '#f57f17',
+      first:  '10c',
+      stages: [
+        { id: '10c', label: 'W3' }
+      ]
+    },
+    output: {
+      label:  'OUTPUT',
+      thread: '🔵 New thread each stage',
+      threadColor: '#1565c0',
+      first:  11,
+      stages: [
+        { id: 11, label: 'W4B' },
+        { id: 12, label: 'W4'  },
+        { id: 'w4-5', label: 'W4.5' },
+        { id: 13, label: 'W5'  },
+        { id: 14, label: 'W5C' },
+        { id: 15, label: 'W5B' }
+      ]
+    },
+    publish: {
+      label:  'PUBLISH',
+      thread: '🔵 New thread each stage',
+      threadColor: '#1565c0',
+      first:  'run-analysis',
+      stages: [
+        { id: 'run-analysis', label: 'Run Analysis' },
+        { id: 'w8e', label: 'W8E' },
+        { id: 'w8es', label: 'W8E - Sugg' },
+        { id: 16,     label: 'W6' }
+      ]
+    },
+    refinement: {
+      label:  'POST-ANALYSIS REFINEMENT',
+      thread: '🟣 Run after W7 analysis — targeted section correction only',
+      threadColor: '#6a1b9a',
+      first:  'w8par-a',
+      stages: [
+        { id: 'w8par-a', label: 'W8A — Edit Brief'    },
+        { id: 'w8par-m', label: 'W8-M — Media Gap'    },
+        { id: 'w8par-b', label: 'W8B — Rewrite'       },
+        { id: 'w8par-c', label: 'W8C — Humanisation'  },
+        { id: 'w8par-d', label: 'W8D — Analysis'       }
+      ]
+    },
+    media: {
+      label:  'MEDIA',
+      thread: '⚪ Featured Image — image prompt. Check existing video — check for existing videos first. Build NotebookLM doc + video prompt — build doc then generate prompt. Thumbnail — generate thumbnail. Embed — embed video into article.',
+      threadColor: '#546e7a',
+      first:  'fi',
+      stages: [
+        { id: 'fi', label: 'Featured Image'  },
+        { id: 'vm', label: 'Check existing video'  },
+        { id: 17,   label: 'Build NotebookLM doc + video prompt'  },
+        { id: 18,   label: 'Thumbnail'  },
+        { id: 19,   label: 'Embed'  }
+      ]
+    }
+  };
+
+  var _activeGroup = null;
+
+  function selectGroup(groupKey) {
+    var group = _groups[groupKey];
+    if (!group) return;
+    _activeGroup = groupKey;
+
+    /* ── Highlight active group button ── */
+    ['classify','analysis','governance','humanisation','output','publish','media','refinement'].forEach(function(k) {
+      var btn = document.getElementById('grpbtn-' + k);
+      if (btn) btn.style.background = (k === groupKey) ? '#1565c0' : '#546e7a';
+    });
+
+    /* ── Thread indicator ── */
+    var ind = document.getElementById('threadIndicator');
+    if (ind) { ind.textContent = group.thread; ind.style.color = group.threadColor; }
+
+    /* ── Render stage buttons ── */
+    var container = document.getElementById('stageButtons');
+    container.innerHTML = '';
+    group.stages.forEach(function(stage) {
+      var btn = document.createElement('button');
+      btn.id = 'navbtn-' + stage.id;
+      btn.textContent = stage.label;
+      btn.style.cssText = 'background:#546e7a;color:#ffffff;border:none;border-radius:2px;' +
+                          'padding:2px 5px;font-family:JetBrains Mono,monospace;' +
+                          'font-size:11px;cursor:pointer;font-weight:700;' +
+                          'box-shadow:0 2px 0 rgba(0,0,0,0.2)';
+      btn.onclick = (function(id) { return function() { navGoTo(id); }; })(stage.id);
+      container.appendChild(btn);
+    });
+
+    /* ── Navigate to first stage in group ── */
+    navGoTo(group.first);
+    highlightActiveStageBtn(group.first);
+  }
+
+  function highlightActiveStageBtn(idx) {
+    if (!_activeGroup) return;
+    var group = _groups[_activeGroup];
+    if (!group) return;
+    group.stages.forEach(function(stage) {
+      var btn = document.getElementById('navbtn-' + stage.id);
+      if (btn) btn.style.background = (String(stage.id) === String(idx)) ? '#1565c0' : '#546e7a';
+    });
+  }
+
+  /* ── Patch navGoTo to keep stage highlight in sync ── */
+  document.addEventListener('DOMContentLoaded', function() {
+    var _origNavGoTo = window.navGoTo;
+    if (typeof _origNavGoTo === 'function') {
+      window.navGoTo = function(idx) {
+        _origNavGoTo(idx);
+        highlightActiveStageBtn(idx);
+      };
+    }
+    /* Auto-select CLASSIFY on load */
+    selectGroup('classify');
+    navGoTo('ac');
+  });
+</script>

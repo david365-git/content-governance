@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; padding: 12px; }
+      label { display:block; font-weight:600; margin-bottom:6px; }
+      select { width: 100%; padding: 8px; font-size: 13px; }
+      textarea { width: 100%; height: 330px; margin-top: 10px; padding: 10px; font-size: 12px; border: 1px solid #ccc; }
+      button { margin-top: 10px; width: 100%; padding: 10px; font-size: 13px; cursor: pointer; background-color: #f0f0f0; border: 1px solid #999; }
+      button:disabled { cursor: not-allowed; opacity: 0.6; }
+      #status { font-size: 11px; color: #666; margin-top: 4px; height: 14px; }
+    </style>
+  </head>
+  <body>
+    <label for="promptSelect">Choose a prompt</label>
+    <select id="promptSelect">
+      <option value="">-- Select a prompt --</option>
+    </select>
+    <div id="status"></div>
+
+    <textarea id="promptText" readonly placeholder="Select a prompt to see content..."></textarea>
+
+    <button id="copyBtn" disabled>Copy to clipboard and close</button>
+
+    <script>
+      // PROMPTS now only contains {row, name} to keep it under the size limit
+      const PROMPTS = <?!= promptsJson ?>; 
+
+      const sel = document.getElementById('promptSelect');
+      const ta  = document.getElementById('promptText');
+      const btn = document.getElementById('copyBtn');
+      const status = document.getElementById('status');
+
+      // 1. Build the dropdown (Names only)
+      function buildOptions() {
+        PROMPTS.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.row;
+          opt.textContent = p.name;
+          sel.appendChild(opt);
+        });
+      }
+
+      // 2. Fetch full text from server ONLY when chosen
+      function handleSelection() {
+        const row = sel.value;
+        if (!row) {
+          ta.value = '';
+          btn.disabled = true;
+          return;
+        }
+
+        status.textContent = "Loading text...";
+        btn.disabled = true;
+        ta.value = "Fetching from sheet...";
+
+        google.script.run
+          .withSuccessHandler(function(text) {
+            ta.value = text;
+            status.textContent = "";
+            btn.disabled = false;
+          })
+          .withFailureHandler(function(err) {
+            ta.value = "Error: " + err.message;
+            status.textContent = "Failed to load.";
+          })
+          .getPromptTextByRow(row);
+      }
+
+      // 3. Copy and Close logic
+      async function copyAndClose() {
+        const text = ta.value || '';
+        try {
+          // Attempt modern clipboard API
+          await navigator.clipboard.writeText(text);
+          google.script.host.close();
+        } catch (e) {
+          // Fallback for older environments
+          ta.focus();
+          ta.select();
+          document.execCommand('copy');
+          google.script.host.close();
+        }
+      }
+
+      // Initialize
+      buildOptions();
+      sel.addEventListener('change', handleSelection);
+      btn.addEventListener('click', copyAndClose);
+    </script>
+  </body>
+</html>
