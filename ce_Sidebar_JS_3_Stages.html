@@ -4319,65 +4319,187 @@ function copyDeferredFixPrompt() {
       .buildDeferredCheckPrompt(_atomicHtml);
   }
 
-function runGenerateSerpGeminiPrompt() {
-    var btn = document.getElementById('serpGenPromptBtn');
-    btn.disabled = true; btn.innerText = 'Generating…';
-    setStatus('statusSerpNotes', 'running', 'Reading Primary Search Term from row…', true);
+/* ══ W4.5 — Competitor SERP Notes Automated ══ */
 
-    google.script.run
-      .withSuccessHandler(function(res) {
-        btn.disabled = false; btn.innerText = '⚙ Generate Prompt';
-        if (!res.success) {
-          setStatus('statusSerpNotes', 'fail', '❌ ' + res.message);
-          return;
-        }
-        document.getElementById('serpGeminiPrompt').value = res.prompt;
-        setStatus('statusSerpNotes', 'ready', '✔ Prompt ready for "' + res.term + '" — copy and paste into Gemini');
-      })
-      .withFailureHandler(function(err) {
-        btn.disabled = false; btn.innerText = '⚙ Generate Prompt';
-        setStatus('statusSerpNotes', 'fail', '❌ ' + err.message);
-      })
-      .buildCompetitorSerpGeminiPrompt();
+function runCompetitorSerpNotesAutomated() {
+
+  var btn =
+    document.getElementById(
+      'serpNotesAutoBtn'
+    );
+
+  var resultEl =
+    document.getElementById(
+      'serpNotesResult'
+    );
+
+  var startTime =
+    Date.now();
+
+  btn.disabled = true;
+  btn.innerText = 'Running…';
+
+  if (resultEl) {
+    resultEl.style.display = 'none';
+    resultEl.textContent = '';
   }
 
-  /* ══ W4.5 — Competitor SERP Notes ══ */
-  function runSaveCompetitorSerpNotes() {
-    var raw = document.getElementById('serpNotesInput').value.trim();
-    if (!raw) {
-      setStatus('statusSerpNotes', 'fail', '❌ Paste Gemini output first');
-      return;
-    }
-    var btn = document.getElementById('serpNotesSaveBtn');
-    btn.disabled = true; btn.innerText = 'Saving…';
-    setStatus('statusSerpNotes', 'running', 'Building note and saving to sheet…', true);
+  setStatus(
+    'statusSerpNotes',
+    'running',
+    '⏳ W4.5 running grounded Google UK search... 0s',
+    true
+  );
 
-    google.script.run
-      .withSuccessHandler(function(buildRes) {
-        if (!buildRes.success) {
-          btn.disabled = false; btn.innerText = '💾 Build & Save to Sheet';
-          setStatus('statusSerpNotes', 'fail', '❌ ' + buildRes.message);
+
+  var progressTimer =
+    setInterval(
+      function() {
+
+        var elapsed =
+          Math.floor(
+            (
+              Date.now() -
+              startTime
+            ) / 1000
+          );
+
+        setStatus(
+          'statusSerpNotes',
+          'running',
+          '⏳ W4.5 running grounded Google UK search... ' +
+          elapsed +
+          's',
+          true
+        );
+
+      },
+      1000
+    );
+
+
+  google.script.run
+
+    .withSuccessHandler(
+      function(res) {
+
+        clearInterval(
+          progressTimer
+        );
+
+        var elapsedSeconds =
+          Math.floor(
+            (
+              Date.now() -
+              startTime
+            ) / 1000
+          );
+
+        btn.disabled = false;
+
+        btn.innerText =
+          '⚡ Run W4.5 Automated';
+
+
+        if (
+          !res ||
+          !res.success
+        ) {
+
+          var failMessage =
+            res &&
+            res.message
+              ? res.message
+              : 'Unknown W4.5 error';
+
+          setStatus(
+            'statusSerpNotes',
+            'fail',
+            '❌ ' +
+            failMessage +
+            ' — ' +
+            elapsedSeconds +
+            's'
+          );
+
           return;
         }
-        google.script.run
-          .withSuccessHandler(function(pushRes) {
-            btn.disabled = false; btn.innerText = '💾 Build & Save to Sheet';
-            var resultEl = document.getElementById('serpNotesResult');
-            resultEl.style.display = 'block';
-            resultEl.textContent = pushRes.message;
-            setStatus('statusSerpNotes', pushRes.success ? 'done' : 'fail',
-              pushRes.success ? '✔ Saved — proceed to W5' : '❌ ' + pushRes.message);
-          })
-          .withFailureHandler(function(err) {
-            btn.disabled = false; btn.innerText = '💾 Build & Save to Sheet';
-            setStatus('statusSerpNotes', 'fail', '❌ Push failed — ' + err.message);
-          })
-          .pushCompetitorSerpNotesToSheet(buildRes.note);
-      })
-      .withFailureHandler(function(err) {
-        btn.disabled = false; btn.innerText = '💾 Build & Save to Sheet';
-        setStatus('statusSerpNotes', 'fail', '❌ Build failed — ' + err.message);
-      })
-      .buildCompetitorSerpNotes(raw);
-  }
+
+
+        var message =
+          '✔ ' +
+          res.message +
+          ' — ' +
+          elapsedSeconds +
+          's — Cost: $' +
+          Number(
+            res.cost || 0
+          ).toFixed(4);
+
+
+        setStatus(
+          'statusSerpNotes',
+          'done',
+          message
+        );
+
+
+        if (resultEl) {
+
+          resultEl.style.display =
+            'block';
+
+          resultEl.textContent =
+            'Search term: ' +
+            (
+              res.term ||
+              ''
+            ) +
+            '\n' +
+            'Organic results found: ' +
+            Number(
+              res.resultsFound || 0
+            ) +
+            '\n' +
+            'Saved to: Competitor SERP Notes';
+        }
+      }
+    )
+
+
+    .withFailureHandler(
+      function(err) {
+
+        clearInterval(
+          progressTimer
+        );
+
+        var elapsedSeconds =
+          Math.floor(
+            (
+              Date.now() -
+              startTime
+            ) / 1000
+          );
+
+        btn.disabled = false;
+
+        btn.innerText =
+          '⚡ Run W4.5 Automated';
+
+        setStatus(
+          'statusSerpNotes',
+          'fail',
+          '❌ W4.5 failed — ' +
+          err.message +
+          ' — ' +
+          elapsedSeconds +
+          's'
+        );
+      }
+    )
+
+
+    .bc_runCompetitorSerpNotesAutomated();
+}
 </script>

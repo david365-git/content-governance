@@ -93,5 +93,387 @@ function buildCompetitorSerpGeminiPrompt() {
     return { success: true, prompt: prompt, term: term };
   } catch (e) {
     return { success: false, message: "Build error: " + e.toString() };
+ 
+ 
+ function bc_runCompetitorSerpNotesAutomated() {
+  try {
+
+    var startTime = Date.now();
+
+    /*
+     * ---------------------------------------------------------
+     * BUILD SEARCH PROMPT
+     * ---------------------------------------------------------
+     */
+
+    var promptData =
+      buildCompetitorSerpGeminiPrompt();
+
+    if (
+      !promptData ||
+      !promptData.success
+    ) {
+      return {
+        success: false,
+        message:
+          promptData && promptData.message
+            ? promptData.message
+            : "Could not build W4.5 SERP prompt.",
+        cost: 0
+      };
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * RUN GROUNDED GOOGLE SEARCH
+     * ---------------------------------------------------------
+     */
+
+    var apiResult =
+      bc_sendPromptViaGemini(
+        promptData.prompt
+      );
+
+    if (
+      !apiResult ||
+      !apiResult.success
+    ) {
+      return {
+        success: false,
+        message:
+          apiResult && apiResult.message
+            ? apiResult.message
+            : "Gemini grounded search failed.",
+        cost: 0
+      };
+    }
+
+
+    var rawOutput =
+      String(
+        apiResult.text || ""
+      ).trim();
+
+    if (!rawOutput) {
+      return {
+        success: false,
+        message:
+          "Gemini grounded search returned no usable SERP output.",
+        cost: Number(apiResult.cost || 0)
+      };
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * BASIC SERP RESULT VALIDATION
+     * ---------------------------------------------------------
+     */
+
+    var resultLines =
+      rawOutput.match(
+        /^\s*[1-8][.)]\s+.+$/gm
+      ) || [];
+
+    if (resultLines.length < 5) {
+
+      return {
+        success: false,
+        message:
+          "Grounded search returned only " +
+          resultLines.length +
+          " recognisable organic result(s). W4.5 was not saved.",
+        cost: Number(apiResult.cost || 0)
+      };
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * BUILD STORED NOTE
+     * ---------------------------------------------------------
+     */
+
+    var generatedDate =
+      Utilities.formatDate(
+        new Date(),
+        Session.getScriptTimeZone(),
+        "dd/MM/yyyy HH:mm"
+      );
+
+    var note =
+      "Generated: " +
+      generatedDate +
+      "\n" +
+      "Source: Gemini grounded Google Search — automated\n" +
+      "Search term: " +
+      promptData.term +
+      "\n\n" +
+      "RAW COMPETITOR SNAPSHOT:\n" +
+      rawOutput;
+
+
+    /*
+     * ---------------------------------------------------------
+     * SAVE TO COMPETITOR SERP NOTES
+     * ---------------------------------------------------------
+     */
+
+    var pushResult =
+      pushCompetitorSerpNotesToSheet(
+        note
+      );
+
+    if (
+      !pushResult ||
+      !pushResult.success
+    ) {
+
+      return {
+        success: false,
+        message:
+          pushResult && pushResult.message
+            ? pushResult.message
+            : "Could not save Competitor SERP Notes.",
+        cost: Number(apiResult.cost || 0)
+      };
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * RECORD COST / TIME
+     * ---------------------------------------------------------
+     */
+
+    if (
+      typeof bc_addToApiCostAndTime ===
+      "function"
+    ) {
+
+      bc_addToApiCostAndTime(
+        Number(apiResult.cost || 0),
+        (
+          Date.now() -
+          startTime
+        ) / 1000
+      );
+    }
+
+
+    return {
+      success: true,
+      message:
+        "W4.5 complete — grounded competitor SERP notes saved for \"" +
+        promptData.term +
+        "\".",
+      term: promptData.term,
+      resultsFound: resultLines.length,
+      cost: Number(apiResult.cost || 0)
+    };
+
+
+  } catch (e) {
+
+    return {
+      success: false,
+      message:
+        "W4.5 automation error: " +
+        e.toString(),
+      cost: 0
+    };
+  }
+} }
+}
+
+function bc_runCompetitorSerpNotesAutomated() {
+  try {
+
+    var startTime = Date.now();
+
+    /*
+     * ---------------------------------------------------------
+     * BUILD SEARCH PROMPT
+     * ---------------------------------------------------------
+     */
+
+    var promptData =
+      buildCompetitorSerpGeminiPrompt();
+
+    if (
+      !promptData ||
+      !promptData.success
+    ) {
+      return {
+        success: false,
+        message:
+          promptData && promptData.message
+            ? promptData.message
+            : "Could not build W4.5 SERP prompt.",
+        cost: 0
+      };
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * RUN GROUNDED GOOGLE SEARCH
+     * ---------------------------------------------------------
+     */
+
+    var apiResult =
+      bc_sendPromptViaGemini(
+        promptData.prompt
+      );
+
+    if (
+      !apiResult ||
+      !apiResult.success
+    ) {
+      return {
+        success: false,
+        message:
+          apiResult && apiResult.message
+            ? apiResult.message
+            : "Gemini grounded search failed.",
+        cost: 0
+      };
+    }
+
+
+    var rawOutput =
+      String(
+        apiResult.text || ""
+      ).trim();
+
+    if (!rawOutput) {
+      return {
+        success: false,
+        message:
+          "Gemini grounded search returned no usable SERP output.",
+        cost: Number(apiResult.cost || 0)
+      };
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * BASIC SERP RESULT VALIDATION
+     * ---------------------------------------------------------
+     */
+
+    var resultLines =
+      rawOutput.match(
+        /^\s*[1-8][.)]\s+.+$/gm
+      ) || [];
+
+    if (resultLines.length < 5) {
+
+      return {
+        success: false,
+        message:
+          "Grounded search returned only " +
+          resultLines.length +
+          " recognisable organic result(s). W4.5 was not saved.",
+        cost: Number(apiResult.cost || 0)
+      };
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * BUILD STORED NOTE
+     * ---------------------------------------------------------
+     */
+
+    var generatedDate =
+      Utilities.formatDate(
+        new Date(),
+        Session.getScriptTimeZone(),
+        "dd/MM/yyyy HH:mm"
+      );
+
+    var note =
+      "Generated: " +
+      generatedDate +
+      "\n" +
+      "Source: Gemini grounded Google Search — automated\n" +
+      "Search term: " +
+      promptData.term +
+      "\n\n" +
+      "RAW COMPETITOR SNAPSHOT:\n" +
+      rawOutput;
+
+
+    /*
+     * ---------------------------------------------------------
+     * SAVE TO COMPETITOR SERP NOTES
+     * ---------------------------------------------------------
+     */
+
+    var pushResult =
+      pushCompetitorSerpNotesToSheet(
+        note
+      );
+
+    if (
+      !pushResult ||
+      !pushResult.success
+    ) {
+
+      return {
+        success: false,
+        message:
+          pushResult && pushResult.message
+            ? pushResult.message
+            : "Could not save Competitor SERP Notes.",
+        cost: Number(apiResult.cost || 0)
+      };
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * RECORD COST / TIME
+     * ---------------------------------------------------------
+     */
+
+    if (
+      typeof bc_addToApiCostAndTime ===
+      "function"
+    ) {
+
+      bc_addToApiCostAndTime(
+        Number(apiResult.cost || 0),
+        (
+          Date.now() -
+          startTime
+        ) / 1000
+      );
+    }
+
+
+    return {
+      success: true,
+      message:
+        "W4.5 complete — grounded competitor SERP notes saved for \"" +
+        promptData.term +
+        "\".",
+      term: promptData.term,
+      resultsFound: resultLines.length,
+      cost: Number(apiResult.cost || 0)
+    };
+
+
+  } catch (e) {
+
+    return {
+      success: false,
+      message:
+        "W4.5 automation error: " +
+        e.toString(),
+      cost: 0
+    };
   }
 }
