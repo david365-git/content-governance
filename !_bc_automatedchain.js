@@ -4356,17 +4356,21 @@ function bc_buildDeferredFixPromptServer_(html, result) {
     );
 
     var defectTerms = [
-      'delamination',
-      'sealer failure',
-      'efflorescence',
-      'filler collapse',
-      'colour loss',
-      'grout haze',
-      'lippage',
-      'spalling',
-      'micro-scratching',
-      'residue lock-in'
-    ];
+    'delamination',
+    'sealer failure',
+    'efflorescence',
+    'filler collapse',
+    'colour loss',
+    'grout haze',
+    'lippage',
+    'spalling',
+    'micro-scratching',
+    'residue lock-in',
+    'adhesive failure',
+    'debonded substrate',
+    'glaze crazing',
+    'water ingress'
+  ];
 
     var paragraphs =
       html.match(
@@ -4500,9 +4504,9 @@ function bc_runW4Automated() {
     exceptionCount++;
 
     bc_appendGovernancePipelineException(
-    label + ' [' + w4RunStamp + ']',
-    message || 'Unresolved W4 issue.'
-  );
+      label + ' [' + w4RunStamp + ']',
+      message || 'Unresolved W4 issue.'
+    );
 
     log.push(
       label + ' recorded in GJ.'
@@ -4600,6 +4604,39 @@ function bc_runW4Automated() {
   }
 
 
+  function buildCheck7OnlyRecheckPrompt(html) {
+
+    return [
+      'CHECK 7 ONLY — NAMED DEFECT COMPLETION',
+      '',
+      'ROLE: Senior UK SEO & Editorial Quality Auditor',
+      '',
+      'TASK:',
+      'Check only whether every named technical defect is explained to completion before the next paragraph.',
+      '',
+      'Each named defect must contain:',
+      'ELEMENT 1 — what the defect is physically.',
+      'ELEMENT 2 — what the homeowner sees or notices.',
+      'ELEMENT 3 — what professional correction does about it.',
+      '',
+      'Named defects include:',
+      'delamination, sealer failure, efflorescence, filler collapse, colour loss, grout haze, lippage, spalling, micro-scratching, residue lock-in.',
+      '',
+      'Do not assess section opening tone.',
+      'Do not assess cluster tone.',
+      'Do not assess links.',
+      'Do not assess any other editorial rule.',
+      '',
+      'ARTICLE HTML:',
+      html,
+      '',
+      'RETURN EXACTLY:',
+      'CHECK 7: PASS|FAIL',
+      'OBSERVATION 7: [one sentence — name any incomplete defect]'
+    ].join('\n');
+  }
+
+
   /*
    * =========================================================
    * STEP 1 — LOAD CZ
@@ -4647,10 +4684,6 @@ function bc_runW4Automated() {
     audit.failures.forEach(
       function(f) {
 
-        /*
-         * Governed lateral links are not invented by W4.
-         */
-
         if (
           isGovernedLateralLinkFailure(f)
         ) {
@@ -4696,10 +4729,6 @@ function bc_runW4Automated() {
       }
     );
 
-
-    /*
-     * Safe JSON mechanical correction.
-     */
 
     if (remaining.length > 0) {
 
@@ -4761,10 +4790,6 @@ function bc_runW4Automated() {
       }
     }
 
-
-    /*
-     * Final mechanical recheck.
-     */
 
     var mechanicalRecheck =
       runAtomicAuditWithContext(
@@ -4898,8 +4923,8 @@ function bc_runW4Automated() {
 
 
     /*
-     * Checks 1, 5, 7 and 8 are now LOCKED.
-     * We do not ask the model to judge them again.
+     * Checks 1, 5 and 8 remain locked.
+     * Check 7 now receives its own targeted repair below.
      */
 
     var lockedFailures = [];
@@ -4923,15 +4948,6 @@ function bc_runW4Automated() {
     }
 
     if (
-      deferredResult.check7 === 'FAIL'
-    ) {
-      lockedFailures.push(
-        'CHECK 7: ' +
-        deferredResult.obs7
-      );
-    }
-
-    if (
       deferredResult.check8 === 'FAIL'
     ) {
       lockedFailures.push(
@@ -4948,6 +4964,161 @@ function bc_runW4Automated() {
       recordW4Exception(
         'W4 — Deferred Checks',
         lockedFailures.join('\n')
+      );
+    }
+
+
+    /*
+     * =======================================================
+     * CHECK 7 ONLY — TARGETED DEFECT COMPLETION REPAIR
+     * =======================================================
+     */
+
+    if (
+      deferredResult.check7 === 'FAIL'
+    ) {
+
+      var check7OnlyResult = {
+        check1: 'PASS',
+        obs1: '',
+        check4: 'PASS',
+        obs4: '',
+        check5: 'PASS',
+        obs5: '',
+        check7: 'FAIL',
+        obs7: deferredResult.obs7,
+        check8: 'PASS',
+        obs8: ''
+      };
+
+
+      var check7FixPrompt =
+        bc_buildDeferredFixPromptServer_(
+          html,
+          check7OnlyResult
+        );
+
+
+      var check7FixApi =
+        bc_sendPromptViaOpenAI(
+          check7FixPrompt,
+          2200
+        );
+
+
+      if (
+        check7FixApi &&
+        check7FixApi.success
+      ) {
+
+        totalCost +=
+          check7FixApi.cost || 0;
+
+
+        var check7Apply =
+          applyBatchAtomicFix(
+            html,
+            check7FixApi.text
+          );
+
+
+        if (
+          check7Apply &&
+          check7Apply.success
+        ) {
+
+          html =
+            check7Apply.patchedHtml;
+
+          log.push(
+            'Check 7 JSON patch applied.'
+          );
+
+
+          var check7RecheckPrompt =
+            buildCheck7OnlyRecheckPrompt(
+              html
+            );
+
+
+          var check7RecheckApi =
+            bc_sendPromptViaOpenAI(
+              check7RecheckPrompt,
+              700
+            );
+
+
+          if (
+            check7RecheckApi &&
+            check7RecheckApi.success
+          ) {
+
+            totalCost +=
+              check7RecheckApi.cost || 0;
+
+
+            var check7Text =
+              String(
+                check7RecheckApi.text || ''
+              );
+
+
+            var check7Match =
+              check7Text.match(
+                /CHECK 7:\s*(PASS|FAIL)/i
+              );
+
+
+            if (
+              !check7Match ||
+              check7Match[1]
+                .toUpperCase() !==
+                'PASS'
+            ) {
+
+              recordW4Exception(
+                'W4 — Deferred Check 7',
+                check7Text ||
+                'Named-defect check remains unresolved.'
+              );
+
+            } else {
+
+              log.push(
+                'Check 7 passed after targeted correction.'
+              );
+            }
+
+          } else {
+
+            recordW4Exception(
+              'W4 — Deferred Check 7',
+              'Check 7 recheck could not be completed.'
+            );
+          }
+
+        } else {
+
+          recordW4Exception(
+            'W4 — Deferred Check 7',
+            deferredResult.obs7 ||
+            'Check 7 correction could not be applied safely.'
+          );
+        }
+
+      } else {
+
+        recordW4Exception(
+          'W4 — Deferred Check 7',
+          deferredResult.obs7 ||
+          'Check 7 correction API call failed.'
+        );
+      }
+
+    } else {
+
+      log.push(
+        'Check 7 passed first time.'
       );
     }
 
@@ -5018,12 +5189,6 @@ function bc_runW4Automated() {
             'Check 4 JSON patches applied.'
           );
 
-
-          /*
-           * -----------------------------------------------
-           * SMALL CHECK-4-ONLY RECHECK
-           * -----------------------------------------------
-           */
 
           var check4RecheckPrompt =
             buildCheck4OnlyRecheckPrompt(
