@@ -41,6 +41,34 @@ function runAtomicAuditWithContext(html) {
   }
 }
 
+function atomicHasRealLateralLink(html, hubUrl) {
+
+  function normaliseUrl(url) {
+    return String(url || "")
+      .trim()
+      .replace(/^https?:\/\/(?:www\.)?/i, "")
+      .replace(/[?#].*$/, "")
+      .replace(/\/+$/, "")
+      .toLowerCase();
+  }
+
+  var hubNorm = normaliseUrl(hubUrl);
+
+  var links = [];
+  var re =
+    /href=["'](https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk[^"']*)["']/gi;
+
+  var match;
+
+  while ((match = re.exec(String(html || ""))) !== null) {
+    links.push(match[1]);
+  }
+
+  return links.some(function(link) {
+    return normaliseUrl(link) !== hubNorm;
+  });
+}
+
 function buildAtomicFailure(failLine, html, hubUrl, articleType) {
   var failure = {
     checkId:     '',
@@ -203,7 +231,12 @@ function buildAtomicFailure(failLine, html, hubUrl, articleType) {
   }
 
   // ── CHECK 2 — Lateral internal link ──
-  if (failLine.indexOf('CHECK 2') > -1 && failLine.indexOf('No lateral internal link found') > -1) {
+    if (failLine.indexOf('CHECK 2') > -1 && failLine.indexOf('No lateral internal link found') > -1) {
+
+    if (atomicHasRealLateralLink(html, hubUrl)) {
+      return null;
+    }
+
     failure.checkId = '2-lateral';
     var targetSection = null;
     var maxSectionNum = -1;

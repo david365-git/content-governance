@@ -1168,32 +1168,137 @@ function setLocalStatus(elementId, message, isError) {
   var _atomicTotal     = 0;
 
   function runW4Automated() {
-    var btn = document.getElementById('autoW4Btn');
-    var statusDiv = document.getElementById('autoW4Status');
-    btn.disabled = true;
-    btn.innerText = 'Running… (this may take a while)';
-    statusDiv.innerText = 'Running mechanical audit, fixes, and deferred checks…';
-    statusDiv.style.color = '';
 
-    google.script.run
-      .withSuccessHandler(function(res) {
-        btn.disabled = false;
-        btn.innerText = '⚡ Run W4 Automated';
-        if (res.success) {
-          statusDiv.innerText = '✔ ' + res.message + ' — Cost: $' + res.cost.toFixed(4);
-        } else {
-          statusDiv.innerText = '❌ ' + res.message + ' — Cost: $' + res.cost.toFixed(4);
-          statusDiv.style.color = '#c62828';
-        }
-      })
-      .withFailureHandler(function(err) {
-        btn.disabled = false;
-        btn.innerText = '⚡ Run W4 Automated';
-        statusDiv.innerText = '❌ ' + err.message;
-        statusDiv.style.color = '#c62828';
-      })
-      .bc_runW4Automated();
+  var btn =
+    document.getElementById(
+      'autoW4Btn'
+    );
+
+  var statusDiv =
+    document.getElementById(
+      'autoW4Status'
+    );
+
+  btn.disabled = true;
+
+  btn.innerText =
+    'Running…';
+
+  statusDiv.style.color =
+    '';
+
+  var startTime =
+    Date.now();
+
+
+  function formatElapsed() {
+
+    var seconds =
+      Math.floor(
+        (
+          Date.now() -
+          startTime
+        ) / 1000
+      );
+
+    var mins =
+      Math.floor(
+        seconds / 60
+      );
+
+    var secs =
+      seconds % 60;
+
+    return (
+      String(mins).padStart(2, '0') +
+      ':' +
+      String(secs).padStart(2, '0')
+    );
   }
+
+
+  function updateRunningStatus() {
+
+    statusDiv.innerText =
+      'Running W4 validation and safe JSON fixes… ' +
+      formatElapsed();
+  }
+
+
+  updateRunningStatus();
+
+  var timer =
+    setInterval(
+      updateRunningStatus,
+      1000
+    );
+
+
+  google.script.run
+
+    .withSuccessHandler(
+      function(res) {
+
+        clearInterval(timer);
+
+        btn.disabled = false;
+
+        btn.innerText =
+          '⚡ Run W4 — Read CZ and Save Final HTML to CT';
+
+        if (res.success) {
+
+          statusDiv.innerText =
+            '✔ ' +
+            res.message +
+            ' — ' +
+            formatElapsed() +
+            ' — Cost: $' +
+            Number(
+              res.cost || 0
+            ).toFixed(4);
+
+        } else {
+
+          statusDiv.innerText =
+            '❌ ' +
+            res.message +
+            ' — ' +
+            formatElapsed() +
+            ' — Cost: $' +
+            Number(
+              res.cost || 0
+            ).toFixed(4);
+
+          statusDiv.style.color =
+            '#c62828';
+        }
+      }
+    )
+
+    .withFailureHandler(
+      function(err) {
+
+        clearInterval(timer);
+
+        btn.disabled = false;
+
+        btn.innerText =
+          '⚡ Run W4 — Read CZ and Save Final HTML to CT';
+
+        statusDiv.innerText =
+          '❌ ' +
+          err.message +
+          ' — ' +
+          formatElapsed();
+
+        statusDiv.style.color =
+          '#c62828';
+      }
+    )
+
+    .bc_runW4Automated();
+}
 
   function auditThenPushHTML() {
     var html = document.getElementById('finalHtmlPreview').value;

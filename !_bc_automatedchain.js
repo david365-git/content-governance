@@ -4137,7 +4137,8 @@ function bc_runW2CPlanningAutomated() {
 
 function bc_runStage3Automated() {
   var startTime = Date.now();
-  var htmlResult = getW2BHtmlFromSheet();
+
+  var htmlResult = getW2CFinalHtmlFromSheet();
   if (!htmlResult.success) throw new Error(htmlResult.message);
 
   var promptData = buildHumanisationPrompt(htmlResult.html);
@@ -4149,8 +4150,16 @@ function bc_runStage3Automated() {
   var saveResult = saveHumanisedHtml(apiResult.text);
   if (!saveResult.success) throw new Error(saveResult.message);
 
-  bc_addToApiCostAndTime(apiResult.cost, (Date.now() - startTime) / 1000);
-  return { success: true, message: saveResult.message, cost: apiResult.cost };
+  bc_addToApiCostAndTime(
+    apiResult.cost,
+    (Date.now() - startTime) / 1000
+  );
+
+  return {
+    success: true,
+    message: 'W3 humanisation complete — result saved to Column CZ.',
+    cost: apiResult.cost
+  };
 }
 
 function bc_runW4BAutomated() {
@@ -4215,158 +4224,961 @@ function bc_runW4BAutomated() {
 }
 
 function bc_buildDeferredFixPromptServer_(html, result) {
-  var failureLines = [];
-  if (result.check1 === 'FAIL') failureLines.push('CHECK 1 (Cluster tone): ' + result.obs1);
-  if (result.check4 === 'FAIL') failureLines.push('CHECK 4 (Section opening tone): ' + result.obs4);
-  if (result.check5 === 'FAIL') failureLines.push('CHECK 5 (Header cluster tone): ' + result.obs5);
-  if (result.check7 === 'FAIL') failureLines.push('CHECK 7 (Named defect completion): ' + result.obs7);
 
-  return 'Read the following and respond as instructed:\n\n' +
-    'DEFERRED CHECK FIX — TARGETED SECTION CORRECTIONS\n\n' +
-    'ROLE: Senior UK SEO content editor for a natural stone floor restoration website.\n\n' +
-    'TASK: Fix only the sections identified in the failures below. Return the complete HTML with only those sections corrected. Do not reword, restructure or improve any other section.\n\n' +
-    'CRITICAL RULES:\n' +
-    '1. Return complete HTML only — no markdown, no explanation, no preamble.\n' +
-    '2. Do not change any section not named in the failures.\n' +
-    '3. Do not change images, figures, captions, links, schema, header, footer or bio box.\n' +
-    '4. Each section opening sentence must orient the reader to their visible problem before introducing mechanism or technical terms.\n' +
-    '5. Named defects must be complete — three mandatory elements in the same paragraph before the next paragraph begins:\n' +
-    '   ELEMENT 1 (definition): One sentence stating what the defect is as a physical mechanism.\n' +
-    '   ELEMENT 2 (symptom): One sentence stating what the homeowner sees or notices.\n' +
-    '   ELEMENT 3 (correction): One sentence stating what professional intervention does about it.\n' +
-    '   A defect named without all three elements present is incomplete.\n\n' +
-    'FAILURES TO FIX:\n' + failureLines.join('\n') + '\n\n' +
-    'ARTICLE HTML:\n' + html;
+  var failures = [];
+  var fragments = [];
+
+
+  /*
+   * ---------------------------------------------------------
+   * HEADER
+   * Needed only for cluster/header failures.
+   * ---------------------------------------------------------
+   */
+
+  if (
+    result.check1 === 'FAIL' ||
+    result.check5 === 'FAIL'
+  ) {
+
+    var headerMatch =
+      html.match(
+        /<header[^>]*>[\s\S]*?<\/header>/i
+      );
+
+    if (headerMatch) {
+
+      fragments.push(
+        'FRAGMENT TYPE: HEADER\n' +
+        headerMatch[0]
+      );
+    }
+  }
+
+
+  if (result.check1 === 'FAIL') {
+    failures.push(
+      'CHECK 1 — Cluster tone: ' +
+      result.obs1
+    );
+  }
+
+  if (result.check5 === 'FAIL') {
+    failures.push(
+      'CHECK 5 — Header cluster tone: ' +
+      result.obs5
+    );
+  }
+
+
+  /*
+   * ---------------------------------------------------------
+   * SECTION OPENERS
+   * Only send the first paragraph of affected sections.
+   * ---------------------------------------------------------
+   */
+
+  if (result.check4 === 'FAIL') {
+
+    failures.push(
+      'CHECK 4 — Section opening tone: ' +
+      result.obs4
+    );
+
+    var sectionIds =
+      String(result.obs4 || '')
+        .match(/section-\d+/gi) || [];
+
+    var seenSections = {};
+
+    sectionIds.forEach(function(sectionId) {
+
+      sectionId =
+        sectionId.toLowerCase();
+
+      if (seenSections[sectionId]) {
+        return;
+      }
+
+      seenSections[sectionId] = true;
+
+      var sectionRegex =
+        new RegExp(
+          '<section[^>]*id=["\']' +
+          sectionId +
+          '["\'][^>]*>[\\s\\S]*?<\\/section>',
+          'i'
+        );
+
+      var sectionMatch =
+        html.match(sectionRegex);
+
+      if (!sectionMatch) {
+        return;
+      }
+
+      var h2Match =
+        sectionMatch[0].match(
+          /<h2[^>]*>[\s\S]*?<\/h2>/i
+        );
+
+      var pMatch =
+        sectionMatch[0].match(
+          /<p[^>]*>[\s\S]*?<\/p>/i
+        );
+
+      if (pMatch) {
+
+        fragments.push(
+          'FRAGMENT TYPE: SECTION OPENER — ' +
+          sectionId +
+          '\n' +
+          (h2Match ? h2Match[0] + '\n' : '') +
+          pMatch[0]
+        );
+      }
+    });
+  }
+
+
+  /*
+   * ---------------------------------------------------------
+   * NAMED DEFECT PARAGRAPHS
+   * Only send paragraphs containing relevant defect terms.
+   * ---------------------------------------------------------
+   */
+
+  if (result.check7 === 'FAIL') {
+
+    failures.push(
+      'CHECK 7 — Named defect completion: ' +
+      result.obs7
+    );
+
+    var defectTerms = [
+      'delamination',
+      'sealer failure',
+      'efflorescence',
+      'filler collapse',
+      'colour loss',
+      'grout haze',
+      'lippage',
+      'spalling',
+      'micro-scratching',
+      'residue lock-in'
+    ];
+
+    var paragraphs =
+      html.match(
+        /<p[^>]*>[\s\S]*?<\/p>/gi
+      ) || [];
+
+    paragraphs.forEach(function(p) {
+
+      var plain =
+        p.replace(/<[^>]+>/g, ' ')
+         .toLowerCase();
+
+      var relevant =
+        defectTerms.some(function(term) {
+          return plain.indexOf(term) !== -1;
+        });
+
+      if (relevant) {
+
+        fragments.push(
+          'FRAGMENT TYPE: DEFECT PARAGRAPH\n' +
+          p
+        );
+      }
+    });
+  }
+
+
+  /*
+   * ---------------------------------------------------------
+   * ENTITY-DUMP CHECK
+   * Only send suspicious comma-heavy paragraphs.
+   * ---------------------------------------------------------
+   */
+
+  if (result.check8 === 'FAIL') {
+
+    failures.push(
+      'CHECK 8 — Entity dump/comma-list prose: ' +
+      result.obs8
+    );
+
+    var dumpParagraphs =
+      html.match(
+        /<p[^>]*>[\s\S]*?<\/p>/gi
+      ) || [];
+
+    dumpParagraphs.forEach(function(p) {
+
+      var plain =
+        p.replace(/<[^>]+>/g, ' ');
+
+      var commaCount =
+        (plain.match(/,/g) || []).length;
+
+      if (commaCount >= 4) {
+
+        fragments.push(
+          'FRAGMENT TYPE: COMMA-HEAVY PARAGRAPH\n' +
+          p
+        );
+      }
+    });
+  }
+
+
+  /*
+   * ---------------------------------------------------------
+   * DEDUPLICATE
+   * ---------------------------------------------------------
+   */
+
+  fragments =
+    fragments.filter(
+      function(value, index, array) {
+        return array.indexOf(value) === index;
+      }
+    );
+
+
+  return [
+    'DEFERRED CHECK FIX — TARGETED FRAGMENT CORRECTION',
+    '',
+    'ROLE: Senior UK SEO content editor for a natural stone floor restoration website.',
+    '',
+    'TASK:',
+    'Correct ONLY the supplied HTML fragments needed to resolve the failures.',
+    'Do NOT return the complete article.',
+    '',
+    'RETURN ONLY A JSON ARRAY.',
+    '',
+    'FORMAT:',
+    '[{"checkId":"4","old":"EXACT ORIGINAL HTML","new":"CORRECTED HTML"}]',
+    '',
+    'RULES:',
+    '- "old" MUST be copied exactly from the supplied fragment.',
+    '- "new" must contain only the corrected replacement for that exact fragment.',
+    '- Preserve HTML tags.',
+    '- Preserve links.',
+    '- Preserve figures and images.',
+    '- Do not introduce new facts.',
+    '- Do not rewrite unaffected material.',
+    '- Do not return markdown.',
+    '- Do not return explanations.',
+    '',
+    'FAILURES:',
+    failures.join('\n'),
+    '',
+    'TARGET FRAGMENTS:',
+    fragments.join('\n\n---\n\n')
+  ].join('\n');
 }
 
 function bc_runW4Automated() {
+
   var startTime = Date.now();
   var totalCost = 0;
   var log = [];
+  var exceptionCount = 0;
 
-  var html = getHtmlFromActiveRow();
-  if (!html || html.indexOf('ERROR') === 0) throw new Error(html || 'No HTML found.');
+  var w4RunStamp =
+    Utilities.formatDate(
+      new Date(),
+      Session.getScriptTimeZone(),
+      'yyyy-MM-dd HH:mm:ss'
+    );
 
-  var audit = runAtomicAuditWithContext(html);
-  if (audit.error) throw new Error(audit.error);
 
-  if (!audit.allPass) {
+  function recordW4Exception(label, message) {
+
+    exceptionCount++;
+
+    bc_appendGovernancePipelineException(
+    label + ' [' + w4RunStamp + ']',
+    message || 'Unresolved W4 issue.'
+  );
+
+    log.push(
+      label + ' recorded in GJ.'
+    );
+  }
+
+
+  function isGovernedLateralLinkFailure(failure) {
+
+    if (!failure) return false;
+
+    var checkId =
+      String(
+        failure.checkId || ''
+      ).toLowerCase();
+
+    var description =
+      String(
+        failure.description || ''
+      ).toLowerCase();
+
+    return (
+      checkId === '2-lateral' ||
+      (
+        checkId === '2' &&
+        description.indexOf(
+          'lateral'
+        ) !== -1
+      )
+    );
+  }
+
+
+  function buildCheck4OnlyRecheckPrompt(html) {
+
+    var sectionOpeners = [];
+    var secRe =
+      /<section[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/section>/gi;
+
+    var sm;
+
+    while (
+      (sm = secRe.exec(html)) !== null
+    ) {
+
+      var h2m =
+        sm[2].match(
+          /<h2[^>]*>([\s\S]*?)<\/h2>/i
+        );
+
+      var pm =
+        sm[2].match(
+          /<p[^>]*>([\s\S]*?)<\/p>/i
+        );
+
+      if (h2m && pm) {
+
+        sectionOpeners.push(
+          'Section "' +
+          sm[1] +
+          '" — H2: "' +
+          h2m[1]
+            .replace(/<[^>]+>/g, '')
+            .trim() +
+          '"\nOpening: "' +
+          pm[1]
+            .replace(/<[^>]+>/g, '')
+            .trim() +
+          '"'
+        );
+      }
+    }
+
+
+    return [
+      'CHECK 4 ONLY — SECTION OPENING TONE',
+      '',
+      'ROLE: Senior UK SEO & Editorial Quality Auditor',
+      '',
+      'TASK:',
+      'Check only whether each section opening sentence orients the reader to their visible problem before introducing mechanism, company, entity or process.',
+      '',
+      'Do not assess cluster tone.',
+      'Do not assess the header.',
+      'Do not assess named defects.',
+      'Do not assess any other editorial rule.',
+      '',
+      'SECTION OPENERS:',
+      sectionOpeners.join('\n\n'),
+      '',
+      'RETURN EXACTLY:',
+      'CHECK 4: PASS|FAIL',
+      'OBSERVATION 4: [one sentence — name failing section ids if any]'
+    ].join('\n');
+  }
+
+
+  /*
+   * =========================================================
+   * STEP 1 — LOAD CZ
+   * =========================================================
+   */
+
+  var html =
+    getHtmlFromActiveRow();
+
+  if (
+    !html ||
+    html.indexOf('ERROR') === 0
+  ) {
+
+    throw new Error(
+      html ||
+      'No HTML found in CZ.'
+    );
+  }
+
+
+  /*
+   * =========================================================
+   * STEP 2 — MECHANICAL AUDIT
+   * =========================================================
+   */
+
+  var audit =
+    runAtomicAuditWithContext(
+      html
+    );
+
+  if (audit.error) {
+
+    recordW4Exception(
+      'W4 — Mechanical Audit',
+      audit.error
+    );
+
+  } else if (!audit.allPass) {
+
     var remaining = [];
-    audit.failures.forEach(function(f) {
-      if (f.canAutoFix) {
-        var fixRes = applyAutoFix(html, f.checkId);
-        if (fixRes.success) {
-          html = fixRes.patchedHtml;
-          log.push('Auto-fixed CHECK ' + f.checkId);
+
+
+    audit.failures.forEach(
+      function(f) {
+
+        /*
+         * Governed lateral links are not invented by W4.
+         */
+
+        if (
+          isGovernedLateralLinkFailure(f)
+        ) {
+
+          log.push(
+            'Governed lateral-link issue deferred to Final Exception Check.'
+          );
+
+          return;
+        }
+
+
+        if (f.canAutoFix) {
+
+          var fixRes =
+            applyAutoFix(
+              html,
+              f.checkId
+            );
+
+          if (
+            fixRes &&
+            fixRes.success
+          ) {
+
+            html =
+              fixRes.patchedHtml;
+
+            log.push(
+              'Auto-fixed CHECK ' +
+              f.checkId
+            );
+
+          } else {
+
+            remaining.push(f);
+          }
+
         } else {
+
           remaining.push(f);
         }
-      } else {
-        remaining.push(f);
       }
-    });
+    );
+
+
+    /*
+     * Safe JSON mechanical correction.
+     */
 
     if (remaining.length > 0) {
-      var batchPrompt = buildBatchAtomicFixPrompt(remaining);
-      if (!batchPrompt.success) throw new Error(batchPrompt.message);
 
-      var batchApiResult = bc_sendPromptViaOpenAI(batchPrompt.prompt, 6000);
-      if (!batchApiResult.success) throw new Error(batchApiResult.message);
-      totalCost += batchApiResult.cost;
+      var batchPrompt =
+        buildBatchAtomicFixPrompt(
+          remaining
+        );
 
-      var batchApply = applyBatchAtomicFix(html, batchApiResult.text);
-      if (!batchApply.success) throw new Error('Batch fix failed: ' + batchApply.message);
-      html = batchApply.patchedHtml;
-      log.push('Batch fix: ' + batchApply.message);
+      if (
+        batchPrompt &&
+        batchPrompt.success
+      ) {
+
+        var batchApiResult =
+          bc_sendPromptViaOpenAI(
+            batchPrompt.prompt,
+            3500
+          );
+
+        if (
+          batchApiResult &&
+          batchApiResult.success
+        ) {
+
+          totalCost +=
+            batchApiResult.cost || 0;
+
+          var batchApply =
+            applyBatchAtomicFix(
+              html,
+              batchApiResult.text
+            );
+
+          if (
+            batchApply &&
+            batchApply.success
+          ) {
+
+            html =
+              batchApply.patchedHtml;
+
+            log.push(
+              'Mechanical JSON patches applied.'
+            );
+
+          } else {
+
+            log.push(
+              'Mechanical JSON patch could not be applied safely.'
+            );
+          }
+
+        } else {
+
+          log.push(
+            'Mechanical correction API call did not complete.'
+          );
+        }
+      }
     }
 
-    var recheck = runAtomicAuditWithContext(html);
-    if (recheck.error) throw new Error(recheck.error);
-        if (!recheck.allPass) {
 
-      bc_addToApiCostAndTime(
-        totalCost,
-        (Date.now() - startTime) / 1000
+    /*
+     * Final mechanical recheck.
+     */
+
+    var mechanicalRecheck =
+      runAtomicAuditWithContext(
+        html
       );
 
-      var reviewMsg = recheck.failures.length > 0
-        ? recheck.failures.length +
-          ' mechanical failure(s) remain after auto-fix and batch fix.\n\n' +
-          (recheck.report || '')
-        : 'Audit still reports failure(s) that could not be extracted into fixable items.\n\n' +
-          (recheck.report || '');
+    if (mechanicalRecheck.error) {
 
-      bc_appendGovernancePipelineException(
-        'W2B — Mechanical Audit',
-        reviewMsg
+      recordW4Exception(
+        'W4 — Mechanical Audit',
+        mechanicalRecheck.error
       );
 
-      return {
-        success: false,
-        message:
-          'W2B mechanical audit still has unresolved failures — recorded in GJ.',
-        cost: totalCost
-      };
+    } else if (
+      !mechanicalRecheck.allPass
+    ) {
+
+      var lateralFailures = [];
+      var otherFailures = [];
+
+
+      (
+        mechanicalRecheck.failures ||
+        []
+      ).forEach(
+        function(f) {
+
+          if (
+            isGovernedLateralLinkFailure(f)
+          ) {
+
+            lateralFailures.push(f);
+
+          } else {
+
+            otherFailures.push(f);
+          }
+        }
+      );
+
+
+      if (
+        lateralFailures.length > 0
+      ) {
+
+        recordW4Exception(
+          'W4 — Governed Lateral Link',
+          'No governed lateral internal link is present in the article. ' +
+          'W4 did not create or invent a link because lateral-link selection belongs to the governed plan. ' +
+          'Review this item in the Final Exception Check.'
+        );
+      }
+
+
+      if (
+        otherFailures.length > 0
+      ) {
+
+        var failureSummary =
+          otherFailures.map(
+            function(f) {
+
+              return (
+                'CHECK ' +
+                (f.checkId || '?') +
+                ': ' +
+                (
+                  f.description ||
+                  'Unresolved mechanical issue'
+                )
+              );
+            }
+          ).join('\n');
+
+        recordW4Exception(
+          'W4 — Mechanical Audit',
+          failureSummary
+        );
+
+      } else {
+
+        log.push(
+          'No other mechanical failures remain.'
+        );
+      }
+
+    } else {
+
+      log.push(
+        'Mechanical audit passed.'
+      );
     }
-    log.push('Mechanical audit now passes after fixes.');
-  }
 
-  var deferredPrompt = buildDeferredCheckPrompt(html);
-  var deferredApiResult = bc_sendPromptViaOpenAI(deferredPrompt, 2000);
-  if (!deferredApiResult.success) throw new Error(deferredApiResult.message);
-  totalCost += deferredApiResult.cost;
-
-  var deferredResult = parseDeferredCheckResponse(deferredApiResult.text);
-
-  if (deferredResult.hasFailures) {
-    var deferredFixPrompt = bc_buildDeferredFixPromptServer_(html, deferredResult);
-    var deferredFixApiResult = bc_sendPromptViaOpenAI(deferredFixPrompt, 8000);
-    if (!deferredFixApiResult.success) throw new Error(deferredFixApiResult.message);
-    totalCost += deferredFixApiResult.cost;
-
-    html = deferredFixApiResult.text;
-    log.push('Deferred check fix applied.');
-
-    var recheckPrompt = buildDeferredCheckPrompt(html);
-    var recheckApiResult = bc_sendPromptViaOpenAI(recheckPrompt, 2000);
-    if (!recheckApiResult.success) throw new Error(recheckApiResult.message);
-    totalCost += recheckApiResult.cost;
-
-    var recheckDeferred = parseDeferredCheckResponse(recheckApiResult.text);
-        if (recheckDeferred.hasFailures) {
-
-      bc_addToApiCostAndTime(
-        totalCost,
-        (Date.now() - startTime) / 1000
-      );
-
-      bc_appendGovernancePipelineException(
-        'W2B — Deferred Checks',
-        recheckApiResult.text ||
-          'Deferred checks still failing after one automated fix pass.'
-      );
-
-      return {
-        success: false,
-        message:
-          'W2B deferred checks still failing after one fix pass — recorded in GJ.',
-        cost: totalCost
-      };
-    }
-    log.push('Deferred checks now pass after fix.');
   } else {
-    log.push('Deferred checks passed first time.');
+
+    log.push(
+      'Mechanical audit passed first time.'
+    );
   }
 
-  var pushMessage = pushHtmlToActiveRow(html);
 
-  bc_addToApiCostAndTime(totalCost, (Date.now() - startTime) / 1000);
+  /*
+   * =========================================================
+   * STEP 3 — ONE FULL DEFERRED AUDIT
+   * =========================================================
+   */
+
+  var deferredPrompt =
+    buildDeferredCheckPrompt(
+      html
+    );
+
+  var deferredApiResult =
+    bc_sendPromptViaOpenAI(
+      deferredPrompt,
+      1800
+    );
+
+  if (
+    deferredApiResult &&
+    deferredApiResult.success
+  ) {
+
+    totalCost +=
+      deferredApiResult.cost || 0;
+
+    var deferredResult =
+      parseDeferredCheckResponse(
+        deferredApiResult.text
+      );
+
+
+    /*
+     * Checks 1, 5, 7 and 8 are now LOCKED.
+     * We do not ask the model to judge them again.
+     */
+
+    var lockedFailures = [];
+
+    if (
+      deferredResult.check1 === 'FAIL'
+    ) {
+      lockedFailures.push(
+        'CHECK 1: ' +
+        deferredResult.obs1
+      );
+    }
+
+    if (
+      deferredResult.check5 === 'FAIL'
+    ) {
+      lockedFailures.push(
+        'CHECK 5: ' +
+        deferredResult.obs5
+      );
+    }
+
+    if (
+      deferredResult.check7 === 'FAIL'
+    ) {
+      lockedFailures.push(
+        'CHECK 7: ' +
+        deferredResult.obs7
+      );
+    }
+
+    if (
+      deferredResult.check8 === 'FAIL'
+    ) {
+      lockedFailures.push(
+        'CHECK 8: ' +
+        deferredResult.obs8
+      );
+    }
+
+
+    if (
+      lockedFailures.length > 0
+    ) {
+
+      recordW4Exception(
+        'W4 — Deferred Checks',
+        lockedFailures.join('\n')
+      );
+    }
+
+
+    /*
+     * =======================================================
+     * CHECK 4 ONLY — SAFE JSON REPAIR
+     * =======================================================
+     */
+
+    if (
+      deferredResult.check4 === 'FAIL'
+    ) {
+
+      var check4OnlyResult = {
+        check1: 'PASS',
+        obs1: '',
+        check4: 'FAIL',
+        obs4: deferredResult.obs4,
+        check5: 'PASS',
+        obs5: '',
+        check7: 'PASS',
+        obs7: '',
+        check8: 'PASS',
+        obs8: ''
+      };
+
+
+      var check4FixPrompt =
+        bc_buildDeferredFixPromptServer_(
+          html,
+          check4OnlyResult
+        );
+
+
+      var check4FixApi =
+        bc_sendPromptViaOpenAI(
+          check4FixPrompt,
+          2200
+        );
+
+
+      if (
+        check4FixApi &&
+        check4FixApi.success
+      ) {
+
+        totalCost +=
+          check4FixApi.cost || 0;
+
+
+        var check4Apply =
+          applyBatchAtomicFix(
+            html,
+            check4FixApi.text
+          );
+
+
+        if (
+          check4Apply &&
+          check4Apply.success
+        ) {
+
+          html =
+            check4Apply.patchedHtml;
+
+          log.push(
+            'Check 4 JSON patches applied.'
+          );
+
+
+          /*
+           * -----------------------------------------------
+           * SMALL CHECK-4-ONLY RECHECK
+           * -----------------------------------------------
+           */
+
+          var check4RecheckPrompt =
+            buildCheck4OnlyRecheckPrompt(
+              html
+            );
+
+
+          var check4RecheckApi =
+            bc_sendPromptViaOpenAI(
+              check4RecheckPrompt,
+              700
+            );
+
+
+          if (
+            check4RecheckApi &&
+            check4RecheckApi.success
+          ) {
+
+            totalCost +=
+              check4RecheckApi.cost || 0;
+
+
+            var check4Text =
+              String(
+                check4RecheckApi.text || ''
+              );
+
+
+            var check4Match =
+              check4Text.match(
+                /CHECK 4:\s*(PASS|FAIL)/i
+              );
+
+
+            if (
+              !check4Match ||
+              check4Match[1]
+                .toUpperCase() !==
+                'PASS'
+            ) {
+
+              recordW4Exception(
+                'W4 — Deferred Check 4',
+                check4Text ||
+                'Section-opening check remains unresolved.'
+              );
+
+            } else {
+
+              log.push(
+                'Check 4 passed after targeted correction.'
+              );
+            }
+
+          } else {
+
+            recordW4Exception(
+              'W4 — Deferred Check 4',
+              'Check 4 recheck could not be completed.'
+            );
+          }
+
+        } else {
+
+          recordW4Exception(
+            'W4 — Deferred Check 4',
+            deferredResult.obs4 ||
+            'Check 4 correction could not be applied safely.'
+          );
+        }
+
+      } else {
+
+        recordW4Exception(
+          'W4 — Deferred Check 4',
+          deferredResult.obs4 ||
+          'Check 4 correction API call failed.'
+        );
+      }
+
+    } else {
+
+      log.push(
+        'Check 4 passed first time.'
+      );
+    }
+
+  } else {
+
+    recordW4Exception(
+      'W4 — Deferred Checks',
+      deferredApiResult &&
+      deferredApiResult.message
+        ? deferredApiResult.message
+        : 'Deferred audit API call failed.'
+    );
+  }
+
+
+  /*
+   * =========================================================
+   * STEP 4 — SAVE FINAL HTML TO CT
+   * =========================================================
+   */
+
+  var pushMessage =
+    pushHtmlToActiveRow(
+      html
+    );
+
+  if (
+    !pushMessage ||
+    /^ERROR|^PUSH ERROR/i.test(
+      pushMessage
+    )
+  ) {
+
+    throw new Error(
+      pushMessage ||
+      'Could not save W4 HTML to CT.'
+    );
+  }
+
+
+  /*
+   * =========================================================
+   * STEP 5 — FINISH
+   * =========================================================
+   */
+
+  bc_addToApiCostAndTime(
+    totalCost,
+    (
+      Date.now() -
+      startTime
+    ) / 1000
+  );
+
+
   return {
+
     success: true,
-    message: 'Pushed — ' + pushMessage + ' | ' + log.join(' | '),
+
+    message:
+      exceptionCount === 0
+        ? 'W4 complete — all checks passed and final HTML saved to Column CT.'
+        : 'W4 complete — final HTML saved to Column CT. ' +
+          exceptionCount +
+          ' unresolved issue(s) recorded in Column GJ for the Final Exception Check.',
+
     cost: totalCost
   };
 }
+
 function bc_getActivePostsRow() {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -5515,3 +6327,4 @@ function getPipelineRunLog(row) {
     };
   }
 }
+

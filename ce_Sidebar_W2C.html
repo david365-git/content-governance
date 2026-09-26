@@ -861,6 +861,17 @@ function w2cBuildUpdatedHtml() {
         alt
       );
 
+      /*
+       * W2C has already generated and approved
+       * the alt text and caption for this media.
+       * W4B must therefore leave it unchanged.
+       */
+
+      img.setAttribute(
+        'data-w4b-skip',
+        'true'
+      );
+
 
       var figcaption =
         document.createElement(

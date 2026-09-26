@@ -1351,16 +1351,51 @@ function pushHtmlToActiveRow(cleanHTML) {
 ============================================================ */
 function getHtmlFromActiveRow() {
   try {
-    const ss        = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet     = ss.getSheetByName("posts");
-    const activeRow = sheet.getActiveRange().getRow();
-    if (activeRow < 2) return "ERROR: Select a valid data row first.";
-    // col 98 — New HTML (CV)
-    var html = String(sheet.getRange(activeRow, 104).getValue() || "").trim();
-    if (!html) html = String(sheet.getRange(activeRow, 98).getValue() || "").trim();
-    if (!html) return "ERROR: No HTML found in col 104 (CZ) or col 98 (CT) for Row " + activeRow + ". Push re-hydrated HTML first.";
+
+    const ss =
+      SpreadsheetApp.getActiveSpreadsheet();
+
+    const sheet =
+      ss.getSheetByName("posts");
+
+    const activeRow =
+      sheet.getActiveRange().getRow();
+
+    if (activeRow < 2) {
+      return "ERROR: Select a valid data row first.";
+    }
+
+    var html =
+      String(
+        sheet
+          .getRange(activeRow, 104)
+          .getValue() || ""
+      ).trim();
+
+    if (!html) {
+
+      html =
+        String(
+          sheet
+            .getRange(activeRow, 98)
+            .getValue() || ""
+        ).trim();
+    }
+
+    if (!html) {
+
+      return (
+        "ERROR: No HTML found in CZ (col 104) " +
+        "or CT (col 98) for Row " +
+        activeRow +
+        "."
+      );
+    }
+
     return String(html);
+
   } catch (e) {
+
     return "ERROR: " + e.toString();
   }
 }

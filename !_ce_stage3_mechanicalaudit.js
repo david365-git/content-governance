@@ -408,61 +408,322 @@ function runMechanicalAuditOnHTML(html, schema, articleType, hubUrl) {
    CHECK 2 (SPOKE) — INTERNAL LINKS
 ============================================================ */
 function auditInternalLinks(html, hubUrl, articleType) {
-  const governedMaxLinks = getMaxLateralLinks(articleType);
-  const MIN_LINKS = (governedMaxLinks !== null) ? governedMaxLinks : 5;
-  const MAX_LINKS = (governedMaxLinks !== null) ? governedMaxLinks : 8;
-  const internalRe = /href="(https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk[^"]*)"/gi;
-  const internalLinks = [];
-  let m;
-  while ((m = internalRe.exec(html)) !== null) {
-    internalLinks.push(m[1]);
-  }
-  const uniqueLinks = internalLinks.filter(function(l, i, a) { return a.indexOf(l) === i; });
 
-  if (internalLinks.length === 0) {
-    return { pass: false, label: "FAIL", detail: "No internal abbeyfloorcare.co.uk links found. This article requires " + MIN_LINKS + "-" + MAX_LINKS + " contextual internal links from the silo map, plus the hub link." };
+  const governedMaxLinks =
+    getMaxLateralLinks(articleType);
+
+  const MIN_LINKS =
+    (governedMaxLinks !== null)
+      ? governedMaxLinks
+      : 5;
+
+  const MAX_LINKS =
+    (governedMaxLinks !== null)
+      ? governedMaxLinks
+      : 8;
+
+
+  /*
+   * Normalise URLs for exact comparison.
+   *
+   * Important:
+   * A child article beneath the hub path is NOT the hub.
+   * Only an exact normalised URL match counts as the hub.
+   */
+  function normaliseUrl(url) {
+
+    return String(url || '')
+      .trim()
+      .replace(/#.*$/, '')
+      .replace(/[?].*$/, '')
+      .replace(/\/+$/, '')
+      .replace(
+        /^https?:\/\/(?:www\.)?/i,
+        'https://'
+      )
+      .toLowerCase();
   }
-  let hubFound = false;
-  if (hubUrl) {
-    const hubNorm = hubUrl.replace(/#.*$/, "").replace(/[/]+$/, "").toLowerCase();
-    hubFound = internalLinks.some(function(l) {
-      const lNorm = l.replace(/#.*$/, "").replace(/[/]+$/, "").toLowerCase();
-      return lNorm === hubNorm || lNorm.indexOf(hubNorm) > -1 || hubNorm.indexOf(lNorm) > -1;
-    });
+
+
+  /*
+   * Collect absolute Abbey Floor Care links.
+   */
+  const internalRe =
+    /href=["'](https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk[^"']*)["']/gi;
+
+  const internalLinks = [];
+
+  let m;
+
+  while (
+    (m = internalRe.exec(html)) !== null
+  ) {
+
+    internalLinks.push(
+      m[1]
+    );
   }
-  const lateralLinks = internalLinks.filter(function(l) {
-    if (!hubUrl) return true;
-    const hubNorm = hubUrl.replace(/#.*$/, "").replace(/[/]+$/, "").toLowerCase();
-    const lNorm = l.replace(/#.*$/, "").replace(/[/]+$/, "").toLowerCase();
-    return lNorm.indexOf(hubNorm) === -1 && hubNorm.indexOf(lNorm) === -1;
-  });
-  const uniqueLateralLinks = lateralLinks.filter(function(l, i, a) { return a.indexOf(l) === i; });
+
+
+  const uniqueLinks =
+    internalLinks.filter(
+      function(link, index, array) {
+
+        var normalised =
+          normaliseUrl(link);
+
+        return (
+          array.findIndex(
+            function(other) {
+              return normaliseUrl(other) ===
+                     normalised;
+            }
+          ) === index
+        );
+      }
+    );
+
+
+  if (
+    internalLinks.length === 0
+  ) {
+
+    return {
+      pass: false,
+      label: 'FAIL',
+      detail:
+        'No internal abbeyfloorcare.co.uk links found. ' +
+        'This article requires ' +
+        MIN_LINKS +
+        '-' +
+        MAX_LINKS +
+        ' contextual internal links from the silo map, plus the hub link.'
+    };
+  }
+
+
+  /*
+   * Exact hub match only.
+   */
+  var hubFound = false;
+
+  var hubNorm =
+    normaliseUrl(
+      hubUrl
+    );
+
+  if (hubNorm) {
+
+    hubFound =
+      internalLinks.some(
+        function(link) {
+
+          return (
+            normaliseUrl(link) ===
+            hubNorm
+          );
+        }
+      );
+  }
+
+
+  /*
+   * Any internal link that is NOT the exact hub URL
+   * is potentially a lateral link.
+   */
+  const lateralLinks =
+    internalLinks.filter(
+      function(link) {
+
+        if (!hubNorm) {
+          return true;
+        }
+
+        return (
+          normaliseUrl(link) !==
+          hubNorm
+        );
+      }
+    );
+
+
+  const uniqueLateralLinks =
+    lateralLinks.filter(
+      function(link, index, array) {
+
+        var normalised =
+          normaliseUrl(link);
+
+        return (
+          array.findIndex(
+            function(other) {
+              return normaliseUrl(other) ===
+                     normalised;
+            }
+          ) === index
+        );
+      }
+    );
+
 
   const failures = [];
-  if (hubUrl && !hubFound) failures.push("Hub page link missing — expected link to: " + hubUrl);
-  if (uniqueLateralLinks.length === 0) failures.push("No lateral internal link found — add contextual links to related pages in the silo");
-  if (uniqueLinks.length < MIN_LINKS) failures.push("Only " + uniqueLinks.length + " internal link(s) found — Stage 2A requires " + MIN_LINKS + "-" + MAX_LINKS + " contextual internal links from the silo map (hub link + lateral links combined)");
-  if (uniqueLinks.length > MAX_LINKS) failures.push(uniqueLinks.length + " internal links found — exceeds the maximum of " + MAX_LINKS);
 
-  const selfLinkRe = /href="([^"]+)"/gi;
+
+  if (
+    hubUrl &&
+    !hubFound
+  ) {
+
+    failures.push(
+      'Hub page link missing — expected link to: ' +
+      hubUrl
+    );
+  }
+
+
+  if (
+    uniqueLateralLinks.length === 0 &&
+    (
+      governedMaxLinks === null ||
+      governedMaxLinks > 1
+    )
+  ) {
+    failures.push(
+      "No lateral internal link found — add contextual links to related pages in the silo"
+    );
+  }
+
+
+  if (
+    uniqueLinks.length <
+    MIN_LINKS
+  ) {
+
+    failures.push(
+      'Only ' +
+      uniqueLinks.length +
+      ' internal link(s) found — Stage 2A requires ' +
+      MIN_LINKS +
+      '-' +
+      MAX_LINKS +
+      ' contextual internal links from the silo map (hub link + lateral links combined)'
+    );
+  }
+
+
+  if (
+    uniqueLinks.length >
+    MAX_LINKS
+  ) {
+
+    failures.push(
+      uniqueLinks.length +
+      ' internal links found — exceeds the maximum of ' +
+      MAX_LINKS
+    );
+  }
+
+
+  /*
+   * Self-link detection.
+   */
+  const selfLinkRe =
+    /href=["']([^"']+)["']/gi;
+
   const selfLinks = [];
+
   let slm;
-  while ((slm = selfLinkRe.exec(html)) !== null) {
-    const href = slm[1].replace(/#.*$/, "").replace(/[/]+$/, "").toLowerCase();
-    const ss2  = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet2 = ss2.getSheetByName("posts");
-    const activeRow2 = sheet2.getActiveRange().getRow();
-    const ownUrl2 = activeRow2 >= 2
-      ? String(sheet2.getRange(activeRow2, 3).getValue() || "").trim().replace(/\/$/, "").toLowerCase()
-      : "";
-    if (ownUrl2 && href === ownUrl2) selfLinks.push(slm[1]);
+
+
+  const ss2 =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  const sheet2 =
+    ss2.getSheetByName(
+      'posts'
+    );
+
+  const activeRow2 =
+    sheet2.getActiveRange()
+      .getRow();
+
+  const ownUrl2 =
+    activeRow2 >= 2
+      ? normaliseUrl(
+          sheet2
+            .getRange(
+              activeRow2,
+              3
+            )
+            .getValue()
+        )
+      : '';
+
+
+  while (
+    (slm = selfLinkRe.exec(html)) !== null
+  ) {
+
+    var hrefNorm =
+      normaliseUrl(
+        slm[1]
+      );
+
+    if (
+      ownUrl2 &&
+      hrefNorm === ownUrl2
+    ) {
+
+      selfLinks.push(
+        slm[1]
+      );
+    }
   }
-  if (selfLinks.length > 0) {
-    failures.push("Self-referencing link(s) detected: " + selfLinks.slice(0, 3).join(", "));
+
+
+  if (
+    selfLinks.length > 0
+  ) {
+
+    failures.push(
+      'Self-referencing link(s) detected: ' +
+      selfLinks
+        .slice(0, 3)
+        .join(', ')
+    );
   }
-  if (failures.length > 0) return { pass: false, label: "FAIL", detail: failures.join(" | ") };
-  const hubLabel = hubFound ? "Hub link ✓" : "Hub URL not set — skipped";
-  return { pass: true, label: "PASS", detail: hubLabel + " | " + uniqueLinks.length + " total internal link(s), " + uniqueLateralLinks.length + " lateral" };
+
+
+  if (
+    failures.length > 0
+  ) {
+
+    return {
+      pass: false,
+      label: 'FAIL',
+      detail:
+        failures.join(' | ')
+    };
+  }
+
+
+  const hubLabel =
+    hubFound
+      ? 'Hub link ✓'
+      : 'Hub URL not set — skipped';
+
+
+  return {
+    pass: true,
+    label: 'PASS',
+    detail:
+      hubLabel +
+      ' | ' +
+      uniqueLinks.length +
+      ' total internal link(s), ' +
+      uniqueLateralLinks.length +
+      ' lateral'
+  };
 }
 
 /* ============================================================
