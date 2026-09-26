@@ -1774,14 +1774,43 @@ function getMetaPrompt() {
     "META TITLE:\n" +
     "- CAPITALISATION: Title Case — first letter of every word except minor prepositions\n" +
     "  and articles unless first word — see Capitalisation Rules above\n" +
-    "- EXACTLY 50-60 characters — count every character before outputting\n" +
+    "- TARGET 50-60 characters. Never exceed 60 characters.\n" +
     "- Must contain the primary search term or a natural close variant\n" +
-    "- Must include 'Abbey Floor Care' as brand signal — never truncate to 'Abbey' alone\n" +
-    "- Must read as a natural phrase a person would say — not a keyword string\n" +
+    "- Must include 'Abbey Floor Care' as the brand signal — never truncate to 'Abbey' alone\n" +
+    "- Must read naturally in UK English\n" +
+    "- CTR PURPOSE (Hard Lock): The Meta Title is not merely a label for the service or article.\n" +
+    "  It must give the searcher a reason to choose this result over otherwise similar SERP results.\n" +
+    "- Build the click-driving angle around ONE of the following, whichever is genuinely supported by\n" +
+    "  the Page Context, Article Content, Problem Angle, Authority Brief or Competitor SERP Context:\n" +
+    "  * a visible problem the homeowner recognises\n" +
+    "  * a decision they are unsure about\n" +
+    "  * a meaningful limitation or trade-off\n" +
+    "  * a consequence of choosing the wrong treatment\n" +
+    "  * a repair-versus-replacement distinction\n" +
+    "  * an unexpected or counterintuitive fact\n" +
+    "  * a specific 'what actually matters' distinction\n" +
+    "- Prefer tension, contrast or useful specificity over generic service wording.\n" +
+    "- The title must make an implicit promise that the page resolves a real uncertainty.\n" +
+    "- BORING TITLE TEST (Hard Lock): Reject any candidate that is essentially only:\n" +
+    "  [service] + [location] + [brand].\n" +
+    "  Example to reject: 'Ceramic Tile Repair West End Edinburgh | Abbey Floor Care'.\n" +
+    "- Also reject generic modifiers that add no useful reason to click, including:\n" +
+    "  'professional', 'quality', 'trusted', 'local', 'reliable', 'specialist service',\n" +
+    "  'services', 'solutions', 'experts', 'expert', 'guide', 'overview', 'tips', 'hub'.\n" +
+    "- Strong patterns may include natural phrases such as:\n" +
+    "  'What Can Actually Be Repaired',\n" +
+    "  'Repair or Replace?',\n" +
+    "  'Why the Damage Keeps Returning',\n" +
+    "  'When Cleaning Will Not Fix It',\n" +
+    "  'What the Damage Is Really Telling You',\n" +
+    "  but ONLY when that angle is supported by this page.\n" +
+    "- Do not manufacture drama. No fake urgency, fear, exaggeration, guarantees or unsupported claims.\n" +
+    "- Do not use empty clickbait such as 'You Won't Believe', 'Shocking', 'Secret', 'Amazing',\n" +
+    "  'Game-Changing', 'Must See' or similar tabloid phrasing.\n" +
+    "- Use the COMPETITOR SERP CONTEXT above to avoid repeating the dominant title pattern.\n" +
+    "  If competitors are mostly using plain service + location titles, deliberately choose a more\n" +
+    "  useful problem-, decision-, consequence- or distinction-led angle that this article supports.\n" +
     "- Word order must follow natural English syntax\n" +
-    "- Prohibited word order constructions: noun + 'not working why',\n" +
-    "  noun + 'why not working', any inverted clause that does not read naturally\n" +
-    "- Prohibited words: solutions, specialists, expert, guide, overview, tips, hub\n" +
     "- NEAR ME RULE (Hard Lock): Never use the phrase 'near me' in the Meta Title.\n" +
     "  Replace with the location name where available, or use the core phrase without the modifier.\n" +
     "  WRONG: 'Victorian Tile Restoration Near Me in Penkhull | Abbey Floor Care'\n" +
@@ -1897,10 +1926,16 @@ function getMetaPrompt() {
     "1.  Count H1 characters. If not 40-60 — rewrite.\n" +
     "2.  Verify H1 is Title Case — every word capitalised including short words.\n" +
     "    If any word is lowercase — rewrite the entire H1.\n" +
-    "3.  Count Meta Title characters. If not 50-60 — rewrite.\n" +
+    "3.  Count Meta Title characters. If over 60 — rewrite. Aim for 50-60 where possible.\n" +
     "4.  Verify Meta Title is Title Case with preposition exceptions. If not — rewrite.\n" +
     "5.  Verify Meta Title word order follows natural English syntax. If inverted — rewrite.\n" +
-    "6.  Verify Meta Title contains no prohibited words. If it does — rewrite.\n" +
+    "6.  BORING TITLE TEST: Does the Meta Title amount to little more than service + location + brand?\n" +
+    "    If yes — REJECT it and rewrite with a supported problem, decision, consequence,\n" +
+    "    limitation, contrast or 'what actually matters' angle.\n" +
+    "    The title must give a searcher a concrete reason to choose this result over a generic competitor listing.\n" +
+    "7.  Verify Meta Title contains no prohibited or empty promotional words. If it does — rewrite.\n" +
+    "8.  Verify the CTR angle is genuinely supported by the article, Problem Angle, Authority Brief\n" +
+    "    or Competitor SERP Context. If the angle is invented, exaggerated or unsupported — rewrite.\n" +
     "7.  Count Meta Description characters. If not 140-160 — rewrite.\n" +
     "8.  Verify Meta Description has exactly two sentences. If not — rewrite.\n" +
     "9.  Verify sentence one does not open with a prohibited opener. If it does — rewrite.\n" +

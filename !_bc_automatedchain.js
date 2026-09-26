@@ -6661,3 +6661,474 @@ function getPipelineRunLog(row) {
   }
 }
 
+function bc_runW5Automated() {
+
+  var startTime = Date.now();
+  var totalCost = 0;
+
+
+  function parseW5Output(text) {
+
+    text = String(text || "")
+      .replace(
+        /\s+(New\s+H1:|New\s+Meta\s+Title:|New\s+Meta\s+Description:|Yoast\s+Keyphrase:)/gi,
+        '\n$1'
+      )
+      .trim();
+
+
+    function extract(pattern) {
+      var m = text.match(pattern);
+      return m ? String(m[1] || "").trim() : "";
+    }
+
+
+    return {
+      h1: extract(
+        /(?:^|\n)New\s+H1:\s*(.+)/i
+      ),
+
+      title: extract(
+        /(?:^|\n)New\s+Meta\s+Title:\s*(.+)/i
+      ),
+
+      description: extract(
+        /(?:^|\n)New\s+Meta\s+Description:\s*(.+)/i
+      ),
+
+      keyphrase: extract(
+        /(?:^|\n)Yoast\s+Keyphrase:\s*(.+)/i
+      )
+    };
+  }
+
+
+  function validateW5Output(fields) {
+
+    var issues = [];
+
+    if (!fields.h1) {
+      issues.push("New H1 missing.");
+    }
+
+    if (!fields.title) {
+      issues.push("New Meta Title missing.");
+    }
+
+    if (!fields.description) {
+      issues.push("New Meta Description missing.");
+    }
+
+    if (!fields.keyphrase) {
+      issues.push("Yoast Keyphrase missing.");
+    }
+
+
+    if (fields.h1) {
+
+      if (
+        fields.h1.length < 40 ||
+        fields.h1.length > 60
+      ) {
+
+        issues.push(
+          "H1 is " +
+          fields.h1.length +
+          " characters; required range is 40-60."
+        );
+      }
+    }
+
+
+    if (fields.title) {
+
+      if (fields.title.length > 60) {
+
+        issues.push(
+          "Meta Title is " +
+          fields.title.length +
+          " characters; maximum is 60."
+        );
+      }
+
+
+      if (
+        fields.title.toLowerCase()
+          .indexOf("abbey floor care") === -1
+      ) {
+
+        issues.push(
+          "Meta Title does not contain Abbey Floor Care."
+        );
+      }
+
+
+      /*
+       * -------------------------------------------------------
+       * BORING TITLE TEST
+       * Reject a title that is essentially:
+       * service/search term + location + brand.
+       * -------------------------------------------------------
+       */
+
+      var d =
+        getActiveRowDataMap();
+
+      var primaryTerm =
+        String(
+          d["Primary Search Term"] || ""
+        )
+          .toLowerCase()
+          .replace(/\bnear me\b/g, "")
+          .replace(/[^a-z0-9\s]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+
+      var location =
+        String(
+          d["Locality"] ||
+          d["Location"] ||
+          ""
+        )
+          .toLowerCase()
+          .trim();
+
+
+      var titleCore =
+        fields.title
+          .toLowerCase()
+          .replace(/abbey floor care/g, "")
+          .replace(/[|–—:-]/g, " ")
+          .replace(/[^a-z0-9\s]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+
+
+      if (location) {
+
+        var escapedLocation =
+          location.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            "\\$&"
+          );
+
+        titleCore =
+          titleCore
+            .replace(
+              new RegExp(
+                "\\b" +
+                escapedLocation +
+                "\\b",
+                "gi"
+              ),
+              ""
+            )
+            .replace(/\s+/g, " ")
+            .trim();
+      }
+
+
+      if (
+        primaryTerm &&
+        (
+          titleCore === primaryTerm ||
+          titleCore === primaryTerm.replace(/\bnear me\b/g, "").trim()
+        )
+      ) {
+
+        issues.push(
+          "Meta Title fails the Boring Title Test — it is effectively only the search term/location plus brand."
+        );
+      }
+    }
+
+
+    if (fields.description) {
+
+      if (
+        fields.description.length < 140 ||
+        fields.description.length > 160
+      ) {
+
+        issues.push(
+          "Meta Description is " +
+          fields.description.length +
+          " characters; required range is 140-160."
+        );
+      }
+
+
+      var sentenceCount =
+        (
+          fields.description.match(
+            /[.!?](?:\s|$)/g
+          ) || []
+        ).length;
+
+      if (sentenceCount !== 2) {
+
+        issues.push(
+          "Meta Description must contain exactly two sentences."
+        );
+      }
+    }
+
+
+    if (fields.keyphrase) {
+
+      var keyphrase =
+        fields.keyphrase.trim();
+
+      var words =
+        keyphrase
+          .split(/\s+/)
+          .filter(Boolean);
+
+      if (
+        keyphrase !==
+        keyphrase.toLowerCase()
+      ) {
+
+        issues.push(
+          "Yoast Keyphrase is not lowercase."
+        );
+      }
+
+      if (
+        words.length < 2 ||
+        words.length > 6
+      ) {
+
+        issues.push(
+          "Yoast Keyphrase must contain 2-6 words."
+        );
+      }
+    }
+
+
+    return {
+      success: issues.length === 0,
+      issues: issues
+    };
+  }
+
+
+  /*
+   * =========================================================
+   * BUILD W5 PROMPT
+   * =========================================================
+   */
+
+  var prompt =
+    getMetaPrompt();
+
+  if (
+    !prompt ||
+    String(prompt).trim() === ""
+  ) {
+
+    return {
+      success: false,
+      message:
+        "W5 could not build the H1/meta prompt.",
+      cost: 0
+    };
+  }
+
+
+  /*
+   * =========================================================
+   * FIRST GENERATION
+   * =========================================================
+   */
+
+  var apiResult =
+    bc_sendPromptViaOpenAI(
+      prompt,
+      1400
+    );
+
+  if (
+    !apiResult ||
+    !apiResult.success
+  ) {
+
+    return {
+      success: false,
+      message:
+        apiResult &&
+        apiResult.message
+          ? apiResult.message
+          : "W5 OpenAI generation failed.",
+      cost: 0
+    };
+  }
+
+
+  totalCost +=
+    Number(
+      apiResult.cost || 0
+    );
+
+
+  var output =
+    String(
+      apiResult.text || ""
+    ).trim();
+
+
+  var fields =
+    parseW5Output(
+      output
+    );
+
+
+  var validation =
+    validateW5Output(
+      fields
+    );
+
+
+  /*
+   * =========================================================
+   * ONE CORRECTION ATTEMPT
+   * =========================================================
+   */
+
+  if (!validation.success) {
+
+    var correctionPrompt =
+      prompt +
+      "\n\n" +
+      "IMPORTANT — YOUR PREVIOUS OUTPUT FAILED AUTOMATED VALIDATION.\n\n" +
+      "PREVIOUS OUTPUT:\n" +
+      output +
+      "\n\n" +
+      "FAILURES:\n- " +
+      validation.issues.join("\n- ") +
+      "\n\n" +
+      "Correct ONLY the four requested fields so every failure above is resolved.\n" +
+      "The Meta Title must also pass the CTR/Boring Title rules in the original prompt.\n" +
+      "Return ONLY these four lines:\n" +
+      "New H1: [value]\n" +
+      "New Meta Title: [value]\n" +
+      "New Meta Description: [value]\n" +
+      "Yoast Keyphrase: [value]";
+
+
+    var retry =
+      bc_sendPromptViaOpenAI(
+        correctionPrompt,
+        1400
+      );
+
+
+    if (
+      !retry ||
+      !retry.success
+    ) {
+
+      return {
+        success: false,
+        message:
+          "W5 first output failed validation and the correction call failed.",
+        cost: totalCost
+      };
+    }
+
+
+    totalCost +=
+      Number(
+        retry.cost || 0
+      );
+
+
+    output =
+      String(
+        retry.text || ""
+      ).trim();
+
+
+    fields =
+      parseW5Output(
+        output
+      );
+
+
+    validation =
+      validateW5Output(
+        fields
+      );
+  }
+
+
+  /*
+   * =========================================================
+   * DO NOT SAVE FAILED OUTPUT
+   * =========================================================
+   */
+
+  if (!validation.success) {
+
+    return {
+      success: false,
+      message:
+        "W5 output failed validation after correction: " +
+        validation.issues.join(" | "),
+      cost: totalCost
+    };
+  }
+
+
+  /*
+   * =========================================================
+   * SAVE ALL FOUR FIELDS
+   * =========================================================
+   */
+
+  var pushResult =
+    pushGovernanceFieldsToActiveRow(
+      output
+    );
+
+
+  if (
+    !pushResult ||
+    !pushResult.success
+  ) {
+
+    return {
+      success: false,
+      message:
+        pushResult &&
+        pushResult.message
+          ? pushResult.message
+          : "W5 could not save the generated fields.",
+      cost: totalCost
+    };
+  }
+
+
+  bc_addToApiCostAndTime(
+    totalCost,
+    (
+      Date.now() -
+      startTime
+    ) / 1000
+  );
+
+
+  return {
+    success: true,
+
+    message:
+      "W5 complete — H1, CTR-focused Meta Title, Meta Description and Yoast Keyphrase saved.",
+
+    h1: fields.h1,
+    metaTitle: fields.title,
+    metaDescription: fields.description,
+    yoastKeyphrase: fields.keyphrase,
+
+    cost: totalCost
+  };
+}

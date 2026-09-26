@@ -1100,21 +1100,217 @@ function setLocalStatus(elementId, message, isError) {
   }
 
   /* ══ W5 ══ */
-  function updateGovLengths() {
-    var raw     = document.getElementById('govPasteBlock').value;
-    var display = document.getElementById('govLengthDisplay');
-    function extract(label) { var re = new RegExp(label + ':\\s*(.+)', 'i'); var m = raw.match(re); return m ? m[1].trim() : ''; }
-    function lenSpan(label, val, min, max) {
-      var len = val.length; var ok = len >= min && len <= max;
-      var col = val ? (ok ? '#2e7d32' : '#c62828') : '#999';
-      var note = val ? (ok ? '✔' : (len < min ? '▲ +'+(min-len) : '▼ -'+(len-max))) : '—';
-      return '<span style="color:' + col + ';font-weight:700">' + label + ': ' + len + ' chars ' + note + ' (' + min + '-' + max + ')</span>';
-    }
-    document.getElementById('govH1Len').innerHTML    = lenSpan('H1',    extract('New H1'),               40, 60);
-    document.getElementById('govTitleLen').innerHTML = lenSpan('Title',  extract('New Meta Title'),       50, 60);
-    document.getElementById('govDescLen').innerHTML  = lenSpan('Desc',   extract('New Meta Description'), 140, 160);
-    display.style.display = raw.trim() ? 'block' : 'none';
+
+function runW5Automated() {
+
+  var btn =
+    document.getElementById(
+      'autoW5Btn'
+    );
+
+  var resultEl =
+    document.getElementById(
+      'w5Result'
+    );
+
+  var startTime =
+    Date.now();
+
+
+  btn.disabled =
+    true;
+
+  btn.innerText =
+    'Running…';
+
+
+  if (resultEl) {
+    resultEl.style.display =
+      'none';
+
+    resultEl.textContent =
+      '';
   }
+
+
+  setStatus(
+    'statusGov',
+    'running',
+    '⏳ W5 generating and validating H1 + Meta... 0s',
+    true
+  );
+
+
+  var progressTimer =
+    setInterval(
+      function() {
+
+        var elapsed =
+          Math.floor(
+            (
+              Date.now() -
+              startTime
+            ) / 1000
+          );
+
+
+        setStatus(
+          'statusGov',
+          'running',
+          '⏳ W5 generating and validating H1 + Meta... ' +
+          elapsed +
+          's',
+          true
+        );
+
+      },
+      1000
+    );
+
+
+  google.script.run
+
+    .withSuccessHandler(
+      function(res) {
+
+        clearInterval(
+          progressTimer
+        );
+
+
+        var elapsedSeconds =
+          Math.floor(
+            (
+              Date.now() -
+              startTime
+            ) / 1000
+          );
+
+
+        btn.disabled =
+          false;
+
+        btn.innerText =
+          '⚡ Run W5 Automated';
+
+
+        if (
+          !res ||
+          !res.success
+        ) {
+
+          var failMessage =
+            res &&
+            res.message
+              ? res.message
+              : 'Unknown W5 error';
+
+
+          setStatus(
+            'statusGov',
+            'fail',
+            '❌ ' +
+            failMessage +
+            ' — ' +
+            elapsedSeconds +
+            's'
+          );
+
+          return;
+        }
+
+
+        setStatus(
+          'statusGov',
+          'done',
+          '✔ ' +
+          res.message +
+          ' — ' +
+          elapsedSeconds +
+          's — Cost: $' +
+          Number(
+            res.cost || 0
+          ).toFixed(4)
+        );
+
+
+        if (resultEl) {
+
+          resultEl.style.display =
+            'block';
+
+
+          resultEl.textContent =
+            'H1:\n' +
+            (
+              res.h1 ||
+              ''
+            ) +
+            '\n\n' +
+
+            'Meta Title:\n' +
+            (
+              res.metaTitle ||
+              ''
+            ) +
+            '\n\n' +
+
+            'Meta Description:\n' +
+            (
+              res.metaDescription ||
+              ''
+            ) +
+            '\n\n' +
+
+            'Yoast Keyphrase:\n' +
+            (
+              res.yoastKeyphrase ||
+              ''
+            );
+        }
+      }
+    )
+
+
+    .withFailureHandler(
+      function(err) {
+
+        clearInterval(
+          progressTimer
+        );
+
+
+        var elapsedSeconds =
+          Math.floor(
+            (
+              Date.now() -
+              startTime
+            ) / 1000
+          );
+
+
+        btn.disabled =
+          false;
+
+        btn.innerText =
+          '⚡ Run W5 Automated';
+
+
+        setStatus(
+          'statusGov',
+          'fail',
+          '❌ W5 failed — ' +
+          err.message +
+          ' — ' +
+          elapsedSeconds +
+          's'
+        );
+      }
+    )
+
+
+    .bc_runW5Automated();
+}
 
   function generateGovernancePrompt() {
     var btn = document.getElementById('govPromptBtn');

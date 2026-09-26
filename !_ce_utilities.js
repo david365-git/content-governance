@@ -1510,95 +1510,336 @@ function sanitiseGovernanceField(value, fieldName) {
 
 function pushGovernanceFieldsToActiveRow(rawOutput) {
   try {
+
     if (!rawOutput || rawOutput.trim() === '') {
-      return { success: false, message: 'ERROR: No output provided.' };
+      return {
+        success: false,
+        message: 'ERROR: No output provided.'
+      };
     }
 
-    const ss        = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet     = ss.getSheetByName('posts');
-    const activeRow = sheet.getActiveRange().getRow();
+
+    const ss =
+      SpreadsheetApp.getActiveSpreadsheet();
+
+    const sheet =
+      ss.getSheetByName('posts');
+
+    const activeRow =
+      sheet.getActiveRange().getRow();
+
     if (activeRow < 2) {
-      return { success: false, message: 'ERROR: Select a valid data row first.' };
+      return {
+        success: false,
+        message: 'ERROR: Select a valid data row first.'
+      };
     }
 
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn())
-                         .getValues()[0]
-                         .map(function(h) { return String(h).trim(); });
 
-    // H1 + Meta only — schema is handled by W5C
-    const FIELDS = [
-      { labels: ['New H1', 'H1'],                       col: 'New H1'              },
-      { labels: ['New Meta Title', 'Title'],             col: 'New Meta Title'       },
-      { labels: ['New Meta Description', 'Description'], col: 'New Meta Description' }
-    ];
-
-    // Normalise output — LLM sometimes returns all fields on one line
-    var normOutput = rawOutput
-      .replace(/\s+(New\s+H1:|New\s+Meta\s+Title:|New\s+Meta\s+Description:|(?<![A-Za-z])H1:|(?<![A-Za-z])Title:|(?<![A-Za-z])Description:)/g, '\n$1');
-    const lines  = normOutput.split(/\r?\n/);
-    const parsed = {};
-    let currentField = null;
-
-    lines.forEach(function(line) {
-      var trimmed = line.trim();
-
-      // Skip schema blocks entirely — not expected, but safe to ignore
-      if (trimmed.indexOf('<script') === 0) { currentField = null; return; }
-      if (/^SCHEMA TYPE SELECTED:/i.test(trimmed)) return;
-
-      var matched = false;
-      FIELDS.forEach(function(f) {
-        f.labels.forEach(function(lbl) {
-          var prefix = lbl + ':';
-          if (!matched && trimmed.indexOf(prefix) === 0) {
-            currentField = f.col;
-            parsed[f.col] = trimmed.substring(prefix.length).trim();
-            matched = true;
-          }
+    const headers =
+      sheet
+        .getRange(
+          1,
+          1,
+          1,
+          sheet.getLastColumn()
+        )
+        .getValues()[0]
+        .map(function(h) {
+          return String(h).trim();
         });
-      });
 
-      // Accumulate continuation lines
-      if (!matched && currentField && trimmed.length > 0) {
-        parsed[currentField] = (parsed[currentField] || '') + trimmed;
-      }
-    });
 
-    const written  = [];
-    const missing  = [];
-    const notFound = [];
+    /*
+     * ---------------------------------------------------------
+     * NORMALISE OUTPUT
+     * ---------------------------------------------------------
+     */
 
-    FIELDS.forEach(function(f) {
-      const colIndex = headers.indexOf(f.col);
-      if (colIndex === -1) { notFound.push(f.col); return; }
-      const value = parsed[f.col];
-      if (!value || value.trim() === '') { missing.push(f.col); return; }
-      const cleaned = sanitiseGovernanceField(stripMarkdown(value), f.col);
-      const cell = sheet.getRange(activeRow, colIndex + 1);
-      try {
-        cell.setPlainTextValue(cleaned);
-      } catch(plainErr) {
-        cell.setNumberFormat('@');
-        cell.setValue(cleaned);
-      }
-      written.push(f.col);
-    });
+    var normOutput =
+      String(rawOutput)
+        .replace(
+          /\s+(New\s+H1:|New\s+Meta\s+Title:|New\s+Meta\s+Description:|Yoast\s+Keyphrase:|(?<![A-Za-z])H1:|(?<![A-Za-z])Title:|(?<![A-Za-z])Description:)/g,
+          '\n$1'
+        );
 
-    var message = 'PUSHED ' + written.length + '/3 fields to Row ' + activeRow + '.';
-    if (missing.length > 0)  message += '\nNot found in output: ' + missing.join(', ');
-    if (notFound.length > 0) message += '\nColumn missing from sheet: ' + notFound.join(', ');
 
-    if (written.length > 0) logPipelineResume("W5 — H1 Meta Push", "");
+    /*
+     * ---------------------------------------------------------
+     * PARSE FOUR W5 FIELDS
+     * ---------------------------------------------------------
+     */
+
+    var h1Match =
+      normOutput.match(
+        /(?:^|\n)(?:New\s+H1|H1):\s*(.+)/i
+      );
+
+    var titleMatch =
+      normOutput.match(
+        /(?:^|\n)(?:New\s+Meta\s+Title|Title):\s*(.+)/i
+      );
+
+    var descMatch =
+      normOutput.match(
+        /(?:^|\n)(?:New\s+Meta\s+Description|Description):\s*(.+)/i
+      );
+
+    var yoastMatch =
+      normOutput.match(
+        /(?:^|\n)Yoast\s+Keyphrase:\s*(.+)/i
+      );
+
+
+    var h1 =
+      h1Match
+        ? sanitiseGovernanceField(
+            stripMarkdown(
+              h1Match[1].trim()
+            ),
+            'New H1'
+          )
+        : '';
+
+
+    var metaTitle =
+      titleMatch
+        ? sanitiseGovernanceField(
+            stripMarkdown(
+              titleMatch[1].trim()
+            ),
+            'New Meta Title'
+          )
+        : '';
+
+
+    var metaDescription =
+      descMatch
+        ? sanitiseGovernanceField(
+            stripMarkdown(
+              descMatch[1].trim()
+            ),
+            'New Meta Description'
+          )
+        : '';
+
+
+    var yoastKeyphrase =
+      yoastMatch
+        ? stripMarkdown(
+            yoastMatch[1].trim()
+          )
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+        : '';
+
+
+    /*
+     * ---------------------------------------------------------
+     * REQUIRED FIELD CHECK
+     * ---------------------------------------------------------
+     */
+
+    var missing = [];
+
+    if (!h1) {
+      missing.push(
+        'New H1'
+      );
+    }
+
+    if (!metaTitle) {
+      missing.push(
+        'New Meta Title'
+      );
+    }
+
+    if (!metaDescription) {
+      missing.push(
+        'New Meta Description'
+      );
+    }
+
+    if (!yoastKeyphrase) {
+      missing.push(
+        'Yoast Keyphrase'
+      );
+    }
+
+
+    if (missing.length > 0) {
+      return {
+        success: false,
+        message:
+          'W5 output missing: ' +
+          missing.join(', '),
+        written: [],
+        missing: missing,
+        notFound: []
+      };
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * FIND DESTINATION COLUMNS
+     * ---------------------------------------------------------
+     */
+
+    var h1Idx =
+      headers.indexOf(
+        'New H1'
+      );
+
+    var titleIdx =
+      headers.indexOf(
+        'New Meta Title'
+      );
+
+    var descIdx =
+      headers.indexOf(
+        'New Meta Description'
+      );
+
+
+    var notFound = [];
+
+    if (h1Idx === -1) {
+      notFound.push(
+        'New H1'
+      );
+    }
+
+    if (titleIdx === -1) {
+      notFound.push(
+        'New Meta Title'
+      );
+    }
+
+    if (descIdx === -1) {
+      notFound.push(
+        'New Meta Description'
+      );
+    }
+
+
+    if (notFound.length > 0) {
+      return {
+        success: false,
+        message:
+          'Column missing from sheet: ' +
+          notFound.join(', '),
+        written: [],
+        missing: [],
+        notFound: notFound
+      };
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * SAVE H1
+     * ---------------------------------------------------------
+     */
+
+    var h1Cell =
+      sheet.getRange(
+        activeRow,
+        h1Idx + 1
+      );
+
+    h1Cell.setNumberFormat('@');
+    h1Cell.setValue(
+      h1
+    );
+
+
+    /*
+     * ---------------------------------------------------------
+     * SAVE META TITLE
+     * ---------------------------------------------------------
+     */
+
+    var titleCell =
+      sheet.getRange(
+        activeRow,
+        titleIdx + 1
+      );
+
+    titleCell.setNumberFormat('@');
+    titleCell.setValue(
+      metaTitle
+    );
+
+
+    /*
+     * ---------------------------------------------------------
+     * SAVE META DESCRIPTION + YOAST KEYPHRASE
+     * ---------------------------------------------------------
+     */
+
+    var descCell =
+      sheet.getRange(
+        activeRow,
+        descIdx + 1
+      );
+
+    var combinedDescription =
+      metaDescription +
+      '\nYoast Keyphrase: ' +
+      yoastKeyphrase;
+
+    descCell.setNumberFormat('@');
+    descCell.setValue(
+      combinedDescription
+    );
+
+
+    /*
+     * ---------------------------------------------------------
+     * PIPELINE LOG
+     * ---------------------------------------------------------
+     */
+
+    if (
+      typeof logPipelineResume ===
+      'function'
+    ) {
+
+      logPipelineResume(
+        'W5 — H1 Meta Push',
+        ''
+      );
+    }
+
+
     return {
-      success:  written.length > 0,
-      message:  message,
-      written:  written,
-      missing:  missing,
-      notFound: notFound
+      success: true,
+      message:
+        'PUSHED H1, Meta Title, Meta Description and Yoast Keyphrase to Row ' +
+        activeRow +
+        '.',
+      written: [
+        'New H1',
+        'New Meta Title',
+        'New Meta Description',
+        'Yoast Keyphrase'
+      ],
+      missing: [],
+      notFound: []
     };
 
-  } catch(e) {
-    return { success: false, message: 'PUSH ERROR: ' + e.toString() };
+
+  } catch (e) {
+
+    return {
+      success: false,
+      message:
+        'PUSH ERROR: ' +
+        e.toString()
+    };
   }
 }
 

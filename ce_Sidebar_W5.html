@@ -1,44 +1,69 @@
   <!-- ══ ce_Sidebar_W5.html - W5 — H1 + META ══ -->
-  <div id="window-13" class="window-card" style="display:none" style="border-top:3px solid #1a237e">
-    <div class="window-header">
-      <span class="window-label" style="color:#1a237e">W5 — H1 &amp; Meta</span>
-      <span class="tag" style="background:#1a237e">Generate → Paste → Push</span>
-    </div>
-    <div class="window-body">
-      <div id="statusGov" class="status-bar pending">Generate prompt → paste into ChatGPT → paste output → push. Schema is built by W5C.</div>
 
-      <!-- Step 1: Generate -->
-      <div class="btn-row">
-        <button style="background:#1a237e" id="govPromptBtn" onclick="generateGovernancePrompt()">Generate Prompt</button>
-      </div>
-      <textarea id="govPrompt" placeholder="Prompt will appear here — copy and paste into ChatGPT..."></textarea>
-      <div class="btn-row" style="margin-top:4px">
-        <button class="btn-copy" id="copyGovPromptBtn" disabled onclick="copyText('govPrompt','statusGov','Prompt copied — paste into ChatGPT')">Copy Prompt</button>
-      </div>
+<div id="window-13"
+     class="window-card"
+     style="display:none;border-top:3px solid #1a237e">
 
-      <!-- Step 2: Paste LLM output -->
-      <div style="margin-top:12px">
-        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#1a237e;margin-bottom:4px;letter-spacing:1px">PASTE CHATGPT OUTPUT HERE</div>
-        <textarea id="govPasteBlock" style="height:160px" placeholder="New H1: [value]&#10;New Meta Title: [value]&#10;New Meta Description: [value]" oninput="updateGovLengths()"></textarea>
-        <div class="btn-row" style="margin-top:3px">
-          <button class="btn-copy" onclick="clearAndPaste('govPasteBlock')">⌫ Clear + Paste</button>
-        </div>
-        <div id="govLengthDisplay" style="font-family:JetBrains Mono,monospace;font-size:13px;margin-top:6px;line-height:1.8;display:none">
-          <span id="govH1Len"></span><br>
-          <span id="govTitleLen"></span><br>
-          <span id="govDescLen"></span>
-        </div>
-      </div>
+  <div class="window-header">
 
-      <!-- Step 3: Push -->
-      <button style="background:#2e7d32;width:100%;margin-top:10px;padding:9px;font-size:11px;font-weight:700;border:none;border-radius:5px;color:white;cursor:pointer" id="pushGovBtn" onclick="pushGovernanceToSheet()">💾 Push to Sheet</button>
-      <div id="stage2CResultGrid" style="display:none;margin-top:8px">
-        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#2e7d32;margin-bottom:5px;letter-spacing:1px">PUSH RESULT</div>
-        <div id="stage2CGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px"></div>
-        <div id="stage2CMsg" style="font-family:JetBrains Mono,monospace;font-size:13px;background:#e8f5e9;border-radius:4px;padding:8px;white-space:pre-wrap;color:#333"></div>
-      </div>
-    </div>
+    <span class="window-label"
+          style="color:#1a237e">
+      W5 — H1 &amp; Meta
+    </span>
+
+    <span class="tag"
+          style="background:#1a237e">
+      Automated
+    </span>
+
   </div>
+
+
+  <div class="window-body">
+
+    <div id="statusGov"
+         class="status-bar pending">
+      Generates and validates H1, CTR-focused Meta Title, Meta Description and Yoast Keyphrase, then saves them automatically.
+    </div>
+
+
+    <div class="step-label"
+         style="margin-top:8px">
+      Source: Page governance + article content + GSC queries + Competitor SERP Notes → validated W5 fields
+    </div>
+
+
+    <div class="btn-row"
+         style="margin-top:8px">
+
+      <button
+        id="autoW5Btn"
+        style="background:#1a237e"
+        onclick="runW5Automated()">
+
+        ⚡ Run W5 Automated
+
+      </button>
+
+    </div>
+
+
+    <div id="w5Result"
+         style="
+           display:none;
+           margin-top:8px;
+           font-family:JetBrains Mono,monospace;
+           font-size:12px;
+           background:#e8eaf6;
+           border-radius:4px;
+           padding:8px;
+           white-space:pre-wrap;
+           color:#333;">
+    </div>
+
+  </div>
+
+</div>
 
   <!-- ══ W5C — DETERMINISTIC SCHEMA BUILDER ══ -->
   <div id="window-14" class="window-card" style="display:none" style="border-top:3px solid #bf360c">
