@@ -1,104 +1,1162 @@
-<!-- ══ W2C IMAGE SUGGESTION ══ -->
-<div id="window-10b" class="window-card" style="display:none">
-  <div class="window-header">
-    <span class="window-label" style="color:var(--green)">W2C — Image Suggestion</span>
-  </div>
-  <div class="window-body">
-    <div id="statusW2C" class="status-bar pending">Generate prompt → Copy → paste to ChatGPT → paste JSON response → Save</div>
+<!-- ══════════════════════════════════════════════════════════════
+     W2C — MEDIA REVIEW & INSERTION
+══════════════════════════════════════════════════════════════ -->
 
-    <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #ddd">
-      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 1 — GENERATE PROMPT:</label>
-      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">Reads the selected HTML source, finds every H2 heading and builds a ChatGPT prompt asking it to suggest suitable images for each heading.</div>
-      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">HTML SOURCE:</label>
-      <select id="w2cSourceSelect" style="width:100%;padding:6px;font-size:11px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;margin-bottom:6px">
-        <option value="w2b_raw_html">W2B Raw HTML (col EU)</option>
-        <option value="new_html">New HTML (col CT)</option>
-        <option value="humanised_html">Humanised HTML (col CZ)</option>
-        <option value="w8b_html">W8B_HTML (col FI)</option>
-        <option value="w8c_html">W8C_HTML (col FJ)</option>
-        <option value="html_semtc_adj">New HTML With Semantic Adjustment (col FT)</option>
-      </select>
-      <textarea id="w2cPrompt" style="height:140px" placeholder="Prompt will appear here"></textarea>
-      <div class="btn-row" style="margin-top:4px">
-        <button class="btn-generate" id="w2cGenBtn" onclick="runW2CGenerate()">Generate Prompt</button>
-        <button class="btn-copy" onclick="copyW2CPrompt()" style="background:#558b2f;color:#fff">Copy Prompt</button>
-      </div>
+<div id="window-10b" class="window-card" style="display:none">
+
+  <div class="window-header">
+    <span class="window-label" style="color:var(--green)">
+      W2C — Media Review & Insertion
+    </span>
+  </div>
+
+  <div class="window-body">
+
+    <div id="statusW2C" class="status-bar pending">
+      Generate fresh media suggestions and FL HTML to begin.
     </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         AUTOMATED W2C GENERATION
+    ═══════════════════════════════════════════════════════ -->
+
+    <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #ddd">
+
+      <button
+        class="btn-generate"
+        id="w2cAutoRunBtn"
+        onclick="w2cAutoRegenerateFL()"
+        style="width:100%;background:#1565c0;color:#fff;padding:9px">
+        ⚡ Generate Media Suggestions & FL
+      </button>
+
+      <div
+        id="w2cAutoRunResult"
+        style="display:none;margin-top:7px;font-family:JetBrains Mono,monospace;font-size:11px">
+      </div>
+
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         CURRENT FL HTML
+    ═══════════════════════════════════════════════════════ -->
+
+    <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #ddd">
+
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:5px">
+        CURRENT FL HTML
+      </label>
+
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:7px">
+        Contains the article and visible media suggestions. Copy this HTML
+        into your external editor to review the rendered article.
+      </div>
+
+      <textarea
+        id="w2cCurrentHtml"
+        style="width:100%;height:260px;box-sizing:border-box;font-family:JetBrains Mono,monospace;font-size:11px"
+        placeholder="Column FL HTML will appear here"></textarea>
+
+      <div class="btn-row" style="margin-top:6px">
+
+        <button
+          class="btn-generate"
+          onclick="w2cLoadCurrentHtml()"
+          style="background:#1565c0;color:#fff">
+          ↻ Reload FL
+        </button>
+
+        <button
+          class="btn-copy"
+          onclick="w2cCopyCurrentHtml()"
+          style="background:#558b2f;color:#fff">
+          Copy HTML
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         MEDIA URL ENTRIES
+    ═══════════════════════════════════════════════════════ -->
+
+    <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #ddd">
+
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:5px">
+        MEDIA
+      </label>
+
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:8px">
+        Copy the generation prompt if required, create or source the media,
+        upload it to WordPress, then paste its final URL below.
+        Leave the URL blank to reject that suggestion.
+      </div>
+
+      <div id="w2cMediaEntries">
+
+        <div style="padding:10px;background:#fafafa;border:1px solid #ddd;font-size:11px;color:#777">
+          Generate or load FL first.
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         BUILD UPDATED HTML
+    ═══════════════════════════════════════════════════════ -->
+
+    <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #ddd">
+
+      <button
+        class="btn-generate"
+        onclick="w2cBuildUpdatedHtml()"
+        style="width:100%;background:#6a1b9a;color:#fff;padding:9px">
+        ⚙ Build Updated HTML
+      </button>
+
+      <div
+        id="w2cBuildResult"
+        style="display:none;margin-top:7px;font-family:JetBrains Mono,monospace;font-size:11px">
+      </div>
+
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         UPDATED HTML
+    ═══════════════════════════════════════════════════════ -->
 
     <div>
-      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 2 — PASTE LLM JSON RESPONSE HERE:</label>
-      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">ChatGPT returns a JSON array of image suggestions. Clear & Paste brings it from your clipboard. Save to Sheet writes the JSON to column FK.</div>
-      <textarea id="w2cResponse" style="height:140px" placeholder="Paste the JSON response from ChatGPT here"></textarea>
-      <div class="btn-row" style="margin-top:4px">
-        <button class="btn-copy" onclick="clearAndPaste('w2cResponse')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
-        <button class="btn-copy" onclick="saveW2CToSheet()" style="background:#37474f;color:#fff">⬇ Save to Sheet</button>
+
+      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:5px">
+        UPDATED HTML
+      </label>
+
+      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:7px">
+        Accepted media URLs are inserted as final figure HTML.
+        Suggestions with no URL are removed.
+        Copy this HTML into your external editor and check the rendered result.
       </div>
-      <div id="w2cSaveResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+
+      <textarea
+        id="w2cUpdatedHtml"
+        style="width:100%;height:260px;box-sizing:border-box;font-family:JetBrains Mono,monospace;font-size:11px"
+        placeholder="Updated HTML will appear here"></textarea>
+
+      <div class="btn-row" style="margin-top:6px">
+
+        <button
+          class="btn-copy"
+          onclick="w2cCopyUpdatedHtml()"
+          style="background:#558b2f;color:#fff">
+          Copy Updated HTML
+        </button>
+
+        <button
+          class="btn-copy"
+          onclick="w2cSaveUpdatedHtml()"
+          style="background:#37474f;color:#fff">
+          ✔ Save Updated HTML to FL
+        </button>
+
+      </div>
+
+      <div
+        id="w2cSaveResult"
+        style="display:none;margin-top:7px;font-family:JetBrains Mono,monospace;font-size:11px">
+      </div>
+
     </div>
 
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
-      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 3 — RECONCILE WITH SELECTED HTML SOURCE:</label>
-      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">Reads the HTML source selected in Step 1 and the JSON from column FK. Injects a comment placeholder after each H2 showing where each image will go. Saves the result to column FL.</div>
-      <div class="btn-row" style="margin-top:4px">
-        <button class="btn-generate" onclick="runReconcileW2C()" style="background:#6a1b9a;color:#fff">⚙ Reconcile</button>
-      </div>
-      <div id="w2cReconcileResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
-    </div>
-
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
-      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 3A — SAVE SUGGESTIONS TO IMAGE LIBRARY:</label>
-      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">Writes one row per image suggestion into the Image Library sheet with Post ID, H2 heading, slug, alt, caption and AI prompt. This is your working list for sourcing and generating images.</div>
-      <div class="btn-row" style="margin-top:4px">
-        <button class="btn-copy" onclick="saveToImageLibrary()" style="background:#2e7d32;color:#fff">⬇ Save to Image Library</button>
-      </div>
-      <div id="w2cLibraryResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
-    </div>
-
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
-      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 3B — VIEW COLUMN FL HTML:</label>
-      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">Opens a modal showing the column FL content — raw HTML code tab and a WYSIWYG preview tab — so you can see the article with the comment placeholders in place.</div>
-      <div class="btn-row" style="margin-top:4px">
-        <button class="btn-copy" onclick="openFLViewer()" style="background:#1565c0;color:#fff">👁 View Column FL HTML</button>
-      </div>
-    </div>
-
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
-      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 3C — GENERATE FIGURE HTML:</label>
-      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">Once you have added image URLs to column H of the Image Library, this builds a ChatGPT prompt to write the complete figure HTML for each image — with alt text, diagnostic captions, and linked captions where column K has a URL. Save Figure HTML writes the result to column L of the Image Library.</div>
-      <div class="btn-row" style="margin-top:4px">
-        <button class="btn-generate" onclick="runBuildFigureHtmlPrompt()" style="background:#1565c0;color:#fff">Generate Figure HTML Prompt</button>
-        <button class="btn-copy" onclick="copyFigurePrompt()" style="background:#558b2f;color:#fff">Copy Prompt</button>
-      </div>
-      <textarea id="w2cFigurePrompt" style="height:100px;margin-top:6px" placeholder="Figure HTML prompt will appear here"></textarea>
-      <div style="margin-top:6px">
-        <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">Paste ChatGPT response:</label>
-        <textarea id="w2cFigureResponse" style="height:80px" placeholder="Paste ChatGPT JSON response here"></textarea>
-        <div class="btn-row" style="margin-top:4px">
-          <button class="btn-copy" onclick="clearAndPaste('w2cFigureResponse')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
-          <button class="btn-copy" onclick="saveFigureHtml()" style="background:#37474f;color:#fff">⬇ Save Figure HTML</button>
-        </div>
-        <div id="w2cFigureResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
-      </div>
-    </div>
-
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
-      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 4A — INJECT IMAGES FROM IMAGE LIBRARY:</label>
-      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">Reads Image Library rows where Status is Ready, takes the figure HTML from column L, and replaces the comment placeholders in column FL with real figure tags. Updates Status to Injected.</div>
-      <div class="btn-row" style="margin-top:4px">
-        <button class="btn-generate" onclick="injectImagesFromLibrary()" style="background:#e65100;color:#fff">⚡ Inject Images into FL HTML</button>
-      </div>
-      <div id="w2cInjectResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
-    </div>
-
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
-      <label style="font-size:11px;color:#666;font-weight:600;display:block;margin-bottom:3px">STEP 4 — PASTE HTML WITH IMAGES ADDED:</label>
-      <div style="font-family:JetBrains Mono,monospace;font-size:11px;color:#555;margin-bottom:6px">Manual fallback only — use this if you have edited the FL HTML yourself outside the pipeline. Clear & Paste brings your edited version in, Save to Sheet overwrites column FL.</div>
-      <textarea id="w2cFinalHtml" style="height:140px" placeholder="Paste the HTML with images added here"></textarea>
-      <div class="btn-row" style="margin-top:4px">
-        <button class="btn-copy" onclick="clearAndPaste('w2cFinalHtml')" style="background:#2e7d32;color:#fff">⌫ Clear & Paste</button>
-        <button class="btn-copy" onclick="saveW2CFinalHtml()" style="background:#37474f;color:#fff">⬇ Save to Sheet</button>
-      </div>
-      <div id="w2cFinalSaveResult" style="display:none;margin-top:6px;font-family:JetBrains Mono,monospace;font-size:11px"></div>
-    </div>
   </div>
 </div>
+
+
+<script>
+
+/* ============================================================
+   AUTOMATICALLY GENERATE FK + FL
+============================================================ */
+
+function w2cAutoRegenerateFL() {
+
+  var btn = document.getElementById('w2cAutoRunBtn');
+  var result = document.getElementById('w2cAutoRunResult');
+
+  btn.disabled = true;
+  btn.innerText = 'Generating…';
+
+  result.style.display = 'block';
+  result.style.color = '#555';
+  result.innerText =
+    'Generating fresh media suggestions, saving FK and rebuilding FL…';
+
+  google.script.run
+
+    .withSuccessHandler(function(res) {
+
+      btn.disabled = false;
+      btn.innerText =
+        '⚡ Generate Media Suggestions & FL';
+
+      if (res && res.success) {
+
+        result.style.color = '#2e7d32';
+        result.innerText = '✔ ' + res.message;
+
+        /*
+         * FK and FL have now been regenerated.
+         * Immediately load the new FL into this window.
+         */
+        w2cLoadCurrentHtml();
+
+      } else {
+
+        result.style.color = '#c62828';
+        result.innerText =
+          '❌ ' +
+          (
+            res && res.message
+              ? res.message
+              : 'W2C generation failed.'
+          );
+      }
+
+    })
+
+    .withFailureHandler(function(err) {
+
+      btn.disabled = false;
+      btn.innerText =
+        '⚡ Generate Media Suggestions & FL';
+
+      result.style.color = '#c62828';
+      result.innerText =
+        '❌ ' + err.message;
+
+    })
+
+    .bc_runW2CPlanningAutomated();
+}
+
+
+/* ============================================================
+   HTML ESCAPING
+============================================================ */
+
+function w2cEscapeHtml(value) {
+
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+
+/* ============================================================
+   LOAD COLUMN FL
+============================================================ */
+
+function w2cLoadCurrentHtml() {
+
+  var status =
+    document.getElementById('statusW2C');
+
+  status.className =
+    'status-bar running';
+
+  status.innerText =
+    'Loading column FL…';
+
+  google.script.run
+
+    .withSuccessHandler(function(res) {
+
+      if (!res || !res.success) {
+
+        status.className =
+          'status-bar fail';
+
+        status.innerText =
+          '❌ ' +
+          (
+            res && res.message
+              ? res.message
+              : 'Unable to load column FL.'
+          );
+
+        return;
+      }
+
+      var html =
+        String(res.html || '');
+
+      /*
+       * Number every W2C suggestion.
+       */
+
+      var wrapper =
+        document.createElement('div');
+
+      wrapper.innerHTML = html;
+
+      var placeholders =
+        wrapper.querySelectorAll(
+          '.w2c-media-placeholder'
+        );
+
+      placeholders.forEach(
+        function(block, index) {
+
+          var imageNumber =
+            index + 1;
+
+          block.setAttribute(
+            'data-w2c-number',
+            String(imageNumber)
+          );
+
+          if (
+            !block.querySelector(
+              '.w2c-image-number'
+            )
+          ) {
+
+            var numberDiv =
+              document.createElement('div');
+
+            numberDiv.className =
+              'w2c-image-number';
+
+            numberDiv.style.cssText =
+              'font-size:20px;' +
+              'font-weight:700;' +
+              'margin-bottom:10px;' +
+              'color:#333;';
+
+            numberDiv.textContent =
+              'IMAGE ' +
+              imageNumber;
+
+            block.insertBefore(
+              numberDiv,
+              block.firstChild
+            );
+          }
+        }
+      );
+
+      html = wrapper.innerHTML;
+
+      document.getElementById(
+        'w2cCurrentHtml'
+      ).value = html;
+
+      document.getElementById(
+        'w2cUpdatedHtml'
+      ).value = '';
+
+      w2cBuildMediaEntryControls(
+        html
+      );
+
+      status.className =
+        'status-bar done';
+
+      status.innerText =
+        '✔ FL loaded — ' +
+        placeholders.length +
+        ' media suggestion(s) found.';
+
+    })
+
+    .withFailureHandler(function(err) {
+
+      status.className =
+        'status-bar fail';
+
+      status.innerText =
+        '❌ ' + err.message;
+
+    })
+
+    .getW2CFinalHtmlFromSheet();
+}
+
+
+/* ============================================================
+   BUILD MEDIA ENTRY CONTROLS
+============================================================ */
+
+function w2cBuildMediaEntryControls(html) {
+
+  var container =
+    document.getElementById(
+      'w2cMediaEntries'
+    );
+
+  container.innerHTML = '';
+
+  var wrapper =
+    document.createElement('div');
+
+  wrapper.innerHTML = html;
+
+  var placeholders =
+    wrapper.querySelectorAll(
+      '.w2c-media-placeholder'
+    );
+
+  if (!placeholders.length) {
+
+    container.innerHTML =
+      '<div style="' +
+        'padding:10px;' +
+        'background:#fafafa;' +
+        'border:1px solid #ddd;' +
+        'font-size:11px;' +
+        'color:#777;' +
+      '">' +
+        'No W2C media suggestions found in FL.' +
+      '</div>';
+
+    return;
+  }
+
+
+  placeholders.forEach(
+    function(block, index) {
+
+      var imageNumber =
+        parseInt(
+          block.getAttribute(
+            'data-w2c-number'
+          ),
+          10
+        ) ||
+        (index + 1);
+
+      var slug =
+        block.getAttribute(
+          'data-w2c-slug'
+        ) || '';
+
+      var action =
+        block.getAttribute(
+          'data-w2c-action'
+        ) || 'add';
+
+      var existingMedia =
+        block.getAttribute(
+          'data-w2c-existing-media'
+        ) || '';
+
+      var blockText =
+        block.innerText ||
+        block.textContent ||
+        '';
+
+      var mediaType =
+        w2cExtractPlaceholderField(
+          blockText,
+          'Media type:'
+        );
+
+      var alt =
+        w2cExtractPlaceholderField(
+          blockText,
+          'Alt text:'
+        );
+
+      var caption =
+        w2cExtractPlaceholderField(
+          blockText,
+          'Caption:'
+        );
+
+      var mediaBrief =
+        w2cExtractPlaceholderField(
+          blockText,
+          'Media brief:'
+        );
+
+
+      /*
+       * Copy-ready generation instruction.
+       */
+
+      var generatorPrompt =
+        'Generate a ' +
+        String(
+          mediaType ||
+          'visual'
+        ).toLowerCase() +
+        ' in landscape 16:9 format. ' +
+        mediaBrief;
+
+
+      var card =
+        document.createElement('div');
+
+      card.style.cssText =
+        'margin-bottom:12px;' +
+        'padding:12px;' +
+        'border:1px solid #ccc;' +
+        'border-radius:5px;' +
+        'background:#fafafa;';
+
+
+      var replacementText = '';
+
+      if (
+        action ===
+          'replace_existing' &&
+        existingMedia
+      ) {
+
+        replacementText =
+          '<div style="' +
+            'font-size:11px;' +
+            'font-weight:700;' +
+            'color:#b45309;' +
+            'margin-bottom:5px;' +
+          '">' +
+            'PROPOSED REPLACEMENT FOR EXISTING MEDIA #' +
+            w2cEscapeHtml(
+              existingMedia
+            ) +
+          '</div>';
+      }
+
+
+      card.innerHTML =
+
+        '<div style="' +
+          'font-size:16px;' +
+          'font-weight:700;' +
+          'margin-bottom:6px;' +
+        '">' +
+          'Image ' +
+          imageNumber +
+        '</div>' +
+
+        replacementText +
+
+        '<div style="font-size:11px;margin-bottom:5px;">' +
+          '<strong>Suggested slug:</strong> ' +
+          w2cEscapeHtml(slug) +
+        '</div>' +
+
+        '<div style="font-size:11px;margin-bottom:5px;">' +
+          '<strong>Media type:</strong> ' +
+          w2cEscapeHtml(mediaType) +
+        '</div>' +
+
+        '<div style="font-size:11px;margin-bottom:5px;">' +
+          '<strong>Alt:</strong> ' +
+          w2cEscapeHtml(alt) +
+        '</div>' +
+
+        '<div style="font-size:11px;margin-bottom:8px;">' +
+          '<strong>Caption:</strong> ' +
+          w2cEscapeHtml(caption) +
+        '</div>' +
+
+        '<label style="' +
+          'font-size:11px;' +
+          'font-weight:700;' +
+          'display:block;' +
+          'margin-bottom:3px;' +
+        '">' +
+          'IMAGE GENERATOR PROMPT:' +
+        '</label>' +
+
+        '<textarea ' +
+          'id="w2cPrompt_' +
+          imageNumber +
+          '" ' +
+          'style="' +
+            'width:100%;' +
+            'height:105px;' +
+            'box-sizing:border-box;' +
+            'font-size:11px;' +
+            'font-family:JetBrains Mono,monospace;' +
+            'margin-bottom:5px;' +
+          '">' +
+          w2cEscapeHtml(
+            generatorPrompt
+          ) +
+        '</textarea>' +
+
+        '<button ' +
+          'class="btn-copy" ' +
+          'onclick="w2cCopyGeneratorPrompt(' +
+            imageNumber +
+          ')" ' +
+          'style="' +
+            'background:#558b2f;' +
+            'color:#fff;' +
+            'margin-bottom:10px;' +
+          '">' +
+          'Copy Generator Prompt' +
+        '</button>' +
+
+        '<label style="' +
+          'font-size:11px;' +
+          'font-weight:700;' +
+          'display:block;' +
+          'margin-bottom:3px;' +
+        '">' +
+          'IMAGE ' +
+          imageNumber +
+          ' WORDPRESS URL:' +
+        '</label>' +
+
+        '<input ' +
+          'type="text" ' +
+          'id="w2cUrl_' +
+          imageNumber +
+          '" ' +
+          'placeholder="Paste WordPress media URL here — leave blank to reject" ' +
+          'style="' +
+            'width:100%;' +
+            'box-sizing:border-box;' +
+            'padding:7px;' +
+            'font-size:11px;' +
+            'border:1px solid #bbb;' +
+            'border-radius:4px;' +
+          '">' ;
+
+      container.appendChild(card);
+    }
+  );
+}
+
+
+/* ============================================================
+   EXTRACT A FIELD FROM A PLACEHOLDER
+============================================================ */
+
+function w2cExtractPlaceholderField(
+  text,
+  label
+) {
+
+  var start =
+    text.indexOf(label);
+
+  if (start === -1) {
+    return '';
+  }
+
+  start += label.length;
+
+  var remaining =
+    text.substring(start).trim();
+
+  var labels = [
+    'Media type:',
+    'Alt text:',
+    'Caption:',
+    'Purpose:',
+    'Media brief:'
+  ];
+
+  var end =
+    remaining.length;
+
+  labels.forEach(
+    function(nextLabel) {
+
+      var p =
+        remaining.indexOf(
+          nextLabel
+        );
+
+      if (
+        p > 0 &&
+        p < end
+      ) {
+        end = p;
+      }
+    }
+  );
+
+  return remaining
+    .substring(0, end)
+    .trim();
+}
+
+
+/* ============================================================
+   BUILD UPDATED HTML
+============================================================ */
+
+function w2cBuildUpdatedHtml() {
+
+  var sourceHtml =
+    document.getElementById(
+      'w2cCurrentHtml'
+    ).value.trim();
+
+  var resultDiv =
+    document.getElementById(
+      'w2cBuildResult'
+    );
+
+  if (!sourceHtml) {
+
+    resultDiv.style.display =
+      'block';
+
+    resultDiv.style.color =
+      '#c62828';
+
+    resultDiv.innerText =
+      '❌ Load FL HTML first.';
+
+    return;
+  }
+
+
+  var wrapper =
+    document.createElement('div');
+
+  wrapper.innerHTML =
+    sourceHtml;
+
+
+  /*
+   * Capture original figures before changing placeholders.
+   */
+
+  var originalFigures =
+    Array.from(
+      wrapper.querySelectorAll(
+        'figure'
+      )
+    );
+
+  var placeholders =
+    Array.from(
+      wrapper.querySelectorAll(
+        '.w2c-media-placeholder'
+      )
+    );
+
+  var inserted = 0;
+  var rejected = 0;
+  var replacedExisting = [];
+
+
+  placeholders.forEach(
+    function(block, index) {
+
+      var imageNumber =
+        parseInt(
+          block.getAttribute(
+            'data-w2c-number'
+          ),
+          10
+        ) ||
+        (index + 1);
+
+      var input =
+        document.getElementById(
+          'w2cUrl_' +
+          imageNumber
+        );
+
+      var url =
+        input
+          ? String(
+              input.value || ''
+            ).trim()
+          : '';
+
+      var action =
+        block.getAttribute(
+          'data-w2c-action'
+        ) || 'add';
+
+      var existingMedia =
+        block.getAttribute(
+          'data-w2c-existing-media'
+        ) || '';
+
+
+      /*
+       * Blank URL = reject suggestion.
+       *
+       * If it was a replacement proposal,
+       * the original existing figure remains.
+       */
+
+      if (!url) {
+
+        block.remove();
+
+        rejected++;
+
+        return;
+      }
+
+
+      var blockText =
+        block.innerText ||
+        block.textContent ||
+        '';
+
+      var alt =
+        w2cExtractPlaceholderField(
+          blockText,
+          'Alt text:'
+        );
+
+      var caption =
+        w2cExtractPlaceholderField(
+          blockText,
+          'Caption:'
+        );
+
+
+      /*
+       * Build final WordPress figure.
+       */
+
+      var figure =
+        document.createElement(
+          'figure'
+        );
+
+      figure.className =
+        'wp-caption aligncenter';
+
+      figure.setAttribute(
+        'style',
+        'width: 700px'
+      );
+
+
+      var img =
+        document.createElement(
+          'img'
+        );
+
+      img.setAttribute(
+        'src',
+        url
+      );
+
+      img.setAttribute(
+        'alt',
+        alt
+      );
+
+
+      var figcaption =
+        document.createElement(
+          'figcaption'
+        );
+
+      figcaption.className =
+        'wp-caption-text';
+
+      figcaption.textContent =
+        caption;
+
+
+      figure.appendChild(img);
+      figure.appendChild(figcaption);
+
+      block.replaceWith(
+        figure
+      );
+
+      inserted++;
+
+
+      /*
+       * Replacement suggestion:
+       * remove the old numbered figure.
+       */
+
+      if (
+        action ===
+          'replace_existing' &&
+        existingMedia
+      ) {
+
+        var existingIndex =
+          parseInt(
+            existingMedia,
+            10
+          ) - 1;
+
+        if (
+          existingIndex >= 0 &&
+          existingIndex <
+            originalFigures.length
+        ) {
+
+          var oldFigure =
+            originalFigures[
+              existingIndex
+            ];
+
+          if (
+            oldFigure &&
+            oldFigure.isConnected
+          ) {
+
+            oldFigure.remove();
+
+            replacedExisting.push(
+              existingMedia
+            );
+          }
+        }
+      }
+
+    }
+  );
+
+
+  var updatedHtml =
+    wrapper.innerHTML.trim();
+
+
+  document.getElementById(
+    'w2cUpdatedHtml'
+  ).value =
+    updatedHtml;
+
+
+  resultDiv.style.display =
+    'block';
+
+  resultDiv.style.color =
+    '#2e7d32';
+
+  resultDiv.innerText =
+    '✔ Updated HTML built — ' +
+    inserted +
+    ' media item(s) inserted, ' +
+    rejected +
+    ' suggestion(s) rejected' +
+    (
+      replacedExisting.length
+        ? ', existing media ' +
+          replacedExisting.join(', ') +
+          ' replaced'
+        : ''
+    ) +
+    '.';
+}
+
+
+/* ============================================================
+   COPY CURRENT FL HTML
+============================================================ */
+
+function w2cCopyCurrentHtml() {
+
+  var html =
+    document.getElementById(
+      'w2cCurrentHtml'
+    ).value;
+
+  if (!html.trim()) {
+
+    alert(
+      'Load FL HTML first.'
+    );
+
+    return;
+  }
+
+  navigator.clipboard
+    .writeText(html)
+    .then(function() {
+
+      document.getElementById(
+        'statusW2C'
+      ).innerText =
+        '✔ Current FL HTML copied.';
+    });
+}
+
+
+/* ============================================================
+   COPY GENERATOR PROMPT
+============================================================ */
+
+function w2cCopyGeneratorPrompt(
+  imageNumber
+) {
+
+  var el =
+    document.getElementById(
+      'w2cPrompt_' +
+      imageNumber
+    );
+
+  if (!el) return;
+
+  navigator.clipboard
+    .writeText(el.value)
+    .then(function() {
+
+      document.getElementById(
+        'statusW2C'
+      ).innerText =
+        '✔ Image ' +
+        imageNumber +
+        ' generator prompt copied.';
+    });
+}
+
+
+/* ============================================================
+   COPY UPDATED HTML
+============================================================ */
+
+function w2cCopyUpdatedHtml() {
+
+  var html =
+    document.getElementById(
+      'w2cUpdatedHtml'
+    ).value;
+
+  if (!html.trim()) {
+
+    alert(
+      'Build the updated HTML first.'
+    );
+
+    return;
+  }
+
+  navigator.clipboard
+    .writeText(html)
+    .then(function() {
+
+      document.getElementById(
+        'statusW2C'
+      ).innerText =
+        '✔ Updated HTML copied for external review.';
+    });
+}
+
+
+/* ============================================================
+   SAVE UPDATED HTML TO COLUMN FL
+============================================================ */
+
+function w2cSaveUpdatedHtml() {
+
+  var html =
+    document.getElementById(
+      'w2cUpdatedHtml'
+    ).value.trim();
+
+  var resultDiv =
+    document.getElementById(
+      'w2cSaveResult'
+    );
+
+  if (!html) {
+
+    resultDiv.style.display =
+      'block';
+
+    resultDiv.style.color =
+      '#c62828';
+
+    resultDiv.innerText =
+      '❌ Build the updated HTML first.';
+
+    return;
+  }
+
+
+  resultDiv.style.display =
+    'block';
+
+  resultDiv.style.color =
+    '#555';
+
+  resultDiv.innerText =
+    'Saving updated HTML to FL…';
+
+
+  google.script.run
+
+    .withSuccessHandler(
+      function(res) {
+
+        if (
+          res &&
+          res.success
+        ) {
+
+          resultDiv.style.color =
+            '#2e7d32';
+
+          resultDiv.innerText =
+            '✔ Updated HTML saved to column FL.';
+
+          document.getElementById(
+            'statusW2C'
+          ).className =
+            'status-bar done';
+
+          document.getElementById(
+            'statusW2C'
+          ).innerText =
+            '✔ W2C media review complete — FL contains the approved media version.';
+
+        } else {
+
+          resultDiv.style.color =
+            '#c62828';
+
+          resultDiv.innerText =
+            '❌ ' +
+            (
+              res &&
+              res.message
+                ? res.message
+                : 'Save failed.'
+            );
+        }
+
+      }
+    )
+
+    .withFailureHandler(
+      function(err) {
+
+        resultDiv.style.color =
+          '#c62828';
+
+        resultDiv.innerText =
+          '❌ Save failed — ' +
+          err.message;
+      }
+    )
+
+    .saveW2CFinalHtmlToSheet(
+      html
+    );
+}
+
+</script>

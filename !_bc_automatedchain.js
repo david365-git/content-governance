@@ -4121,9 +4121,6 @@ function bc_runW2CPlanningAutomated() {
   var reconcileResult = reconcileImageSuggestions('w2b_raw_html');
   if (!reconcileResult.success) throw new Error(reconcileResult.message);
 
-  var libraryResult = saveW2CSuggestionsToImageLibrary();
-  if (!libraryResult.success) throw new Error(libraryResult.message);
-
   bc_addToApiCostAndTime(
     apiResult.cost,
     (Date.now() - startTime) / 1000
@@ -4132,7 +4129,8 @@ function bc_runW2CPlanningAutomated() {
   return {
     success: true,
     message:
-      'W2C planning complete — suggestions saved, FL prepared, and Image Library populated. Human image review is now required.',
+      'W2C planning complete — visual requirements assessed and FL prepared for review. ' +
+      reconcileResult.message,
     cost: apiResult.cost
   };
 }

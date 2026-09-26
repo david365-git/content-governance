@@ -36,18 +36,28 @@ function buildImageSuggestionPrompt(sourceKey) {
 
   const source = getW2CSourceColumn(sourceKey);
   const html = String(sheet.getRange(row, source.col).getValue() || "").trim();
+
   if (!html) {
-    return { success: false, message: "Column " + source.label + " is empty for this row — save that stage's output first." };
+    return {
+      success: false,
+      message: "Column " + source.label + " is empty for this row — save that stage's output first."
+    };
   }
 
-  // Extract H2 and H3 headings with their immediately following prose
+  /*
+   * =========================================================
+   * EXTRACT H2 / H3 CANDIDATES
+   * =========================================================
+   */
+
   var h2Blocks = [];
   var currentH2 = null;
   var h2Count = 0;
   var h3CountInSection = 0;
 
-  // Split HTML into heading blocks
-  var headingRegex = /<(h2|h3)([^>]*)>([\s\S]*?)<\/(h2|h3)>([\s\S]*?)(?=<h2|<h3|<\/section|<footer|$)/gi;
+  var headingRegex =
+    /<(h2|h3)([^>]*)>([\s\S]*?)<\/(h2|h3)>([\s\S]*?)(?=<h2|<h3|<\/section|<footer|$)/gi;
+
   var match;
 
   while ((match = headingRegex.exec(html)) !== null) {
@@ -55,16 +65,23 @@ function buildImageSuggestionPrompt(sourceKey) {
     var headingRaw   = match[3];
     var followingRaw = match[5];
 
-    var headingText = headingRaw.replace(/<[^>]+>/g, '').trim();
+    var headingText =
+      headingRaw.replace(/<[^>]+>/g, '').trim();
+
     if (!headingText) continue;
 
-    // Extract up to 2 <p> tag contents following the heading
     var pMatches = [];
     var pRegex   = /<p[^>]*>([\s\S]*?)<\/p>/gi;
     var pMatch;
-    var pCount   = 0;
-    while ((pMatch = pRegex.exec(followingRaw)) !== null && pCount < 2) {
-      var pText = pMatch[1].replace(/<[^>]+>/g, '').trim();
+    var pCount = 0;
+
+    while (
+      (pMatch = pRegex.exec(followingRaw)) !== null &&
+      pCount < 2
+    ) {
+      var pText =
+        pMatch[1].replace(/<[^>]+>/g, '').trim();
+
       if (pText) {
         pMatches.push(pText);
         pCount++;
@@ -75,107 +92,283 @@ function buildImageSuggestionPrompt(sourceKey) {
       currentH2 = headingText;
       h2Count++;
       h3CountInSection = 0;
+
       h2Blocks.push({
-        level:   'h2',
+        level: 'h2',
         heading: headingText,
-        prose:   pMatches.join(' '),
+        prose: pMatches.join(' '),
         h2Index: h2Count
       });
+
     } else if (level === 'h3' && currentH2) {
       h3CountInSection++;
+
       h2Blocks.push({
-        level:    'h3',
-        heading:  headingText,
-        prose:    pMatches.join(' '),
+        level: 'h3',
+        heading: headingText,
+        prose: pMatches.join(' '),
         parentH2: currentH2,
-        h2Index:  h2Count
+        h2Index: h2Count
       });
     }
   }
 
   if (h2Blocks.length === 0) {
-    return { success: false, message: "No H2 or H3 headings found in " + source.label + " content." };
+    return {
+      success: false,
+      message: "No H2 or H3 headings found in " + source.label + " content."
+    };
   }
 
-  // Build candidate block for the prompt
+  /*
+   * =========================================================
+   * BUILD HEADING CANDIDATE BLOCK
+   * =========================================================
+   */
+
   var candidateBlock = "";
-  var h2Counter  = 0;
+  var h2Counter = 0;
   var h3Counters = {};
 
   h2Blocks.forEach(function(b) {
+
     if (b.level === 'h2') {
       h2Counter++;
       h3Counters[h2Counter] = 0;
-      candidateBlock += "H2 " + h2Counter + ": " + b.heading + "\n";
+
+      candidateBlock +=
+        "H2 " + h2Counter + ": " + b.heading + "\n";
+
       if (b.prose) {
-        candidateBlock += "Opening prose: " + b.prose.substring(0, 300) + (b.prose.length > 300 ? "..." : "") + "\n";
+        candidateBlock +=
+          "Opening prose: " +
+          b.prose.substring(0, 300) +
+          (b.prose.length > 300 ? "..." : "") +
+          "\n";
       }
+
       candidateBlock += "\n";
+
     } else if (b.level === 'h3') {
-      h3Counters[b.h2Index] = (h3Counters[b.h2Index] || 0) + 1;
-      candidateBlock += "H3 " + b.h2Index + "." + h3Counters[b.h2Index] + ": " + b.heading + "\n";
+
+      h3Counters[b.h2Index] =
+        (h3Counters[b.h2Index] || 0) + 1;
+
+      candidateBlock +=
+        "H3 " +
+        b.h2Index +
+        "." +
+        h3Counters[b.h2Index] +
+        ": " +
+        b.heading +
+        "\n";
+
       if (b.prose) {
-        candidateBlock += "Opening prose: " + b.prose.substring(0, 300) + (b.prose.length > 300 ? "..." : "") + "\n";
+        candidateBlock +=
+          "Opening prose: " +
+          b.prose.substring(0, 300) +
+          (b.prose.length > 300 ? "..." : "") +
+          "\n";
       }
+
       candidateBlock += "\n";
     }
   });
 
-var typeInstruction = "ARTICLE TYPE: " + articleType + "\n" +
-    "For every suggestion, set \"type\": \"ai-photo\" and provide an \"ai_prompt\" field — a detailed photorealistic image description that serves two purposes simultaneously: (1) as a prompt for AI image generation if needed, and (2) as a visual search brief to find a matching real photograph from an existing library of thousands of job site images. All images must be landscape orientation, 16:9 aspect ratio. Describe the scene as if briefing a photographer: the specific floor condition visible, the viewing angle and composition, the lighting quality, the dominant colours and tones of the stone and grout, what is happening to the surface at this exact stage, and any specific visual details that make this image recognisable and distinct from a generic floor photo. Write as a single detailed paragraph. Do NOT describe abstract diagrams, charts, or illustrations.\n" +
-    "\nALSO provide an ALTERNATIVE non-photographic media option for every suggestion, so the photorealistic option above and this alternative can be compared before choosing. Set \"alt_media_type\" to ONE of the following five categories, chosen strictly by what this specific heading's content is doing:\n" +
-    "1. BEFORE/AFTER COMPARISON — only when the content describes a transformation or dramatic outcome contrast. MUST use real photography, never AI-generated — do not suggest this type unless real project photos would plausibly exist for this content.\n" +
-    "2. CALLOUT / WARNING BOX — when the content states an explicit prohibition, safety rule, or \"never do X\" instruction.\n" +
-    "3. DIAGRAM / CROSS-SECTION — when explaining a hidden mechanism, process, or how something behaves beneath the visible surface (e.g. how heat affects sealer, how moisture moves through stone).\n" +
-    "4. COMPARISON TABLE — when comparing two or more named options, products, or approaches side by side.\n" +
-    "5. ICON-BASED STEP SUMMARY — when the content describes a sequential multi-step process that could be condensed into a visual checklist.\n" +
-    "HARD RULE: \"alt_media_brief\" must NEVER describe a photorealistic image — it must always be clearly illustrated/diagrammatic/iconographic, EXCEPT for category 1 (Before/After), where it must instead be a one-sentence note describing what real project photo would be needed (do not generate an AI prompt for that case). For categories 2-5, \"alt_media_brief\" should be a ready-to-use AI generation prompt for that non-photorealistic visual, landscape orientation, specific to this heading's actual content — not generic.\n";
+  /*
+   * =========================================================
+   * INVENTORY EXISTING MEDIA
+   * =========================================================
+   *
+   * We cannot visually inspect these images here.
+   * The LLM receives only the section context, src, alt and caption.
+   * Any Keep/Replace judgement is therefore provisional.
+   */
 
-  var prompt = "STAGE 2C — IMAGE SUGGESTION\n" +
-    "ROLE: Senior UK SEO & Stone Restoration Content Strategist with visual content expertise.\n" +
-    "TASK: Review the H2 and H3 headings and opening prose below from the published article HTML. For each heading that would genuinely benefit from a supporting image placed immediately after it, output a suggestion. Not every heading requires an image — only suggest where a visual adds real diagnostic, illustrative, or engagement value. For H3 headings, suggest images wherever genuinely useful — the suggestions will be reviewed and only the best selected.\n\n" +
-    typeInstruction + "\n" +
+  var existingMedia = [];
+  var sectionRegex =
+    /<section[^>]*>([\s\S]*?)<\/section>/gi;
+
+  var sectionMatch;
+  var mediaNumber = 0;
+
+  while ((sectionMatch = sectionRegex.exec(html)) !== null) {
+
+    var sectionHtml = sectionMatch[1];
+
+    var sectionHeadingMatch =
+      sectionHtml.match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
+
+    var sectionHeading = sectionHeadingMatch
+      ? sectionHeadingMatch[1]
+          .replace(/<[^>]+>/g, '')
+          .trim()
+      : '';
+
+    var figureRegex =
+      /<figure\b[^>]*>([\s\S]*?)<\/figure>/gi;
+
+    var figureMatch;
+
+    while ((figureMatch = figureRegex.exec(sectionHtml)) !== null) {
+      mediaNumber++;
+
+      var figureHtml = figureMatch[0];
+
+      var srcMatch =
+        figureHtml.match(/<img[^>]*src=["']([^"']+)["']/i);
+
+      var altMatch =
+        figureHtml.match(/<img[^>]*alt=["']([^"']*)["']/i);
+
+      var captionMatch =
+        figureHtml.match(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i);
+
+      var captionText = captionMatch
+        ? captionMatch[1]
+            .replace(/<[^>]+>/g, '')
+            .trim()
+        : '';
+
+      existingMedia.push({
+        number: mediaNumber,
+        heading: sectionHeading,
+        src: srcMatch ? srcMatch[1] : '',
+        alt: altMatch ? altMatch[1] : '',
+        caption: captionText
+      });
+    }
+  }
+
+  var existingMediaBlock = "";
+
+  if (existingMedia.length === 0) {
+    existingMediaBlock =
+      "No existing figure images were found in the article.\n";
+  } else {
+    existingMedia.forEach(function(m) {
+      existingMediaBlock +=
+        "EXISTING MEDIA " + m.number + "\n" +
+        "Section: " + m.heading + "\n" +
+        "Source: " + m.src + "\n" +
+        "Alt: " + m.alt + "\n" +
+        "Caption: " + m.caption + "\n\n";
+    });
+  }
+
+  /*
+   * =========================================================
+   * PROMPT
+   * =========================================================
+   */
+
+  var prompt =
+    "STAGE 2C — VISUAL MEDIA PLANNING\n" +
+
+    "ROLE: Senior UK SEO, editorial and visual-content strategist for a professional stone and tile restoration website.\n\n" +
+
+    "ARTICLE TYPE: " + articleType + "\n\n" +
+
+    "TARGET:\n" +
+    "Aim for approximately three genuinely useful visual elements across the complete article. This is not a rigid quota. Fewer are acceptable when the article does not need them.\n\n" +
+
+    "IMPORTANT EXISTING-MEDIA RULE:\n" +
+    "Do NOT assume an existing image is useful merely because it exists. Assess its section, filename/source, alt text and caption to decide whether it appears relevant and informative.\n\n" +
+
+    "VISUAL LIMITATION:\n" +
+    "You cannot see the actual existing image. Therefore any judgement about an existing image is provisional. The human editor will visually review the real image in the rendered article and make the final Keep or Replace decision.\n\n" +
+
+    "If an existing visual appears relevant from its metadata, allow it to count towards the approximate target of three. If it appears generic, outdated, decorative, weakly related or misleading, do not automatically count it as useful.\n\n" +
+
+    "PRIORITY:\n" +
+    "Prefer strong visual support in the first three substantive H2 sections. Later sections should receive media only when they explain something genuinely different that earlier visuals cannot communicate effectively.\n\n" +
+
+    "AVAILABLE MEDIA TYPES:\n" +
+    "- Real Photograph\n" +
+    "- AI Photograph\n" +
+    "- Before/After Comparison\n" +
+    "- Diagram/Cross-Section\n" +
+    "- Comparison Graphic/Table\n" +
+    "- Callout/Warning Graphic\n" +
+    "- Step/Process Graphic\n\n" +
+
+    "MEDIA SELECTION RULES:\n" +
+    "- REAL PHOTOGRAPH: use when the reader needs to recognise a genuine floor condition, defect, treatment stage or result.\n" +
+    "- AI PHOTOGRAPH: use only when a realistic illustrative scene is useful and a real project image is unlikely to exist.\n" +
+    "- BEFORE/AFTER COMPARISON: only when matching real project photographs would plausibly exist. Never fabricate before/after evidence.\n" +
+    "- DIAGRAM/CROSS-SECTION: use for hidden mechanisms such as moisture movement, substrate behaviour, bonding, heat, cracks or sealer behaviour.\n" +
+    "- COMPARISON GRAPHIC/TABLE: use when comparing conditions, options, products or approaches.\n" +
+    "- CALLOUT/WARNING GRAPHIC: use for explicit prohibitions or important risks.\n" +
+    "- STEP/PROCESS GRAPHIC: use for a short sequential workflow.\n\n" +
+
     "------------------------------------------------------------\n" +
-    "H2 AND H3 HEADINGS AND OPENING PROSE FROM ARTICLE:\n" +
+    "EXISTING MEDIA CURRENTLY IN THE ARTICLE:\n" +
     "------------------------------------------------------------\n" +
+
+    existingMediaBlock +
+
+    "------------------------------------------------------------\n" +
+    "ARTICLE HEADINGS AND OPENING PROSE:\n" +
+    "------------------------------------------------------------\n" +
+
     candidateBlock +
+
     "------------------------------------------------------------\n" +
+    "TASK:\n" +
+    "------------------------------------------------------------\n" +
+
+    "Determine whether the article needs any additional or replacement media to reach approximately three genuinely useful visual elements.\n\n" +
+
+    "For each recommendation choose:\n" +
+    "\"action\": \"add\" OR \"replace_existing\".\n\n" +
+
+    "Use \"replace_existing\" only where an existing media item appears weak or inappropriate from the supplied metadata. The human editor will confirm this visually before replacement.\n\n" +
+
+    "If the article already appears to contain enough useful media, return [].\n\n" +
+
+    "Do not suggest media merely to decorate the page.\n\n" +
+
     "OUTPUT RULES:\n" +
-    "- Return ONLY a JSON array. No preamble, no markdown fences, no explanation.\n" +
-    "- One object per suggested image.\n" +
-    "- Maximum " + h2Blocks.length + " suggestions total.\n" +
-    "- Suggest images for all H3 headings where genuinely useful — the suggestions will be reviewed and only the best selected.\n" +
-    "- \"h2_text\" must be the exact H2 or H3 heading text from the list above — copied character for character.\n" +
-    "- \"heading_level\" must be either \"h2\" or \"h3\".\n" +
-    "- \"position\" must be \"after_h2\" for H2 images and \"after_h3\" for H3 images.\n" +
-    "- \"alt\" must be 5-15 words, descriptive, no keyword stuffing.\n" +
-    "- \"caption\" must follow the diagnostic caption pattern — connect the image to the reader's situation, not just describe it (e.g. \"If your floor looks like this...\").\n" +
-    "- \"slug\" must be lowercase, hyphenated, no file extension.\n" +
-    "- \"ai_prompt\" must be comprehensive enough to serve two purposes simultaneously:\n" +
-    "  PURPOSE 1 — AI IMAGE GENERATION: detailed enough that an AI image generator can produce a useful photorealistic image from it alone.\n" +
-    "  PURPOSE 2 — LIBRARY SEARCH AID: descriptive enough that a person scanning thousands of existing photos can use it as a mental image to recognise a match. Include: the specific floor condition or stage being shown, the viewing angle and composition (wide shot, close-up, top-down), the dominant colours and tones, what distinguishes this image from a generic floor photo, and any specific visual details that make this image recognisable. Write as a single detailed paragraph.\n\n" +
-    "REQUIRED JSON SHAPE (one example object):\n" +
+    "- Return ONLY a JSON array.\n" +
+    "- Maximum 3 recommendations.\n" +
+    "- No markdown fences or explanation.\n" +
+    "- \"h2_text\" must exactly match the target H2 or H3.\n" +
+    "- \"heading_level\" must be \"h2\" or \"h3\".\n" +
+    "- \"action\" must be \"add\" or \"replace_existing\".\n" +
+    "- \"existing_media_reference\" must contain the existing media number when action is \"replace_existing\", otherwise use an empty string.\n" +
+    "- \"media_type\" must use one of the allowed media types.\n" +
+    "- \"alt\" should normally be 5-15 descriptive words.\n" +
+    "- \"caption\" should help the reader interpret the visual.\n" +
+    "- \"purpose\" must explain why the visual improves this section.\n" +
+    "- \"media_brief\" must clearly describe what the visual should contain.\n" +
+    "- \"position\" must be \"after_h2\" or \"after_h3\".\n" +
+    "- \"slug\" must be lowercase and hyphenated.\n\n" +
+
+    "REQUIRED JSON SHAPE:\n" +
     "[\n" +
     "  {\n" +
-    "    \"h2_text\": \"exact H2 or H3 heading text here\",\n" +
-    "    \"heading_level\": \"h2\" or \"h3\",\n" +
-    "    \"slug\": \"example-descriptive-slug\",\n" +
-    "    \"alt\": \"descriptive alt text here\",\n" +
-    "    \"caption\": \"diagnostic caption here\",\n" +
-    "    \"type\": \"ai-photo\",\n" +
-    "    \"ai_prompt\": \"detailed photorealistic image description here\",\n" +
-    "    \"alt_media_type\": \"one of: Before/After Comparison | Callout/Warning Box | Diagram/Cross-Section | Comparison Table | Icon-Based Step Summary\",\n" +
-    "    \"alt_media_brief\": \"AI prompt for the non-photorealistic alternative, or a note on the real photo needed if alt_media_type is Before/After\",\n" +
-    "    \"position\": \"after_h2\" or \"after_h3\"\n" +
+    "    \"h2_text\": \"exact heading text\",\n" +
+    "    \"heading_level\": \"h2\",\n" +
+    "    \"action\": \"replace_existing\",\n" +
+    "    \"existing_media_reference\": \"2\",\n" +
+    "    \"slug\": \"descriptive-slug\",\n" +
+    "    \"media_type\": \"Diagram/Cross-Section\",\n" +
+    "    \"alt\": \"Concise descriptive alt text\",\n" +
+    "    \"caption\": \"Useful reader-facing caption\",\n" +
+    "    \"purpose\": \"Why this visual improves the section.\",\n" +
+    "    \"media_brief\": \"Detailed description of the proposed visual.\",\n" +
+    "    \"position\": \"after_h2\"\n" +
     "  }\n" +
     "]\n\n" +
+
     "--- GENERATE NOW ---";
 
   return {
     success: true,
-    prompt:        prompt,
+    prompt: prompt,
     candidateCount: h2Blocks.length,
-    articleType:   articleType
+    existingMediaCount: existingMedia.length,
+    articleType: articleType
   };
 }
 
@@ -638,69 +831,183 @@ function reconcileImageSuggestions(sourceKey) {
 
   var source = getW2CSourceColumn(sourceKey);
   var html = String(posts.getRange(row, source.col).getValue() || "").trim();
-  var json = String(posts.getRange(row, 167).getValue() || "").trim(); // FK — Image Suggestions (JSON)
+  var json = String(posts.getRange(row, 167).getValue() || "").trim();
 
   if (!html) {
-    return { success: false, message: "Column " + source.label + " is empty for this row." };
+    return {
+      success: false,
+      message: "Column " + source.label + " is empty for this row."
+    };
   }
+
   if (!json) {
-    return { success: false, message: "Column FK (Image Suggestions JSON) is empty for this row." };
+    return {
+      success: false,
+      message: "Column FK (Image Suggestions JSON) is empty for this row."
+    };
   }
 
   var suggestions;
+
   try {
     suggestions = JSON.parse(json);
   } catch (e) {
-    return { success: false, message: "Invalid JSON in column FK — " + e.toString() };
+    return {
+      success: false,
+      message: "Invalid JSON in column FK — " + e.toString()
+    };
   }
 
-  if (!Array.isArray(suggestions) || suggestions.length === 0) {
-    return { success: false, message: "No suggestions found in column FK JSON." };
+  if (!Array.isArray(suggestions)) {
+    return {
+      success: false,
+      message: "Column FK must contain a JSON array."
+    };
+  }
+
+  if (suggestions.length === 0) {
+    posts.getRange(row, 168).setValue(html);
+
+    return {
+      success: true,
+      message: "No additional or replacement media recommended — source HTML copied to FL unchanged.",
+      notFound: []
+    };
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   var notFound = [];
 
   suggestions.forEach(function(s) {
-    var h2Text = s.h2_text;
-    if (!h2Text) return;
+    var headingText = String(s.h2_text || "").trim();
 
-    // Build comment block
-    var commentBlock = '\n<!-- IMAGE SUGGESTION\n' +
-      'slug: '            + (s.slug           || '') + '\n' +
-      'alt: '             + (s.alt            || '') + '\n' +
-      'caption: '         + (s.caption        || '') + '\n' +
-      'type: '            + (s.type           || '') + '\n' +
-      'ai_prompt (photorealistic): ' + (s.ai_prompt || '') + '\n' +
-      'ALT MEDIA TYPE: '  + (s.alt_media_type  || '') + '\n' +
-      'ALT MEDIA BRIEF: ' + (s.alt_media_brief || '') + '\n' +
-      '-->\n';
+    if (!headingText) return;
 
-    // Determine heading level from suggestion — default to h2
-    var headingLevel = String(s.heading_level || 'h2').toLowerCase();
-    var tagName      = (headingLevel === 'h3') ? 'h3' : 'h2';
+    var action = String(s.action || "add").trim();
+    var existingRef = String(s.existing_media_reference || "").trim();
 
-    var escaped      = h2Text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    var actionLabel;
+
+    if (action === "replace_existing" && existingRef) {
+      actionLabel =
+        "PROPOSED REPLACEMENT FOR EXISTING MEDIA #" +
+        escapeHtml(existingRef);
+    } else {
+      actionLabel = "PROPOSED NEW MEDIA";
+    }
+
+    var mediaType  = escapeHtml(s.media_type);
+    var alt        = escapeHtml(s.alt);
+    var caption    = escapeHtml(s.caption);
+    var purpose    = escapeHtml(s.purpose);
+    var mediaBrief = escapeHtml(s.media_brief);
+    var slug       = escapeHtml(s.slug);
+
+    var placeholder =
+      '\n<div class="w2c-media-placeholder" ' +
+      'data-w2c-slug="' + slug + '" ' +
+      'data-w2c-action="' + escapeHtml(action) + '" ' +
+      'data-w2c-existing-media="' + escapeHtml(existingRef) + '" ' +
+      'style="' +
+        'box-sizing:border-box;' +
+        'width:100%;' +
+        'max-width:760px;' +
+        'min-height:260px;' +
+        'margin:24px auto;' +
+        'padding:24px;' +
+        'border:2px dashed #9e9e9e;' +
+        'background:#f5f5f5;' +
+        'font-family:Arial,sans-serif;' +
+        'color:#222;' +
+      '">' +
+
+        '<div style="' +
+          'font-size:14px;' +
+          'font-weight:700;' +
+          'text-transform:uppercase;' +
+          'margin-bottom:8px;' +
+        '">' +
+          actionLabel +
+        '</div>' +
+
+        '<div style="' +
+          'font-size:18px;' +
+          'font-weight:700;' +
+          'margin-bottom:16px;' +
+        '">' +
+          'Media type: ' + mediaType +
+        '</div>' +
+
+        '<div style="margin-bottom:10px;">' +
+          '<strong>Alt text:</strong> ' + alt +
+        '</div>' +
+
+        '<div style="margin-bottom:10px;">' +
+          '<strong>Caption:</strong> ' + caption +
+        '</div>' +
+
+        '<div style="margin-bottom:10px;">' +
+          '<strong>Purpose:</strong> ' + purpose +
+        '</div>' +
+
+        '<div>' +
+          '<strong>Media brief:</strong> ' + mediaBrief +
+        '</div>' +
+
+      '</div>\n';
+
+    var headingLevel =
+      String(s.heading_level || "h2").toLowerCase();
+
+    var tagName =
+      headingLevel === "h3" ? "h3" : "h2";
+
+    var escapedHeading =
+      headingText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
     var headingRegex = new RegExp(
-      '(<' + tagName + '[^>]*>[^<]*' + escaped + '[^<]*<\/' + tagName + '>)',
+      '(<'+ tagName +'[^>]*>[^<]*' +
+      escapedHeading +
+      '[^<]*<\\/' + tagName + '>)',
       'i'
     );
 
     if (!headingRegex.test(html)) {
-      notFound.push(h2Text);
+      notFound.push(headingText);
       return;
     }
 
-    html = html.replace(headingRegex, '$1' + commentBlock);
+    html = html.replace(
+      headingRegex,
+      '$1' + placeholder
+    );
   });
 
-  posts.getRange(row, 168).setValue(html); // FL — HTML with Image Suggestions
+  posts.getRange(row, 168).setValue(html);
 
-  var message = "Reconciled and saved to column FL (168).";
+  var message =
+    "Visible W2C media-review placeholders saved to FL.";
+
   if (notFound.length > 0) {
-    message += " H2s not found in HTML: " + notFound.join(" | ") + ".";
+    message +=
+      " Headings not found: " +
+      notFound.join(" | ") +
+      ".";
   }
 
-  return { success: true, message: message, notFound: notFound };
+  return {
+    success: true,
+    message: message,
+    notFound: notFound
+  };
 }
 
 /* ============================================================
