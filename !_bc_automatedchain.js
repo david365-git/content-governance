@@ -150,35 +150,203 @@ function bc_runW0Automated() {
 }
 
 function bc_sendPromptViaGemini(promptText) {
-  var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
-  if (!apiKey) throw new Error('GEMINI_API_KEY not set in Script Properties.');
-  var payload = {
-    contents: [{ parts: [{ text: promptText }] }],
-    tools: [{ googleSearch: {} }]
-  };
-  var options = {
-    method: 'post',
-    contentType: 'application/json',
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  };
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=' + apiKey;
-  var response = UrlFetchApp.fetch(url, options);
-  var data = JSON.parse(response.getContentText());
-  if (response.getResponseCode() !== 200) {
-    return { success: false, message: (data.error && data.error.message) || 'Gemini API error' };
+
+  try {
+
+    var apiKey =
+      PropertiesService
+        .getScriptProperties()
+        .getProperty('GEMINI_API_KEY');
+
+    if (!apiKey) {
+      throw new Error(
+        'GEMINI_API_KEY not set in Script Properties.'
+      );
+    }
+
+
+    var payload = {
+      contents: [
+        {
+          parts: [
+            {
+              text: promptText
+            }
+          ]
+        }
+      ],
+      tools: [
+        {
+          googleSearch: {}
+        }
+      ]
+    };
+
+
+    var options = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+
+
+    var url =
+      'https://generativelanguage.googleapis.com/v1beta/models/' +
+      'gemini-3.6-flash:generateContent?key=' +
+      apiKey;
+
+
+    var response =
+      UrlFetchApp.fetch(
+        url,
+        options
+      );
+
+
+    var responseText =
+      response.getContentText();
+
+
+    var data;
+
+    try {
+
+      data =
+        JSON.parse(
+          responseText
+        );
+
+    } catch (parseError) {
+
+      return {
+        success: false,
+        message:
+          'Gemini returned invalid JSON: ' +
+          responseText.substring(0, 500)
+      };
+    }
+
+
+    if (
+      response.getResponseCode() !== 200
+    ) {
+
+      return {
+        success: false,
+        message:
+          (
+            data.error &&
+            data.error.message
+          )
+            ? data.error.message
+            : 'Gemini API error — HTTP ' +
+              response.getResponseCode()
+      };
+    }
+
+
+    if (
+      !data.candidates ||
+      !data.candidates.length
+    ) {
+
+      return {
+        success: false,
+        message:
+          'Gemini returned no candidates. Response: ' +
+          responseText.substring(0, 500)
+      };
+    }
+
+
+    var candidate =
+      data.candidates[0];
+
+
+    if (
+      !candidate.content ||
+      !candidate.content.parts ||
+      !candidate.content.parts.length
+    ) {
+
+      return {
+        success: false,
+        message:
+          'Gemini returned no text content. Finish reason: ' +
+          String(
+            candidate.finishReason || 'unknown'
+          )
+      };
+    }
+
+
+    var text =
+      candidate.content.parts
+        .map(
+          function(part) {
+            return part.text || '';
+          }
+        )
+        .join('')
+        .trim();
+
+
+    if (!text) {
+
+      return {
+        success: false,
+        message:
+          'Gemini returned an empty text response.'
+      };
+    }
+
+
+    var promptTokens =
+      (
+        data.usageMetadata &&
+        data.usageMetadata.promptTokenCount
+      ) || 0;
+
+
+    var completionTokens =
+      (
+        data.usageMetadata &&
+        data.usageMetadata.candidatesTokenCount
+      ) || 0;
+
+
+    var cost =
+      (
+        promptTokens /
+        1000000 *
+        1.50
+      ) +
+      (
+        completionTokens /
+        1000000 *
+        7.50
+      );
+
+
+    return {
+      success: true,
+      text: text,
+      promptTokens: promptTokens,
+      completionTokens: completionTokens,
+      cost: cost
+    };
+
+
+  } catch (e) {
+
+    return {
+      success: false,
+      message:
+        'Gemini request error: ' +
+        e.toString()
+    };
   }
-  var text = data.candidates[0].content.parts.map(function(p) { return p.text || ''; }).join('');
-  var promptTokens = (data.usageMetadata && data.usageMetadata.promptTokenCount) || 0;
-  var completionTokens = (data.usageMetadata && data.usageMetadata.candidatesTokenCount) || 0;
-  var cost = (promptTokens / 1000000 * 1.50) + (completionTokens / 1000000 * 7.50);
-  return {
-    success: true,
-    text: text,
-    promptTokens: promptTokens,
-    completionTokens: completionTokens,
-    cost: cost
-  };
 }
 function bc_runSerpBridgeAutomated() {
   var promptData = bc_buildSerpBridgePrompt();

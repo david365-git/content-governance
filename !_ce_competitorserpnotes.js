@@ -75,36 +75,79 @@ function getCompetitorSerpNotes() {
 function buildCompetitorSerpGeminiPrompt() {
   try {
     const d = getActiveRowDataMap();
-    const primaryTerm  = String(d["Primary Search Term"]         || "").trim();
-    const queryCluster = String(d["Primary Query Cluster Owned"] || "").trim();
-    const term = primaryTerm || queryCluster;
+
+    const primaryTerm =
+      String(
+        d["Primary Search Term"] || ""
+      ).trim();
+
+    const queryCluster =
+      String(
+        d["Primary Query Cluster Owned"] || ""
+      ).trim();
+
+    const term =
+      primaryTerm ||
+      queryCluster;
 
     if (!term) {
-      return { success: false, message: "No Primary Search Term or Query Cluster found for this row." };
+      return {
+        success: false,
+        message:
+          "No Primary Search Term or Query Cluster found for this row."
+      };
     }
 
     var prompt =
-      "Search Google UK for the term: " + term + "\n\n" +
-      "Return the top 8 organic results (not ads, not shopping results) in this exact format:\n\n" +
-      "1. [Domain] | [Exact page title as it appears in the SERP] | [Exact meta description as it appears in the SERP]\n" +
-      "2. ...\n\n" +
-      "Show your sources/citations for this.";
+      "Search Google UK for the term: " +
+      term +
+      "\n\n" +
 
-    return { success: true, prompt: prompt, term: term };
+      "Identify up to 8 leading organic competitor results.\n" +
+      "Exclude ads, shopping results, map results and abbeyfloorcare.co.uk.\n\n" +
+
+      "IMPORTANT:\n" +
+      "- Do NOT reproduce page titles or meta descriptions verbatim.\n" +
+      "- Summarise each competitor's search-result positioning in your own words.\n" +
+      "- Base every entry on the grounded Google Search results.\n" +
+      "- Do not invent titles, descriptions or claims that are not supported by the search results.\n\n" +
+
+      "Return each result on one numbered line in this format:\n\n" +
+
+      "1. [Domain] | [URL] | Title angle: [short paraphrase] | SERP message: [short paraphrase]\n" +
+      "2. ...\n\n" +
+
+      "After the results add:\n\n" +
+      "SERP PATTERNS:\n" +
+      "- Search intent pattern: [brief summary]\n" +
+      "- Common title angles: [brief summary]\n" +
+      "- Common benefit/message angles: [brief summary]\n" +
+      "- Differentiation opportunity: [brief factual gap or underused angle]\n\n" +
+
+      "Keep the response concise and do not quote source wording verbatim.";
+
+    return {
+      success: true,
+      prompt: prompt,
+      term: term
+    };
+
   } catch (e) {
-    return { success: false, message: "Build error: " + e.toString() };
- 
- 
- function bc_runCompetitorSerpNotesAutomated() {
+
+    return {
+      success: false,
+      message:
+        "Build error: " +
+        e.toString()
+    };
+  }
+}
+
+
+function bc_runCompetitorSerpNotesAutomated() {
   try {
 
     var startTime = Date.now();
-
-    /*
-     * ---------------------------------------------------------
-     * BUILD SEARCH PROMPT
-     * ---------------------------------------------------------
-     */
 
     var promptData =
       buildCompetitorSerpGeminiPrompt();
@@ -122,13 +165,6 @@ function buildCompetitorSerpGeminiPrompt() {
         cost: 0
       };
     }
-
-
-    /*
-     * ---------------------------------------------------------
-     * RUN GROUNDED GOOGLE SEARCH
-     * ---------------------------------------------------------
-     */
 
     var apiResult =
       bc_sendPromptViaGemini(
@@ -149,7 +185,6 @@ function buildCompetitorSerpGeminiPrompt() {
       };
     }
 
-
     var rawOutput =
       String(
         apiResult.text || ""
@@ -164,20 +199,12 @@ function buildCompetitorSerpGeminiPrompt() {
       };
     }
 
-
-    /*
-     * ---------------------------------------------------------
-     * BASIC SERP RESULT VALIDATION
-     * ---------------------------------------------------------
-     */
-
     var resultLines =
       rawOutput.match(
         /^\s*[1-8][.)]\s+.+$/gm
       ) || [];
 
     if (resultLines.length < 5) {
-
       return {
         success: false,
         message:
@@ -187,13 +214,6 @@ function buildCompetitorSerpGeminiPrompt() {
         cost: Number(apiResult.cost || 0)
       };
     }
-
-
-    /*
-     * ---------------------------------------------------------
-     * BUILD STORED NOTE
-     * ---------------------------------------------------------
-     */
 
     var generatedDate =
       Utilities.formatDate(
@@ -213,13 +233,6 @@ function buildCompetitorSerpGeminiPrompt() {
       "RAW COMPETITOR SNAPSHOT:\n" +
       rawOutput;
 
-
-    /*
-     * ---------------------------------------------------------
-     * SAVE TO COMPETITOR SERP NOTES
-     * ---------------------------------------------------------
-     */
-
     var pushResult =
       pushCompetitorSerpNotesToSheet(
         note
@@ -229,7 +242,6 @@ function buildCompetitorSerpGeminiPrompt() {
       !pushResult ||
       !pushResult.success
     ) {
-
       return {
         success: false,
         message:
@@ -240,18 +252,10 @@ function buildCompetitorSerpGeminiPrompt() {
       };
     }
 
-
-    /*
-     * ---------------------------------------------------------
-     * RECORD COST / TIME
-     * ---------------------------------------------------------
-     */
-
     if (
       typeof bc_addToApiCostAndTime ===
       "function"
     ) {
-
       bc_addToApiCostAndTime(
         Number(apiResult.cost || 0),
         (
@@ -260,7 +264,6 @@ function buildCompetitorSerpGeminiPrompt() {
         ) / 1000
       );
     }
-
 
     return {
       success: true,
@@ -273,7 +276,6 @@ function buildCompetitorSerpGeminiPrompt() {
       cost: Number(apiResult.cost || 0)
     };
 
-
   } catch (e) {
 
     return {
@@ -284,7 +286,6 @@ function buildCompetitorSerpGeminiPrompt() {
       cost: 0
     };
   }
-} }
 }
 
 function bc_runCompetitorSerpNotesAutomated() {
