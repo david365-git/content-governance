@@ -114,13 +114,12 @@
     },
     publish: {
       label:  'PUBLISH',
-      thread: '🔵 New thread each stage',
+      thread: '🔵 Normal flow: W8E → W6. Use Suggestions only if W8E finds issues.',
       threadColor: '#1565c0',
-      first:  'run-analysis',
+      first:  'w8e',
       stages: [
-        { id: 'run-analysis', label: 'Run Analysis' },
-        { id: 'w8e', label: 'W8E' },
-        { id: 'w8es', label: 'W8E - Sugg' },
+        { id: 'w8e',  label: 'W8E' },
+        { id: 'w8es', label: 'W8E Sugg — if needed' },
         { id: 16,     label: 'W6' }
       ]
     },

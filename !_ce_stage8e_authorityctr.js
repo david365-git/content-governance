@@ -5,86 +5,193 @@
  */
 
 function buildW8EAnalysisPrompt() {
+
   const ss  = SpreadsheetApp.getActiveSpreadsheet();
   const sh  = ss.getSheetByName('posts');
   const row = sh.getActiveCell().getRow();
 
-  const colHtml  = 'CT';
-  const colH1    = 'CK';
-  const colTitle = 'CL';
-  const colMeta  = 'CM';
-  const colSchema= 'CN';
-  const colPst   = 'CO';
-  const colSerp  = 'FU';
+  const colHtml   = 'CT';
+  const colH1     = 'CK';
+  const colTitle  = 'CL';
+  const colMeta   = 'CM';
+  const colSchema = 'CN';
+  const colPst    = 'CO';
+  const colSerp   = 'FU';
 
   function getVal(col) {
     return sh.getRange(col + row).getValue();
   }
 
-  const html   = getVal(colHtml);
-  const h1     = getVal(colH1);
-  const title  = getVal(colTitle);
-  const meta   = getVal(colMeta);
-  const schema = getVal(colSchema);
-  const pst    = getVal(colPst);
+  const html      = getVal(colHtml);
+  const h1        = getVal(colH1);
+  const title     = getVal(colTitle);
+  const meta      = getVal(colMeta);
+  const schema    = getVal(colSchema);
+  const pst       = getVal(colPst);
   const serpNotes = getVal(colSerp);
 
   if (!html) {
-    return { success: false, message: "ERROR: New HTML (CT) is empty for this row." };
+    return {
+      success: false,
+      message: "ERROR: New HTML (CT) is empty for this row."
+    };
   }
 
   const prompt =
-`You are auditing a single article for Google authority potential and click-through rate, as part of a post-migration content recovery project. Before May 2025 this article lived in a material-specific silo (e.g. /travertine/, /slate/); after a URL migration it was moved to a flat /home-garden/ structure, which caused a loss of topical authority. Your job is to check whether this specific article, as written, recovers that authority.
+    `You are auditing a single finished article for Google authority potential,
+    silo recovery, click-through rate and first-click satisfaction.
 
-Primary Search Term: ${pst}
-H1: ${h1}
-Meta Title: ${title}
-Meta Description: ${meta}
+    The article is part of a post-migration content recovery process.
 
-Competitor SERP Notes (from prior research):
-${serpNotes || "No competitor SERP notes available for this row."}
+    Primary Search Term: ${pst}
+    H1: ${h1}
+    Meta Title: ${title}
+    Meta Description: ${meta}
 
-Schema (JSON-LD):
-${schema}
+    Competitor SERP Notes:
+    ${serpNotes || "No competitor SERP notes available for this row."}
 
-Article HTML:
-${html}
+    Schema (JSON-LD):
+    ${schema}
 
-Assess against these sections. For every point, give a PASS/FAIL/PARTIAL and one sentence of concrete evidence quoted or paraphrased from the actual article — not a generic statement. If you cannot find evidence, say "not present" rather than inferring.
+    Article HTML:
+    ${html}
 
-1. GOOGLE AUTHORITY SIGNALS
-- Experience Proofing: specific first-person or case-study detail?
-- Expertise Depth: technical terms used correctly and explained?
-- Entity Alignment: does the article anchor clearly to its core material entity throughout?
-- Trust Signals: factual claims verifiable or hedged? For freshness, check the schema's dateModified/datePublished fields — this is sufficient evidence of freshness on its own. NEVER suggest adding a visible "last updated" or "reviewed and updated" date line into the article body — WordPress displays this automatically, and adding one in the HTML would create a duplicate, potentially conflicting date. Do not flag the absence of an on-page date as a Trust Signals issue at all.
+    Return JSON ONLY.
+    Do not use markdown fences.
+    Do not include prose before or after the JSON.
 
-2. SILO RECOVERY CHECK
-- Silo Identity Signal: would a reader know which material silo this belongs to from the first 100 words?
-- Internal Link Architecture: links to a silo hub or sibling articles (name them if present)?
-- PST/Scope Alignment: does the body content match the stated Primary Search Term and scope?
+    Use this exact top-level structure:
 
-3. CLICK-THROUGH RATE POTENTIAL
-- Title Tag: specific, gives a concrete reason to click?
-- Meta Description: states a concrete answer/value, not a vague teaser?
-- SERP Differentiation: use the Competitor SERP Notes provided above to name one specific way this title+meta would stand out against the actual competing pages listed there. Only say "no real SERP data available" if the Competitor SERP Notes section above is genuinely empty — do not say this if notes are present.
-- Snippet Capture: is there a clean, self-contained answer block likely to win a featured snippet?
+    {
+      "overall_status": "PASS" | "PASS_WITH_FIXES" | "NEEDS_AUTHOR_INPUT",
+      "auto_fixable_count": 0,
+      "author_input_count": 0,
+      "checks": [
+        {
+          "section": "GOOGLE AUTHORITY SIGNALS",
+          "check": "Experience Proofing",
+          "status": "PASS" | "PARTIAL" | "FAIL",
+          "evidence": "specific evidence from the article, or 'not present'",
+          "action_type": "NONE" | "AUTO-FIXABLE" | "NEEDS AUTHOR INPUT",
+          "action": "specific action required, or empty string if none"
+        }
+      ]
+    }
 
-4. SEARCH INTENT & FIRST-CLICK SATISFACTION
-- Intent Match: informational or commercial, matches likely searcher intent?
-- Immediate Value: core answer without excessive scrolling?
-- Actionable Takeaways: clear and specific to this material/defect?
+    Run these checks:
 
-5. FINAL ACTION LIST
-Every PARTIAL or FAIL verdict from sections 1-4 above MUST have a corresponding entry here — do not leave any PARTIAL or FAIL unaddressed. List the specific text edits, link additions, or heading changes needed, each tied to which section flagged it. For any item that requires adding new content (not just editing existing text), you must also state: (a) the exact location in the article where it should be inserted (e.g. "after the second paragraph", "immediately below the H2 'Common Causes'"), and (b) example draft text the author can adapt, written in the article's own voice and specific to the material and defect discussed — not a generic placeholder.
+    GOOGLE AUTHORITY SIGNALS
+    - Experience Proofing
+    - Expertise Depth
+    - Entity Alignment
+    - Trust Signals
 
-Tag every item as either AUTO-FIXABLE or NEEDS AUTHOR INPUT, using this test: if the fix is a self-contained text edit, rewording, or addition that does not depend on facts only the author knows (e.g. title tag wording, meta description, snippet block, keyphrase punctuation, softening an absolute claim), tag it AUTO-FIXABLE. If the fix requires a specific fact, date, or first-hand detail only the author can supply (e.g. a real first-person observation, a genuine review date, a specific project detail), tag it NEEDS AUTHOR INPUT — and in these cases the example draft text is a starting point for the author to correct, not text to be applied as-is.
+    SILO RECOVERY CHECK
+    - Silo Identity Signal
+    - Internal Link Architecture
+    - PST / Scope Alignment
 
-Format each item as:
-[AUTO-FIXABLE] or [NEEDS AUTHOR INPUT] — [Section name]: [description of the fix, location, and example text as applicable]
+    CLICK-THROUGH RATE POTENTIAL
+    - Title Tag
+    - Meta Description
+    - SERP Differentiation
+    - Snippet Capture
 
-Rules: do not invent competitor data you don't have. Do not comment on sentence rhythm, em-dashes, or "AI-sounding" vocabulary. If a section has no issue, say "PASS, no action needed." Output plain text only — no markdown tables, no bold/italic asterisks, no headers with # symbols. Use simple line breaks and a colon after each label, e.g. "Experience Proofing: PARTIAL — evidence here."`;
+    SEARCH INTENT & FIRST-CLICK SATISFACTION
+    - Intent Match
+    - Immediate Value
+    - Actionable Takeaways
 
-  return { success: true, prompt: prompt };
+    RULES
+
+    1. For every check, return one object in "checks".
+
+    2. "status" must be exactly:
+    PASS
+    PARTIAL
+    FAIL
+
+    3. "action_type" must be exactly:
+    NONE
+    AUTO-FIXABLE
+    NEEDS AUTHOR INPUT
+
+    4. If status is PASS:
+    - action_type must be NONE
+    - action must be an empty string
+
+    5. If status is PARTIAL or FAIL:
+    - action_type must be AUTO-FIXABLE or NEEDS AUTHOR INPUT
+    - action must state exactly what needs changing
+
+    6. Use AUTO-FIXABLE only when the issue can be corrected safely from the existing article and supplied context without inventing facts.
+
+    Examples:
+    - improve Meta Title wording
+    - improve Meta Description
+    - tighten an existing explanation
+    - add a self-contained snippet answer using facts already present
+    - soften an absolute claim
+    - improve an existing internal-link anchor
+
+    7. Use NEEDS AUTHOR INPUT only when the fix depends on facts that are not present in the supplied material.
+
+    Examples:
+    - first-hand project detail
+    - genuine experience claim
+    - missing factual date
+    - unverified technical claim
+    - missing real-world observation
+
+    8. Do not invent evidence, experience, project facts or competitor information.
+
+    9. For Trust Signals:
+    Schema datePublished/dateModified is sufficient freshness evidence.
+    Do not request a visible update date in the article body.
+
+    10. For SERP Differentiation:
+    Use the supplied Competitor SERP Notes if available.
+    If they are empty, say so explicitly.
+
+    11. For each PARTIAL or FAIL action:
+    state the exact field or article area affected.
+
+    Examples:
+    - Meta Title
+    - Meta Description
+    - first paragraph
+    - H2 "Common Causes"
+    - paragraph immediately below H2 "..."
+
+    12. The "action" field must be concrete enough for an automated correction stage to understand.
+
+    13. Determine overall_status as follows:
+
+    PASS
+    = every check is PASS.
+
+    PASS_WITH_FIXES
+    = one or more checks are PARTIAL or FAIL,
+    but every required action is AUTO-FIXABLE.
+
+    NEEDS_AUTHOR_INPUT
+    = at least one required action is NEEDS AUTHOR INPUT.
+
+    14. auto_fixable_count must equal the number of checks whose action_type is AUTO-FIXABLE.
+
+    15. author_input_count must equal the number of checks whose action_type is NEEDS AUTHOR INPUT.
+
+    16. Do not include duplicate fixes for the same underlying problem.
+
+    17. Do not score, rank or give percentages.
+
+    Return valid JSON only.`;
+
+  return {
+    success: true,
+    prompt: prompt
+  };
 }
 
 function buildW8EAutoFixPrompt() {

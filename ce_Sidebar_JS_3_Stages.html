@@ -3426,40 +3426,140 @@ function runGetHumanisationRules() {
   }
 
   function executW5CBuild() {
-    setStatus('statusW5C','running','Building schema from sheet data…',true);
-    document.getElementById('w5cBuildBtn').disabled = true;
-    ['w5cResultBlock','w5cPreviewBlock','w5cAuditPrompt'].forEach(function(id){ document.getElementById(id).style.display = 'none'; });
-    google.script.run
-      .withSuccessHandler(function(result) {
-        document.getElementById('w5cBuildBtn').disabled = false;
-        document.getElementById('w5cResultBlock').style.display = 'block';
-        document.getElementById('w5cResultText').textContent    = result.message;
-        if (!result.success) { setStatus('statusW5C','fail','❌ ' + result.message); return; }
-        setStatus('statusW5C','running','✔ Schema built and pushed — running audit…',true);
-        document.getElementById('w5cAuditPrompt').style.display = 'block';
-        setTimeout(function() {
-          setStatus('statusW5C','running','Running schema audit…',true);
-          document.getElementById('w5bAuditBtn').disabled = true;
-          document.getElementById('w5bAuditResult').style.display = 'none';
-          google.script.run
-            .withSuccessHandler(function(auditResult) {
-              document.getElementById('w5bAuditBtn').disabled = false;
-              if (!auditResult) { setStatus('statusW5C','done','✔ Schema built and pushed — audit returned no result'); return; }
-              var passed = auditResult.status === 'clear';
-              document.getElementById('w5bAuditResult').style.display = 'block';
-              if (auditResult.prompt) { var pe = document.getElementById('w5bCorrectionPrompt'); if (pe) pe.value = auditResult.prompt; }
-              var w5bText = document.getElementById('w5bAuditText'); if (w5bText) w5bText.textContent = auditResult.message || '';
-              if (passed) { setStatus('statusW5C','done','✔ Schema built and pushed — ' + (auditResult.message || '').split('\n')[0]); setStatus('statusW5B','done','✔ Schema passed all checks — no corrections needed'); }
-              else { setStatus('statusW5C','fail','⚠ Schema built — audit issues found — see W5B'); setStatus('statusW5B','fail','⚠ Schema audit failed — correction prompt generated'); }
-            })
-            .withFailureHandler(function(err) { document.getElementById('w5bAuditBtn').disabled = false; setStatus('statusW5C','done','✔ Schema built — audit failed to run: ' + err.message); })
-            .runSchemaAuditForCorrection();
-        }, 500);
-        if (result.preview) { document.getElementById('w5cPreview').value = result.preview; document.getElementById('w5cPreviewBlock').style.display = 'block'; document.getElementById('w5cToggleBtn').textContent = 'Show'; }
-      })
-      .withFailureHandler(function(err) { document.getElementById('w5cBuildBtn').disabled = false; setStatus('statusW5C','fail','❌ Script error: ' + err.message); })
-      .generateSchemaForActiveRow();
-  }
+
+  setStatus(
+    'statusW5C',
+    'running',
+    'Building and validating schema from sheet data…',
+    true
+  );
+
+  document.getElementById(
+    'w5cBuildBtn'
+  ).disabled = true;
+
+  [
+    'w5cResultBlock',
+    'w5cPreviewBlock',
+    'w5cAuditPrompt'
+  ].forEach(function(id) {
+
+    var el =
+      document.getElementById(id);
+
+    if (el) {
+      el.style.display = 'none';
+    }
+  });
+
+
+  google.script.run
+
+    .withSuccessHandler(function(result) {
+
+      document.getElementById(
+        'w5cBuildBtn'
+      ).disabled = false;
+
+
+      document.getElementById(
+        'w5cResultBlock'
+      ).style.display = 'block';
+
+
+      document.getElementById(
+        'w5cResultText'
+      ).textContent =
+        result && result.message
+          ? result.message
+          : 'No result returned.';
+
+
+      if (
+        !result ||
+        !result.success
+      ) {
+
+        setStatus(
+          'statusW5C',
+          'fail',
+          '❌ ' +
+          (
+            result && result.message
+              ? result.message
+              : 'W5C failed.'
+          )
+        );
+
+        return;
+      }
+
+
+      setStatus(
+        'statusW5C',
+        'done',
+        '✔ Schema built, validated and saved.'
+      );
+
+
+      var auditNotice =
+        document.getElementById(
+          'w5cAuditPrompt'
+        );
+
+
+      if (auditNotice) {
+
+        auditNotice.style.display =
+          'block';
+
+        auditNotice.textContent =
+          '✔ Schema built, validated and saved — W5B audit included automatically.';
+      }
+
+
+      if (
+        result.preview
+      ) {
+
+        document.getElementById(
+          'w5cPreview'
+        ).value =
+          result.preview;
+
+
+        document.getElementById(
+          'w5cPreviewBlock'
+        ).style.display =
+          'block';
+
+
+        document.getElementById(
+          'w5cToggleBtn'
+        ).textContent =
+          'Show';
+      }
+    })
+
+
+    .withFailureHandler(function(err) {
+
+      document.getElementById(
+        'w5cBuildBtn'
+      ).disabled = false;
+
+
+      setStatus(
+        'statusW5C',
+        'fail',
+        '❌ Script error: ' +
+        err.message
+      );
+    })
+
+
+    .generateSchemaForActiveRow();
+}
 
   function toggleW5CPreview() {
     var ta = document.getElementById('w5cPreview'); var btn = document.getElementById('w5cToggleBtn');
@@ -4697,5 +4797,275 @@ function runCompetitorSerpNotesAutomated() {
 
 
     .bc_runCompetitorSerpNotesAutomated();
+}
+
+function runW8EAutomated() {
+
+  var btn =
+    document.getElementById(
+      'w8eAutoBtn'
+    );
+
+
+  var summary =
+    document.getElementById(
+      'w8eSummary'
+    );
+
+
+  var authorBlock =
+    document.getElementById(
+      'w8eAuthorBlock'
+    );
+
+
+  var authorItems =
+    document.getElementById(
+      'w8eAuthorItems'
+    );
+
+
+  var autoFixBlock =
+    document.getElementById(
+      'w8eAutoFixBlock'
+    );
+
+
+  var autoFixItems =
+    document.getElementById(
+      'w8eAutoFixItems'
+    );
+
+
+  var startTime =
+    Date.now();
+
+
+  btn.disabled = true;
+
+  btn.innerText =
+    'Running…';
+
+
+  summary.style.display =
+    'none';
+
+  authorBlock.style.display =
+    'none';
+
+  autoFixBlock.style.display =
+    'none';
+
+
+  setStatus(
+    'statusW8E',
+    'running',
+    '⏳ W8E running... 0s',
+    true
+  );
+
+
+  var timer =
+    setInterval(
+      function() {
+
+        var elapsed =
+          Math.floor(
+            (
+              Date.now() -
+              startTime
+            ) / 1000
+          );
+
+
+        setStatus(
+          'statusW8E',
+          'running',
+          '⏳ W8E running... ' +
+          elapsed +
+          's',
+          true
+        );
+
+      },
+      1000
+    );
+
+
+  google.script.run
+
+    .withSuccessHandler(
+      function(res) {
+
+        clearInterval(
+          timer
+        );
+
+
+        btn.disabled = false;
+
+        btn.innerText =
+          '⚡ Run W8E Automated';
+
+
+        var elapsedSeconds =
+          Math.floor(
+            (
+              Date.now() -
+              startTime
+            ) / 1000
+          );
+
+
+        if (
+          !res ||
+          !res.success
+        ) {
+
+          setStatus(
+            'statusW8E',
+            'fail',
+            '❌ ' +
+            (
+              res && res.message
+                ? res.message
+                : 'Unknown W8E error'
+            ) +
+            ' — ' +
+            elapsedSeconds +
+            's'
+          );
+
+          return;
+        }
+
+
+        summary.style.display =
+          'block';
+
+
+        summary.textContent =
+          'Overall: ' +
+          res.overallStatus +
+          '\n' +
+          'Auto-fixable: ' +
+          Number(
+            res.autoFixableCount || 0
+          ) +
+          '\n' +
+          'Needs author input: ' +
+          Number(
+            res.authorInputCount || 0
+          ) +
+          '\n' +
+          'Cost: $' +
+          Number(
+            res.cost || 0
+          ).toFixed(4);
+
+
+        if (
+          Array.isArray(
+            res.autoFixableItems
+          ) &&
+          res.autoFixableItems.length
+        ) {
+
+          autoFixBlock.style.display =
+            'block';
+
+
+          autoFixItems.textContent =
+            res.autoFixableItems
+              .map(
+                function(item) {
+
+                  return (
+                    item.check +
+                    ': ' +
+                    item.action
+                  );
+                }
+              )
+              .join(
+                '\n\n'
+              );
+        }
+
+
+        if (
+          Array.isArray(
+            res.authorInputItems
+          ) &&
+          res.authorInputItems.length
+        ) {
+
+          authorBlock.style.display =
+            'block';
+
+
+          authorItems.textContent =
+            res.authorInputItems
+              .map(
+                function(item) {
+
+                  return (
+                    item.check +
+                    ': ' +
+                    item.action
+                  );
+                }
+              )
+              .join(
+                '\n\n'
+              );
+        }
+
+
+        var statusMessage =
+          '✔ W8E complete — ' +
+          res.overallStatus +
+          ' — ' +
+          elapsedSeconds +
+          's — Cost: $' +
+          Number(
+            res.cost || 0
+          ).toFixed(4);
+
+
+        setStatus(
+          'statusW8E',
+          'done',
+          statusMessage
+        );
+      }
+    )
+
+
+    .withFailureHandler(
+      function(err) {
+
+        clearInterval(
+          timer
+        );
+
+
+        btn.disabled = false;
+
+        btn.innerText =
+          '⚡ Run W8E Automated';
+
+
+        setStatus(
+          'statusW8E',
+          'fail',
+          '❌ W8E failed — ' +
+          err.message
+        );
+      }
+    )
+
+
+    .bc_runW8EAutomated();
 }
 </script>
