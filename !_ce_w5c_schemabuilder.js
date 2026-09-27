@@ -126,6 +126,250 @@ function buildLocationContextPrompt() {
   }
 }
 
+function w5cValidateBuiltSchema(fullSchema) {
+
+  try {
+
+    var schema =
+      String(fullSchema || "")
+        .replace(/%22/g, '"')
+        .replace(/%3A/g, ':')
+        .replace(/%2F/g, '/')
+        .replace(/%7B/g, '{')
+        .replace(/%7D/g, '}')
+        .replace(/%26/g, '&')
+        .replace(/%5B/g, '[')
+        .replace(/%5D/g, ']')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(
+          /application\/ld\s+json/gi,
+          'application/ld+json'
+        )
+        .trim();
+
+
+    var scriptMatch =
+      schema.match(
+        /<script[^>]*>([\s\S]*?)<\/script>/i
+      );
+
+
+    var schemaJSON =
+      scriptMatch
+        ? scriptMatch[1].trim()
+        : schema;
+
+
+    var failures = [];
+    var passes = [];
+
+
+    /*
+     * CHECK 10 — VALID JSON
+     */
+
+    var c10 =
+      auditSchemaValidJSON(
+        schemaJSON
+      );
+
+
+    if (c10.pass) {
+
+      passes.push(
+        'Check 10 — Valid JSON'
+      );
+
+    } else {
+
+      failures.push({
+        check: 10,
+        label: 'Invalid JSON',
+        detail: c10.detail
+      });
+
+
+      return {
+        success: false,
+        passes: passes,
+        failures: failures
+      };
+    }
+
+
+    var parsed =
+      JSON.parse(
+        schemaJSON
+      );
+
+
+    /*
+     * EXISTING W5B CHECKS
+     */
+
+    var checks = [
+
+      {
+        n: 11,
+        fn: auditSchemaContext,
+        label: '@context value'
+      },
+
+      {
+        n: 12,
+        fn: auditSchemaType,
+        label: '@type present'
+      },
+
+      {
+        n: 13,
+        fn: auditSchemaRequiredFields,
+        label: 'Required fields'
+      },
+
+      {
+        n: 14,
+        fn: auditSchemaEncodedChars,
+        label: 'HTML-encoded characters',
+        raw: schemaJSON
+      },
+
+      {
+        n: 15,
+        fn: auditSchemaURLs,
+        label: 'URL format'
+      },
+
+      {
+        n: 16,
+        fn: auditSchemaBracketURLs,
+        label: 'Bracket-wrapped URLs',
+        raw: schemaJSON
+      },
+
+      {
+        n: 20,
+        fn: auditSchemaPublisherAnchor,
+        label: 'Publisher @id anchor'
+      },
+
+      {
+        n: 21,
+        fn: auditSchemaAuthorPerson,
+        label: 'Author @type Person'
+      },
+
+      {
+        n: 22,
+        fn: auditSchemaNoUrlOnArticle,
+        label: 'No url field on Article'
+      },
+
+      {
+        n: 23,
+        fn: auditSchemaHasPartFragmentTypes,
+        label: 'hasPart fragment/@type consistency'
+      },
+
+      {
+        n: 24,
+        fn: auditSchemaRootFields,
+        label: 'Illegal root-level fields'
+      }
+    ];
+
+
+    checks.forEach(
+      function(c) {
+
+        var result;
+
+
+        if (
+          c.n === 14 ||
+          c.n === 16
+        ) {
+
+          result =
+            c.fn(
+              c.raw
+            );
+
+        } else {
+
+          result =
+            c.fn(
+              parsed
+            );
+        }
+
+
+        if (
+          result &&
+          result.pass
+        ) {
+
+          passes.push(
+            'Check ' +
+            c.n +
+            ' — ' +
+            c.label
+          );
+
+        } else {
+
+          failures.push({
+
+            check:
+              c.n,
+
+            label:
+              c.label,
+
+            detail:
+              result &&
+              result.detail
+                ? result.detail
+                : 'Unknown validation failure'
+          });
+        }
+      }
+    );
+
+
+    return {
+
+      success:
+        failures.length === 0,
+
+      passes:
+        passes,
+
+      failures:
+        failures
+    };
+
+
+  } catch (e) {
+
+    return {
+
+      success: false,
+
+      passes: [],
+
+      failures: [
+        {
+          check: 'W5C',
+          label: 'Schema validation error',
+          detail: e.toString()
+        }
+      ]
+    };
+  }
+}
 
 /* ============================================================
    MAIN SCHEMA GENERATOR
@@ -510,7 +754,7 @@ function generateSchemaForActiveRow() {
                "Primary @type: " + primaryType + "\n" +
                "Relationship: " + (primaryRel || "none") + "\n" +
                "mentions: " + mentionsArray.length + " entities\n" +
-               "Run W5B audit to verify.",
+               "W5B validation included automatically.",
       preview: wrapped
     };
 

@@ -197,14 +197,14 @@
     }
   }
 
-  function navNext() {
-    var next = _currentWindow + 1;
-    if (next >= _totalWindows) next = 0;
-    if (next === _w0bWindowIdx) {
-      var w0b = document.getElementById('window-' + _w0bWindowIdx);
-      if (w0b && w0b.getAttribute('data-geo-only') === 'true' && !_isGeoPage) { next++; }
-    }
-    navGoTo(next);
+  function navPrev() {
+    var prev = _currentWindow - 1;
+
+    if (prev === 15) prev = 14;
+
+    if (prev < 0) prev = _totalWindows - 1;
+
+    navGoTo(prev);
   }
 
   function navPrev() {

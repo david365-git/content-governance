@@ -6667,6 +6667,12 @@ function bc_runW5Automated() {
   var totalCost = 0;
 
 
+  /*
+   * =========================================================
+   * PARSE W5 OUTPUT
+   * =========================================================
+   */
+
   function parseW5Output(text) {
 
     text = String(text || "")
@@ -6678,51 +6684,84 @@ function bc_runW5Automated() {
 
 
     function extract(pattern) {
-      var m = text.match(pattern);
-      return m ? String(m[1] || "").trim() : "";
+
+      var match =
+        text.match(pattern);
+
+      return match
+        ? String(match[1] || "").trim()
+        : "";
     }
 
 
     return {
-      h1: extract(
-        /(?:^|\n)New\s+H1:\s*(.+)/i
-      ),
 
-      title: extract(
-        /(?:^|\n)New\s+Meta\s+Title:\s*(.+)/i
-      ),
+      h1:
+        extract(
+          /(?:^|\n)New\s+H1:\s*(.+)/i
+        ),
 
-      description: extract(
-        /(?:^|\n)New\s+Meta\s+Description:\s*(.+)/i
-      ),
+      title:
+        extract(
+          /(?:^|\n)New\s+Meta\s+Title:\s*(.+)/i
+        ),
 
-      keyphrase: extract(
-        /(?:^|\n)Yoast\s+Keyphrase:\s*(.+)/i
-      )
+      description:
+        extract(
+          /(?:^|\n)New\s+Meta\s+Description:\s*(.+)/i
+        ),
+
+      keyphrase:
+        extract(
+          /(?:^|\n)Yoast\s+Keyphrase:\s*(.+)/i
+        )
     };
   }
 
+
+  /*
+   * =========================================================
+   * DETERMINISTIC VALIDATION
+   * =========================================================
+   */
 
   function validateW5Output(fields) {
 
     var issues = [];
 
+
+    /*
+     * REQUIRED FIELDS
+     */
+
     if (!fields.h1) {
-      issues.push("New H1 missing.");
+      issues.push(
+        "New H1 missing."
+      );
     }
 
     if (!fields.title) {
-      issues.push("New Meta Title missing.");
+      issues.push(
+        "New Meta Title missing."
+      );
     }
 
     if (!fields.description) {
-      issues.push("New Meta Description missing.");
+      issues.push(
+        "New Meta Description missing."
+      );
     }
 
     if (!fields.keyphrase) {
-      issues.push("Yoast Keyphrase missing.");
+      issues.push(
+        "Yoast Keyphrase missing."
+      );
     }
 
+
+    /*
+     * H1
+     */
 
     if (fields.h1) {
 
@@ -6740,9 +6779,15 @@ function bc_runW5Automated() {
     }
 
 
+    /*
+     * META TITLE
+     */
+
     if (fields.title) {
 
-      if (fields.title.length > 60) {
+      if (
+        fields.title.length > 60
+      ) {
 
         issues.push(
           "Meta Title is " +
@@ -6752,31 +6797,15 @@ function bc_runW5Automated() {
       }
 
 
-      if (
-        fields.title.toLowerCase()
-          .indexOf("abbey floor care") === -1
-      ) {
-
-        issues.push(
-          "Meta Title does not contain Abbey Floor Care."
-        );
-      }
-
-
-      /*
-       * -------------------------------------------------------
-       * BORING TITLE TEST
-       * Reject a title that is essentially:
-       * service/search term + location + brand.
-       * -------------------------------------------------------
-       */
-
-      var d =
+      var rowData =
         getActiveRowDataMap();
+
 
       var primaryTerm =
         String(
-          d["Primary Search Term"] || ""
+          rowData["Primary Search Term"] ||
+          rowData["Primary Query Cluster Owned"] ||
+          ""
         )
           .toLowerCase()
           .replace(/\bnear me\b/g, "")
@@ -6784,10 +6813,11 @@ function bc_runW5Automated() {
           .replace(/\s+/g, " ")
           .trim();
 
+
       var location =
         String(
-          d["Locality"] ||
-          d["Location"] ||
+          rowData["Locality"] ||
+          rowData["Location"] ||
           ""
         )
           .toLowerCase()
@@ -6797,10 +6827,22 @@ function bc_runW5Automated() {
       var titleCore =
         fields.title
           .toLowerCase()
-          .replace(/abbey floor care/g, "")
-          .replace(/[|–—:-]/g, " ")
-          .replace(/[^a-z0-9\s]/g, " ")
-          .replace(/\s+/g, " ")
+          .replace(
+            /abbey floor care/g,
+            ""
+          )
+          .replace(
+            /[|–—:-]/g,
+            " "
+          )
+          .replace(
+            /[^a-z0-9\s]/g,
+            " "
+          )
+          .replace(
+            /\s+/g,
+            " "
+          )
           .trim();
 
 
@@ -6811,6 +6853,7 @@ function bc_runW5Automated() {
             /[.*+?^${}()|[\]\\]/g,
             "\\$&"
           );
+
 
         titleCore =
           titleCore
@@ -6823,25 +6866,37 @@ function bc_runW5Automated() {
               ),
               ""
             )
-            .replace(/\s+/g, " ")
+            .replace(
+              /\s+/g,
+              " "
+            )
             .trim();
       }
 
 
+      /*
+       * Basic deterministic protection against
+       * service/search-term + location titles.
+       *
+       * The semantic check below makes the final
+       * linguistic judgement.
+       */
+
       if (
         primaryTerm &&
-        (
-          titleCore === primaryTerm ||
-          titleCore === primaryTerm.replace(/\bnear me\b/g, "").trim()
-        )
+        titleCore === primaryTerm
       ) {
 
         issues.push(
-          "Meta Title fails the Boring Title Test — it is effectively only the search term/location plus brand."
+          "Meta Title is effectively only the search term/location and has no distinct CTR-driving angle."
         );
       }
     }
 
+
+    /*
+     * META DESCRIPTION
+     */
 
     if (fields.description) {
 
@@ -6865,7 +6920,10 @@ function bc_runW5Automated() {
           ) || []
         ).length;
 
-      if (sentenceCount !== 2) {
+
+      if (
+        sentenceCount !== 2
+      ) {
 
         issues.push(
           "Meta Description must contain exactly two sentences."
@@ -6874,15 +6932,21 @@ function bc_runW5Automated() {
     }
 
 
+    /*
+     * YOAST KEYPHRASE
+     */
+
     if (fields.keyphrase) {
 
       var keyphrase =
         fields.keyphrase.trim();
 
+
       var words =
         keyphrase
           .split(/\s+/)
           .filter(Boolean);
+
 
       if (
         keyphrase !==
@@ -6893,6 +6957,7 @@ function bc_runW5Automated() {
           "Yoast Keyphrase is not lowercase."
         );
       }
+
 
       if (
         words.length < 2 ||
@@ -6907,8 +6972,346 @@ function bc_runW5Automated() {
 
 
     return {
-      success: issues.length === 0,
-      issues: issues
+
+      success:
+        issues.length === 0,
+
+      issues:
+        issues
+    };
+  }
+
+
+  /*
+   * =========================================================
+   * SEMANTIC META TITLE QUALITY CHECK
+   *
+   * This deliberately does NOT use a blacklist of phrases.
+   * It judges whether the title contains a concrete,
+   * page-specific informational tension.
+   * =========================================================
+   */
+
+  function validateW5TitleSemantically(fields) {
+
+    try {
+
+      var d =
+        getActiveRowDataMap();
+
+
+      var title =
+        String(
+          fields.title || ""
+        ).trim();
+
+
+      if (!title) {
+
+        return {
+          success: false,
+          issue:
+            "Meta Title is missing.",
+          cost: 0
+        };
+      }
+
+
+      var primaryTerm =
+        String(
+          d["Primary Search Term"] ||
+          d["Primary Query Cluster Owned"] ||
+          ""
+        ).trim();
+
+
+      var location =
+        String(
+          d["Locality"] ||
+          d["Location"] ||
+          ""
+        ).trim();
+
+
+      var problemAngle =
+        String(
+          d["Problem Angle"] ||
+          ""
+        ).trim();
+
+
+      var authorityBrief =
+        String(
+          d["Authority Brief"] ||
+          ""
+        ).trim();
+
+
+      var competitorNotes =
+        String(
+          d["Competitor SERP Notes"] ||
+          ""
+        ).trim();
+
+
+      var semanticPrompt =
+        "W5 META TITLE QUALITY CHECK\n\n" +
+
+        "Evaluate the Meta Title linguistically and semantically.\n" +
+        "Do NOT judge it by matching against a blacklist of phrases.\n\n" +
+
+        "META TITLE:\n" +
+        title +
+        "\n\n" +
+
+        "PAGE CONTEXT:\n" +
+
+        "Primary Search Term: " +
+        primaryTerm +
+        "\n" +
+
+        (
+          location
+            ? "Location: " +
+              location +
+              "\n"
+            : ""
+        ) +
+
+        (
+          problemAngle
+            ? "Problem Angle: " +
+              problemAngle +
+              "\n"
+            : ""
+        ) +
+
+        (
+          authorityBrief
+            ? "Authority Brief:\n" +
+              authorityBrief.substring(
+                0,
+                1600
+              ) +
+              "\n"
+            : ""
+        ) +
+
+        (
+          competitorNotes
+            ? "Competitor SERP Context:\n" +
+              competitorNotes.substring(
+                0,
+                1200
+              ) +
+              "\n"
+            : ""
+        ) +
+
+        "\nQUALITY TEST:\n" +
+
+        "PASS only if the title gives the searcher a specific and concrete reason to click.\n\n" +
+
+        "A strong title should express at least one meaningful form of informational tension supported by this page:\n" +
+
+        "- a real decision the homeowner needs to make\n" +
+        "- a recognisable problem\n" +
+        "- a consequence that matters\n" +
+        "- a limitation or boundary\n" +
+        "- a useful contrast between choices or outcomes\n" +
+        "- a specific uncertainty the article resolves\n" +
+        "- a counterintuitive fact genuinely supported by the page\n\n" +
+
+        "FAIL if the supposed hook is semantically vague.\n" +
+
+        "A vague hook could be attached to many unrelated pages without materially changing its meaning.\n\n" +
+
+        "Do not fail or pass a title merely because it contains words such as 'what', 'why', 'when', 'works', 'lasts' or 'matters'.\n" +
+
+        "Judge what those words MEAN in this specific title.\n\n" +
+
+        "Ask this decisive question:\n" +
+
+        "After reading this title, does the searcher know WHAT specific uncertainty, problem, consequence, distinction or decision the article will resolve?\n\n" +
+
+        "If the answer is no, FAIL.\n\n" +
+
+        "Also FAIL if the title is essentially just a service/search phrase plus location with decorative wording added that contributes no concrete meaning.\n\n" +
+
+        "Do not require Abbey Floor Care in the title.\n" +
+
+        "Do not reward exaggerated clickbait.\n" +
+
+        "Do not require emotional language.\n" +
+
+        "Do not invent a better title.\n\n" +
+
+        "Return JSON only:\n" +
+
+        '{"pass":true,"reason":"brief linguistic reason"}';
+
+
+      var semanticResult =
+        bc_sendPromptViaOpenAI(
+          semanticPrompt,
+          900
+        );
+
+
+      if (
+        !semanticResult ||
+        !semanticResult.success
+      ) {
+
+        return {
+          success: false,
+          issue:
+            "Meta Title semantic validation could not be completed.",
+          cost:
+            Number(
+              semanticResult &&
+              semanticResult.cost
+                ? semanticResult.cost
+                : 0
+            )
+        };
+      }
+
+
+      var raw =
+        String(
+          semanticResult.text || ""
+        )
+          .replace(
+            /^```(?:json)?\s*/i,
+            ""
+          )
+          .replace(
+            /\s*```$/i,
+            ""
+          )
+          .trim();
+
+
+      var parsed;
+
+
+      try {
+
+        parsed =
+          JSON.parse(
+            raw
+          );
+
+      } catch (e) {
+
+        return {
+          success: false,
+          issue:
+            "Meta Title semantic validator returned invalid JSON.",
+          cost:
+            Number(
+              semanticResult.cost || 0
+            )
+        };
+      }
+
+
+      if (
+        parsed.pass !== true
+      ) {
+
+        return {
+          success: false,
+          issue:
+            "Meta Title lacks a specific CTR-driving informational tension: " +
+            String(
+              parsed.reason ||
+              "the title is too vague."
+            ),
+          cost:
+            Number(
+              semanticResult.cost || 0
+            )
+        };
+      }
+
+
+      return {
+        success: true,
+        cost:
+          Number(
+            semanticResult.cost || 0
+          )
+      };
+
+
+    } catch (e) {
+
+      return {
+        success: false,
+        issue:
+          "Meta Title semantic validation error: " +
+          e.toString(),
+        cost: 0
+      };
+    }
+  }
+
+
+  /*
+   * =========================================================
+   * COMPLETE VALIDATION
+   *
+   * Run deterministic checks first.
+   * Only spend money on semantic title checking if those pass.
+   * =========================================================
+   */
+
+  function runCompleteValidation(fields) {
+
+    var deterministic =
+      validateW5Output(
+        fields
+      );
+
+
+    if (
+      !deterministic.success
+    ) {
+
+      return deterministic;
+    }
+
+
+    var semantic =
+      validateW5TitleSemantically(
+        fields
+      );
+
+
+    totalCost +=
+      Number(
+        semantic.cost || 0
+      );
+
+
+    if (
+      !semantic.success
+    ) {
+
+      return {
+        success: false,
+        issues: [
+          semantic.issue
+        ]
+      };
+    }
+
+
+    return {
+      success: true,
+      issues: []
     };
   }
 
@@ -6921,6 +7324,7 @@ function bc_runW5Automated() {
 
   var prompt =
     getMetaPrompt();
+
 
   if (
     !prompt ||
@@ -6945,8 +7349,9 @@ function bc_runW5Automated() {
   var apiResult =
     bc_sendPromptViaOpenAI(
       prompt,
-      1400
+      5000
     );
+
 
   if (
     !apiResult ||
@@ -6984,32 +7389,49 @@ function bc_runW5Automated() {
 
 
   var validation =
-    validateW5Output(
+    runCompleteValidation(
       fields
     );
 
 
   /*
    * =========================================================
-   * ONE CORRECTION ATTEMPT
+   * ONE FULL CORRECTION ATTEMPT
    * =========================================================
    */
 
-  if (!validation.success) {
+  if (
+    !validation.success
+  ) {
 
     var correctionPrompt =
       prompt +
       "\n\n" +
+
       "IMPORTANT — YOUR PREVIOUS OUTPUT FAILED AUTOMATED VALIDATION.\n\n" +
+
       "PREVIOUS OUTPUT:\n" +
       output +
       "\n\n" +
+
       "FAILURES:\n- " +
-      validation.issues.join("\n- ") +
+      validation.issues.join(
+        "\n- "
+      ) +
       "\n\n" +
-      "Correct ONLY the four requested fields so every failure above is resolved.\n" +
-      "The Meta Title must also pass the CTR/Boring Title rules in the original prompt.\n" +
+
+      "Correct ONLY the four requested fields so every failure above is resolved.\n\n" +
+
+      "For the Meta Title, do not merely add a generic curiosity phrase.\n" +
+
+      "The title must communicate a concrete problem, decision, consequence, limitation, contrast or uncertainty that THIS page actually resolves.\n" +
+
+      "A phrase that could be attached unchanged to many unrelated service pages is not a meaningful CTR hook.\n\n" +
+
+      "Do not include analysis, reasoning, notes, markdown or explanation.\n\n" +
+
       "Return ONLY these four lines:\n" +
+
       "New H1: [value]\n" +
       "New Meta Title: [value]\n" +
       "New Meta Description: [value]\n" +
@@ -7019,7 +7441,7 @@ function bc_runW5Automated() {
     var retry =
       bc_sendPromptViaOpenAI(
         correctionPrompt,
-        1400
+        5000
       );
 
 
@@ -7032,7 +7454,8 @@ function bc_runW5Automated() {
         success: false,
         message:
           "W5 first output failed validation and the correction call failed.",
-        cost: totalCost
+        cost:
+          totalCost
       };
     }
 
@@ -7056,9 +7479,206 @@ function bc_runW5Automated() {
 
 
     validation =
-      validateW5Output(
+      runCompleteValidation(
         fields
       );
+  }
+
+
+  /*
+   * =========================================================
+   * FINAL TARGETED MICRO-REPAIR
+   *
+   * Do not regenerate the enormous W5 prompt for a small
+   * remaining defect such as 161 characters or a vague title.
+   * =========================================================
+   */
+
+  if (
+    !validation.success
+  ) {
+
+    var rowData =
+      getActiveRowDataMap();
+
+
+    var microPrimaryTerm =
+      String(
+        rowData["Primary Search Term"] ||
+        rowData["Primary Query Cluster Owned"] ||
+        ""
+      ).trim();
+
+
+    var microLocation =
+      String(
+        rowData["Locality"] ||
+        rowData["Location"] ||
+        ""
+      ).trim();
+
+
+    var microMaterial =
+      String(
+        rowData["Stone Type"] ||
+        ""
+      ).trim();
+
+
+    var microProblemAngle =
+      String(
+        rowData["Problem Angle"] ||
+        ""
+      ).trim();
+
+
+    var microAuthority =
+      String(
+        rowData["Authority Brief"] ||
+        ""
+      ).trim();
+
+
+    var microPrompt =
+      "W5 FINAL TARGETED REPAIR\n\n" +
+
+      "Repair ONLY the field or fields that fail the validation below.\n" +
+
+      "Keep fields that already pass unchanged unless a small consistency change is unavoidable.\n\n" +
+
+      "PAGE CONTEXT:\n" +
+
+      "Primary Search Term: " +
+      microPrimaryTerm +
+      "\n" +
+
+      "Material: " +
+      microMaterial +
+      "\n" +
+
+      (
+        microLocation
+          ? "Location: " +
+            microLocation +
+            "\n"
+          : ""
+      ) +
+
+      (
+        microProblemAngle
+          ? "Problem Angle: " +
+            microProblemAngle +
+            "\n"
+          : ""
+      ) +
+
+      (
+        microAuthority
+          ? "Authority Brief:\n" +
+            microAuthority.substring(
+              0,
+              1400
+            ) +
+            "\n"
+          : ""
+      ) +
+
+      "\nCURRENT FIELDS:\n" +
+
+      "New H1: " +
+      fields.h1 +
+      "\n" +
+
+      "New Meta Title: " +
+      fields.title +
+      "\n" +
+
+      "New Meta Description: " +
+      fields.description +
+      "\n" +
+
+      "Yoast Keyphrase: " +
+      fields.keyphrase +
+      "\n\n" +
+
+      "FAILED VALIDATION:\n- " +
+
+      validation.issues.join(
+        "\n- "
+      ) +
+
+      "\n\nREPAIR RULES:\n" +
+
+      "- H1 must be 40-60 characters.\n" +
+
+      "- Meta Title must be no more than 60 characters.\n" +
+
+      "- Meta Title must preserve the search intent and required location where applicable.\n" +
+
+      "- Abbey Floor Care is optional if branding prevents a useful title within 60 characters.\n" +
+
+      "- Meta Title must contain a concrete informational tension supported by this page.\n" +
+
+      "- The reader should be able to tell what specific problem, decision, consequence, contrast, limitation or uncertainty the page resolves.\n" +
+
+      "- Do not substitute a vague curiosity phrase merely to make the title sound interesting.\n" +
+
+      "- Do not invent facts, drama, urgency, risk or unsupported claims.\n" +
+
+      "- Meta Description must be 140-160 characters.\n" +
+
+      "- Meta Description must contain exactly two sentences.\n" +
+
+      "- Yoast Keyphrase must be lowercase and 2-6 words.\n" +
+
+      "- Do not include analysis, commentary, markdown or character counts.\n\n" +
+
+      "Return ONLY these four lines:\n" +
+
+      "New H1: [value]\n" +
+
+      "New Meta Title: [value]\n" +
+
+      "New Meta Description: [value]\n" +
+
+      "Yoast Keyphrase: [value]";
+
+
+    var microResult =
+      bc_sendPromptViaOpenAI(
+        microPrompt,
+        1600
+      );
+
+
+    if (
+      microResult &&
+      microResult.success
+    ) {
+
+      totalCost +=
+        Number(
+          microResult.cost || 0
+        );
+
+
+      output =
+        String(
+          microResult.text || ""
+        ).trim();
+
+
+      fields =
+        parseW5Output(
+          output
+        );
+
+
+      validation =
+        runCompleteValidation(
+          fields
+        );
+    }
   }
 
 
@@ -7068,14 +7688,28 @@ function bc_runW5Automated() {
    * =========================================================
    */
 
-  if (!validation.success) {
+  if (
+    !validation.success
+  ) {
 
     return {
       success: false,
+
       message:
         "W5 output failed validation after correction: " +
-        validation.issues.join(" | "),
-      cost: totalCost
+        validation.issues.join(
+          " | "
+        ) +
+        "\n\nRAW W5 OUTPUT:\n" +
+        String(
+          output || ""
+        ).substring(
+          0,
+          1400
+        ),
+
+      cost:
+        totalCost
     };
   }
 
@@ -7099,36 +7733,66 @@ function bc_runW5Automated() {
 
     return {
       success: false,
+
       message:
         pushResult &&
         pushResult.message
           ? pushResult.message
           : "W5 could not save the generated fields.",
-      cost: totalCost
+
+      cost:
+        totalCost
     };
   }
 
 
-  bc_addToApiCostAndTime(
-    totalCost,
-    (
-      Date.now() -
-      startTime
-    ) / 1000
-  );
+  /*
+   * =========================================================
+   * RECORD COST + TIME
+   * =========================================================
+   */
 
+  if (
+    typeof bc_addToApiCostAndTime ===
+    "function"
+  ) {
+
+    bc_addToApiCostAndTime(
+      totalCost,
+      (
+        Date.now() -
+        startTime
+      ) / 1000
+    );
+  }
+
+
+  /*
+   * =========================================================
+   * SUCCESS
+   * =========================================================
+   */
 
   return {
+
     success: true,
 
     message:
       "W5 complete — H1, CTR-focused Meta Title, Meta Description and Yoast Keyphrase saved.",
 
-    h1: fields.h1,
-    metaTitle: fields.title,
-    metaDescription: fields.description,
-    yoastKeyphrase: fields.keyphrase,
+    h1:
+      fields.h1,
 
-    cost: totalCost
+    metaTitle:
+      fields.title,
+
+    metaDescription:
+      fields.description,
+
+    yoastKeyphrase:
+      fields.keyphrase,
+
+    cost:
+      totalCost
   };
 }

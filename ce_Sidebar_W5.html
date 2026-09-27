@@ -121,54 +121,9 @@
       </div>
 
       <div id="w5cAuditPrompt" style="display:none;margin-top:8px;font-family:JetBrains Mono,monospace;font-size:13px;color:#555;background:#fff3e0;border-radius:4px;padding:6px">
-        ✔ Schema pushed — run W5B audit to verify structure.
-      </div>
+      ✔ Schema built, validated and saved — W5B audit included automatically.
+    </div>
     </div>
   </div>
 
-  <!-- ══ W5B — SCHEMA CORRECTION AUDIT ══ -->
-  <div id="window-15" class="window-card" style="display:none" style="border-top:3px solid #6a1b9a">
-    <div class="window-header">
-      <span class="window-label" style="color:#6a1b9a">W5B — Schema Correction Audit</span>
-      <span class="tag" style="background:#6a1b9a">Audit → Copy Prompt → Paste → Push</span>
-    </div>
-    <div class="window-body">
-      <div id="statusW5B" class="status-bar pending">Run audit to check schema in active row</div>
-
-      <!-- Step 1: Audit -->
-      <div class="btn-row">
-        <button style="background:#6a1b9a" id="w5bAuditBtn" onclick="runW5BAudit()">🔍 Audit Schema</button>
-      </div>
-
-      <!-- Audit result display -->
-      <div id="w5bAuditResult" style="display:none;margin-top:10px">
-        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#6a1b9a;margin-bottom:4px;letter-spacing:1px">AUDIT RESULT</div>
-        <div id="w5bResultText" style="font-family:JetBrains Mono,monospace;font-size:13px;background:#f3e5f5;border-radius:4px;padding:8px;white-space:pre-wrap;color:#333;max-height:160px;overflow-y:auto"></div>
-      </div>
-
-      <!-- Step 2: Correction prompt (shown only if failures) -->
-      <div id="w5bPromptBlock" style="display:none;margin-top:12px">
-        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#6a1b9a;margin-bottom:4px;letter-spacing:1px">CORRECTION PROMPT — COPY TO CHATGPT</div>
-        <textarea id="w5bPrompt" style="height:120px;font-size:9px" readonly></textarea>
-        <div class="btn-row" style="margin-top:4px">
-          <button class="btn-copy" id="w5bCopyBtn" onclick="copyText('w5bPrompt','statusW5B','Correction prompt copied — paste into ChatGPT')">Copy Prompt</button>
-        </div>
-      </div>
-
-      <!-- Step 3: Paste corrected schema -->
-      <div id="w5bPasteBlock" style="display:none;margin-top:12px">
-        <div style="font-family:JetBrains Mono,monospace;font-size:13px;font-weight:700;color:#6a1b9a;margin-bottom:4px;letter-spacing:1px">PASTE CORRECTED SCHEMA HERE</div>
-        <textarea id="w5bPasteArea" style="height:120px;font-size:9px" placeholder="&lt;script type=&quot;application/ld+json&quot;&gt;...&lt;/script&gt;"></textarea>
-        <div class="btn-row" style="margin-top:3px">
-          <button class="btn-copy" onclick="clearAndPaste('w5bPasteArea')">⌫ Clear + Paste</button>
-        </div>
-      </div>
-
-      <!-- Step 4: Push -->
-      <div id="w5bPushBlock" style="display:none;margin-top:10px">
-        <button style="background:#2e7d32;width:100%;padding:9px;font-size:11px;font-weight:700;border:none;border-radius:5px;color:white;cursor:pointer" onclick="pushW5BCorrectedSchema()">💾 Push Corrected Schema</button>
-      </div>
-
-      <div id="w5bPushResult" style="display:none;margin-top:8px;font-family:JetBrains Mono,monospace;font-size:13px;background:#e8f5e9;border-radius:4px;padding:8px;white-space:pre-wrap;color:#333"></div>
-    </div>
-  </div>
+  

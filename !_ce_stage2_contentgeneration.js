@@ -1776,7 +1776,11 @@ function getMetaPrompt() {
     "  and articles unless first word — see Capitalisation Rules above\n" +
     "- TARGET 50-60 characters. Never exceed 60 characters.\n" +
     "- Must contain the primary search term or a natural close variant\n" +
-    "- Must include 'Abbey Floor Care' as the brand signal — never truncate to 'Abbey' alone\n" +
+    "- BRAND RULE: Include 'Abbey Floor Care' only when the complete title can still contain\n" +
+    "  the search intent, required location and a meaningful CTR-driving angle within 60 characters.\n" +
+    "  If the brand forces removal of the useful click-driving angle, OMIT the brand.\n" +
+    "  Search intent + location + useful reason to click take priority over branding.\n" +
+    "  Never shorten the brand to 'Abbey' merely to make it fit.\n" +
     "- Must read naturally in UK English\n" +
     "- CTR PURPOSE (Hard Lock): The Meta Title is not merely a label for the service or article.\n" +
     "  It must give the searcher a reason to choose this result over otherwise similar SERP results.\n" +
