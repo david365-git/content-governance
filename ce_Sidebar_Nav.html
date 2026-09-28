@@ -18,6 +18,7 @@
     <button id="grpbtn-publish"      onclick="selectGroup('publish')"      style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">PUBLISH</button>
     <button id="grpbtn-media"        onclick="selectGroup('media')"        style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">MEDIA</button>
     <button id="grpbtn-refinement"   onclick="selectGroup('refinement')"   style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#6a1b9a;color:#fff;letter-spacing:0.5px">REFINE</button>
+    <button id="grpbtn-master" onclick="selectGroup('master')" style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#1565c0;color:#fff;letter-spacing:0.5px">MASTER</button>
   </div>
 
   <!-- ── Thread indicator ── -->
@@ -123,6 +124,15 @@
         { id: 16,     label: 'W6' }
       ]
     },
+    master: {
+    label: 'MASTER AUTOMATION',
+    thread: '🟦 Guided automation from Content Intelligence through W8E',
+    threadColor: '#1565c0',
+    first: 'master-automation',
+    stages: [
+      { id: 'master-automation', label: 'Master Automation' }
+    ]
+  },
     refinement: {
       label:  'POST-ANALYSIS REFINEMENT',
       thread: '🟣 Run after W7 analysis — targeted section correction only',
@@ -159,7 +169,7 @@
     _activeGroup = groupKey;
 
     /* ── Highlight active group button ── */
-    ['classify','analysis','governance','humanisation','output','publish','media','refinement'].forEach(function(k) {
+    ['classify','analysis','governance','humanisation','output','publish','media','refinement','master'].forEach(function(k) {
       var btn = document.getElementById('grpbtn-' + k);
       if (btn) btn.style.background = (k === groupKey) ? '#1565c0' : '#546e7a';
     });

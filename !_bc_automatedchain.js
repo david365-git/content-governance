@@ -7806,19 +7806,17 @@ function bc_runW8EAutomated() {
 
     /*
      * =========================================================
-     * BUILD EXISTING W8E PROMPT
+     * BUILD SINGLE W8E PROMPT
      * =========================================================
      */
 
     var promptResult =
       buildW8EAnalysisPrompt();
 
-
     if (
       !promptResult ||
       !promptResult.success
     ) {
-
       return {
         success: false,
         message:
@@ -7836,9 +7834,7 @@ function bc_runW8EAutomated() {
         promptResult.prompt || ""
       ).trim();
 
-
     if (!prompt) {
-
       return {
         success: false,
         message:
@@ -7850,22 +7846,20 @@ function bc_runW8EAutomated() {
 
     /*
      * =========================================================
-     * FIRST ANALYSIS
+     * ONE OPENAI CALL ONLY
      * =========================================================
      */
 
     var apiResult =
       bc_sendPromptViaOpenAI(
         prompt,
-        6000
+        7000
       );
-
 
     if (
       !apiResult ||
       !apiResult.success
     ) {
-
       return {
         success: false,
         message:
@@ -7889,9 +7883,7 @@ function bc_runW8EAutomated() {
         apiResult.text || ""
       ).trim();
 
-
     if (!output) {
-
       return {
         success: false,
         message:
@@ -7904,10 +7896,7 @@ function bc_runW8EAutomated() {
 
     /*
      * =========================================================
-     * VALIDATE + SAVE
-     *
-     * saveW8EAnalysisResult() now performs the atomic JSON
-     * validation before writing anything to FZ.
+     * VALIDATE ANALYSIS + ATOMIC FIXES
      * =========================================================
      */
 
@@ -7918,108 +7907,11 @@ function bc_runW8EAutomated() {
 
 
     /*
-     * =========================================================
-     * ONE CORRECTION ATTEMPT
-     * =========================================================
-     */
-
-    if (
-      !saveResult ||
-      !saveResult.success
-    ) {
-
-      var failureMessage =
-        saveResult &&
-        saveResult.message
-          ? saveResult.message
-          : "Unknown W8E JSON validation failure.";
-
-
-      var correctionPrompt =
-        prompt +
-        "\n\n" +
-
-        "IMPORTANT — YOUR PREVIOUS JSON FAILED AUTOMATED VALIDATION.\n\n" +
-
-        "VALIDATION FAILURE:\n" +
-        failureMessage +
-        "\n\n" +
-
-        "PREVIOUS RESPONSE:\n" +
-        output +
-        "\n\n" +
-
-        "Correct the JSON so it satisfies ALL original rules.\n\n" +
-
-        "HARD OUTPUT RULES:\n" +
-
-        "- Return JSON only.\n" +
-
-        "- No markdown fences.\n" +
-
-        "- No commentary before or after the JSON.\n" +
-
-        "- Return exactly 14 check objects.\n" +
-
-        "- Include each governed check exactly once.\n" +
-
-        "- PASS must use action_type NONE and an empty action.\n" +
-
-        "- PARTIAL or FAIL must use AUTO-FIXABLE or NEEDS AUTHOR INPUT and contain a concrete action.\n" +
-
-        "- auto_fixable_count must exactly match the checks.\n" +
-
-        "- author_input_count must exactly match the checks.\n" +
-
-        "- overall_status must be derived from those action types.\n" +
-
-        "- Do not change a substantive judgement merely to make the JSON validate.\n";
-
-
-      var retry =
-        bc_sendPromptViaOpenAI(
-          correctionPrompt,
-          6000
-        );
-
-
-      if (
-        !retry ||
-        !retry.success
-      ) {
-
-        return {
-          success: false,
-          message:
-            "W8E JSON failed validation and the correction call failed.",
-          cost:
-            totalCost
-        };
-      }
-
-
-      totalCost +=
-        Number(
-          retry.cost || 0
-        );
-
-
-      output =
-        String(
-          retry.text || ""
-        ).trim();
-
-
-      saveResult =
-        saveW8EAnalysisResult(
-          output
-        );
-    }
-
-
-    /*
-     * =========================================================
-     * STOP IF STILL INVALID
+     * IMPORTANT:
+     * No second AI correction call.
+     *
+     * If the JSON is invalid, stop.
+     * This keeps W8E to one paid API call.
      * =========================================================
      */
 
@@ -8027,22 +7919,16 @@ function bc_runW8EAutomated() {
       !saveResult ||
       !saveResult.success
     ) {
-
       return {
         success: false,
 
         message:
-          "W8E failed JSON validation after correction: " +
+          "W8E stopped because the one-call result failed validation: " +
           (
             saveResult &&
             saveResult.message
               ? saveResult.message
               : "Unknown validation failure."
-          ) +
-          "\n\nRAW W8E OUTPUT:\n" +
-          output.substring(
-            0,
-            1800
           ),
 
         cost:
@@ -8053,59 +7939,327 @@ function bc_runW8EAutomated() {
 
     /*
      * =========================================================
-     * READ NORMALISED RESULT
+     * PARSE THE ALREADY-VALIDATED JSON
      * =========================================================
      */
 
-    var parsed;
-
-    try {
-
-      parsed =
-        JSON.parse(
-          String(output)
-            .replace(/^```json\s*/i, "")
-            .replace(/^```\s*/i, "")
-            .replace(/\s*```$/i, "")
-            .trim()
-        );
-
-    } catch (e) {
-
-      parsed = {
-        checks: []
-      };
-    }
+    var cleaned =
+      output
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
 
 
-    var authorItems =
-      Array.isArray(parsed.checks)
-        ? parsed.checks.filter(
-            function(item) {
+    var parsed =
+      JSON.parse(
+        cleaned
+      );
 
-              return (
-                item &&
-                item.action_type ===
-                "NEEDS AUTHOR INPUT"
-              );
-            }
-          )
+
+    var checks =
+      Array.isArray(
+        parsed.checks
+      )
+        ? parsed.checks
+        : [];
+
+
+    var fixes =
+      Array.isArray(
+        parsed.fixes
+      )
+        ? parsed.fixes
         : [];
 
 
     var autoItems =
-      Array.isArray(parsed.checks)
-        ? parsed.checks.filter(
-            function(item) {
+      checks.filter(
+        function(item) {
+          return (
+            item &&
+            item.action_type ===
+            "AUTO-FIXABLE"
+          );
+        }
+      );
 
-              return (
-                item &&
-                item.action_type ===
-                "AUTO-FIXABLE"
-              );
-            }
+
+    var authorItems =
+      checks.filter(
+        function(item) {
+          return (
+            item &&
+            item.action_type ===
+            "NEEDS AUTHOR INPUT"
+          );
+        }
+      );
+
+
+    /*
+     * =========================================================
+     * APPLY ALREADY-VALIDATED ATOMIC FIXES
+     * =========================================================
+     */
+
+    var appliedFixCount = 0;
+    var skippedFixCount = 0;
+    var fixMessages = [];
+
+
+    if (
+      fixes.length > 0
+    ) {
+
+      var ss =
+        SpreadsheetApp
+          .getActiveSpreadsheet();
+
+
+      var sh =
+        ss.getSheetByName(
+          'posts'
+        );
+
+
+      var row =
+        sh
+          .getActiveCell()
+          .getRow();
+
+
+      var fieldColumns = {
+        html: 'CT',
+        h1: 'CK',
+        metaTitle: 'CL',
+        metaDescription: 'CM',
+        schema: 'CN'
+      };
+
+
+      /*
+       * Work in memory first so multiple fixes in the
+       * same field can be applied safely before one write.
+       */
+
+      var working = {
+        html:
+          String(
+            sh.getRange(
+              'CT' + row
+            ).getValue() || ''
+          ),
+
+        h1:
+          String(
+            sh.getRange(
+              'CK' + row
+            ).getValue() || ''
+          ),
+
+        metaTitle:
+          String(
+            sh.getRange(
+              'CL' + row
+            ).getValue() || ''
+          ),
+
+        metaDescription:
+          String(
+            sh.getRange(
+              'CM' + row
+            ).getValue() || ''
+          ),
+
+        schema:
+          String(
+            sh.getRange(
+              'CN' + row
+            ).getValue() || ''
           )
-        : [];
+      };
+
+
+      var touched = {};
+
+
+      for (
+        var i = 0;
+        i < fixes.length;
+        i++
+      ) {
+
+        var fix =
+          fixes[i] || {};
+
+
+        var label =
+          String(
+            fix.fixLabel || ""
+          ).trim();
+
+
+        var field =
+          String(
+            fix.field || ""
+          ).trim();
+
+
+        var oldText =
+          String(
+            fix.old || ""
+          );
+
+
+        var newText =
+          String(
+            fix.new || ""
+          );
+
+
+        if (
+          !fieldColumns[field]
+        ) {
+
+          skippedFixCount++;
+
+          fixMessages.push(
+            "Skipped " +
+            label +
+            " — invalid field."
+          );
+
+          continue;
+        }
+
+
+        var current =
+          working[field];
+
+
+        var firstIndex =
+          current.indexOf(
+            oldText
+          );
+
+
+        if (
+          firstIndex === -1
+        ) {
+
+          skippedFixCount++;
+
+          fixMessages.push(
+            "Skipped " +
+            label +
+            " — OLD text no longer found."
+          );
+
+          continue;
+        }
+
+
+        var secondIndex =
+          current.indexOf(
+            oldText,
+            firstIndex +
+            oldText.length
+          );
+
+
+        if (
+          secondIndex !== -1
+        ) {
+
+          skippedFixCount++;
+
+          fixMessages.push(
+            "Skipped " +
+            label +
+            " — OLD text is not unique."
+          );
+
+          continue;
+        }
+
+
+        working[field] =
+          current.substring(
+            0,
+            firstIndex
+          ) +
+          newText +
+          current.substring(
+            firstIndex +
+            oldText.length
+          );
+
+
+        touched[field] = true;
+
+        appliedFixCount++;
+
+        fixMessages.push(
+          "Applied " +
+          label
+        );
+      }
+
+
+      /*
+       * =========================================================
+       * WRITE ONLY TOUCHED FIELDS
+       * =========================================================
+       */
+
+      Object.keys(
+        touched
+      ).forEach(
+        function(field) {
+
+          sh.getRange(
+            fieldColumns[field] +
+            row
+          ).setValue(
+            working[field]
+          );
+        }
+      );
+    }
+
+
+    /*
+     * =========================================================
+     * FINAL STATUS
+     *
+     * This is based on the audit result from the one call.
+     * No second audit is performed.
+     * =========================================================
+     */
+
+    var finalStatus;
+
+
+    if (
+      authorItems.length > 0
+    ) {
+
+      finalStatus =
+        "NEEDS_AUTHOR_INPUT";
+
+    } else if (
+      skippedFixCount > 0
+    ) {
+
+      finalStatus =
+        "PASS_WITH_FIXES";
+
+    } else {
+
+      finalStatus =
+        "PASS";
+    }
 
 
     /*
@@ -8131,7 +8285,7 @@ function bc_runW8EAutomated() {
 
     /*
      * =========================================================
-     * SUCCESS
+     * RETURN
      * =========================================================
      */
 
@@ -8140,26 +8294,33 @@ function bc_runW8EAutomated() {
       success: true,
 
       message:
-        "W8E complete — validated authority and CTR analysis saved to FZ.",
+        "W8E complete — one-call audit finished and validated safe fixes were applied.",
 
       overallStatus:
-        saveResult.overallStatus,
+        finalStatus,
 
       autoFixableCount:
-        Number(
-          saveResult.autoFixableCount || 0
-        ),
+        autoItems.length,
 
       authorInputCount:
-        Number(
-          saveResult.authorInputCount || 0
-        ),
+        authorItems.length,
 
       autoFixableItems:
         autoItems,
 
       authorInputItems:
         authorItems,
+
+      appliedFixCount:
+        appliedFixCount,
+
+      skippedFixCount:
+        skippedFixCount,
+
+      fixMessage:
+        fixMessages.join(
+          "\n"
+        ),
 
       cost:
         totalCost

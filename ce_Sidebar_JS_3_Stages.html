@@ -4965,32 +4965,50 @@ function runW8EAutomated() {
 
 
         if (
-          Array.isArray(
-            res.autoFixableItems
-          ) &&
-          res.autoFixableItems.length
-        ) {
+        Number(
+          res.appliedFixCount || 0
+        ) > 0 &&
+        Number(
+          res.skippedFixCount || 0
+        ) === 0
+      ) {
 
-          autoFixBlock.style.display =
-            'block';
+        autoFixBlock.style.display =
+          'block';
 
+        autoFixItems.textContent =
+          '✔ ' +
+          Number(
+            res.appliedFixCount || 0
+          ) +
+          ' safe W8E fix(es) applied automatically.';
 
-          autoFixItems.textContent =
-            res.autoFixableItems
-              .map(
-                function(item) {
+      } else if (
+        Array.isArray(
+          res.autoFixableItems
+        ) &&
+        res.autoFixableItems.length
+      ) {
 
-                  return (
-                    item.check +
-                    ': ' +
-                    item.action
-                  );
-                }
-              )
-              .join(
-                '\n\n'
-              );
-        }
+        autoFixBlock.style.display =
+          'block';
+
+        autoFixItems.textContent =
+          res.autoFixableItems
+            .map(
+              function(item) {
+
+                return (
+                  item.check +
+                  ': ' +
+                  item.action
+                );
+              }
+            )
+            .join(
+              '\n\n'
+            );
+      }
 
 
         if (
@@ -5067,5 +5085,8 @@ function runW8EAutomated() {
 
 
     .bc_runW8EAutomated();
+}
+function masterRunContentIntelligence() {
+  runFullGovernanceChain();
 }
 </script>

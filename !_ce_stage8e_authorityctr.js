@@ -22,13 +22,13 @@ function buildW8EAnalysisPrompt() {
     return sh.getRange(col + row).getValue();
   }
 
-  const html      = getVal(colHtml);
-  const h1        = getVal(colH1);
-  const title     = getVal(colTitle);
-  const meta      = getVal(colMeta);
-  const schema    = getVal(colSchema);
-  const pst       = getVal(colPst);
-  const serpNotes = getVal(colSerp);
+  const html      = String(getVal(colHtml) || '').trim();
+  const h1        = String(getVal(colH1) || '').trim();
+  const title     = String(getVal(colTitle) || '').trim();
+  const meta      = String(getVal(colMeta) || '').trim();
+  const schema    = String(getVal(colSchema) || '').trim();
+  const pst       = String(getVal(colPst) || '').trim();
+  const serpNotes = String(getVal(colSerp) || '').trim();
 
   if (!html) {
     return {
@@ -37,31 +37,51 @@ function buildW8EAnalysisPrompt() {
     };
   }
 
+
   const prompt =
-    `You are auditing a single finished article for Google authority potential,
-    silo recovery, click-through rate and first-click satisfaction.
+    `You are performing the FINAL pre-publication audit of one finished article.
 
-    The article is part of a post-migration content recovery process.
+    Your job has TWO parts in ONE response:
 
-    Primary Search Term: ${pst}
-    H1: ${h1}
-    Meta Title: ${title}
-    Meta Description: ${meta}
+    1. Audit the finished page for authority, silo recovery, CTR and first-click satisfaction.
+    2. For every issue that can safely be corrected from the supplied material, return the exact deterministic replacement required.
 
-    Competitor SERP Notes:
+    Do NOT create a second-stage repair plan.
+    Do NOT ask another model to interpret your recommendations later.
+    The fixes you return here will be applied directly by script.
+
+    PRIMARY SEARCH TERM:
+    ${pst}
+
+    CURRENT H1:
+    ${h1}
+
+    CURRENT META TITLE:
+    ${title}
+
+    CURRENT META DESCRIPTION:
+    ${meta}
+
+    COMPETITOR SERP NOTES:
     ${serpNotes || "No competitor SERP notes available for this row."}
 
-    Schema (JSON-LD):
+    CURRENT SCHEMA:
     ${schema}
 
-    Article HTML:
+    CURRENT ARTICLE HTML:
     ${html}
 
-    Return JSON ONLY.
-    Do not use markdown fences.
-    Do not include prose before or after the JSON.
 
-    Use this exact top-level structure:
+    ============================================================
+    OUTPUT
+    ============================================================
+
+    Return VALID JSON ONLY.
+
+    No markdown fences.
+    No commentary before or after the JSON.
+
+    Use exactly this top-level structure:
 
     {
       "overall_status": "PASS" | "PASS_WITH_FIXES" | "NEEDS_AUTHOR_INPUT",
@@ -72,121 +92,219 @@ function buildW8EAnalysisPrompt() {
           "section": "GOOGLE AUTHORITY SIGNALS",
           "check": "Experience Proofing",
           "status": "PASS" | "PARTIAL" | "FAIL",
-          "evidence": "specific evidence from the article, or 'not present'",
+          "evidence": "specific evidence from the supplied page, or 'not present'",
           "action_type": "NONE" | "AUTO-FIXABLE" | "NEEDS AUTHOR INPUT",
-          "action": "specific action required, or empty string if none"
+          "action": "specific required action, or empty string"
+        }
+      ],
+      "fixes": [
+        {
+          "fixLabel": "short description",
+          "field": "html",
+          "old": "exact current fragment",
+          "new": "exact replacement fragment"
         }
       ]
     }
 
-    Run these checks:
+
+    ============================================================
+    THE 14 REQUIRED CHECKS
+    ============================================================
 
     GOOGLE AUTHORITY SIGNALS
-    - Experience Proofing
-    - Expertise Depth
-    - Entity Alignment
-    - Trust Signals
+    1. Experience Proofing
+    2. Expertise Depth
+    3. Entity Alignment
+    4. Trust Signals
 
     SILO RECOVERY CHECK
-    - Silo Identity Signal
-    - Internal Link Architecture
-    - PST / Scope Alignment
+    5. Silo Identity Signal
+    6. Internal Link Architecture
+    7. PST / Scope Alignment
 
     CLICK-THROUGH RATE POTENTIAL
-    - Title Tag
-    - Meta Description
-    - SERP Differentiation
-    - Snippet Capture
+    8. Title Tag
+    9. Meta Description
+    10. SERP Differentiation
+    11. Snippet Capture
 
     SEARCH INTENT & FIRST-CLICK SATISFACTION
-    - Intent Match
-    - Immediate Value
-    - Actionable Takeaways
+    12. Intent Match
+    13. Immediate Value
+    14. Actionable Takeaways
 
-    RULES
 
-    1. For every check, return one object in "checks".
+    ============================================================
+    AUDIT RULES
+    ============================================================
 
-    2. "status" must be exactly:
+    1. Return exactly 14 check objects.
+
+    2. Each governed check must appear exactly once.
+
+    3. status must be exactly one of:
     PASS
     PARTIAL
     FAIL
 
-    3. "action_type" must be exactly:
+    4. action_type must be exactly one of:
     NONE
     AUTO-FIXABLE
     NEEDS AUTHOR INPUT
 
-    4. If status is PASS:
+    5. If status is PASS:
     - action_type must be NONE
-    - action must be an empty string
+    - action must be ""
 
-    5. If status is PARTIAL or FAIL:
+    6. If status is PARTIAL or FAIL:
     - action_type must be AUTO-FIXABLE or NEEDS AUTHOR INPUT
     - action must state exactly what needs changing
 
-    6. Use AUTO-FIXABLE only when the issue can be corrected safely from the existing article and supplied context without inventing facts.
+    7. AUTO-FIXABLE means the correction can be made safely using ONLY information already present in the supplied article, schema, metadata or competitor notes.
 
-    Examples:
-    - improve Meta Title wording
-    - improve Meta Description
-    - tighten an existing explanation
-    - add a self-contained snippet answer using facts already present
-    - soften an absolute claim
-    - improve an existing internal-link anchor
+    8. NEEDS AUTHOR INPUT means the correction requires a fact that is not safely established in the supplied material.
 
-    7. Use NEEDS AUTHOR INPUT only when the fix depends on facts that are not present in the supplied material.
+    Examples include:
+    - first-hand experience
+    - actual project history
+    - exact experience duration
+    - business/service scope that is contradictory or unverified
+    - factual claims requiring confirmation
 
-    Examples:
-    - first-hand project detail
-    - genuine experience claim
-    - missing factual date
-    - unverified technical claim
-    - missing real-world observation
+    9. Never invent first-hand experience, projects, business capabilities, service coverage, dates or outcomes.
 
-    8. Do not invent evidence, experience, project facts or competitor information.
+    10. Trust Signals:
+    datePublished/dateModified in Schema is sufficient freshness evidence.
+    Never request a visible article-body update date.
 
-    9. For Trust Signals:
-    Schema datePublished/dateModified is sufficient freshness evidence.
-    Do not request a visible update date in the article body.
+    11. SERP Differentiation:
+    use the supplied Competitor SERP Notes when available.
+    Do not invent competitor evidence.
 
-    10. For SERP Differentiation:
-    Use the supplied Competitor SERP Notes if available.
-    If they are empty, say so explicitly.
+    12. Do not score or rank the article.
 
-    11. For each PARTIAL or FAIL action:
-    state the exact field or article area affected.
+    13. Do not recommend stylistic rewrites merely because wording could be prettier.
 
-    Examples:
-    - Meta Title
-    - Meta Description
-    - first paragraph
-    - H2 "Common Causes"
-    - paragraph immediately below H2 "..."
+    14. Only flag a problem when it materially affects authority, semantic alignment, search intent, CTR, factual reliability or user usefulness.
 
-    12. The "action" field must be concrete enough for an automated correction stage to understand.
 
-    13. Determine overall_status as follows:
+
+    ============================================================
+    ATOMIC FIX RULES
+    ============================================================
+
+    For EVERY check marked AUTO-FIXABLE, normally return the corresponding safe replacement in the top-level "fixes" array.
+
+    Each fix must use this exact form:
+
+    {
+      "fixLabel": "short description",
+      "field": "html" | "h1" | "metaTitle" | "metaDescription" | "schema",
+      "old": "exact existing fragment",
+      "new": "exact replacement fragment"
+    }
+
+    The script will perform literal find-and-replace.
+
+    Therefore:
+
+    1. "old" MUST be copied verbatim from the supplied CURRENT field.
+
+    2. Never paraphrase OLD.
+
+    3. OLD must occur exactly once in that field.
+    If necessary, include enough surrounding text or HTML to make it unique.
+
+    4. NEW must make the smallest safe change necessary.
+
+    5. Do not rewrite unrelated material.
+
+    6. Do not return a fix for NEEDS AUTHOR INPUT.
+
+    7. Do not use an automated fix to guess around an unresolved author-input issue.
+
+    8. If an apparently AUTO-FIXABLE issue cannot actually be expressed as a safe exact replacement, classify it as NEEDS AUTHOR INPUT rather than returning an unsafe fix.
+
+    9. For field "html":
+    preserve existing HTML structure unless the identified issue genuinely requires a structural addition or replacement.
+
+    10. For field "h1":
+    OLD must equal the complete current H1.
+
+    11. For field "metaTitle":
+    OLD must equal the complete current Meta Title.
+    NEW must be no more than 60 characters.
+
+    12. For field "metaDescription":
+    OLD must equal the COMPLETE current Meta Description field exactly as supplied.
+
+    If the field contains:
+    Yoast Keyphrase: ...
+
+    preserve that line unchanged unless the issue explicitly concerns the keyphrase.
+
+    The actual Meta Description prose after the fix must remain 140-160 characters and exactly two sentences.
+
+    13. For field "schema":
+    use the smallest unique exact JSON or JSON-LD fragment that can safely be replaced.
+    Do not rewrite the whole schema unless there is no smaller safe replacement.
+
+    14. Every object in "fixes" must correspond to an AUTO-FIXABLE check.
+
+    15. Do not return duplicate fixes.
+
+    16. If an AUTO-FIXABLE action genuinely requires two separate replacements, two fix objects are allowed for that check.
+
+    17. The "fixes" array must be empty when there are no AUTO-FIXABLE issues.
+
+    18. EXPERIENCE DURATION GOVERNANCE:
+
+    The verified experience fact is:
+    more than 30 years.
+
+    Equivalent natural wording is allowed where it suits the surrounding sentence, including:
+    - more than 30 years
+    - over 30 years
+    - 30 years and more
+    - 30+ years
+    - in excess of 30 years
+
+    Treat these as semantically equivalent.
+
+    Do not flag variation between these confirmed equivalents as a contradiction.
+
+    If the page contains weaker or conflicting wording such as:
+    - nearly 30 years
+    - almost 30 years
+    - around 30 years
+    - approximately 30 years
+
+    classify that wording as AUTO-FIXABLE and replace it with a natural equivalent of "more than 30 years" that fits the surrounding text.
+
+    Do not require author input for this experience-duration fact.
+
+
+    ============================================================
+    OVERALL STATUS
+    ============================================================
+
+    Set overall_status to:
 
     PASS
-    = every check is PASS.
+    when every check passes.
 
     PASS_WITH_FIXES
-    = one or more checks are PARTIAL or FAIL,
-    but every required action is AUTO-FIXABLE.
+    when one or more issues exist but every required action is safely AUTO-FIXABLE.
 
     NEEDS_AUTHOR_INPUT
-    = at least one required action is NEEDS AUTHOR INPUT.
+    when at least one issue requires author input.
 
-    14. auto_fixable_count must equal the number of checks whose action_type is AUTO-FIXABLE.
+    auto_fixable_count must equal the number of CHECKS marked AUTO-FIXABLE.
 
-    15. author_input_count must equal the number of checks whose action_type is NEEDS AUTHOR INPUT.
+    author_input_count must equal the number of CHECKS marked NEEDS AUTHOR INPUT.
 
-    16. Do not include duplicate fixes for the same underlying problem.
-
-    17. Do not score, rank or give percentages.
-
-    Return valid JSON only.`;
+    Return JSON only.`;
 
   return {
     success: true,
@@ -195,52 +313,226 @@ function buildW8EAnalysisPrompt() {
 }
 
 function buildW8EAutoFixPrompt() {
+
   const ss  = SpreadsheetApp.getActiveSpreadsheet();
   const sh  = ss.getSheetByName('posts');
   const row = sh.getActiveCell().getRow();
 
-  const analysis = sh.getRange('FZ' + row).getValue();
-  const html     = sh.getRange('CT' + row).getValue();
+  const analysisRaw =
+    String(
+      sh.getRange('FZ' + row).getValue() || ''
+    ).trim();
 
-  if (!analysis) {
-    return { success: false, message: "ERROR: No W8E analysis saved yet (column FZ is empty). Run W8E Analysis first." };
-  }
-  if (!html) {
-    return { success: false, message: "ERROR: New HTML (CT) is empty for this row." };
+  const html =
+    String(
+      sh.getRange('CT' + row).getValue() || ''
+    ).trim();
+
+  const h1 =
+    String(
+      sh.getRange('CK' + row).getValue() || ''
+    ).trim();
+
+  const metaTitle =
+    String(
+      sh.getRange('CL' + row).getValue() || ''
+    ).trim();
+
+  const metaDescription =
+    String(
+      sh.getRange('CM' + row).getValue() || ''
+    ).trim();
+
+  const schema =
+    String(
+      sh.getRange('CN' + row).getValue() || ''
+    ).trim();
+
+
+  if (!analysisRaw) {
+    return {
+      success: false,
+      message:
+        "No W8E analysis saved yet in column FZ."
+    };
   }
 
-  const lines = String(analysis).split('\n');
-  const autoItems = lines.filter(function(l) {
-    return /^\s*\[AUTO-FIXABLE\]/i.test(l.trim());
-  });
 
-  if (autoItems.length === 0) {
-    return { success: false, message: "No [AUTO-FIXABLE] items found in the saved analysis. Nothing to fix automatically." };
+  let analysis;
+
+  try {
+
+    analysis =
+      JSON.parse(
+        analysisRaw
+      );
+
+  } catch (e) {
+
+    return {
+      success: false,
+      message:
+        "Saved W8E analysis is not valid JSON."
+    };
   }
+
+
+  if (
+    !Array.isArray(
+      analysis.checks
+    )
+  ) {
+
+    return {
+      success: false,
+      message:
+        "Saved W8E analysis contains no checks array."
+    };
+  }
+
+
+  const autoItems =
+    analysis.checks.filter(
+      function(item) {
+
+        return (
+          item &&
+          item.action_type ===
+            "AUTO-FIXABLE"
+        );
+      }
+    );
+
+
+  if (
+    autoItems.length === 0
+  ) {
+
+    return {
+      success: false,
+      message:
+        "No AUTO-FIXABLE W8E items found."
+    };
+  }
+
+
+  const fixesJson =
+    JSON.stringify(
+      autoItems.map(
+        function(item) {
+
+          return {
+            section:
+              item.section || "",
+
+            check:
+              item.check || "",
+
+            action:
+              item.action || ""
+          };
+        }
+      ),
+      null,
+      2
+    );
+
 
   const prompt =
-    `You are applying a fixed set of pre-approved text edits to an existing article. Do NOT return the whole article.
+    `You are applying a fixed set of pre-approved W8E corrections to an existing finished article.
 
-    For each fix below, return ONLY the exact original fragment being replaced (OLD) and its exact replacement (NEW). Each OLD fragment must be copied verbatim from the article HTML below — exact characters, exact tags — so it can be located by an automated find-and-replace. Each OLD fragment must be unique within the article (include enough surrounding text to make it unique if needed).
+    Do NOT reassess the article.
+    Do NOT introduce additional improvements.
+    Do NOT change anything that is not required by the supplied AUTO-FIXABLE actions.
+    Do NOT act on anything marked NEEDS AUTHOR INPUT.
 
-    Do not touch anything not listed in the fixes below.
+    AUTO-FIXABLE ACTIONS:
+    ${fixesJson}
 
-    Return ONLY a JSON array, no markdown fences, no preamble, in this exact format:
-    [
-      {"fixLabel": "short label for this fix", "field": "html", "old": "exact original fragment", "new": "exact replacement fragment"}
-    ]
+    CURRENT FIELDS
 
-    The "field" value must be one of: "html" (article body), "h1" (New H1), "metaTitle" (New Meta Title), "metaDescription" (New Meta Description), "schema" (Schema JSON-LD). Choose the field the fix actually targets — a title tag fix must use "metaTitle", a meta description fix must use "metaDescription", not "html". If a fix could apply to the article body, default to "html".
+    H1:
+    ${h1}
 
-    CRITICAL JSON FORMATTING RULE: The old/new fragments contain HTML with double-quote attributes (e.g. style="..."). Every double quote character inside the old/new string values MUST be escaped as \\" so the result is valid JSON. Do not use curly/smart quotes (’ " ") anywhere — use straight quotes only, and escape them inside strings. Test that your output is valid JSON before returning it.
+    META TITLE:
+    ${metaTitle}
 
-    FIXES TO APPLY:
-    ${autoItems.join('\n')}
+    META DESCRIPTION:
+    ${metaDescription}
+
+    SCHEMA:
+    ${schema}
 
     ARTICLE HTML:
-    ${html}`;
+    ${html}
 
-  return { success: true, prompt: prompt, count: autoItems.length };
+    TASK
+
+    For each AUTO-FIXABLE action, produce the smallest safe replacement necessary.
+
+    Return JSON ONLY.
+
+    Use this exact structure:
+
+    [
+      {
+        "fixLabel": "short description",
+        "field": "html",
+        "old": "exact existing fragment",
+        "new": "exact replacement fragment"
+      }
+    ]
+
+    FIELD must be exactly one of:
+
+    html
+    h1
+    metaTitle
+    metaDescription
+    schema
+
+    RULES
+
+    1. OLD must be copied exactly from the supplied current field.
+
+    2. OLD must uniquely identify the text being replaced.
+
+    3. NEW must make only the requested correction.
+
+    4. Do not change unrelated wording.
+
+    5. Do not invent facts.
+
+    6. Do not resolve any NEEDS AUTHOR INPUT issue.
+
+    7. If an AUTO-FIXABLE action depends on unresolved author information, omit that fix rather than guessing.
+
+    8. For HTML fixes:
+    preserve all existing HTML structure unless the action specifically requires a structural change.
+
+    9. For schema fixes:
+    return only the exact schema fragment that needs changing, not the complete schema unless absolutely necessary.
+
+    10. For Meta Title or Meta Description:
+    OLD must be the complete current field value and NEW must be the complete replacement field value.
+
+    11. Meta Title must remain no more than 60 characters.
+
+    12. Meta Description must remain 140-160 characters.
+
+    13. Preserve the existing Yoast Keyphrase line in the Meta Description field unless the fix explicitly concerns it.
+
+    14. Return a valid JSON array only.
+
+    15. No markdown fences.
+    No explanation.
+    No commentary.`;
+
+  return {
+    success: true,
+    prompt: prompt,
+    count: autoItems.length
+  };
 }
 
 function applyW8EAutoFix(rawJson) {
@@ -339,19 +631,1148 @@ function applyW8EAutoFix(rawJson) {
 }
 
 function saveW8EAnalysisResult(resultText) {
+
   const ss  = SpreadsheetApp.getActiveSpreadsheet();
   const sh  = ss.getSheetByName('posts');
   const row = sh.getActiveCell().getRow();
 
-  if (!resultText || !resultText.trim()) {
-    return { success: false, message: "No result text provided." };
+  if (!resultText || !String(resultText).trim()) {
+    return {
+      success: false,
+      message: "No W8E result provided."
+    };
   }
 
-  sh.getRange('FZ' + row).setValue(resultText.trim());
+  let cleaned =
+    String(resultText)
+      .trim()
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
 
-  if (typeof logPipelineResume === 'function') {
-    logPipelineResume("W8E — Authority & CTR Analysis", "");
+  let parsed;
+
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch (e) {
+    return {
+      success: false,
+      message:
+        "W8E result is not valid JSON: " +
+        e.message
+    };
   }
 
-  return { success: true, message: "Saved to column FZ (W8E Authority & CTR Analysis)." };
+
+  /*
+   * =========================================================
+   * TOP-LEVEL VALIDATION
+   * =========================================================
+   */
+
+  const allowedOverall = [
+    "PASS",
+    "PASS_WITH_FIXES",
+    "NEEDS_AUTHOR_INPUT"
+  ];
+
+  if (
+    allowedOverall.indexOf(
+      parsed.overall_status
+    ) === -1
+  ) {
+    return {
+      success: false,
+      message:
+        "W8E overall_status is invalid."
+    };
+  }
+
+  if (
+    !Array.isArray(
+      parsed.checks
+    )
+  ) {
+    return {
+      success: false,
+      message:
+        "W8E checks must be an array."
+    };
+  }
+
+  if (
+    !Array.isArray(
+      parsed.fixes
+    )
+  ) {
+    return {
+      success: false,
+      message:
+        "W8E fixes must be an array."
+    };
+  }
+
+
+  /*
+   * =========================================================
+   * EXPECT EXACTLY 14 GOVERNED CHECKS
+   * =========================================================
+   */
+
+  const expectedChecks = [
+    "Experience Proofing",
+    "Expertise Depth",
+    "Entity Alignment",
+    "Trust Signals",
+    "Silo Identity Signal",
+    "Internal Link Architecture",
+    "PST / Scope Alignment",
+    "Title Tag",
+    "Meta Description",
+    "SERP Differentiation",
+    "Snippet Capture",
+    "Intent Match",
+    "Immediate Value",
+    "Actionable Takeaways"
+  ];
+
+  if (
+    parsed.checks.length !==
+    expectedChecks.length
+  ) {
+    return {
+      success: false,
+      message:
+        "W8E returned " +
+        parsed.checks.length +
+        " checks; expected " +
+        expectedChecks.length +
+        "."
+    };
+  }
+
+
+  /*
+   * =========================================================
+   * VALIDATE CHECKS
+   * =========================================================
+   */
+
+  const allowedStatus = [
+    "PASS",
+    "PARTIAL",
+    "FAIL"
+  ];
+
+  const allowedActionType = [
+    "NONE",
+    "AUTO-FIXABLE",
+    "NEEDS AUTHOR INPUT"
+  ];
+
+  let autoCount = 0;
+  let authorCount = 0;
+  const seenChecks = {};
+  const autoCheckNames = {};
+
+  for (
+    let i = 0;
+    i < parsed.checks.length;
+    i++
+  ) {
+
+    const item =
+      parsed.checks[i] || {};
+
+    const checkName =
+      String(
+        item.check || ""
+      ).trim();
+
+    if (
+      expectedChecks.indexOf(
+        checkName
+      ) === -1
+    ) {
+      return {
+        success: false,
+        message:
+          "Unexpected W8E check: " +
+          checkName
+      };
+    }
+
+    if (
+      seenChecks[
+        checkName
+      ]
+    ) {
+      return {
+        success: false,
+        message:
+          "Duplicate W8E check: " +
+          checkName
+      };
+    }
+
+    seenChecks[
+      checkName
+    ] = true;
+
+    if (
+      allowedStatus.indexOf(
+        item.status
+      ) === -1
+    ) {
+      return {
+        success: false,
+        message:
+          "Invalid status for " +
+          checkName +
+          "."
+      };
+    }
+
+    if (
+      allowedActionType.indexOf(
+        item.action_type
+      ) === -1
+    ) {
+      return {
+        success: false,
+        message:
+          "Invalid action_type for " +
+          checkName +
+          "."
+      };
+    }
+
+    const evidence =
+      String(
+        item.evidence || ""
+      ).trim();
+
+    const action =
+      String(
+        item.action || ""
+      ).trim();
+
+    if (!evidence) {
+      return {
+        success: false,
+        message:
+          "Missing evidence for " +
+          checkName +
+          "."
+      };
+    }
+
+    if (
+      item.status === "PASS"
+    ) {
+
+      if (
+        item.action_type !==
+        "NONE"
+      ) {
+        return {
+          success: false,
+          message:
+            "PASS check " +
+            checkName +
+            " must use action_type NONE."
+        };
+      }
+
+      if (action) {
+        return {
+          success: false,
+          message:
+            "PASS check " +
+            checkName +
+            " must have an empty action."
+        };
+      }
+    }
+
+    if (
+  item.status === "PARTIAL" ||
+  item.status === "FAIL"
+    ) {
+
+      if (
+        item.action_type ===
+        "NONE"
+      ) {
+        return {
+          success: false,
+          message:
+            checkName +
+            " requires an action_type."
+        };
+      }
+
+      if (!action) {
+        return {
+          success: false,
+          message:
+            checkName +
+            " requires an action."
+        };
+      }
+
+
+      /*
+      * =========================================================
+      * TRUST SIGNALS FALSE-POSITIVE GUARD
+      *
+      * If schema already contains datePublished or dateModified,
+      * W8E must not ask the author to supply publication dates.
+      * =========================================================
+      */
+
+      if (
+        checkName ===
+        "Trust Signals" &&
+        item.action_type ===
+        "NEEDS AUTHOR INPUT"
+      ) {
+
+        const currentSchema =
+          String(
+            sh.getRange(
+              'CN' + row
+            ).getValue() || ''
+          );
+
+
+        const hasSchemaDate =
+          /"datePublished"\s*:/i.test(
+            currentSchema
+          ) ||
+          /"dateModified"\s*:/i.test(
+            currentSchema
+          );
+
+
+        const asksForDate =
+          /publication date|published date|datePublished|modification date|modified date|dateModified/i.test(
+            action
+          );
+
+
+        if (
+          hasSchemaDate &&
+          asksForDate
+        ) {
+
+          return {
+            success: false,
+
+            message:
+              "Trust Signals incorrectly requested author-supplied publication dates even though schema already contains datePublished/dateModified."
+          };
+        }
+      }
+    }
+
+    if (
+      item.action_type ===
+      "AUTO-FIXABLE"
+    ) {
+      autoCount++;
+
+      autoCheckNames[
+        checkName
+      ] = true;
+    }
+
+    if (
+      item.action_type ===
+      "NEEDS AUTHOR INPUT"
+    ) {
+      authorCount++;
+    }
+  }
+
+
+  /*
+   * =========================================================
+   * VERIFY COUNTS
+   * =========================================================
+   */
+
+  if (
+    Number(
+      parsed.auto_fixable_count
+    ) !==
+    autoCount
+  ) {
+    return {
+      success: false,
+      message:
+        "W8E auto_fixable_count does not match the checks."
+    };
+  }
+
+  if (
+    Number(
+      parsed.author_input_count
+    ) !==
+    authorCount
+  ) {
+    return {
+      success: false,
+      message:
+        "W8E author_input_count does not match the checks."
+    };
+  }
+
+
+  /*
+   * =========================================================
+   * VERIFY OVERALL STATUS
+   * =========================================================
+   */
+
+  let expectedOverall;
+
+  if (
+    authorCount > 0
+  ) {
+    expectedOverall =
+      "NEEDS_AUTHOR_INPUT";
+
+  } else if (
+    autoCount > 0
+  ) {
+    expectedOverall =
+      "PASS_WITH_FIXES";
+
+  } else {
+    expectedOverall =
+      "PASS";
+  }
+
+  if (
+    parsed.overall_status !==
+    expectedOverall
+  ) {
+    return {
+      success: false,
+      message:
+        "W8E overall_status should be " +
+        expectedOverall +
+        ", not " +
+        parsed.overall_status +
+        "."
+    };
+  }
+
+
+  /*
+   * =========================================================
+   * CURRENT FIELD VALUES FOR ATOMIC FIX VALIDATION
+   * =========================================================
+   */
+
+  const currentFields = {
+    html:
+      String(
+        sh.getRange(
+          'CT' + row
+        ).getValue() || ''
+      ),
+
+    h1:
+      String(
+        sh.getRange(
+          'CK' + row
+        ).getValue() || ''
+      ),
+
+    metaTitle:
+      String(
+        sh.getRange(
+          'CL' + row
+        ).getValue() || ''
+      ),
+
+    metaDescription:
+      String(
+        sh.getRange(
+          'CM' + row
+        ).getValue() || ''
+      ),
+
+    schema:
+      String(
+        sh.getRange(
+          'CN' + row
+        ).getValue() || ''
+      )
+  };
+
+
+  /*
+   * =========================================================
+   * VALIDATE ATOMIC FIX OBJECTS
+   * =========================================================
+   */
+
+  const allowedFields = [
+    "html",
+    "h1",
+    "metaTitle",
+    "metaDescription",
+    "schema"
+  ];
+
+  const seenFixes = {};
+
+  for (
+    let i = 0;
+    i < parsed.fixes.length;
+    i++
+  ) {
+
+    const fix =
+      parsed.fixes[i] || {};
+
+    const fixLabel =
+      String(
+        fix.fixLabel || ""
+      ).trim();
+
+    const field =
+      String(
+        fix.field || ""
+      ).trim();
+
+    const oldText =
+      String(
+        fix.old || ""
+      );
+
+    const newText =
+      String(
+        fix.new || ""
+      );
+
+    if (!fixLabel) {
+      return {
+        success: false,
+        message:
+          "W8E fix " +
+          (i + 1) +
+          " has no fixLabel."
+      };
+    }
+
+    if (
+      allowedFields.indexOf(
+        field
+      ) === -1
+    ) {
+      return {
+        success: false,
+        message:
+          "W8E fix " +
+          fixLabel +
+          " has invalid field: " +
+          field
+      };
+    }
+
+    if (!oldText) {
+      return {
+        success: false,
+        message:
+          "W8E fix " +
+          fixLabel +
+          " has an empty OLD value."
+      };
+    }
+
+    /*
+ * Empty NEW is allowed only when deliberately
+ * removing an HTML or schema fragment.
+ */
+
+    if (
+      !newText &&
+      field !== "html" &&
+      field !== "schema"
+    ) {
+      return {
+        success: false,
+        message:
+          "W8E fix " +
+          fixLabel +
+          " has an empty NEW value."
+      };
+    }
+
+    if (
+      oldText === newText
+    ) {
+      return {
+        success: false,
+        message:
+          "W8E fix " +
+          fixLabel +
+          " does not change anything."
+      };
+    }
+
+
+    /*
+     * OLD must exist exactly once
+     */
+
+    const fieldValue =
+      currentFields[
+        field
+      ];
+
+    const firstIndex =
+      fieldValue.indexOf(
+        oldText
+      );
+
+    if (
+      firstIndex === -1
+    ) {
+      return {
+        success: false,
+        message:
+          "W8E fix " +
+          fixLabel +
+          " OLD text was not found in " +
+          field +
+          "."
+      };
+    }
+
+    const secondIndex =
+      fieldValue.indexOf(
+        oldText,
+        firstIndex +
+        oldText.length
+      );
+
+    if (
+      secondIndex !== -1
+    ) {
+      return {
+        success: false,
+        message:
+          "W8E fix " +
+          fixLabel +
+          " OLD text is not unique in " +
+          field +
+          "."
+      };
+    }
+
+
+    /*
+     * COMPLETE-FIELD LOCKS
+     */
+
+    if (
+      field === "h1" ||
+      field === "metaTitle" ||
+      field === "metaDescription"
+    ) {
+
+      if (
+        oldText !==
+        fieldValue
+      ) {
+        return {
+          success: false,
+          message:
+            "W8E fix " +
+            fixLabel +
+            " must use the complete current " +
+            field +
+            " as OLD."
+        };
+      }
+    }
+
+
+    /*
+     * TITLE LENGTH
+     */
+
+    if (
+      field === "metaTitle" &&
+      newText.length > 60
+    ) {
+      return {
+        success: false,
+        message:
+          "W8E Meta Title fix exceeds 60 characters."
+      };
+    }
+
+
+    /*
+     * META DESCRIPTION VALIDATION
+     */
+
+    if (
+      field === "metaDescription"
+    ) {
+
+      const oldYoastMatch =
+        fieldValue.match(
+          /\n\s*Yoast Keyphrase:\s*.+$/i
+        );
+
+      const newYoastMatch =
+        newText.match(
+          /\n\s*Yoast Keyphrase:\s*.+$/i
+        );
+
+      if (
+        oldYoastMatch &&
+        (
+          !newYoastMatch ||
+          newYoastMatch[0] !==
+          oldYoastMatch[0]
+        )
+      ) {
+        return {
+          success: false,
+          message:
+            "W8E Meta Description fix did not preserve the Yoast Keyphrase line."
+        };
+      }
+
+
+      const descriptionOnly =
+        newText
+          .replace(
+            /\n\s*Yoast Keyphrase:\s*.+$/i,
+            ''
+          )
+          .trim();
+
+
+      if (
+        descriptionOnly.length < 140 ||
+        descriptionOnly.length > 160
+      ) {
+        return {
+          success: false,
+          message:
+            "W8E Meta Description fix must be 140-160 characters."
+        };
+      }
+
+
+      const sentenceCount =
+        (
+          descriptionOnly.match(
+            /[.!?](?:\s|$)/g
+          ) || []
+        ).length;
+
+
+      if (
+        sentenceCount !== 2
+      ) {
+        return {
+          success: false,
+          message:
+            "W8E Meta Description fix must contain exactly two sentences."
+        };
+      }
+    }
+
+
+    /*
+     * DUPLICATE FIX PROTECTION
+     */
+
+    const fixKey =
+      field +
+      "||" +
+      oldText;
+
+    if (
+      seenFixes[
+        fixKey
+      ]
+    ) {
+      return {
+        success: false,
+        message:
+          "Duplicate W8E atomic fix detected: " +
+          fixLabel
+      };
+    }
+
+    seenFixes[
+      fixKey
+    ] = true;
+  }
+
+
+  /*
+   * =========================================================
+   * FIX COVERAGE CHECK
+   *
+   * If there are AUTO-FIXABLE checks there must be at least
+   * one atomic fix.
+   * =========================================================
+   */
+
+  if (
+    autoCount > 0 &&
+    parsed.fixes.length === 0
+  ) {
+    return {
+      success: false,
+      message:
+        "W8E contains AUTO-FIXABLE checks but returned no atomic fixes."
+    };
+  }
+
+  if (
+    autoCount === 0 &&
+    parsed.fixes.length > 0
+  ) {
+    return {
+      success: false,
+      message:
+        "W8E returned atomic fixes when no checks are AUTO-FIXABLE."
+    };
+  }
+
+
+  /*
+   * =========================================================
+   * SAVE NORMALISED JSON TO FZ
+   * =========================================================
+   */
+
+  const normalised =
+    JSON.stringify(
+      parsed
+    );
+
+  sh.getRange(
+    'FZ' + row
+  ).setValue(
+    normalised
+  );
+
+
+  return {
+    success: true,
+
+    message:
+      "W8E JSON and atomic fixes validated and saved to column FZ.",
+
+    overallStatus:
+      parsed.overall_status,
+
+    autoFixableCount:
+      autoCount,
+
+    authorInputCount:
+      authorCount,
+
+    fixCount:
+      parsed.fixes.length,
+
+    checks:
+      parsed.checks,
+
+    fixes:
+      parsed.fixes
+  };
+}
+
+function resolveW8EExperienceDuration() {
+
+  const ss =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  const sh =
+    ss.getSheetByName('posts');
+
+  const row =
+    sh.getActiveCell().getRow();
+
+  const confirmedText =
+    'more than 30 years';
+
+
+  /*
+   * =========================================================
+   * UPDATE FINAL HTML — CT
+   * =========================================================
+   */
+
+  const htmlCell =
+    sh.getRange(
+      'CT' + row
+    );
+
+  let html =
+    String(
+      htmlCell.getValue() || ''
+    );
+
+
+  if (!html) {
+    return {
+      success: false,
+      message:
+        'Column CT is empty.'
+    };
+  }
+
+
+  const conflictingPattern =
+    /nearly 30 years/gi;
+
+
+  const matches =
+    html.match(
+      conflictingPattern
+    );
+
+
+  if (
+    matches &&
+    matches.length
+  ) {
+
+    html =
+      html.replace(
+        conflictingPattern,
+        confirmedText
+      );
+
+    htmlCell.setValue(
+      html
+    );
+  }
+
+
+  /*
+   * =========================================================
+   * UPDATE SAVED W8E JSON — FZ
+   *
+   * Remove ONLY the now-resolved experience-duration issue.
+   * Do not invent or clear any genuine first-hand example issue.
+   * =========================================================
+   */
+
+  const fzCell =
+    sh.getRange(
+      'FZ' + row
+    );
+
+  const raw =
+    String(
+      fzCell.getValue() || ''
+    ).trim();
+
+
+  let remainingAuthorItems = 0;
+
+
+  if (raw) {
+
+    try {
+
+      const data =
+        JSON.parse(
+          raw
+        );
+
+
+      if (
+        Array.isArray(
+          data.checks
+        )
+      ) {
+
+        data.checks.forEach(
+          function(item) {
+
+            if (
+              !item ||
+              item.check !==
+              'Experience Proofing'
+            ) {
+              return;
+            }
+
+
+            /*
+             * The experience duration is now confirmed.
+             *
+             * If the old action also mentioned adding a
+             * first-hand example, retain only that unresolved
+             * part rather than falsely marking the whole
+             * check as PASS.
+             */
+
+            const oldAction =
+              String(
+                item.action || ''
+              );
+
+
+            const exampleRequired =
+              /first-hand|first hand|repair example|project example|verifiable.*example/i.test(
+                oldAction
+              );
+
+
+            if (
+              exampleRequired
+            ) {
+
+              item.status =
+                'PARTIAL';
+
+              item.action_type =
+                'NEEDS AUTHOR INPUT';
+
+              item.action =
+                'Add a genuine, verifiable first-hand ceramic tile repair or grout-restoration example only if one is available and appropriate to publish. Do not invent one.';
+
+              item.evidence =
+                'The conflicting experience-duration wording has been resolved to "more than 30 years", but no verified first-hand project example has been supplied.';
+
+            } else {
+
+              item.status =
+                'PASS';
+
+              item.action_type =
+                'NONE';
+
+              item.action =
+                '';
+
+              item.evidence =
+                'The experience-duration wording is now consistent at "more than 30 years".';
+            }
+          }
+        );
+
+
+        /*
+         * Recalculate counts from the actual checks.
+         */
+
+        const autoCount =
+          data.checks.filter(
+            function(item) {
+              return (
+                item &&
+                item.action_type ===
+                'AUTO-FIXABLE'
+              );
+            }
+          ).length;
+
+
+        const authorCount =
+          data.checks.filter(
+            function(item) {
+              return (
+                item &&
+                item.action_type ===
+                'NEEDS AUTHOR INPUT'
+              );
+            }
+          ).length;
+
+
+        data.auto_fixable_count =
+          autoCount;
+
+        data.author_input_count =
+          authorCount;
+
+
+        if (
+          authorCount > 0
+        ) {
+
+          data.overall_status =
+            'NEEDS_AUTHOR_INPUT';
+
+        } else if (
+          autoCount > 0
+        ) {
+
+          data.overall_status =
+            'PASS_WITH_FIXES';
+
+        } else {
+
+          data.overall_status =
+            'PASS';
+        }
+
+
+        remainingAuthorItems =
+          authorCount;
+
+
+        fzCell.setValue(
+          JSON.stringify(
+            data
+          )
+        );
+      }
+
+    } catch (e) {
+
+      return {
+        success: false,
+        message:
+          'Experience wording was updated, but FZ could not be updated: ' +
+          e.message
+      };
+    }
+  }
+
+
+  return {
+
+    success: true,
+
+    replacements:
+      matches
+        ? matches.length
+        : 0,
+
+    remainingAuthorItems:
+      remainingAuthorItems,
+
+    message:
+      '✔ Experience wording confirmed as "' +
+      confirmedText +
+      '". ' +
+      (
+        remainingAuthorItems
+          ? remainingAuthorItems +
+            ' author-input issue(s) remain.'
+          : 'No author-input issues remain.'
+      )
+  };
 }
