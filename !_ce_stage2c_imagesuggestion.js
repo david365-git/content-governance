@@ -269,8 +269,8 @@ function buildImageSuggestionPrompt(sourceKey) {
 
     "ARTICLE TYPE: " + articleType + "\n\n" +
 
-    "TARGET:\n" +
-    "Aim for approximately three genuinely useful visual elements across the complete article. This is not a rigid quota. Fewer are acceptable when the article does not need them.\n\n" +
+        "TARGET:\n" +
+    "Generate one useful media recommendation for every H2 section in the article.\n\n" +
 
     "IMPORTANT EXISTING-MEDIA RULE:\n" +
     "Do NOT assume an existing image is useful merely because it exists. Assess its section, filename/source, alt text and caption to decide whether it appears relevant and informative.\n\n" +
@@ -278,10 +278,11 @@ function buildImageSuggestionPrompt(sourceKey) {
     "VISUAL LIMITATION:\n" +
     "You cannot see the actual existing image. Therefore any judgement about an existing image is provisional. The human editor will visually review the real image in the rendered article and make the final Keep or Replace decision.\n\n" +
 
-    "If an existing visual appears relevant from its metadata, allow it to count towards the approximate target of three. If it appears generic, outdated, decorative, weakly related or misleading, do not automatically count it as useful.\n\n" +
+    "H2 COVERAGE RULE:\n" +
+    "Every H2 must receive exactly one recommendation. If a good existing image appears to serve that H2, recommend replacing it only if it appears weak, generic, decorative, outdated or poorly matched from the supplied metadata. Otherwise recommend a new media item for that H2.\n\n" +
 
     "PRIORITY:\n" +
-    "Prefer strong visual support in the first three substantive H2 sections. Later sections should receive media only when they explain something genuinely different that earlier visuals cannot communicate effectively.\n\n" +
+    "Work through the article section by section and ensure complete H2 coverage. Do not skip any H2.\n\n" +
 
     "AVAILABLE MEDIA TYPES:\n" +
     "- Real Photograph\n" +
@@ -324,13 +325,13 @@ function buildImageSuggestionPrompt(sourceKey) {
 
     "Use \"replace_existing\" only where an existing media item appears weak or inappropriate from the supplied metadata. The human editor will confirm this visually before replacement.\n\n" +
 
-    "If the article already appears to contain enough useful media, return [].\n\n" +
+    "Do not return an empty array when H2 sections are present.\n\n" +
 
-    "Do not suggest media merely to decorate the page.\n\n" +
+    "Do not suggest media merely to decorate the page. Each recommendation must materially support its H2 section.\n\n" +
 
     "OUTPUT RULES:\n" +
     "- Return ONLY a JSON array.\n" +
-    "- Maximum 3 recommendations.\n" +
+    "- Return exactly one recommendation for every H2 section.\n" +
     "- No markdown fences or explanation.\n" +
     "- \"h2_text\" must exactly match the target H2 or H3.\n" +
     "- \"heading_level\" must be \"h2\" or \"h3\".\n" +
