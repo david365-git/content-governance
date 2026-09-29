@@ -50,23 +50,25 @@ function buildStage15APrompt() {
             '. Check "Tier Structural Coverage Matrix" sheet.';
   }
 
+   // ==========================================
+  // FILTER EXCLUDED SECTIONS AND THEIR BUDGET
   // ==========================================
-  // NEW LOGIC: FILTER & RE-ALLOCATE BUDGET
-  // ==========================================
-  let spareWords = 0;
+
   tsmData = tsmData.filter(function(req) {
-    // If the Strategy Column marks this section name with an "N", remove it
-    if (secondaryIntents.includes("N — " + req.name)) {
-      spareWords += (req.wordCount || 0); 
-      return false; // Remove from list
+
+    // If Strategy marks this section "N", remove both
+    // the section and its associated word budget.
+    if (
+      secondaryIntents.includes(
+        "N — " + req.name
+      )
+    ) {
+      return false;
     }
-    return true; // Keep in list
+
+    return true;
   });
 
-  // Re-allocate deleted section words to the Geological/Primary section (Order 1)
-  if (tsmData.length > 0 && spareWords > 0) {
-    tsmData[0].wordCount = (tsmData[0].wordCount || 0) + spareWords;
-  }
   // ==========================================
 
   // Read On-Page Content Expectations from Article Type Control Sheet
@@ -95,7 +97,10 @@ function buildStage15APrompt() {
     onPageExpectations = "(No on-page expectations defined for this article type.)";
   }
 
-  const tierWordCount = getTierWordCount(tierLabel, articleType);
+  const tierWordCount =
+    tsmData.reduce(function(total, req) {
+      return total + Number(req.wordCount || 0);
+    }, 0);
 
   // Build TSM block using the NEW FILTERED DATA
   let tsmBlock = '';

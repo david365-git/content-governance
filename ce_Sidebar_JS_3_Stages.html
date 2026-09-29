@@ -5489,4 +5489,309 @@ function masterRunContentGeneration() {
 
     .bc_startPipelineRun();
 }
+
+function masterRunW3ToW8E() {
+
+  var btn =
+    document.getElementById('masterBtnFinal');
+
+  var status =
+    document.getElementById('masterStatusFinal');
+
+  var logBox =
+    document.getElementById('masterLogFinal');
+
+  var w6Notice =
+    document.getElementById('masterW6Notice');
+
+  var startTime = Date.now();
+  var pipelineRow = null;
+
+  var stages = [
+    'W3',
+    'W4B',
+    'W4',
+    'W4.5',
+    'W5',
+    'W5C',
+    'W8E'
+  ];
+
+  btn.disabled = true;
+  btn.innerText = 'Running…';
+
+  status.textContent =
+    '⏳ Starting W3 → W8E… 0s';
+
+  status.style.color = '#555';
+
+  logBox.textContent =
+    'Stage: Starting...\n' +
+    'Progress: 0 / 7\n' +
+    'Cost: $0.0000';
+
+  if (w6Notice) {
+    w6Notice.style.display = 'none';
+  }
+
+  var timer = setInterval(function() {
+
+    var elapsed =
+      Math.floor(
+        (Date.now() - startTime) / 1000
+      );
+
+    status.textContent =
+      '⏳ W3 → W8E running… ' +
+      elapsed +
+      's';
+
+  }, 1000);
+
+
+  google.script.run
+
+    .withSuccessHandler(function(startRes) {
+
+      if (!startRes || !startRes.success) {
+
+        clearInterval(timer);
+
+        btn.disabled = false;
+        btn.innerText = '▶ Run W3 → W8E';
+
+        status.textContent =
+          '❌ ' +
+          (
+            startRes && startRes.message
+              ? startRes.message
+              : 'Could not start pipeline.'
+          );
+
+        status.style.color = '#c62828';
+
+        return;
+      }
+
+
+      pipelineRow = startRes.row;
+
+
+      var logPoller =
+        setInterval(function() {
+
+          if (!pipelineRow) return;
+
+          google.script.run
+
+            .withSuccessHandler(function(logRes) {
+
+              if (
+                !logRes ||
+                !logRes.success
+              ) return;
+
+              var logText =
+                String(logRes.log || '');
+
+              var lines =
+                logText.split(/\r?\n/);
+
+              var completed = 0;
+              var runningCost = 0;
+              var lastCompleted = '—';
+
+              stages.forEach(function(stageName) {
+
+                var prefix =
+                  '✓ ' +
+                  stageName +
+                  ' complete — $';
+
+                for (
+                  var i = 0;
+                  i < lines.length;
+                  i++
+                ) {
+
+                  if (
+                    lines[i].indexOf(prefix) === 0
+                  ) {
+
+                    completed++;
+
+                    lastCompleted =
+                      '✓ ' + stageName;
+
+                    var costMatch =
+                      lines[i].match(
+                        /\$([0-9.]+)/
+                      );
+
+                    if (costMatch) {
+                      runningCost +=
+                        Number(
+                          costMatch[1] || 0
+                        );
+                    }
+
+                    break;
+                  }
+                }
+              });
+
+
+              var currentStage =
+                completed >= stages.length
+                  ? 'Complete'
+                  : stages[completed];
+
+
+              logBox.textContent =
+                'Stage: ' +
+                currentStage +
+                '\n' +
+                'Progress: ' +
+                completed +
+                ' / 7\n' +
+                'Cost: $' +
+                runningCost.toFixed(4) +
+                '\n' +
+                'Last completed: ' +
+                lastCompleted +
+                '\n\n' +
+                logText;
+
+            })
+
+            .getPipelineRunLog(
+              pipelineRow
+            );
+
+        }, 1500);
+
+
+      google.script.run
+
+        .withSuccessHandler(function(res) {
+
+          clearInterval(timer);
+          clearInterval(logPoller);
+
+          var elapsed =
+            (
+              (Date.now() - startTime) /
+              1000
+            ).toFixed(1);
+
+          btn.disabled = false;
+          btn.innerText =
+            '▶ Run W3 → W8E';
+
+
+          if (res && res.success) {
+
+            status.textContent =
+              '✔ W3 → W8E complete — ' +
+              elapsed +
+              's';
+
+            status.style.color = '#2e7d32';
+
+            google.script.run
+
+              .withSuccessHandler(function(finalLogRes) {
+
+                if (
+                  finalLogRes &&
+                  finalLogRes.success &&
+                  finalLogRes.log
+                ) {
+
+                  logBox.textContent =
+                    finalLogRes.log +
+                    '\n\n✔ W3 → W8E complete.' +
+                    '\n➡ Go to W6.';
+                }
+
+                if (w6Notice) {
+                  w6Notice.style.display = 'block';
+                }
+
+                pipelineRow = null;
+              })
+
+              .getPipelineRunLog(
+                pipelineRow
+              );
+
+          } else if (
+            res &&
+            res.stopped
+          ) {
+
+            status.textContent =
+              '■ ' + res.message;
+
+            status.style.color = '#c62828';
+
+            pipelineRow = null;
+
+          } else {
+
+            status.textContent =
+              '❌ ' +
+              (
+                res && res.message
+                  ? res.message
+                  : 'Automation failed.'
+              );
+
+            status.style.color = '#c62828';
+
+            pipelineRow = null;
+          }
+        })
+
+        .withFailureHandler(function(err) {
+
+          clearInterval(timer);
+          clearInterval(logPoller);
+
+          btn.disabled = false;
+          btn.innerText =
+            '▶ Run W3 → W8E';
+
+          status.textContent =
+            '❌ ' + err.message;
+
+          status.style.color = '#c62828';
+
+          pipelineRow = null;
+        })
+
+        .pipelineRunW3ToW8E(
+          pipelineRow
+        );
+
+    })
+
+    .withFailureHandler(function(err) {
+
+      clearInterval(timer);
+
+      btn.disabled = false;
+      btn.innerText =
+        '▶ Run W3 → W8E';
+
+      status.textContent =
+        '❌ Could not start pipeline: ' +
+        err.message;
+
+      status.style.color = '#c62828';
+
+    })
+
+    .bc_startPipelineRun();
+}
 </script>

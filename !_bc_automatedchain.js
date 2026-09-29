@@ -6616,6 +6616,266 @@ function pipelineRunW1AToW2B3(row) {
   };
 }
 
+function pipelineRunW3ToW8E(row) {
+
+  var totalCost = 0;
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("posts");
+
+  if (!sheet) {
+    return {
+      success: false,
+      cost: 0,
+      message: "Posts sheet not found."
+    };
+  }
+
+  sheet.setActiveRange(
+    sheet.getRange(row, 1)
+  );
+
+
+  function runStage(stageName, runner) {
+
+    if (pipelineStopRequested(row)) {
+      return {
+        success: false,
+        stopped: true,
+        message:
+          "Pipeline stopped by user before " +
+          stageName +
+          "."
+      };
+    }
+
+    try {
+
+      var result = runner();
+
+      if (
+        !result ||
+        result.success === false
+      ) {
+
+        var message =
+          result && result.message
+            ? result.message
+            : "Unknown " + stageName + " error";
+
+        bc_recordPipelineFailure(
+          row,
+          stageName,
+          message
+        );
+
+        return {
+          success: false,
+          message: message,
+          cost:
+            Number(
+              result && result.cost
+                ? result.cost
+                : 0
+            )
+        };
+      }
+
+      var stageCost =
+        Number(result.cost || 0);
+
+      totalCost += stageCost;
+
+      bc_recordPipelineStage(
+        row,
+        stageName,
+        stageCost
+      );
+
+      return {
+        success: true,
+        result: result
+      };
+
+    } catch (e) {
+
+      bc_recordPipelineFailure(
+        row,
+        stageName,
+        e.toString()
+      );
+
+      return {
+        success: false,
+        message: e.toString(),
+        cost: 0
+      };
+    }
+  }
+
+
+  // ============================================================
+  // W3
+  // ============================================================
+
+  var stage = runStage(
+    "W3",
+    function() {
+      return bc_runStage3Automated();
+    }
+  );
+
+  if (!stage.success) {
+    return {
+      success: false,
+      stopped: stage.stopped === true,
+      cost: totalCost,
+      message: stage.message
+    };
+  }
+
+
+  // ============================================================
+  // W4B
+  // ============================================================
+
+  stage = runStage(
+    "W4B",
+    function() {
+      return bc_runW4BAutomated();
+    }
+  );
+
+  if (!stage.success) {
+    return {
+      success: false,
+      stopped: stage.stopped === true,
+      cost: totalCost,
+      message: stage.message
+    };
+  }
+
+
+  // ============================================================
+  // W4
+  // ============================================================
+
+  stage = runStage(
+    "W4",
+    function() {
+      return bc_runW4Automated();
+    }
+  );
+
+  if (!stage.success) {
+    return {
+      success: false,
+      stopped: stage.stopped === true,
+      cost: totalCost,
+      message: stage.message
+    };
+  }
+
+
+  // ============================================================
+  // W4.5
+  // ============================================================
+
+  stage = runStage(
+    "W4.5",
+    function() {
+      return bc_runCompetitorSerpNotesAutomated();
+    }
+  );
+
+  if (!stage.success) {
+    return {
+      success: false,
+      stopped: stage.stopped === true,
+      cost: totalCost,
+      message: stage.message
+    };
+  }
+
+
+  // ============================================================
+  // W5
+  // ============================================================
+
+  stage = runStage(
+    "W5",
+    function() {
+      return bc_runW5Automated();
+    }
+  );
+
+  if (!stage.success) {
+    return {
+      success: false,
+      stopped: stage.stopped === true,
+      cost: totalCost,
+      message: stage.message
+    };
+  }
+
+
+  // ============================================================
+  // W5C
+  // ============================================================
+
+  stage = runStage(
+    "W5C",
+    function() {
+      return generateSchemaForActiveRow();
+    }
+  );
+
+  if (!stage.success) {
+    return {
+      success: false,
+      stopped: stage.stopped === true,
+      cost: totalCost,
+      message: stage.message
+    };
+  }
+
+
+  // ============================================================
+  // W8E
+  // ============================================================
+
+  stage = runStage(
+    "W8E",
+    function() {
+      return bc_runW8EAutomated();
+    }
+  );
+
+  if (!stage.success) {
+    return {
+      success: false,
+      stopped: stage.stopped === true,
+      cost: totalCost,
+      message: stage.message
+    };
+  }
+
+
+  bc_appendPipelineRunLog(
+    row,
+    "✓ W3 → W8E complete — $" +
+    totalCost.toFixed(4)
+  );
+
+
+  return {
+    success: true,
+    cost: totalCost,
+    message: "W3 → W8E complete.",
+    w8e: stage.result
+  };
+}
+
 function getPipelineRunLog(row) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
