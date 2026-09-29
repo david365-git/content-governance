@@ -66,7 +66,6 @@ function extractCurrentHeadingsToPosts() {
     .getRange(2, currentHeadingsColPosts + 1, output.length, 1)
     .setValues(output);
 
-  SpreadsheetApp.getUi().alert('Current headings extracted successfully.');
 }
 
 function extractHeadingsFromHtml(html) {
