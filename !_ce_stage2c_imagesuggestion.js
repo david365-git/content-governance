@@ -1025,9 +1025,15 @@ function saveW2CFinalHtmlToSheet(html) {
   var ss    = SpreadsheetApp.getActiveSpreadsheet();
   var posts = ss.getSheetByName('posts');
   var row   = posts.getActiveRange().getRow();
-  posts.getRange(row, 168).setValue(html.trim()); // FL — HTML with Image Suggestions
+  var finalHtml = html.trim();
 
-  return { success: true, message: "Final HTML saved to column FL (168)." };
+  posts.getRange(row, 168).setValue(finalHtml); // FL
+  posts.getRange(row, 98).setValue(finalHtml);  // CT — final source of truth
+
+  return {
+    success: true,
+    message: "Final W2C HTML saved to FL and CT."
+  };
 }
 
 /* ============================================================

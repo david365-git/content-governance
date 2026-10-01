@@ -4437,7 +4437,7 @@ function bc_runCoherenceFullAutomated() {
 function bc_runW2CPlanningAutomated() {
   var startTime = Date.now();
 
-  var promptData = buildImageSuggestionPrompt('w2b_raw_html');
+  var promptData = buildImageSuggestionPrompt('new_html');
   if (!promptData.success) throw new Error(promptData.message);
 
   var apiResult = bc_sendPromptViaOpenAI(promptData.prompt);
@@ -4446,7 +4446,7 @@ function bc_runW2CPlanningAutomated() {
   var saveResult = saveW2CSuggestions(apiResult.text);
   if (!saveResult.success) throw new Error(saveResult.message);
 
-  var reconcileResult = reconcileImageSuggestions('w2b_raw_html');
+  var reconcileResult = reconcileImageSuggestions('new_html');
   if (!reconcileResult.success) throw new Error(reconcileResult.message);
 
   bc_addToApiCostAndTime(
@@ -4466,10 +4466,20 @@ function bc_runW2CPlanningAutomated() {
 function bc_runStage3Automated() {
   var startTime = Date.now();
 
-  var htmlResult = getW2CFinalHtmlFromSheet();
-  if (!htmlResult.success) throw new Error(htmlResult.message);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var posts = ss.getSheetByName('posts');
+    var row = posts.getActiveRange().getRow();
 
-  var promptData = buildHumanisationPrompt(htmlResult.html);
+    var finalW2B3Html =
+      String(posts.getRange(row, 191).getValue() || '').trim(); // GI
+
+    if (!finalW2B3Html) {
+      throw new Error(
+        'Column GI (W2B.3 Final HTML) is empty — W2B.3 must complete before W3.'
+      );
+    }
+
+    var promptData = buildHumanisationPrompt(finalW2B3Html);;
   if (!promptData.success) throw new Error(promptData.message);
 
   var apiResult = bc_sendPromptViaOpenAI(promptData.prompt, 8000);

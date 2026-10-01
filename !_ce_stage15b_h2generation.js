@@ -381,8 +381,21 @@ Do NOT fail merely because:
 - several headings begin with When, Why, How or What;
 - the material name appears several times;
 - related sections naturally use related terminology.
-TEST 4 — SCOPE AND SECTION ROLE:
-The heading must remain within the existing article scope and preserve the section's structural role.
+TEST 4 — SCOPE, MATERIAL AND SECTION ROLE:
+The heading must remain within the existing article scope, use the correct governed MATERIAL, and preserve the section's structural role.
+
+MATERIAL LOCK:
+The governed MATERIAL for this article is:
+${material}
+
+If an H2 names a different material class or substitutes a broader material term that changes what the reader believes the article covers, FAIL this test.
+
+Examples:
+- Ceramic Tile must not become "stone", "stone floor", "natural stone" or another material.
+- Porcelain must not become "stone" or "ceramic" unless the governed section explicitly covers both.
+- Marble must not become generic "stone" where the heading is intended to describe this article specifically.
+
+When this fails, make the smallest wording correction necessary by replacing the incorrect material reference with the governed material. Do not otherwise rewrite the heading.
 FAIL only when it clearly:
 - introduces a new topic, service, method, material, outcome or decision;
 - changes a diagnosis section into a remedy section;

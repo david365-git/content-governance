@@ -2877,20 +2877,23 @@ function buildFeaturedImagePrompt() {
         .replace(/^-|-$/g, "");
     }
 
-    var filenameTopic =
-      entryCondition ||
-      matBehaviour ||
-      h1 ||
-      material;
+    var primarySearchTerm =
+  String(d["Primary Search Term"] || "").trim();
 
-    var materialSlug = fiSlugify_(material);
-    var topicSlug    = fiSlugify_(filenameTopic);
+var filenameTopic =
+  primarySearchTerm ||
+  h1 ||
+  material;
 
-    if (topicSlug.length > 60) {
-      topicSlug = topicSlug.substring(0, 60).replace(/-[^-]*$/, "");
-    }
+  var materialSlug = fiSlugify_(material);
+  var topicSlug    = fiSlugify_(filenameTopic);
 
-    var filenameParts = [materialSlug, topicSlug];
+  // Keep featured-image filenames short, specific and search-topic led.
+  if (topicSlug.length > 45) {
+    topicSlug = topicSlug.substring(0, 45).replace(/-[^-]*$/, "");
+  }
+
+  var filenameParts = [topicSlug];
 
     if (
       (articleType === "Case Study" || articleType === "Geo Service Page") &&
@@ -2908,9 +2911,9 @@ function buildFeaturedImagePrompt() {
 
     // Build descriptive alt text from what the image should visibly show
     var altSubject =
-      entryCondition ||
-      matBehaviour ||
       h1 ||
+      primarySearchTerm ||
+      matBehaviour ||
       (material + " floor");
 
     altSubject =
@@ -2920,7 +2923,7 @@ function buildFeaturedImagePrompt() {
 
     var altText =
       material +
-      " floor showing " +
+      " floor illustrating " +
       altSubject.charAt(0).toLowerCase() +
       altSubject.slice(1);
 
@@ -3257,10 +3260,11 @@ function saveW2BHtmlToSheet(html) {
       };
     }
 
-    let cleanedHtml =
-      ce_stripHtmlCodeFences_(
-        html
-      );
+    // Auto-correct accidental local development contact URLs.
+    cleanedHtml = cleanedHtml.replace(
+      /https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?\/contact\/?/gi,
+      '/contact'
+    );
 
     if (!cleanedHtml) {
       return {

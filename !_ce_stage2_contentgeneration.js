@@ -723,16 +723,13 @@ function buildStage2BPart3A(d) {
     "CORRECT: Link embedded mid-paragraph where the concept is explained and reader need peaks.\n" +
     "WRONG: 'Further detail on this topic is available in [link].' — standalone signpost at section end.\n" +
     "------------------------------------------------------------\n" +
-    "INTERNAL LINK COUNT REQUIREMENT (Hard Lock):\n" +
-    "This article must contain 5-8 internal links from the silo map provided in Stage 1A.\n" +
-    "This requirement applies regardless of the lateral link count set in Stage 1.5D.\n" +
-    "Lateral links and internal links are distinct categories:\n" +
-    "— Lateral links are silo-to-silo links assigned by Stage 1.5D.\n" +
-    "— Internal links are contextual links embedded during generation from the Stage 1A silo map.\n" +
-    "A lateral link count of zero does NOT mean zero internal links.\n" +
-    "The section plan showing 'Internal link: None' reflects lateral link assignment only.\n" +
-    "You MUST still embed 5-8 contextual internal links from the silo map during generation.\n" +
-    "A missing internal link count is a Check 2 audit failure that will block push to sheet.\n" +
+    "INTERNAL LINK GOVERNANCE (Hard Lock):\n" +
+    "Use ONLY internal-link destinations explicitly assigned in the approved Stage 1.5D section plan, plus the governed Feeds Hub URL where required.\n" +
+    "Do NOT invent, select or add additional links from the Stage 1A silo map during article generation.\n" +
+    "If a section plan says 'Internal link: None', do not add an internal link to that section unless it is the separately governed hub link.\n" +
+    "When an Internal link URL is assigned to a section, it MUST appear as a real <a href=\"[exact governed URL]\">descriptive anchor text</a> link within that section.\n" +
+    "Never write phrases such as 'this guide', 'this comparison', 'this diagnosis' or 'this service' as though they reference another page unless the phrase contains the governed <a href> link.\n" +
+    "Do not substitute a different local, service, hub or sibling URL for the governed destination.\n" +
     "------------------------------------------------------------\n" +
     "ANCHOR TEXT (Hard Lock — No Bare URLs):\n" +
     "Every internal link MUST use descriptive anchor text — never a bare URL.\n" +

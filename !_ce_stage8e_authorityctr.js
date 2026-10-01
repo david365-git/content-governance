@@ -61,6 +61,9 @@ Assess against these sections. For every point, give a PASS/FAIL/PARTIAL and one
 2. SILO RECOVERY CHECK
 - Silo Identity Signal: would a reader know which material silo this belongs to from the first 100 words?
 - Internal Link Architecture: links to a silo hub or sibling articles (name them if present)?
+- Missing Link References: identify any sentence that clearly refers readers to another guide, comparison, diagnosis or service but is written as plain text with no <a href> link. Treat this as PARTIAL and include an AUTO-FIXABLE action where the correct governed destination can be identified from the article or supplied context.
+- Link Intent Match: check whether each internal link destination matches the purpose and audience of the sentence containing it. Flag a highly local service-page link used inside a broad or national informational article where that destination creates an obvious intent mismatch.
+- Locality Mismatch: do not assume a local service link is wrong merely because it is local. Flag it only where the article itself is broader in scope and a more appropriate governed hub, sibling guide or general service destination is available.
 - PST/Scope Alignment: does the body content match the stated Primary Search Term and scope?
 
 3. CLICK-THROUGH RATE POTENTIAL
