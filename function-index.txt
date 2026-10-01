@@ -1,1 +1,2 @@
 ./!_bc_promptassembler.js:2156:function bc_runStage2BAutomated() {
+./!_ce_stage2_contentgeneration.js:175:function getStage2BData() {
