@@ -530,19 +530,12 @@ const monitorQueries = postId ? bc_getQueriesFromSheet(postId, 'GSC Monitor') : 
   if (!hasGSCData) {
     const govCluster = governanceClusterMap[articleType] || "B";
 
-    var primarySearchTerm = primaryEntity.toLowerCase();
-    if (articleType === "Geo Service Page") {
-      primarySearchTerm = primaryEntity.toLowerCase() + (location ? " " + location : "");
-    } else if (articleType === "Buyer Guide") {
-      primarySearchTerm = primaryEntity.toLowerCase() + " cost guide";
-    } else if (articleType === "Educational Guide") {
-      primarySearchTerm = primaryEntity.toLowerCase() + " explained";
-    } else if (articleType === "Method Guide") {
-      primarySearchTerm = "how to " + primaryEntity.toLowerCase();
-    } else if (articleType === "Diagnostic Guide") {
-      primarySearchTerm = primaryEntity.toLowerCase() + " problems";
-    } else if (articleType === "Case Study") {
-      primarySearchTerm = primaryEntity.toLowerCase() + (location ? " " + location : "");
+    var primarySearchTerm =
+  String(d["Primary Search Term"] || "").trim();
+
+    if (!primarySearchTerm) {
+      return "STOP — No GSC data and no Primary Search Term is available. " +
+        "Run Content Intelligence from the main automation so the preflight can load the Yoast keyphrase first.";
     }
 
     var noGscParts = [

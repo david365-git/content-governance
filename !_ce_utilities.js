@@ -2649,36 +2649,49 @@ function buildFeaturedImagePrompt() {
     var p = "";
 
     // ── SECTION 1: IMAGE PURPOSE AND STORY ──
-    p += "CREATE A PREMIUM EDITORIAL FEATURE IMAGE\n\n";
-    p += "IMAGE PURPOSE:\n";
-    p += "Featured image for a professional UK stone and tile restoration article.\n\n";
     p += "PRIMARY VISUAL STORY:\n";
-    if (storyDirection.toLowerCase().includes("authority")) {
-      p += "The room has already been beautifully modernised, but the " + material.toLowerCase() + " floor is still failing.\n";
-      p += "The viewer should immediately think:\n";
-      p += "\"Everything else looks expensive and complete — why does the floor still look tired?\"\n";
-    } else if (storyDirection.toLowerCase().includes("transformation")) {
-      p += "A floor that was written off as beyond saving has been transformed into the standout feature of the room.\n";
-      p += "The viewer should immediately think:\n";
-      p += "\"I would never have believed that floor could look this good.\"\n";
-    } else if (storyDirection.toLowerCase().includes("rescue")) {
-      p += "A " + material.toLowerCase() + " floor that looked beyond saving has been recovered through careful professional intervention.\n";
-      p += "The viewer should immediately think:\n";
-      p += "\"That floor looked lost — but it came back.\"\n";
-    } else if (storyDirection.toLowerCase().includes("sympathetic")) {
-      p += "An original " + material.toLowerCase() + " floor has been carefully restored without erasing its age or character.\n";
-      p += "The viewer should immediately think:\n";
-      p += "\"The history of that floor has been respected, not removed.\"\n";
-    } else if (storyDirection.toLowerCase().includes("discovery")) {
-      p += "A hidden " + material.toLowerCase() + " floor has been uncovered after years of concealment.\n";
-      p += "The viewer should immediately think:\n";
-      p += "\"Something beautiful was hidden here all along.\"\n";
-    } else {
-      p += "The " + material.toLowerCase() + " floor in this room is the subject of professional restoration.\n";
-      p += "The viewer should immediately think:\n";
-      p += "\"This floor needed expert attention — and it got it.\"\n";
+    p += "Build the image around the specific problem, question or decision in THIS article.\n";
+    p += "Do not reuse a generic restoration story simply because the article concerns flooring.\n\n";
+
+    if (h1) {
+      p += "Article promise: " + h1 + "\n";
     }
-    p += "\nThe emotional tension between the aspirational modern room and the worn " + material.toLowerCase() + " floor is the entire image concept.\n\n";
+
+    if (entryCondition) {
+      p += "Visible starting condition: " + entryCondition + "\n";
+    }
+
+    if (homPerception) {
+      p += "What the homeowner notices or believes: " + homPerception + "\n";
+    }
+
+    if (matBehaviour) {
+      p += "Material behaviour that matters: " + matBehaviour + "\n";
+    }
+
+    if (constraint) {
+      p += "Important limitation or decision: " + constraint + "\n";
+    }
+
+    if (resultType) {
+      p += "Relevant outcome: " + resultType + "\n";
+    }
+
+    if (storyDirection) {
+      p += "Narrative direction: " + storyDirection + "\n";
+    }
+
+    p += "\nVISUAL STORY RULES:\n";
+    p += "Choose ONE dominant visual idea from the information above.\n";
+    p += "The viewer should understand the central problem or tension before reading the text overlay.\n";
+    p += "Do not automatically portray a dramatic restoration success, neglected floor, or expensive renovated room.\n";
+    p += "For diagnostic articles, prioritise recognition of the symptom or difference being diagnosed.\n";
+    p += "For educational articles, prioritise the material behaviour being explained.\n";
+    p += "For buyer guides, prioritise the decision, comparison or trade-off.\n";
+    p += "For method guides, prioritise the critical stage, boundary or risk in the method.\n";
+    p += "For case studies, prioritise the distinctive real project condition and outcome.\n";
+    p += "For service pages, prioritise the genuine condition the service addresses rather than generic lifestyle imagery.\n";
+    p += "The concept must be difficult to reuse unchanged for another article.\n\n";
     p += "ARTICLE CONTEXT:\n";
     p += "Material: " + material + "\n";
     p += "Article type: " + articleType + "\n";
@@ -2694,11 +2707,12 @@ function buildFeaturedImagePrompt() {
     if (constraint)     p += "Governing constraint: " + constraint + "\n";
     if (resultType)     p += "Outcome: " + resultType + "\n";
     if (headerText)     p += "Article context: " + headerText + "\n";
-    p += "\nThe floor must show:\n";
-    p += "— embedded contamination and ingrained soiling\n";
-    p += "— worn or inconsistent surface texture\n";
-    p += "— dark grout lines and uneven sheen\n";
-    p += "— signs that normal cleaning is no longer improving the appearance\n\n";
+    p += "\nVISUAL CONDITION RULE:\n";
+    p += "Show ONLY conditions that are supported by the article context above.\n";
+    p += "Do not automatically add dirt, dark grout, wear, cracks, staining or uneven sheen unless the article specifically concerns them.\n";
+    p += "The visible floor condition must make this article visually distinct from other featured images about " + material.toLowerCase() + ".\n";
+    p += "Choose the strongest visually recognisable detail from the entry condition, material behaviour or governing constraint and make that the focal clue.\n";
+    p += "Avoid the generic 'dirty worn floor' treatment unless that is genuinely the subject of this page.\n\n";
     p += "The renovation is complete except for the floor.\n";
     p += "The floor is the hero of the image. Everything else in the room exists to make the floor condition visible.\n\n";
     p += "VISUAL PRIORITY ORDER:\n";
@@ -2708,32 +2722,94 @@ function buildFeaturedImagePrompt() {
     p += "4. Premium magazine mood — restrained and professional\n";
     p += "5. Architectural styling — supports the story without distracting from it\n\n";
     // ── SECTION 3: ROOM DIRECTION ──
-    p += "ROOM DESIGN DIRECTION:\n";
-    p += "The room itself must look bright, modern, expensive and recently renovated.\n";
-    p += "Use warm off-whites, greige, or muted sage wall colours inspired by current British interior design magazines.\n";
-    p += "Include contrast skirting boards, brushed brass or matte black details, soft natural daylight.\n";
-    p += "Add subtle lifestyle details — a potted olive tree or plant, clean hallway styling, natural textures.\n\n";
-    if (articleType === "Case Study" && locality) {
-      p += "Setting: a period property entrance hallway in " + locality + " that has been modernised throughout except for the floor.\n\n";
-    } else if (articleType === "Method Guide") {
-      p += "Setting: a close-up professional restoration environment — bright, clean, well-lit workroom atmosphere.\n\n";
+    p += "COMPOSITION AND SETTING DIRECTION:\n";
+    p += "Do not default to the same renovated hallway or aspirational modern room used for other featured images.\n";
+    p += "Choose the composition that best communicates THIS article's specific problem or decision.\n\n";
+
+
+    p += "ROOM-TYPE GOVERNANCE:\n";
+
+      var materialLower = material.toLowerCase();
+
+      var isHallwayMaterial =
+        materialLower.includes("victorian") ||
+        materialLower.includes("edwardian") ||
+        materialLower.includes("encaustic");
+
+      if (isHallwayMaterial) {
+        p += "For Victorian, Edwardian or encaustic floors, hallways and entrance areas are often appropriate and may be used when they suit the article context.\n";
+      } else {
+        p += "For this material, do NOT default to a hallway.\n";
+        p += "Preferred domestic room types, in typical order of frequency, are:\n";
+        p += "1. Kitchen\n";
+        p += "2. Conservatory\n";
+        p += "3. Washroom\n";
+        p += "4. WC\n";
+        p += "5. Bathroom\n";
+        p += "6. Dining room\n";
+        p += "7. Lounge\n";
+        p += "Use a hallway only when the article, project evidence or supplied image clearly supports it.\n";
+      }
+
+      p += "Choose the room that best fits the material, article subject and visible condition rather than repeating a previous featured-image setting.\n\n";
+    if (articleType === "Case Study") {
+      p += "Use a believable domestic setting that fits the actual project context. The floor should remain the visual subject, but the room type, camera height and framing should vary according to the story.\n";
+      if (locality) {
+        p += "The setting should feel plausible for a domestic property in " + locality + " without relying on stereotypes or invented landmarks.\n";
+      }
+
     } else if (articleType === "Diagnostic Guide") {
-      p += "Setting: a domestic floor surface under clear diagnostic lighting — bright and clinical, not atmospheric.\n\n";
+      p += "Prefer diagnostic framing: angled reflected light, close surface detail, grout-to-tile comparison, or a wider contextual view where the symptom can be clearly recognised.\n";
+      p += "The image should help the reader recognise the condition, not simply admire an interior.\n";
+
+    } else if (articleType === "Method Guide") {
+      p += "Prefer process-relevant framing: controlled close-up, treatment boundary, surface reaction, tool-to-surface relationship, or another view that explains what matters in the method.\n";
+      p += "Do not stage a generic cleaning scene.\n";
+
+    } else if (articleType === "Buyer Guide") {
+      p += "Prefer a decision-making composition that makes two conditions, finishes, risks or choices visually understandable.\n";
+      p += "A split emphasis or clearly contrasted surface areas may be appropriate where supported by the article.\n";
+
+    } else if (articleType === "Educational Guide") {
+      p += "Prefer a material-behaviour composition that reveals why the surface behaves as described — through texture, light, wear pattern, grout interaction or another relevant visual clue.\n";
+
     } else if (articleType === "Hub Page") {
-      p += "Setting: an elegant wide-angle hallway or kitchen composition showing the full floor surface across multiple conditions.\n\n";
+      p += "Use a broader composition showing the material clearly in a realistic home, but avoid trying to represent every possible defect at once.\n";
+      p += "Choose one strong representative visual story for the material.\n";
+
+    } else if (
+      articleType === "Service Page" ||
+      articleType === "Geo Service Page"
+    ) {
+      p += "Use a realistic domestic setting that demonstrates the type of floor and condition the service addresses.\n";
+      p += "Avoid generic luxury-room imagery and avoid making every service page look identical.\n";
+
     } else {
-      p += "Setting: a bright modern domestic interior where the floor is clearly the only unresolved element.\n\n";
+      p += "Choose the setting and camera position entirely from the article's specific visual story.\n";
     }
-    p += "DO NOT make the room:\n";
-    p += "— dark, gloomy or atmospheric\n";
-    p += "— Victorian, rustic or derelict\n";
-    p += "— cluttered or overly decorated\n";
-    p += "— a luxury hotel or fantasy interior\n";
-    p += "Only the floor should appear aged or worn.\n\n";
+
+    p += "\nCOMPOSITION VARIATION RULES:\n";
+    p += "Vary camera distance, viewpoint and room context according to the subject.\n";
+    p += "Possible approaches include macro detail, low angled surface view, top-down crop, doorway perspective, partial-room context or wider floor-led composition.\n";
+    p += "Do not automatically use a wide-angle hallway.\n";
+    p += "Do not automatically place plants, brass fittings, sage walls or other repeated lifestyle props.\n";
+    p += "Architecture and furnishings must remain secondary to the floor condition or material behaviour.\n\n";
+
+    p += "AVOID:\n";
+    p += "— generic luxury interiors\n";
+    p += "— showroom-perfect rooms unrelated to the article\n";
+    p += "— repeated lifestyle props from previous images\n";
+    p += "— clutter that competes with the floor\n";
+    p += "— derelict or sensational damage scenes\n\n";
     // ── SECTION 4: TYPOGRAPHY ──
     p += "TYPOGRAPHY OVERLAY:\n";
-    p += "Leave the left third of the image visually clean for typography.\n";
-    p += "Place text directly over the wall area — dark charcoal or near-black text reads clearly against light walls without any panel or overlay.\n\n";
+    p += "Compose the image around the article's visual story FIRST. Typography must adapt to the composition, not determine it.\n";
+    p += "Do not create a blank wall, corridor, doorway or artificial empty area merely to hold text.\n";
+    p += "Text may sit over a naturally quiet part of the floor, cabinetry, wall, furniture, background or other low-detail area.\n";
+    p += "The typography area may be on the left, right, top-left, top-right or lower portion of the image depending on the composition.\n";
+    p += "For diagnostic articles, favour tighter crops, angled reflected-light views, top-down views or close surface compositions where the symptom is visually dominant.\n";
+    p += "For educational or buyer articles, allow comparison-led compositions rather than a conventional room perspective.\n";
+    p += "The image must still work visually if all typography is removed.\n\n";
     if (locationStr) {
       p += "Top small label (gold caps): " + locationStr.toUpperCase() + "\n";
     }
@@ -2777,26 +2853,87 @@ function buildFeaturedImagePrompt() {
     p += "Format: webp\n";
     p += "File size: under 100kb after compression\n";
     p += "Aspect ratio: 16:9 or 4:3 landscape\n";
-    p += "Style: semi-realistic painterly illustration — not photographic, not cartoon\n";
-    p += "Realistic " + material.toLowerCase() + " surface texture detail throughout\n";
-    p += "Warm cinematic natural lighting with realistic shadows\n";
-    p += "Premium architectural restoration magazine aesthetic\n\n";
+    p += "STYLE DIRECTION:\n";
+    p += "Use the visual treatment that best serves this specific article rather than forcing every image into the same painterly magazine style.\n";
+    p += "The result may be realistic editorial photography, restrained photorealistic illustration, diagnostic close-up, material-detail study or architectural context image depending on the article.\n";
+    p += "Realistic " + material.toLowerCase() + " texture, grout, wear and surface behaviour are more important than decorative styling.\n";
+    p += "Lighting must reveal the relevant surface condition clearly. Use reflected, directional, soft daylight or neutral diagnostic lighting as appropriate to the subject.\n";
+    p += "Avoid applying the same warm cinematic lighting, camera angle or visual treatment to every featured image.\n";
+    p += "The result should feel credible, editorial and specific to this page rather than like a reusable website template.\n\n";
     p += "SEED IMAGE:\n";
     p += "Attach a photograph of the actual " + material.toLowerCase() + " floor when sending this prompt to ChatGPT.\n";
     p += "Use it as the exact reference for tile pattern, colour, grout tone and surface condition.\n";
     p += "The generated floor must reflect the real surface — not a generic " + material.toLowerCase() + " pattern.\n";
     p += "If no photograph is attached, generate a realistic " + material.toLowerCase() + " surface appropriate to the article context.\n";
 
-    // Build governed filename
-    var materialSlug    = material.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    var articleTypeSlug = articleType.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    var locationSlug    = locality.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    var filename = [materialSlug, articleTypeSlug, locationSlug].filter(Boolean).join("-") + ".webp";
+    // Build governed filename from the actual page topic rather than article classification
+    function fiSlugify_(text) {
+      return String(text || "")
+        .toLowerCase()
+        .replace(/&/g, " and ")
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+    }
 
-    // Build alt text
-    var altText = material + " " + articleType.toLowerCase();
-    if (entryCondition) altText += " — " + entryCondition.toLowerCase();
-    if (locationStr)    altText += " in " + locationStr;
+    var filenameTopic =
+      entryCondition ||
+      matBehaviour ||
+      h1 ||
+      material;
+
+    var materialSlug = fiSlugify_(material);
+    var topicSlug    = fiSlugify_(filenameTopic);
+
+    if (topicSlug.length > 60) {
+      topicSlug = topicSlug.substring(0, 60).replace(/-[^-]*$/, "");
+    }
+
+    var filenameParts = [materialSlug, topicSlug];
+
+    if (
+      (articleType === "Case Study" || articleType === "Geo Service Page") &&
+      locality
+    ) {
+      filenameParts.push(fiSlugify_(locality));
+    }
+
+    var filename =
+      filenameParts
+        .filter(Boolean)
+        .join("-") +
+      ".webp";
+
+
+    // Build descriptive alt text from what the image should visibly show
+    var altSubject =
+      entryCondition ||
+      matBehaviour ||
+      h1 ||
+      (material + " floor");
+
+    altSubject =
+      String(altSubject)
+        .replace(/\s+/g, " ")
+        .trim();
+
+    var altText =
+      material +
+      " floor showing " +
+      altSubject.charAt(0).toLowerCase() +
+      altSubject.slice(1);
+
+    if (
+      articleType === "Case Study" &&
+      locationStr
+    ) {
+      altText += " in " + locationStr;
+    }
+
+    if (altText.length > 140) {
+      altText = altText.substring(0, 137).replace(/\s+\S*$/, "") + "...";
+    }
 
     return {
       success:     true,
@@ -2956,35 +3093,125 @@ function acBuildClassifyPrompt() {
 }
 function fiSuggestTitlePrompt() {
   try {
+
     var d = getActiveRowDataMap();
-    var material       = String(d["Stone Type"]              || "").trim();
-    var articleType    = String(d["Article Type"]            || "").trim();
-    var locality       = String(d["Locality"]                || "").trim();
-    var h1             = String(d["New H1"]                  || "").trim();
-    var storyDir       = String(d["ac_narrative_archetype"]  || "").trim();
-    var entryCondition = String(d["ac_entry_condition"]      || "").trim();
 
-    var prompt = "I need a punchy editorial middle title for a featured image on a UK floor restoration website.\n\n";
-    prompt += "Rules:\n";
-    prompt += "- 4 to 6 words maximum\n";
-    prompt += "- Magazine cover line style — not a keyword or SEO phrase\n";
-    prompt += "- Must intrigue the reader and hint at the story without giving it away\n";
-    prompt += "- No quotes, no punctuation at the end\n\n";
-    prompt += "Article details:\n";
-    prompt += "Material: " + material + "\n";
-    prompt += "Article type: " + articleType + "\n";
-    if (locality)       prompt += "Location: " + locality + "\n";
-    if (h1)             prompt += "H1: " + h1 + "\n";
-    if (storyDir)       prompt += "Narrative direction: " + storyDir + "\n";
-    if (entryCondition) prompt += "Floor condition: " + entryCondition + "\n";
-    prompt += "\nSuggest 5 options. Return only the five title options, one per line, numbered 1 to 5.";
+    var material       = String(d["Stone Type"]             || "").trim();
+    var articleType    = String(d["Article Type"]           || "").trim();
+    var locality       = String(d["Locality"]               || "").trim();
+    var h1             = String(d["New H1"]                 || "").trim();
+    var pst            = String(d["Primary Search Term"]     || "").trim();
+    var problemAngle   = String(d["Problem Angle"]           || "").trim();
+    var authorityBrief = String(d["Authority Brief"]         || "").trim();
 
-    return { prompt: prompt };
+    var storyDir       = String(d["ac_narrative_archetype"] || "").trim();
+    var entryCondition = String(d["ac_entry_condition"]     || "").trim();
+    var matBehaviour   = String(d["ac_material_behaviour"]   || "").trim();
+    var constraint     = String(d["ac_constraint"]           || "").trim();
+    var resultType     = String(d["ac_result_type"]          || "").trim();
+
+
+    var prompt =
+      "FEATURED IMAGE EDITORIAL TITLE GENERATION\n\n" +
+
+      "ROLE:\n" +
+      "You are a senior UK editorial art director creating short cover lines for a specialist stone and tile restoration website.\n\n" +
+
+      "TASK:\n" +
+      "Create five genuinely different middle-title options for the featured image.\n\n" +
+
+      "The title must express the DISTINCTIVE TENSION, QUESTION, SURPRISE, DECISION or CONSEQUENCE at the heart of this specific article.\n" +
+      "Do not simply describe the floor, repeat the H1, name the article type, or produce generic restoration language.\n\n" +
+
+      "TITLE RULES:\n" +
+      "- 4 to 7 words maximum.\n" +
+      "- The reader must immediately understand the main subject of the article from the title alone.\n" +
+      "- Keep the core material, problem or decision recognisable — do not hide the topic behind vague editorial wording.\n" +
+      "- Editorial magazine-cover style, but clarity comes before cleverness.\n" +
+      "- Specific to THIS article, not reusable across unrelated floor articles.\n" +
+      "- Create curiosity without becoming clickbait.\n" +
+      "- Prefer a clear problem, question, contrast, cause or consequence.\n" +
+      "- Plain natural British English.\n" +
+      "- No SEO keyword stuffing.\n" +
+      "- Do not use the words 'guide', 'restoration', 'professional', 'expert', 'solution' or 'transformation' unless genuinely essential.\n" +
+      "- Do not use vague phrases such as 'Real Work On Real Floors', 'When Cleaning Stops Helping', 'What Happens Next', 'A Floor Reborn', 'Restoring The Beauty', or similar stock wording.\n" +
+      "- No quotation marks.\n" +
+      "- No punctuation at the end.\n\n" +
+
+      "VARIATION RULE:\n" +
+      "The five options must use five different editorial angles:\n" +
+      "1. A hidden cause or discovery.\n" +
+      "2. A visual or material contrast.\n" +
+      "3. A consequence or risk.\n" +
+      "4. A homeowner question or doubt.\n" +
+      "5. A surprising or counter-intuitive insight.\n\n" +
+
+      "ARTICLE DETAILS:\n" +
+      "Material: " + material + "\n" +
+      "Article type: " + articleType + "\n";
+
+    if (locality) {
+      prompt += "Location: " + locality + "\n";
+    }
+
+    if (h1) {
+      prompt += "H1: " + h1 + "\n";
+    }
+
+    if (pst) {
+      prompt += "Primary search term: " + pst + "\n";
+    }
+
+    if (problemAngle) {
+      prompt += "Problem angle: " + problemAngle + "\n";
+    }
+
+    if (authorityBrief) {
+      prompt += "Authority brief: " + authorityBrief + "\n";
+    }
+
+    if (storyDir) {
+      prompt += "Narrative direction: " + storyDir + "\n";
+    }
+
+    if (entryCondition) {
+      prompt += "Entry condition: " + entryCondition + "\n";
+    }
+
+    if (matBehaviour) {
+      prompt += "Material behaviour: " + matBehaviour + "\n";
+    }
+
+    if (constraint) {
+      prompt += "Governing constraint: " + constraint + "\n";
+    }
+
+    if (resultType) {
+      prompt += "Outcome: " + resultType + "\n";
+    }
+
+    prompt +=
+      "\nFINAL CHECK:\n" +
+      "Before returning the titles, reject any option that could plausibly be reused unchanged on several unrelated stone or tile articles.\n\n" +
+
+      "OUTPUT:\n" +
+      "Return only five title options, one per line, numbered 1 to 5.";
+
+    return {
+      prompt: prompt
+    };
 
   } catch(e) {
-    return { error: 'fiSuggestTitlePrompt error: ' + e.message };
+
+    return {
+      error:
+        "fiSuggestTitlePrompt error: " +
+        e.message
+    };
   }
 }
+
+
 function saveW2BHtmlToSheet(html) {
   try {
 

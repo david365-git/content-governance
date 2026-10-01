@@ -457,7 +457,167 @@ function bc_clearGovernancePipelineExceptions() {
   };
 }
 
+function bc_contentIntelligencePreflight_() {
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var posts = ss.getSheetByName("posts");
+  var exportSheet = ss.getSheetByName("site-export");
+  var row = posts.getActiveRange().getRow();
+
+  if (row < 2) {
+    return {
+      success: false,
+      message: "Select a valid article row first."
+    };
+  }
+
+  var headers = posts
+    .getRange(1, 1, 1, posts.getLastColumn())
+    .getValues()[0]
+    .map(function(h) {
+      return String(h || "").trim();
+    });
+
+  function getPostValue(name) {
+    var idx = headers.indexOf(name);
+    return idx > -1
+      ? String(posts.getRange(row, idx + 1).getValue() || "").trim()
+      : "";
+  }
+
+  var postId = getPostValue("Post ID");
+  var url = getPostValue("URL");
+  var title = getPostValue("Title");
+
+  var monitorQueries = postId
+    ? String(bc_getQueriesFromSheet(postId, "GSC Monitor") || "").trim()
+    : String(getPostValue("Montr Queries") || "").trim();
+
+  // Existing article with usable GSC data — continue normally.
+  if (monitorQueries.length > 10) {
+    return {
+      success: true,
+      isNewArticle: false
+    };
+  }
+
+  if (!exportSheet) {
+    return {
+      success: false,
+      message:
+        "No usable GSC data found. This looks like a new article, but the site-export sheet was not found."
+    };
+  }
+
+  var data = exportSheet.getDataRange().getValues();
+
+  if (data.length < 2) {
+    return {
+      success: false,
+      message:
+        "No usable GSC data found. This looks like a new article, but site-export is empty."
+    };
+  }
+
+  var exportHeaders = data[0].map(function(h) {
+    return String(h || "").trim();
+  });
+
+  var idIdx = exportHeaders.indexOf("ID");
+  var titleIdx = exportHeaders.indexOf("Title");
+  var urlIdx = exportHeaders.indexOf("Canonical URL");
+  var keyphraseIdx = exportHeaders.indexOf("Yoast Keyphrase");
+  var metaTitleIdx = exportHeaders.indexOf("Meta Title");
+  var metaDescIdx = exportHeaders.indexOf("Meta Description");
+
+  var matchedRow = null;
+
+  for (var i = 1; i < data.length; i++) {
+
+    var exportId = idIdx > -1
+      ? String(data[i][idIdx] || "").trim()
+      : "";
+
+    var exportUrl = urlIdx > -1
+      ? String(data[i][urlIdx] || "").trim()
+      : "";
+
+    var exportTitle = titleIdx > -1
+      ? String(data[i][titleIdx] || "").trim()
+      : "";
+
+    if (
+      (postId && exportId === postId) ||
+      (url && exportUrl === url) ||
+      (title && exportTitle === title)
+    ) {
+      matchedRow = data[i];
+      break;
+    }
+  }
+
+  if (!matchedRow) {
+    return {
+      success: false,
+      message:
+        "No usable GSC data found. This looks like a new article. Add the article to site-export with its Yoast keyphrase and meta data before running Content Intelligence."
+    };
+  }
+
+  var keyphrase = keyphraseIdx > -1
+    ? String(matchedRow[keyphraseIdx] || "").trim()
+    : "";
+
+  var metaTitle = metaTitleIdx > -1
+    ? String(matchedRow[metaTitleIdx] || "").trim()
+    : "";
+
+  var metaDescription = metaDescIdx > -1
+    ? String(matchedRow[metaDescIdx] || "").trim()
+    : "";
+
+  var missing = [];
+
+  if (!keyphrase) missing.push("Yoast Keyphrase");
+  if (!metaTitle) missing.push("Meta Title");
+  if (!metaDescription) missing.push("Meta Description");
+
+  if (missing.length > 0) {
+    return {
+      success: false,
+      message:
+        "No usable GSC data found. This looks like a new article. Add: " +
+        missing.join(", ") +
+        " before running Content Intelligence."
+    };
+  }
+
+  var pstIdx = headers.indexOf("Primary Search Term");
+
+  if (pstIdx === -1) {
+    return {
+      success: false,
+      message: 'Column "Primary Search Term" was not found.'
+    };
+  }
+
+  posts
+    .getRange(row, pstIdx + 1)
+    .setValue(keyphrase);
+
+  return {
+    success: true,
+    isNewArticle: true,
+    primarySearchTerm: keyphrase
+  };
+}
+
 function bc_runFullGovernanceChainAutomated() {
+  var preflight = bc_contentIntelligencePreflight_();
+
+if (!preflight.success) {
+  throw new Error(preflight.message);
+}
 
   // STOP BEFORE ANY COST IF NO HUB PAGE EXISTS
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -4381,6 +4541,14 @@ function bc_runW4BAutomated() {
     imgFilenames.join('\n')
   ].join('\n');
 
+  if (imgFilenames.length === 0) {
+  return {
+    success: true,
+    message: 'W4B skipped — no eligible original images require alt/caption updates.',
+    cost: 0
+  };
+  }
+
   var apiResult = bc_sendPromptViaOpenAI(prompt, 3000);
   if (!apiResult.success) throw new Error(apiResult.message);
 
@@ -6921,10 +7089,40 @@ function getPipelineRunLog(row) {
   }
 }
 
+function lockW5Keyphrase_(text, lockedKeyphrase) {
+
+  if (!lockedKeyphrase) {
+    return String(text || "");
+  }
+
+  return String(text || "").replace(
+    /Yoast\s+Keyphrase:\s*.+/i,
+    "Yoast Keyphrase: " + lockedKeyphrase
+  );
+}
+
+
 function bc_runW5Automated() {
 
   var startTime = Date.now();
   var totalCost = 0;
+
+  var w5RowData = getActiveRowDataMap();
+
+  var w5PostId =
+    String(w5RowData["Post ID"] || "").trim();
+
+
+  var w5MonitorQueries = w5PostId
+    ? String(bc_getQueriesFromSheet(w5PostId, "GSC Monitor") || "").trim()
+    : String(w5RowData["Montr Queries"] || "").trim();
+
+
+  var w5LockedKeyphrase =
+    w5MonitorQueries.length <= 10
+      ? String(w5RowData["Primary Search Term"] || "").trim()
+      : "";
+
 
 
   /*
@@ -7647,6 +7845,10 @@ function bc_runW5Automated() {
       output
     );
 
+  if (w5LockedKeyphrase) {
+    fields.keyphrase = w5LockedKeyphrase;
+  }
+
 
   var validation =
     runCompleteValidation(
@@ -7736,6 +7938,10 @@ function bc_runW5Automated() {
       parseW5Output(
         output
       );
+
+    if (w5LockedKeyphrase) {
+      fields.keyphrase = w5LockedKeyphrase;
+    }
 
 
     validation =
@@ -7933,6 +8139,10 @@ function bc_runW5Automated() {
           output
         );
 
+      if (w5LockedKeyphrase) {
+        fields.keyphrase = w5LockedKeyphrase;
+      }
+
 
       validation =
         runCompleteValidation(
@@ -7979,6 +8189,17 @@ function bc_runW5Automated() {
    * SAVE ALL FOUR FIELDS
    * =========================================================
    */
+
+  // Rebuild the saved output from the validated fields.
+  // For a new/no-GSC article this guarantees the original
+  // Yoast keyphrase stored in Primary Search Term is preserved.
+
+  output =
+    "New H1: " + fields.h1 + "\n" +
+    "New Meta Title: " + fields.title + "\n" +
+    "New Meta Description: " + fields.description + "\n" +
+    "Yoast Keyphrase: " + fields.keyphrase;
+
 
   var pushResult =
     pushGovernanceFieldsToActiveRow(
@@ -8211,25 +8432,15 @@ function bc_runW8EAutomated() {
         .trim();
 
 
-    var parsed =
-      JSON.parse(
-        cleaned
-      );
-
-
     var checks =
-      Array.isArray(
-        parsed.checks
-      )
-        ? parsed.checks
-        : [];
+  Array.isArray(saveResult.checks)
+    ? saveResult.checks
+    : [];
 
 
     var fixes =
-      Array.isArray(
-        parsed.fixes
-      )
-        ? parsed.fixes
+      Array.isArray(saveResult.fixes)
+        ? saveResult.fixes
         : [];
 
 
