@@ -3260,6 +3260,11 @@ function saveW2BHtmlToSheet(html) {
       };
     }
 
+    let cleanedHtml =
+      ce_stripHtmlCodeFences_(
+        html
+      );
+
     // Auto-correct accidental local development contact URLs.
     cleanedHtml = cleanedHtml.replace(
       /https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?\/contact\/?/gi,

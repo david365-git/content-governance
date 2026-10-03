@@ -117,6 +117,26 @@ function buildRewriteBriefComplianceCheckPromptW2B() {
     --- COMMERCIAL PRODUCT TABLE EXEMPTION ---
     The article HTML may contain one or more retained commercial product tables (recognisable by inline-styled headings like "Products often used during..." or "...are commonly paired with...", followed by a <table> of Amazon product links). These table headings and their surrounding product copy are NOT governed article content — they are preserved verbatim from the original page per a separate rule. Do NOT audit any product table heading or its product descriptions against RE-ANCHOR or DRIFT items. Only audit the surrounding prose paragraphs.
 
+        --- LIGHT HELP CTA EXEMPTION ---
+      A single brief footer or closing call-to-action is permitted when its purpose is to give the reader a way to ask for help about the subject covered by the article.
+
+      Treat a light help CTA as PASS — CONTEXTUAL, not Service-page conversion, when ALL of the following are true:
+      - it appears only once as a short closing/footer message;
+      - it is directly relevant to the problem, diagnosis, decision or treatment boundary discussed in the article;
+      - it offers help, advice, assessment, clarification or contact;
+      - it does not introduce a separate service workflow;
+      - it does not add pricing, availability, booking pressure, urgency, promotional claims or sales incentives;
+      - it does not expand into a detailed description of services being sold.
+
+      Examples that are permitted:
+      - "Contact us if you are unsure which treatment is appropriate."
+      - "If you need help identifying the cause, contact us for advice."
+      - "Contact us to arrange an assessment if the condition cannot be identified safely."
+
+      Do NOT fail an article merely because it contains one relevant contact link or one light assessment/help CTA.
+
+      A CTA should be classified as FAIL — DEVELOPED only when it materially turns the article into a service-sales page, for example by adding service packages, pricing, booking instructions, promotional benefits, repeated sales messaging or substantial service-description content.
+
     --- TASK ---
     The Rewrite Brief above names specific entities/topics the article must re-anchor around with real coverage, and specific drift-prone language, framing, or topics that must be removed or minimised. Judge the full article body against both, applying the Classification Rule and the Commercial Product Table Exemption above.
 
@@ -153,7 +173,7 @@ function buildRewriteBriefComplianceCheckPromptW2B() {
 
     (repeat for every drift item)
 
-    Last line: "CHECK 2B-BRIEF: PASS" only if every re-anchor item is genuinely covered AND every drift item is classified as PASS — ABSENT, PASS — CONTEXTUAL, or PASS — ROUTED. Use "CHECK 2B-BRIEF: FAIL" only if one or more drift items are classified as FAIL — DEVELOPED, or a required re-anchor item is not covered.Last line: "CHECK 2B-BRIEF: PASS" only if every re-anchor item is genuinely covered AND no drift item is present. Otherwise "CHECK 2B-BRIEF: FAIL".
+     Last line: "CHECK 2B-BRIEF: PASS" only if every re-anchor item is genuinely covered AND every drift item is classified as PASS — ABSENT, PASS — CONTEXTUAL, or PASS — ROUTED. Use "CHECK 2B-BRIEF: FAIL" only if one or more drift items are classified as FAIL — DEVELOPED, or a required re-anchor item is not covered.
     `.trim();
 
   return prompt;
@@ -572,38 +592,44 @@ function buildRewriteBriefFixPromptW2B() {
     failingItems.push(block.trim());
   });
 
-  // Fallback: if any failing item had no section named (e.g. a RE-ANCHOR item
-  // covered nowhere in the article), default it to the LAST section in the
-  // article — scope-boundary and "stays within X" statements typically belong
-  // there, and it guarantees the item is actually sent to the LLM for a fix
-  // rather than silently dropped.
-  if (itemsMissingSection) {
-    var allSectionIds = [];
-    var sidRe = /<section[^>]*\bid=["'](section-[\w-]+)["']/gi;
-    var sidM;
-    while ((sidM = sidRe.exec(html)) !== null) {
-      if (allSectionIds.indexOf(sidM[1]) === -1) allSectionIds.push(sidM[1]);
-    }
-    if (allSectionIds.length > 0) {
-      var fallbackSid = allSectionIds[allSectionIds.length - 1];
-      if (sectionIds.indexOf(fallbackSid) === -1) sectionIds.push(fallbackSid);
-    }
-  }
+  // Build the HTML supplied to the fixer.
+  //
+  // If every failed item has a known section ID, send only those sections.
+  //
+  // If ANY failed item has SECTION: none, send the full article HTML.
+  // This is deliberate: the offending content may sit in a CTA, footer,
+  // introduction or other HTML outside the governed <section> blocks.
+  // Giving the fixer the full current HTML lets it copy the exact OLD
+  // text required for the atomic replacement.
 
-  if (sectionIds.length === 0) {
-    return 'ERROR: Could not identify specific failing section ids from the saved result. The audit result may predate the SECTION field — re-run the compliance check first.';
-  }
-
-  // Extract only the implicated <section id="..."> blocks from the full HTML
   var extractedSections = [];
-  sectionIds.forEach(function(sid) {
-    var re = new RegExp('<section[^>]*\\bid=["\']' + sid + '["\'][^>]*>[\\s\\S]*?<\\/section>', 'i');
-    var m = html.match(re);
-    if (m) extractedSections.push(m[0]);
-  });
+
+  if (itemsMissingSection) {
+
+    extractedSections.push(html);
+
+  } else {
+
+    sectionIds.forEach(function(sid) {
+
+      var re = new RegExp(
+        '<section[^>]*\\bid=["\']' +
+        sid +
+        '["\'][^>]*>[\\s\\S]*?<\\/section>',
+        'i'
+      );
+
+      var m = html.match(re);
+
+      if (m) {
+        extractedSections.push(m[0]);
+      }
+    });
+
+  }
 
   if (extractedSections.length === 0) {
-    return 'ERROR: Could not find the failing section(s) (' + sectionIds.join(', ') + ') in the article HTML by id.';
+    return 'ERROR: Could not locate the HTML required for the failed Rewrite Brief item(s).';
   }
 
   const prompt = `

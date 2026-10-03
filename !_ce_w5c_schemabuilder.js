@@ -733,9 +733,16 @@ function generateSchemaForActiveRow() {
       "@graph":   graphNodes
     };
 
-    // ── Minify and wrap ──
-    const minified = JSON.stringify(graph);
-    const wrapped  = '<script type="application/ld+json">' + minified + "<\/script>";
+    // ── Format, validate and wrap ──
+      const schemaJson = JSON.stringify(graph, null, 2);
+
+      // Defensive validation — never save malformed JSON-LD.
+      JSON.parse(schemaJson);
+
+      const wrapped =
+        '<script type="application/ld+json">\n' +
+        schemaJson +
+        '\n<\/script>';
 
     // ── Push to col 92 ──
     const cell = sheet.getRange(row, 92);

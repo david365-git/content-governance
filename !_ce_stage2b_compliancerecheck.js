@@ -96,44 +96,59 @@ function buildRewriteBriefComplianceRecheckPromptW2B_(savedResult) {
   }).join('\n');
 
   const prompt = `
-STAGE 2B — REWRITE BRIEF COMPLIANCE RECHECK (SCOPED — PREVIOUSLY FAILING ITEMS ONLY)
-ROLE: Senior UK SEO & Editorial Quality Auditor
+  STAGE 2B — REWRITE BRIEF COMPLIANCE RECHECK (SCOPED — PREVIOUSLY FAILING ITEMS ONLY)
+  ROLE: Senior UK SEO & Editorial Quality Auditor
 
-You previously audited this article against its Rewrite Brief. The items below FAILED that audit.
-The section(s) shown have since been corrected. Re-check ONLY these specific items against
-ONLY the section(s) provided — do not re-audit any other part of the article, and do not
-introduce new RE-ANCHOR or DRIFT items not listed below.
+  You previously audited this article against its Rewrite Brief. The items below FAILED that audit.
+  The section(s) shown have since been corrected. Re-check ONLY these specific items against
+  ONLY the section(s) provided — do not re-audit any other part of the article, and do not
+  introduce new RE-ANCHOR or DRIFT items not listed below.
 
---- REWRITE BRIEF (for reference only) ---
-${rewriteBrief}
+  --- REWRITE BRIEF (for reference only) ---
+  ${rewriteBrief}
 
---- ITEMS TO RECHECK ---
-${failingItemNames}
+  --- ITEMS TO RECHECK ---
+  ${failingItemNames}
 
---- SECTION(S) TO RECHECK AGAINST ---
-${extractedSections.join('\n\n')}
+  --- SECTION(S) TO RECHECK AGAINST ---
+  ${extractedSections.join('\n\n')}
 
---- TASK ---
-For each item listed above, state whether the corrected section(s) now resolve the failure.
+  --- LIGHT HELP CTA EXEMPTION ---
+  A single brief footer or closing call-to-action is permitted when its purpose is to give the reader a way to ask for help about the subject covered by the article.
 
-COVERAGE STANDARD: Coverage may be conceptual or mechanistic, not just verbatim. If the section
-explains the mechanism a RE-ANCHOR entity name describes — even without using the governed term
-itself — mark it COVERED: YES and quote the sentence that demonstrates the mechanism. Only mark
-COVERED: NO where the underlying mechanism is genuinely absent, not merely unnamed.
+  Treat a light help CTA as PASS — CONTEXTUAL, not Service-page conversion, when ALL of the following are true:
+  - it appears only once as a short closing/footer message;
+  - it is directly relevant to the problem, diagnosis, decision or treatment boundary discussed in the article;
+  - it offers help, advice, assessment, clarification or contact;
+  - it does not introduce a separate service workflow;
+  - it does not add pricing, availability, booking pressure, urgency, promotional claims or sales incentives;
+  - it does not expand into a detailed description of services being sold.
 
-OUTPUT FORMAT (exactly, one block per item, same order as listed above):
-RE-ANCHOR ITEM: [entity/topic text — copy exactly from the list above]
-COVERED: YES / NO
-EVIDENCE: [short quote or section reference, or "none"]
-SECTION: [section id, e.g. section-3]
+  Do NOT fail an article merely because it contains one relevant contact link or one light assessment/help CTA.
 
-DRIFT ITEM: [drift term/framing text — copy exactly from the list above]
-STATUS: PASS — ABSENT / PASS — CONTEXTUAL / PASS — ROUTED / FAIL — DEVELOPED
-EVIDENCE: [short quote or routing/link evidence, or "none"]
-SECTION: [section id, e.g. section-2, or "none" if STATUS is PASS — ABSENT]
+  A CTA should be classified as FAIL — DEVELOPED only when it materially turns the article into a service-sales page.
 
-Last line: "CHECK 2B-BRIEF: PASS" only if every RE-ANCHOR item is COVERED: YES and every DRIFT item is PASS — ABSENT, PASS — CONTEXTUAL, or PASS — ROUTED. Otherwise "CHECK 2B-BRIEF: FAIL".
-`.trim();
+  --- TASK ---
+  For each item listed above, state whether the corrected section(s) now resolve the failure.
+
+  COVERAGE STANDARD: Coverage may be conceptual or mechanistic, not just verbatim. If the section
+  explains the mechanism a RE-ANCHOR entity name describes — even without using the governed term
+  itself — mark it COVERED: YES and quote the sentence that demonstrates the mechanism. Only mark
+  COVERED: NO where the underlying mechanism is genuinely absent, not merely unnamed.
+
+  OUTPUT FORMAT (exactly, one block per item, same order as listed above):
+  RE-ANCHOR ITEM: [entity/topic text — copy exactly from the list above]
+  COVERED: YES / NO
+  EVIDENCE: [short quote or section reference, or "none"]
+  SECTION: [section id, e.g. section-3]
+
+  DRIFT ITEM: [drift term/framing text — copy exactly from the list above]
+  STATUS: PASS — ABSENT / PASS — CONTEXTUAL / PASS — ROUTED / FAIL — DEVELOPED
+  EVIDENCE: [short quote or routing/link evidence, or "none"]
+  SECTION: [section id, e.g. section-2, or "none" if STATUS is PASS — ABSENT]
+
+  Last line: "CHECK 2B-BRIEF: PASS" only if every RE-ANCHOR item is COVERED: YES and every DRIFT item is PASS — ABSENT, PASS — CONTEXTUAL, or PASS — ROUTED. Otherwise "CHECK 2B-BRIEF: FAIL".
+  `.trim();
 
   return prompt;
 }

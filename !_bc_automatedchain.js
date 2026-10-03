@@ -350,7 +350,15 @@ function bc_sendPromptViaGemini(promptText) {
 }
 function bc_runSerpBridgeAutomated() {
   var promptData = bc_buildSerpBridgePrompt();
-  if (!promptData.success) throw new Error(promptData.message);
+  if (promptData.skipped) {
+  return {
+    success: true,
+    skipped: true,
+    text: '',
+    message: promptData.message,
+    cost: 0
+  };
+}
 
   var apiResult = bc_sendPromptViaGemini(promptData.prompt);
   if (!apiResult.success) throw new Error(apiResult.message);
@@ -6794,6 +6802,403 @@ function pipelineRunW1AToW2B3(row) {
   };
 }
 
+function pipelineResumeToW8E(row, startStage) {
+
+  var totalCost = 0;
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("posts");
+
+  if (!sheet) {
+    return {
+      success: false,
+      cost: 0,
+      message: "Posts sheet not found."
+    };
+  }
+
+  row = Number(row);
+
+  if (!row || row < 2) {
+    return {
+      success: false,
+      cost: 0,
+      message: "Invalid pipeline row."
+    };
+  }
+
+  sheet.setActiveRange(
+    sheet.getRange(row, 1)
+  );
+
+
+  var stages = [
+
+    {
+      name: "Pre-AC",
+      selfLogged: true,
+      run: function() {
+        return bc_pipelineRunPreAC(row);
+      }
+    },
+
+    {
+      name: "AC",
+      selfLogged: true,
+      run: function() {
+        return pipelineRunAC(row);
+      }
+    },
+
+    {
+      name: "W-1",
+      selfLogged: true,
+      run: function() {
+        return pipelineRunAuthorityBrief(row);
+      }
+    },
+
+    {
+      name: "W1A-W1D",
+      run: function() {
+        return saveAllW1Outputs();
+      }
+    },
+
+    {
+      name: "W1.5A",
+      run: function() {
+        return bc_runStage15AAutomated();
+      }
+    },
+
+    {
+      name: "W1.5B",
+      run: function() {
+        return bc_runFullW15BAutomated();
+      }
+    },
+
+    {
+      name: "W1.5C",
+      run: function() {
+        return bc_runStage15CAutomated();
+      }
+    },
+
+    {
+      name: "W1.5D",
+      run: function() {
+        return bc_runStage15DAutomated();
+      }
+    },
+
+    {
+      name: "W1.5E",
+      run: function() {
+        return bc_runStage15EAutomated();
+      }
+    },
+
+    {
+      name: "W2B",
+      run: function() {
+        return bc_runStage2BAutomated();
+      }
+    },
+
+    {
+      name: "W2B.05",
+      run: function() {
+        return bc_runFactCheckFullAutomated();
+      }
+    },
+
+    {
+      name: "W2B.1",
+      run: function() {
+        return bc_runSimilarityFullAutomated();
+      }
+    },
+
+    {
+      name: "W2B.2",
+      run: function() {
+        return bc_runRewriteBriefComplianceW2BAutomated();
+      }
+    },
+
+    {
+      name: "W2B.3",
+      run: function() {
+        return bc_runCoherenceFullAutomated();
+      }
+    },
+
+    {
+      name: "W3",
+      run: function() {
+        return bc_runStage3Automated();
+      }
+    },
+
+    {
+      name: "W4B",
+      run: function() {
+        return bc_runW4BAutomated();
+      }
+    },
+
+    {
+      name: "W4",
+      run: function() {
+        return bc_runW4Automated();
+      }
+    },
+
+    {
+      name: "W4.5",
+      run: function() {
+        return bc_runCompetitorSerpNotesAutomated();
+      }
+    },
+
+    {
+      name: "W5",
+      run: function() {
+        return bc_runW5Automated();
+      }
+    },
+
+    {
+      name: "W5C",
+      run: function() {
+        return generateSchemaForActiveRow();
+      }
+    },
+
+    {
+      name: "W8E",
+      run: function() {
+        return bc_runW8EAutomated();
+      }
+    }
+
+  ];
+
+
+  var startIndex = -1;
+
+  for (var i = 0; i < stages.length; i++) {
+
+    if (stages[i].name === startStage) {
+      startIndex = i;
+      break;
+    }
+  }
+
+
+  if (startIndex === -1) {
+
+    return {
+      success: false,
+      cost: 0,
+      message:
+        "Unknown resume stage: " +
+        startStage
+    };
+  }
+
+
+  for (
+    var stageIndex = startIndex;
+    stageIndex < stages.length;
+    stageIndex++
+  ) {
+
+    var stage = stages[stageIndex];
+
+
+    if (pipelineStopRequested(row)) {
+
+      bc_appendPipelineRunLog(
+        row,
+        "■ Pipeline stopped by user before " +
+        stage.name +
+        "."
+      );
+
+      return {
+        success: false,
+        stopped: true,
+        cost: totalCost,
+        message:
+          "Pipeline stopped before " +
+          stage.name +
+          "."
+      };
+    }
+
+
+    var result;
+
+    try {
+
+      result = stage.run();
+
+    } catch (e) {
+
+      if (!stage.selfLogged) {
+        bc_recordPipelineFailure(
+          row,
+          stage.name,
+          e.toString()
+        );
+      }
+
+      return {
+        success: false,
+        cost: totalCost,
+        message:
+          stage.name +
+          " failed: " +
+          e.toString()
+      };
+    }
+
+
+    if (
+      !result ||
+      result.success === false
+    ) {
+
+      var message =
+        result && result.message
+          ? result.message
+          : "Unknown " +
+            stage.name +
+            " error";
+
+      if (!stage.selfLogged) {
+
+        bc_recordPipelineFailure(
+          row,
+          stage.name,
+          message
+        );
+      }
+
+      return {
+        success: false,
+        stopped:
+          result &&
+          result.stopped === true,
+        cost:
+          totalCost +
+          Number(
+            result && result.cost
+              ? result.cost
+              : 0
+          ),
+        message: message
+      };
+    }
+
+
+    var stageCost =
+      Number(result.cost || 0);
+
+    totalCost += stageCost;
+
+
+    if (!stage.selfLogged) {
+
+      bc_recordPipelineStage(
+        row,
+        stage.name,
+        stageCost
+      );
+    }
+  }
+
+
+  bc_appendPipelineRunLog(
+    row,
+    "✓ Recovery " +
+    startStage +
+    " → W8E complete — $" +
+    totalCost.toFixed(4)
+  );
+
+
+  return {
+    success: true,
+    cost: totalCost,
+    message:
+      startStage +
+      " → W8E complete."
+  };
+}
+  function runStage(stageName, runner) {
+
+    var result;
+
+    try {
+      result = runner();
+    } catch (e) {
+      bc_recordPipelineFailure(
+        row,
+        stageName,
+        e.toString()
+      );
+
+      return {
+        success: false,
+        message: e.toString()
+      };
+    }
+
+    if (
+      !result ||
+      result.success === false
+    ) {
+
+      var message =
+        result && result.message
+          ? result.message
+          : "Unknown " +
+            stageName +
+            " error";
+
+      bc_recordPipelineFailure(
+        row,
+        stageName,
+        message
+      );
+
+      return {
+        success: false,
+        message: message
+      };
+    }
+
+    var stageCost =
+      Number(result.cost || 0);
+
+    totalCost += stageCost;
+
+    bc_recordPipelineStage(
+      row,
+      stageName,
+      stageCost
+    );
+
+    return {
+      success: true
+    };
+  }
+
+  
 function pipelineRunW3ToW8E(row) {
 
   var totalCost = 0;
@@ -8101,7 +8506,9 @@ function bc_runW5Automated() {
 
       "- Do not invent facts, drama, urgency, risk or unsupported claims.\n" +
 
-      "- Meta Description must be 140-160 characters.\n" +
+      "- Meta Description must be 140-160 characters INCLUDING spaces and punctuation.\n" +
+      "- Before returning the Meta Description, count its characters and rewrite it until it is between 140 and 160 characters inclusive.\n" +
+      "- Do not return a Meta Description outside that range.\n" +
 
       "- Meta Description must contain exactly two sentences.\n" +
 

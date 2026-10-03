@@ -10,7 +10,10 @@ function buildCaseStudySimilarityPrompt(sourceColumn) {
   const sh = ss.getSheetByName('posts');
   const row = sh.getActiveCell().getRow();
 
-  const targetCol = (sourceColumn === 'EU') ? 'GE' : 'CT';
+  const targetCol =
+  (sourceColumn === 'EU' || sourceColumn === 'GE')
+    ? 'GE'
+    : 'CT';
   const comparisonCol = 'CT'; // always compare against other rows' finished New HTML, not their in-progress GE draft
 
   const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(function(h) { return String(h).trim(); });
@@ -62,7 +65,14 @@ function buildCaseStudySimilarityPrompt(sourceColumn) {
   }
 
   if (comparisons.length === 0) {
-    return { success: false, message: "No other " + thisStoneType + " Case Studies with New HTML found to compare against." };
+  return {
+      success: true,
+      skipped: true,
+      message:
+        "Similarity check skipped — this is the first " +
+        thisStoneType +
+        " Case Study with New HTML."
+    };
   }
 
   let comparisonBlock = '';
