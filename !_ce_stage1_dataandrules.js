@@ -546,11 +546,13 @@ Each of the three paragraphs must explicitly match one of these roles.
 If a paragraph does not clearly match its role — rewrite it before continuing.
 
   PARAGRAPH 1 — SYMPTOM (Hard Lock):
-  - MUST open with a homeowner-visible problem or condition using "If your..." framing
+  - MUST open by grounding the section in a homeowner-visible problem, symptom, condition or concern
+  - Do NOT require a fixed opening phrase such as "If your..."
+  - Vary the grammatical structure naturally across sections while preserving the symptom-first purpose
   - MUST NOT contain process explanation in the first sentence
   - MUST describe what the homeowner sees, feels, or notices
   ❌ FAIL: "Professional cleaning works by removing contamination from the surface."
-  ✅ PASS: "If your marble keeps looking dirty after mopping, the soil has moved below the surface."
+  ✅ PASS: "A marble floor that keeps looking dirty after mopping may have contamination remaining below the surface."
 
   PARAGRAPH 2 — MECHANISM (Hard Lock):
   - MUST explicitly name the process in the first sentence
@@ -607,39 +609,44 @@ If a list fails any criterion — convert to prose immediately.
 --- RULE 17: H2 HEADING GOVERNANCE (Hard Lock) ---
 Every H2 heading must pass all four tests before it is used:
 
-TEST 1 — READER RECOGNITION (PRIORITY TEST):
-The heading must name a condition, problem, or question the homeowner recognises from their
-own experience. A homeowner scanning headings must find themselves in the heading.
-  ❌ FAIL: "Marble Surface Cap and Absorption Behaviour"
-  ✅ PASS: "Why stains spread and go deeper than the original spill"
-  ❌ FAIL: "Marble Formation and Calcite Crystal Behaviour in Stain Removal"
-  ✅ PASS: "Why marble stains form differently from other floors"
+TEST 1 — READER RECOGNITION:
+The heading must name a condition, problem, decision, outcome, or question the homeowner recognises from their
+own experience. A homeowner scanning headings must understand why the section is relevant to them.
+Reader recognition does NOT require a question format or a symptom-first construction.
+  ❌ FAIL: "[Material] Surface Cap and Absorption Behaviour"
+  ✅ PASS: "Stains can spread beyond the original spill"
+  ❌ FAIL: "[Material] Formation and Surface Behaviour in Stain Removal"
+  ✅ PASS: "[Material] stains can behave differently from marks on other floors"
 
 TEST 2 — NO TRAILING GENERIC SUFFIXES:
 Remove: "Explained", "Overview", "Guide", "Information", "Details", "Considerations"
 These add no meaning. If the heading requires a suffix to work — rewrite the heading.
-  ❌ FAIL: "Marble Soil and Stain Behaviour Explained"
-  ✅ PASS: "Why the floor looks dirty again after cleaning"
+  ❌ FAIL: "[Material] Soil and Stain Behaviour Explained"
+  ✅ PASS: "The floor keeps looking dirty after cleaning"
 
-TEST 3 — NO STONE TYPE PREFIX REPETITION:
-Do not begin every H2 with the stone type name. If the article is about marble, every
-heading does not need to start with "Marble". Use it selectively where it aids clarity.
-  ❌ FAIL: "Marble Stain Types and Identification" / "Marble Cleaning Mechanisms" /
-           "Marble Sealing Behaviour" — three consecutive marble-prefixed headings
-  ✅ PASS: Vary — "Stain types and how to identify them" / "Why cleaning has limits" /
-           "How sealing changes the floor's response to spills"
+TEST 3 — NO MATERIAL PREFIX REPETITION:
+Do not begin every H2 with the material name. If the article is about a specific material, every
+heading does not need to start with that material. Use it selectively where it aids clarity.
+  ❌ FAIL: "[Material] Stain Types and Identification" / "[Material] Cleaning Mechanisms" /
+           "[Material] Sealing Behaviour" — three consecutive material-prefixed headings
+  ✅ PASS: Vary — "Stain types and how to identify them" / "Cleaning has practical limits" /
+           "Sealing changes how the floor responds to spills"
 
 TEST 4 — MATCHES SECTION CONTENT:
 The heading must accurately describe what the section covers. A reader who reads only
 the heading must know what they will find in that section.
 
-PRIORITY RULE: Test 1 (Reader Recognition) takes precedence over Test 4 (Content Accuracy).
-If a heading passes Test 1 but seems to fail Test 4 — favor Test 1.
-Symptom-first and question-format headings are preferred even if they don't fully describe mechanism content.
+PRIORITY RULE: Reader Recognition and Content Accuracy must both be satisfied.
+A heading must describe something the homeowner recognises while still accurately representing the section content.
+Reader recognition does NOT require a question format. Use declarative, diagnostic, practical, outcome-led, conditional, or question-based headings as appropriate.
 
-ENFORCEMENT: Before finalising output, apply all four tests to every H2.
-Prioritize reader recognition over content description accuracy.
+REPETITIVE STRUCTURAL FRAMING (Hard Lock):
+Do not use the same rhetorical or grammatical structure for consecutive H2 headings.
+Two consecutive question-format H2s are prohibited.
+Do not repeatedly begin headings with the same construction such as "Are your...", "Is your...", "Why...", "How...", "When...", or "What...".
+Vary heading structure naturally across the article while preserving reader recognition and section accuracy.
 
+ENFORCEMENT: Before finalising output, apply all four tests and the Repetitive Structural Framing rule to every H2.
 --- RULE 18: CLUSTER TONE CONSISTENCY (Hard Lock) ---
 The cluster label from Stage 0 must be maintained across every paragraph of the header
 block — not just the opening sentence.

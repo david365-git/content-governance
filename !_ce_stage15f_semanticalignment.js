@@ -631,9 +631,12 @@ function buildSemanticAlignmentFixPrompt() {
     '- Do NOT start multiple headings with the same template, such as repeating "How the..." or "Why the..." across several headings in the same section — this reads as formulaic and repetitive to a human reader, even if each individual heading is well-optimised.\n' +
     '- Vary sentence construction naturally the way a skilled human editor would, so the section reads fluidly as a whole, not like a list of near-identical templates.\n\n' +
     'PARAGRAPH OPENER VARIETY — CRITICAL (applies across ALL sub-sections in this pass, not just within one):\n' +
-    '- If you are revising multiple sub-sections that sit under the same parent H2, do NOT open every one of them with a homeowner-style question. Opening every single sub-section with "Which...", "What...", "How..." back-to-back reads as mechanical and repetitive, even though each individual question is well-formed.\n' +
-    '- Vary the opening approach across these sub-sections the way a human editor would: one might open with a direct statement, another with a scenario ("If your..."), another with a question, another with a fact. Treat the sequence of openers across the whole set of sub-sections as one continuous piece of writing, not independent fragments each optimised in isolation.\n' +
-    '- As a rough guide, no more than roughly one in three consecutive sub-sections should open with an explicit question — the rest should use varied natural openings instead.\n\n' +
+    '- Avoid repetitive structural framing across consecutive H2s, H3s and sub-sections.\n' +
+    '- Do NOT use the same opening pattern repeatedly, even when the wording changes. Repetition includes consecutive question headings, conditional headings, homeowner-scenario headings, fact-first headings, or headings built from the same grammatical shape.\n' +
+    '- Treat the sequence of headings and section openings across the whole article as one continuous piece of writing, not as independent fragments optimised in isolation.\n' +
+    '- Vary the approach naturally: one heading may be declarative, another diagnostic, another practical, another outcome-led, and another may use a question where genuinely useful.\n' +
+    '- Do NOT allow two consecutive H2s to use the same rhetorical structure unless there is a clear editorial reason.\n' +
+    '- As a rough guide, no more than roughly one in three consecutive headings or sub-sections should use an explicit question.\n\n' +
     (originalHtml ? ('--- ORIGINAL SOURCE ARTICLE (ground truth — check any claim against this before using it) ---\n' + originalHtml + '\n--- END ORIGINAL SOURCE ARTICLE ---\n\n') : '') +
     'BANNED VOCABULARY — HARD LOCK:\n' +
     '- Use concrete, active verbs describing the actual task (e.g. inspect, clean, remove, extract, fill, seal, hone, protect) rather than abstract corporate language.\n' +
@@ -860,9 +863,12 @@ function buildSemanticAlignmentFixPromptForFT() {
       '- Only after the direct verdict is stated may the section explain the reasoning, the conditions that increase risk, or how to inspect for warning signs.\n' +
       '- This rule does NOT apply to purely descriptive or diagnostic sections that have no single clear verdict to give (e.g. "what does a clean floor look like") — for those, open naturally as the section\'s job requires.\n\n' +
       'PARAGRAPH OPENER VARIETY — CRITICAL (applies across ALL sub-sections in this pass, not just within one):\n' +
-      '- If you are revising multiple sub-sections that sit under the same parent H2, do NOT open every one of them with a homeowner-style question. Opening every single sub-section with "Which...", "What...", "How..." back-to-back reads as mechanical and repetitive, even though each individual question is well-formed.\n' +
-      '- Vary the opening approach across these sub-sections the way a human editor would: one might open with a direct statement, another with a scenario ("If your..."), another with a question, another with a fact. Treat the sequence of openers across the whole set of sub-sections as one continuous piece of writing, not independent fragments each optimised in isolation.\n' +
-      '- As a rough guide, no more than roughly one in three consecutive sub-sections should open with an explicit question — the rest should use varied natural openings instead.\n\n' +
+      '- Avoid repetitive structural framing across consecutive H2s, H3s and sub-sections.\n' +
+      '- Do NOT use the same opening pattern repeatedly, even when the wording changes. Repetition includes consecutive question headings, conditional headings, homeowner-scenario headings, fact-first headings, or headings built from the same grammatical shape.\n' +
+      '- Treat the sequence of headings and section openings across the whole article as one continuous piece of writing, not as independent fragments optimised in isolation.\n' +
+      '- Vary the approach naturally: one heading may be declarative, another diagnostic, another practical, another outcome-led, and another may use a question where genuinely useful.\n' +
+      '- Do NOT allow two consecutive H2s to use the same rhetorical structure unless there is a clear editorial reason.\n' +
+      '- As a rough guide, no more than roughly one in three consecutive headings or sub-sections should use an explicit question.\n\n' +
       'STRUCTURAL PRESERVATION (applies ONLY to these specific elements):\n' +
       '- You MUST preserve every <figure>, <img>, <figcaption>, <a href="...">, and <blockquote> element EXACTLY as given — same tags, same attributes, same URLs, same alt text, same position within the section.\n' +
       '- Do NOT remove or relocate any image, link, or blockquote element.\n' +

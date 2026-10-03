@@ -3620,6 +3620,16 @@ function bc_runSimilarityCheckAutomated() {
 
   if (!promptData.success) throw new Error(promptData.message);
 
+  if (promptData.skipped) {
+    return {
+      success: true,
+      skipped: true,
+      text: '',
+      message: promptData.message,
+      cost: 0
+    };
+  }
+
   var apiResult = bc_sendPromptViaOpenAI(
     promptData.prompt,
     2000,
@@ -4517,7 +4527,14 @@ function bc_runW4BAutomated() {
   var figResult = storeFigureInventory();
 
   var imgCount = (html.match(/<img[^>]+>/gi) || []).length;
-  if (imgCount === 0) throw new Error('No <img> tags found in the humanised HTML.');
+
+    if (imgCount === 0) {
+      return {
+        success: true,
+        message: 'W4B skipped — no images are present in the humanised HTML.',
+        cost: 0
+      };
+    }
 
   var meta = getW4BMetadata();
 
@@ -4541,7 +4558,7 @@ function bc_runW4BAutomated() {
     '  Primary search term: ' + (meta.primaryTerm || 'unknown'),
     '',
     'IMAGE CATEGORIES (classify each filename before writing alt/caption):',
-    '1. FLOOR CONDITION IMAGES — photos of the actual stone floor showing a condition, stage, or result. Write a descriptive alt AND a diagnostic caption that helps the reader identify their problem (e.g. "If your floor looks like this...").',
+    '1. FLOOR CONDITION IMAGES — photos of the actual stone floor showing a condition, stage, or result. Write a descriptive alt AND a diagnostic caption that helps the reader identify their problem. Use varied natural framing and do not default to a fixed opening such as "If your floor...".',
     '2. PRODUCT IMAGES — any image from m.media-amazon.com, or any filename that is clearly a commercial product (cleaner bottle, vacuum, mop, brush, sealer, tool). These are NOT decorative. Write a plain descriptive alt stating what the product is (e.g. "Fila Pro Floor Cleaner for impregnated stone surfaces"). Caption should be empty string "" — product captions are handled separately by the page template, not by this diagnostic caption system.',
     '3. TRUE DECORATIVE IMAGES — logos, icons, dividers, spacers with no informative content. Only these get alt="" and caption="".',
     '',

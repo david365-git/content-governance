@@ -118,13 +118,33 @@ RULE 5 — FOOTER CTA:
 Footer must end with a button anchor, direct instruction, or action sentence.
 A footer ending on an explanation sentence has failed this rule.
 
-RULE 6 — PARAGRAPH OPENING VARIETY:
-The conditional symptom-anchor opening — "If your [material] shows...", "If your floor...", "If your [material] has..." — is permitted ONCE per section as the orientation sentence only.
-All subsequent paragraphs within that section must open with varied professional prose: a declarative statement, a mechanism explanation, a cause-and-effect observation, or a direct practical statement.
-A section where every paragraph opens with a conditional "If..." construction has failed this rule.
-The reader has been oriented by the first sentence. Subsequent paragraphs must develop the explanation in natural prose, not repeat the orientation device.
-CORRECT: One conditional opener followed by 2-3 paragraphs of authoritative explanation.
-WRONG: Four consecutive paragraphs each opening with "If your [material]..."
+RULE 6 — REPETITIVE STRUCTURAL FRAMING:
+
+Avoid repeated sentence, paragraph and section-opening structures across the article.
+
+Do not repeatedly use the same grammatical frame, rhetorical device or opening construction, even when the exact words differ.
+
+Examples of repetition to avoid include:
+- repeated conditional openings such as "If your..." or "When your..."
+- repeated question openings
+- repeated "This..." or "The..." openings
+- repeated cause-and-effect constructions
+- repeated homeowner scenarios
+- repeated fact-first constructions
+- repeated sentences built around the same subject + modal pattern such as "X can...", "X may..." or "X should..."
+
+Within each section, vary paragraph openings naturally between declarative statements, observations, mechanisms, cause-and-effect explanations, practical statements, questions and conditional constructions where appropriate.
+
+Across consecutive sections, do not use the same opening structure twice unless there is a clear editorial reason.
+
+A Symptom-Anchor requires reader recognition of a visible problem or condition, but it does NOT require a particular grammatical form.
+
+CORRECT: Sections open with visibly different sentence structures while preserving their intended purpose.
+
+WRONG: Several sections or paragraphs use the same grammatical template with only the material, symptom or noun changed.
+
+ROUTING SECTION EXEMPTION:
+Sections whose sole purpose is routing the reader to other pages should normally open with a direct statement, fact-first explanation or navigation-led sentence rather than a diagnostic symptom construction.
 
 RULE 7 — SECTION OPENER ROTATION (Four-Way Pivot):
 The opening sentence of each section must rotate through these four styles — never use the same style for two consecutive sections:
@@ -401,8 +421,8 @@ BOTH REGISTERS SIMULTANEOUSLY:
 EXAMPLE — wrong (mechanism first):
   "Calcium carbonate reactivity defines how marble behaves under normal household use."
 EXAMPLE — correct (problem first, mechanism second):
-  "If your marble floor looks dull after cleaning, the cleaner itself may be the problem.
-   Many household products contain mild acids that physically dissolve the marble surface
+"A marble floor that looks dull after cleaning may be reacting to the cleaner itself.
+  Many household products contain mild acids that physically dissolve the marble surface
    rather than cleaning it — this reaction is called acid etching, and it cannot be washed
    away because the stone has already changed."
 ------------------------------------------------------------`,
@@ -450,8 +470,10 @@ The reader is scanning to identify whether the image matches their problem.
 A caption that only names or describes the image fails. A caption that connects the image to the reader's situation passes.
 
 DIAGNOSTIC CAPTION PATTERNS (use any of these — vary across the article):
-  - Reader recognition: "If your floor looks like this..."
+  - Reader recognition: "[Visible condition] may indicate [reader-relevant meaning]"
   - Named condition: "This is [condition] — [one sentence on what it means for the reader]"
+  - Direct observation: "[Visible feature] is consistent with [condition or cause]"
+  - Practical interpretation: "[What the image shows] helps distinguish [condition A] from [condition B]"
   - Observation led: "Dark patches like these indicate..."
   - Stage based: "Floors at this stage need..."
   - Pattern recognition: "Hallways showing this pattern have..."
@@ -462,7 +484,7 @@ WRONG — purely descriptive (fails):
   "Coating removal in progress on the Minton tile floor."
 
 CORRECT — diagnostic (passes):
-  "If your floor looks like this after cleaning, the problem is etching — not dirt."
+  "A dull pale mark that remains after cleaning may indicate etching rather than dirt."
   "This is coating removal — softened residue must be extracted, not spread around."
   "Floors at this stage need controlled extraction before sealing can begin."
 
@@ -1107,11 +1129,13 @@ function buildStage2BPart3B(d) {
     "To prevent cognitive fatigue across mechanism-heavy sections, apply these patterns where specified in the Section Plan:\n\n" +
     "1. SYMPTOM-ANCHOR OPENINGS\n" +
     "   When Section Plan specifies 'Symptom-Anchor' pattern:\n" +
-    "   Open the FIRST paragraph only with: <strong>If your [material] shows [symptom]</strong>, [explanation].\n" +
+    "   Open the FIRST paragraph by anchoring it to a homeowner-visible symptom, condition, concern or observation.\n" +
+    "   Do NOT require a fixed opening phrase such as \"If your...\".\n" +
+    "   Vary the grammatical structure naturally across sections while preserving the symptom-first purpose.\n" +
+    "   The symptom anchor may use a conditional, direct observation, fact-first statement, cause-and-effect statement, or other natural construction.\n" +
     "   All subsequent paragraphs in the same section must open in plain text without bold.\n" +
-    "   This counts as ONE bold instance toward the page total of 4.\n" +
     "   If applying Symptom-Anchor would push the page bold total above 4 — use plain text instead.\n" +
-    "   Example: <strong>If your marble shows a dark patch after a spill</strong>, the liquid has soaked into the stone.\n\n" +
+    "   Example: <strong>A dark patch that appears after a spill</strong> may indicate liquid has soaked into the stone.\n\n" +
     "2. DIAGNOSTIC-SEQUENCE\n" +
     "   When Section Plan specifies 'Diagnostic-Sequence' pattern:\n" +
     "   Use numbered <ol> list for self-tests and procedural checks.\n" +
@@ -1127,9 +1151,9 @@ function buildStage2BPart3B(d) {
     "   When Section Plan specifies 'Comparison-Paragraphs' pattern:\n" +
     "   Use parallel paragraph structure with condition names in <strong> tags.\n" +
     "   Example:\n" +
-    "   <p>If your marble shows [symptom A], this is <strong>staining</strong> — [mechanism].</p>\n" +
-    "   <p>If your marble shows [symptom B], this is <strong>etching</strong> — [mechanism].</p>\n\n" +
-    "4. MECHANISM-BLOCKQUOTE\n" +
+    "   <p>A dark patch that remains after cleaning may indicate <strong>staining</strong> — [mechanism].</p>\n" +
+    "   <p>By contrast, a dull pale mark can point to <strong>etching</strong> — [mechanism].</p>\n\n" +
+        "4. MECHANISM-BLOCKQUOTE\n" +
     "   When Section Plan specifies 'Mechanism-Blockquote' pattern:\n" +
     "   Extract critical mechanism principle into <blockquote> visual island.\n" +
     "   Example:\n" +
@@ -1142,7 +1166,7 @@ function buildStage2BPart3B(d) {
     "   Example:\n" +
     "   <h2>Why different stains behave differently</h2>\n" +
     "   <h3>Oil-based contamination</h3>\n" +
-    "   <p><strong>If your marble has dark patches near cooking areas</strong>, [mechanism].</p>\n\n" +
+    "   <p><strong>Dark patches near cooking areas can indicate oil-based contamination</strong>, [mechanism].</p>\n\n" +
     "APPLY ONLY PATTERNS SPECIFIED IN SECTION PLAN.\n" +
       "If Visual Pattern field is 'None' — write pure prose with no special formatting.\n" +
       "Maximum 3-4 visual patterns per article.\n" +

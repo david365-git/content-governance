@@ -121,9 +121,11 @@ function buildAtomicFailure(failLine, html, hubUrl, articleType) {
         fragment: fig,
         fixPrompt: buildStrictRepairPrompt(
           'CHECK 3G — Diagnostic caption',
-          'The figcaption is purely descriptive. Rewrite it to connect the image to the reader\'s problem using one of these patterns:\n' +
-          '- "If your floor looks like this..." \n' +
+          'The figcaption is purely descriptive. Rewrite it to connect the image to the reader problem using one of these varied patterns:\n' +
+          '- "[Visible condition] may indicate [reader-relevant meaning]"\n' +
           '- "This is [condition] — [what it means for the reader]"\n' +
+          '- "[Visible feature] is consistent with [condition or cause]"\n' +
+          '- "[What the image shows] helps distinguish [condition A] from [condition B]"\n' +
           '- "Floors at this stage need..."\n' +
           '- "Dark patches like these indicate..."\n' +
           'Caption must be under 20 words. Change ONLY the figcaption text.',

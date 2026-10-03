@@ -14,15 +14,18 @@
 ============================================================ */
 function getW2CSourceColumn(sourceKey) {
   var SOURCES = {
+    'w2b3_final_html': { col: 191, label: 'W2B.3 Final HTML (col GI)' },
     'new_html':        { col: 98,  label: 'New HTML (col CT)' },
     'humanised_html':  { col: 104, label: 'Humanised HTML (col CZ)' },
     'w2b_raw_html':    { col: 151, label: 'W2B Raw HTML (col EU)' },
     'w8b_html':        { col: 165, label: 'W8B_HTML (col FI)' },
     'w8c_html':        { col: 166, label: 'W8C_HTML (col FJ)' },
     'html_semtc_adj':  { col: 176, label: 'New HTML With Semantic Adjustment (col FT)' }
-  }
-  var key = String(sourceKey || 'w2b_raw_html').trim();
-  return SOURCES[key] || SOURCES['w2b_raw_html'];
+  };
+
+  var key = String(sourceKey || 'w2b3_final_html').trim();
+
+  return SOURCES[key] || SOURCES['w2b3_final_html'];
 }
 
 
@@ -1027,8 +1030,7 @@ function saveW2CFinalHtmlToSheet(html) {
   var row   = posts.getActiveRange().getRow();
   var finalHtml = html.trim();
 
-  posts.getRange(row, 168).setValue(finalHtml); // FL
-  posts.getRange(row, 98).setValue(finalHtml);  // CT — final source of truth
+    posts.getRange(row, 168).setValue(finalHtml); // FL only
 
   return {
     success: true,

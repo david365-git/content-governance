@@ -120,11 +120,12 @@ function getMaxLateralLinks(articleType) {
 }
 
 function buildEnhancedSiloMap(material, activeRow, currentUrl) {
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('posts');
   const data = sheet.getDataRange().getValues();
   const headers = data[0];
-  
+
   const matIndex = headers.indexOf("Stone Type");
   const urlIndex = headers.indexOf("URL");
   const titleIndex = headers.indexOf("Title");
@@ -136,48 +137,161 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
   const headingsIdx = headers.indexOf("Current Headings");
   const safeHandoffIdx = headers.indexOf("Safe Handoff Pages");
   const cannibalGuardIdx = headers.indexOf("Cannibalisation Guardrail");
-  
+
+  const localityIdx = headers.indexOf("Locality");
+
+  const currentLocality =
+    localityIdx > -1
+      ? String(
+          sheet.getRange(activeRow, localityIdx + 1).getValue() || ""
+        ).trim()
+      : "";
+
   let siloPages = [];
-  
+
   for (let i = 1; i < data.length; i++) {
-    if (i === activeRow) continue; // Skip current article by row
-    if (data[i][matIndex] !== material) continue; // Only same material
-    
-    const url = String(data[i][urlIndex] || "").trim();
+
+    // Skip current article.
+    if (i + 1 === activeRow) continue;
+
+    // Same material only.
+    if (data[i][matIndex] !== material) continue;
+
+    const url =
+      String(data[i][urlIndex] || "").trim();
+
     if (!url) continue;
-    
-    // CRITICAL: Skip current article by URL to prevent self-referencing
+
+    // Prevent self-linking.
     if (url === currentUrl) continue;
-    
-    const articleType = String(data[i][articleTypeIdx] || "").trim();
-    
-    // Filter out unwanted page types for lateral linking
-    const excludedTypes = ["Hub Page", "Service Page", "Geo Service Page"];
-    if (excludedTypes.indexOf(articleType) !== -1) continue;
-    
-    const title = String(data[i][titleIndex] || "").trim();
-    const primaryEntity = String(data[i][primaryEntityIdx] || "").trim();
-    const entityRole = String(data[i][entityRoleIdx] || "").trim();
-    const supportingEntities = String(data[i][supportingEntitiesIdx] || "").trim();
-    const metaTitle = String(data[i][metaTitleIdx] || "").trim();
-    const headings = String(data[i][headingsIdx] || "").trim();
-    const safeHandoff = String(data[i][safeHandoffIdx] || "").trim();
-    const cannibalGuard = String(data[i][cannibalGuardIdx] || "").trim();
-    
-    // Extract first 2-3 H2s
+
+    const articleType =
+      String(data[i][articleTypeIdx] || "").trim();
+
+    const candidateLocality =
+      localityIdx > -1
+        ? String(data[i][localityIdx] || "").trim()
+        : "";
+
+    /*
+     * LOCATION GOVERNANCE
+     *
+     * If the current article has a locality:
+     *
+     * 1. A page with the SAME locality is allowed.
+     * 2. A page with a DIFFERENT locality is excluded.
+     * 3. A page with NO locality may still be considered as
+     *    a general non-geographic supporting page.
+     */
+    if (
+      currentLocality &&
+      candidateLocality &&
+      candidateLocality.toLowerCase() !==
+        currentLocality.toLowerCase()
+    ) {
+      continue;
+    }
+
+    /*
+     * Hub is handled separately.
+     * Generic Service Pages remain excluded.
+     *
+     * Geo Service Pages are allowed only when their locality
+     * matches the current article. A Geo Service Page with no
+     * locality is not safe to use.
+     */
+    if (
+      articleType === "Hub Page" ||
+      articleType === "Service Page"
+    ) {
+      continue;
+    }
+
+    if (
+      articleType === "Geo Service Page" &&
+      (
+        !currentLocality ||
+        !candidateLocality ||
+        candidateLocality.toLowerCase() !==
+          currentLocality.toLowerCase()
+      )
+    ) {
+      continue;
+    }
+
+    /*
+     * A Case Study with a stated locality must also match.
+     * If it has no locality, do not use it as the geographic
+     * fallback for a locality-specific article.
+     */
+    if (
+      currentLocality &&
+      articleType === "Case Study" &&
+      !candidateLocality
+    ) {
+      continue;
+    }
+
+    const title =
+      String(data[i][titleIndex] || "").trim();
+
+    const primaryEntity =
+      String(data[i][primaryEntityIdx] || "").trim();
+
+    const entityRole =
+      String(data[i][entityRoleIdx] || "").trim();
+
+    const supportingEntities =
+      String(data[i][supportingEntitiesIdx] || "").trim();
+
+    const metaTitle =
+      String(data[i][metaTitleIdx] || "").trim();
+
+    const headings =
+      String(data[i][headingsIdx] || "").trim();
+
+    const safeHandoff =
+      String(data[i][safeHandoffIdx] || "").trim();
+
+    const cannibalGuard =
+      String(data[i][cannibalGuardIdx] || "").trim();
+
     let h2Sample = "";
+
     if (headings) {
-      const h2Match = headings.match(/<h2>[^<]+/gi);
-      if (h2Match && h2Match.length > 0) {
-        const firstThree = h2Match.slice(0, 3).map(h => h.replace(/<h2>\s*/i, '').trim());
-        h2Sample = firstThree.join(" | ");
+
+      const h2Match =
+        headings.match(/<h2>[^<]+/gi);
+
+      if (
+        h2Match &&
+        h2Match.length > 0
+      ) {
+
+        const firstThree =
+          h2Match
+            .slice(0, 3)
+            .map(function(h) {
+              return h
+                .replace(/<h2>\s*/i, '')
+                .trim();
+            });
+
+        h2Sample =
+          firstThree.join(" | ");
       }
     }
-    
+
     siloPages.push({
       url: url,
       title: title,
       articleType: articleType,
+      locality: candidateLocality,
+      sameLocality:
+        !!currentLocality &&
+        !!candidateLocality &&
+        candidateLocality.toLowerCase() ===
+          currentLocality.toLowerCase(),
       primaryEntity: primaryEntity,
       entityRole: entityRole,
       supportingEntities: supportingEntities,
@@ -187,7 +301,30 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
       cannibalGuard: cannibalGuard
     });
   }
-  
+
+  /*
+   * Put exact-locality candidates first.
+   * General non-geographic pages follow.
+   */
+  siloPages.sort(function(a, b) {
+
+    if (
+      a.sameLocality &&
+      !b.sameLocality
+    ) {
+      return -1;
+    }
+
+    if (
+      !a.sameLocality &&
+      b.sameLocality
+    ) {
+      return 1;
+    }
+
+    return 0;
+  });
+
   return siloPages;
 }
 
@@ -209,6 +346,9 @@ function buildW15DPrompt() {
         'URL: ' + page.url + '\n' +
         'TITLE: ' + page.title + '\n' +
         'TYPE: ' + page.articleType + '\n' +
+        'LOCALITY: ' + (page.locality || 'None') + '\n' +
+        'SAME LOCALITY AS CURRENT ARTICLE: ' +
+          (page.sameLocality ? 'YES' : 'NO') + '\n' +
         'PRIMARY ENTITY: ' + page.primaryEntity + '\n';
 
       if (page.supportingEntities) {
@@ -273,9 +413,14 @@ Internal link: None
 
 6. Do NOT select the same PAGE more than once.
 
-7. Choose the page whose subject is most relevant to the section.
+7. LOCATION PRIORITY:
+   - If one or more relevant pages have SAME LOCALITY AS CURRENT ARTICLE: YES, choose the most relevant of those first.
+   - Only use a page with LOCALITY: None when no suitable same-locality page exists.
+   - Never prefer a non-geographic page over an equally relevant same-locality Case Study or Geo Service Page.
 
-8. Do not reproduce or rewrite any part of the section plan.
+8. Among the location-safe candidates, choose the page whose subject is most relevant to the section.
+
+9. Do not reproduce or rewrite any part of the section plan.
 
 --- OUTPUT FORMAT ---
 

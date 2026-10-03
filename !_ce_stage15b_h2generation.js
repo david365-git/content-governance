@@ -356,7 +356,7 @@ ${generatedH2s}
 --- END GENERATED H2 HEADINGS ---
 ${minimumChangeStandard}
 --- TASK ---
-Apply these four tests to every H2 heading above.
+Apply these five tests to every H2 heading above.
 TEST 1 — SECTION MATCH:
 The heading must accurately represent the section it belongs to.
 FAIL only when the heading clearly:
@@ -377,10 +377,10 @@ TEST 3 — DUPLICATE INTENT:
 The heading must have a distinguishable purpose from the other H2s.
 FAIL only when another H2 would lead the reader to expect substantially the same section content.
 Similar subject matter is acceptable where the section roles are different.
-Do NOT fail merely because:
-- several headings begin with When, Why, How or What;
-- the material name appears several times;
-- related sections naturally use related terminology.
+
+    Do NOT treat shared subject matter alone as duplicate intent.
+    Repeated grammatical or rhetorical heading structures are assessed separately under Test 5 — Repetitive Structural Framing.
+    Repetition of the material name is acceptable only where it genuinely aids clarity and does not create a mechanical heading pattern.
 TEST 4 — SCOPE, MATERIAL AND SECTION ROLE:
 The heading must remain within the existing article scope, use the correct governed MATERIAL, and preserve the section's structural role.
 
@@ -415,41 +415,59 @@ If the section merely explains what a homeowner should look for in a contractor,
 
 When TEST 5 fails, make the smallest wording adjustment necessary while preserving the governed section role.
 
-IMPORTANT — EARLY-STAGE STRUCTURAL CHECK:
-This is an early structural validation stage, NOT a final editorial polish stage.
-The purpose is to ensure that the H2s accurately represent the sections below them.
-Humanisation and later editorial stages can improve phrasing.
-Therefore, DO NOT FAIL for:
-- wording that is acceptable but not perfect;
-- minor stylistic preferences;
-- repeated grammatical patterns;
-- a heading simply because you can think of a better version;
-- small differences in tone;
-- phrases that remain understandable to a homeowner.
-Only FAIL where a genuine structural, clarity, duplication or scope problem exists.
-WHOLE-SET GOVERNANCE CHECK:
-After checking each H2 individually, check the complete set.
-Only FAIL the whole set for:
-1. CLEAR DUPLICATE INTENT
-Two or more headings substantially promise the same section.
-2. GENUINELY CONFUSING SEQUENCE
-The order is clearly contradictory or prevents the reader from understanding the progression.
-Do NOT fail merely because another editorial order might also work.
-3. OBVIOUS SUBJECT DRIFT
-One or more headings move outside the page's intended material, problem, method or decision scope.
-4. STRUCTURAL MISREPRESENTATION
-A heading clearly fails to represent the section it belongs to.
-Do NOT perform a phrase-shape variety test.
-Do NOT fail repeated When, Why, How or What openings.
-Do NOT perform final-copy humanisation here.
+    IMPORTANT — EARLY-STAGE STRUCTURAL CHECK:
+
+    This is an early structural validation stage, NOT a final editorial polish stage.
+
+    The purpose is to ensure that the H2s accurately represent the sections below them while avoiding obvious repetitive structural framing.
+
+    Humanisation and later editorial stages can improve phrasing.
+
+    Therefore:
+
+    DO NOT FAIL for:
+    - wording that is acceptable but not perfect;
+    - minor stylistic preferences;
+    - a heading simply because you can think of a better version;
+    - small differences in tone;
+    - phrases that remain understandable to a homeowner.
+
+    DO FAIL when two or more consecutive headings use the same rhetorical or grammatical structure strongly enough to make the heading set read mechanically.
+
+    WHOLE-SET GOVERNANCE CHECK:
+
+    After checking each H2 individually, check the complete set.
+
+    FAIL the whole set for:
+
+    1. CLEAR DUPLICATE INTENT
+    Two or more headings substantially promise the same section.
+
+    2. GENUINELY CONFUSING SEQUENCE
+    The order is clearly contradictory or prevents the reader from understanding the progression.
+
+    Do NOT fail merely because another editorial order might also work.
+
+    3. OBVIOUS SUBJECT DRIFT
+    One or more headings move outside the page's intended material, problem, method or decision scope.
+
+    4. STRUCTURAL MISREPRESENTATION
+    A heading clearly fails to represent the section it belongs to.
+
+    5. REPETITIVE STRUCTURAL FRAMING
+    Two or more consecutive H2s use the same rhetorical or grammatical structure.
+    This includes repeated question formats, repeated conditional formats, or repeated opening constructions such as "Are your...", "Is your...", "Why...", "How...", "When..." or "What...".
+    Two consecutive question-format H2s must FAIL this check.
+
+    Do NOT perform final-copy humanisation here.
 OUTPUT FORMAT:
 H2: [heading text]
-TEST 1 (Section Match): PASS / FAIL
-TEST 2 (Reader Clarity): PASS / FAIL
-TEST 3 (Duplicate Intent): PASS / FAIL
-TEST 4 (Scope and Section Role): PASS / FAIL
-TEST 5 (Claim Support): PASS / FAIL
-REASON: [brief summary]
+    TEST 1 (Section Match): PASS / FAIL
+    TEST 2 (Reader Clarity): PASS / FAIL
+    TEST 3 (Duplicate Intent): PASS / FAIL
+    TEST 4 (Scope and Section Role): PASS / FAIL
+    TEST 5 (Repetitive Structural Framing): PASS / FAIL
+    REASON: [brief summary]
 If ANY test is FAIL, also output:
 PROBLEM:
 [State the genuine structural problem.]
@@ -461,13 +479,15 @@ SUGGESTED ALTERNATIVES:
 1. [First replacement H2]
 2. [Second replacement H2]
 3. [Third replacement H2]
-Rules for suggested alternatives:
-- Preserve the existing section purpose.
-- Fix only the genuine failure.
-- Do not introduce a new topic, service, material, process or outcome.
-- Avoid duplicating another H2.
-- Apply the MINIMUM CHANGE STANDARD above.
-- Do not rewrite merely for stylistic improvement.
+    Rules for suggested alternatives:
+    - Preserve the existing section purpose.
+    - Fix only the genuine failure.
+    - Do not introduce a new topic, service, material, process or outcome.
+    - Avoid duplicating another H2.
+    - Do not repeat the rhetorical or grammatical structure of an adjacent H2.
+    - Do not create two consecutive question-format H2s.
+    - Apply the MINIMUM CHANGE STANDARD above.
+    - Do not rewrite merely for stylistic improvement.
 Repeat for every H2.
 Last line:
 CHECK 1.5B-H2GOV: PASS
@@ -673,9 +693,7 @@ function buildH2GovernanceFixPromptW15B() {
     );
   const failingBlocks = [];
   blocks.forEach(function(block) {
-    var isFail =
-      /TEST\s*[1-4][^\n]*:\s*FAIL/i
-        .test(block);
+    var isFail = /TEST\s*[1-5][^\n]*:\s*FAIL/i.test(block);
     var hasViolation =
       /PROBLEM:/i.test(block) ||
       /WHAT TO CHANGE:/i.test(block);
@@ -743,26 +761,32 @@ For each failing heading, apply Rule 17 corrections:
 - If it failed Test 1 (Section Match):
   correct only the wording that misrepresents, narrows, broadens or changes the section's existing purpose.
 - If it failed Test 2 (Reader Clarity):
-  correct only the wording that is genuinely confusing, overly technical or unclear to a homeowner.
+  correct only the wording that is genuinely confusing, overly technical or unclear to a homeowner. Reader clarity does NOT require a question format.
 - If it failed Test 3 (Duplicate Intent):
   change only what is necessary to distinguish this section from the other H2 whose intended content substantially overlaps.
 - If it failed Test 4 (Scope and Section Role):
   remove or correct only the wording that introduces a new topic or changes the governed purpose of the section.
+- If it failed Repetitive Structural Framing:
+  change only the rhetorical or grammatical structure causing repetition. Do not change the section's governed purpose. Two consecutive question-format H2s are not allowed. Avoid repeating the same opening construction such as "Are your...", "Is your...", "Why...", "How...", "When..." or "What...".
 For EACH failing H2:
 1. Generate THREE possible corrected headings internally.
-2. Test all three candidates against:
-- Test 1 — Section Match
-- Test 2 — Reader Clarity
-- Test 3 — Duplicate Intent
-- Test 4 — Scope and Section Role
-- the whole-set governance rules
-3. Reject any candidate that:
-- introduces a new topic;
-- narrows or broadens the section incorrectly;
-- duplicates the intent of another H2;
-- is genuinely confusing to a homeowner;
-- changes the intended section role;
-- moves outside the existing article scope.
+      2. Test all three candidates against:
+      - Test 1 — Section Match
+      - Test 2 — Reader Clarity
+      - Test 3 — Duplicate Intent
+      - Test 4 — Scope and Section Role
+      - Test 5 — Repetitive Structural Framing
+      - the whole-set governance rules
+      3. Reject any candidate that:
+      - introduces a new topic;
+      - narrows or broadens the section incorrectly;
+      - duplicates the intent of another H2;
+      - is genuinely confusing to a homeowner;
+      - changes the intended section role;
+      - moves outside the existing article scope;
+      - repeats the rhetorical or grammatical structure of the previous or following H2;
+      - creates two consecutive question-format H2s;
+      - repeats an opening construction such as "Are your...", "Is your...", "Why...", "How...", "When..." or "What..." where an adjacent H2 already uses the same construction.
 4. Select the strongest remaining candidate.
 5. Return ONLY that selected corrected heading in the final H2 list.
 Apply the MINIMUM CHANGE STANDARD above.
@@ -1672,7 +1696,7 @@ ${location
     location
   : ''}
 --- HEADING QUALITY TARGET — HARD LOCK ---
-Every H2 must satisfy all four of these:
+Every H2 must satisfy all five of these:
 1. SEARCH INTENT & UX
 The H2 sequence must guide the reader logically from problem to solution.
 Do not create overlapping or redundant headings covering the same ground twice.
@@ -1685,6 +1709,32 @@ Rich technical vocabulary belongs in H3s or body text, not crammed into the H2 i
 4. SINGLE TOPIC PER HEADING
 Each H2 must cover exactly one main idea.
 Do not combine two different section purposes into one heading.
+
+Do not turn the H2 into a compressed contents list.
+Avoid a main heading followed by a colon and a list of section functions, stages or coverage requirements.
+
+WRONG:
+"Simple Upkeep Replaced the Failed Cleaning Routine: Intervention Steps, Maintenance Handover and Escalation Guidance"
+
+CORRECT:
+"Simple Upkeep Replaced the Failed Cleaning Routine"
+
+Where a section contains several related supporting elements, choose the single dominant homeowner-facing idea for the H2 and leave the supporting elements to the H3s or body text.
+
+5. HEADING VARIETY AND STRUCTURAL FRAMING — HARD LOCK
+Do not repeat the governed material name, material class or close variants in every H2.
+Use the material name only where it genuinely helps identify the section.
+
+Vary the remaining headings naturally using the specific condition, process, result, grout or joint condition, surface behaviour, maintenance issue or homeowner decision being discussed.
+
+Do not introduce a different material merely for variety.
+Do not substitute a broader or narrower material term if that would change the governed meaning of the article.
+
+Treat the full H2 sequence as one continuous piece of writing.
+Do not use the same rhetorical or grammatical structure for consecutive H2s.
+Do not make more than one H2 in the article a question unless the governed section role specifically requires a question.
+Avoid repeated heading openings such as "Are...", "Is...", "Has...", "Why...", "How...", "When..." or "What...".
+Prefer clear descriptive, diagnostic, practical or outcome-led headings where a question adds no useful reader decision.
 ${hasStoryFramework
   ? `
 --- STORY FRAMEWORK — PRIMARY GOVERNING INSTRUCTION ---
@@ -1736,14 +1786,15 @@ Stage 1.5A has created a section structure below.
 Your ONLY job is to create an H2 heading for each section.
 The H2 rule that applies depends on the article type — read the ARTICLE TYPE H2 RULE block carefully before generating any headings.
 ${h2RuleBlock}
---- SYMPTOM-FIRST RULE ---
-Applies to all article types EXCEPT Geo Service Page.
-SYMPTOM-FIRST vs MECHANISM-FIRST:
-WRONG:
-"Geological Formation & Internal Structure"
-CORRECT:
-"Why some marks will not come out no matter what you use"
-The H2 must describe the HOMEOWNER'S PROBLEM, not the technical mechanism.
+    --- SYMPTOM-FIRST RULE (applies to all article types EXCEPT Geo Service Page) ---
+
+    SYMPTOM-FIRST vs MECHANISM-FIRST:
+    ❌ WRONG (mechanism-first): "Geological Formation & Internal Structure"
+    ✅ CORRECT (symptom-first): "Some marks remain after normal cleaning"
+
+    The H2 must connect clearly to the HOMEOWNER'S PROBLEM, not lead with the technical mechanism.
+    Symptom-first does NOT require a question format or any fixed grammatical construction.
+    Vary H2 structure naturally across the article.
 CRITICAL RULE:
 Never copy the TSM Requirement name as the H2.
 ENTITY NAMES FORBIDDEN IN H2S:

@@ -192,9 +192,10 @@ function buildStage15EPrompt() {
 
     ROTATION RULE — no two consecutive sections may use the same style:
 
-    Style A — CONDITIONAL (diagnostic): "If your ${material.toLowerCase()} shows [symptom]..."
+    Style A — CONDITIONAL / SYMPTOM-LED (diagnostic): open by connecting the reader directly to a visible symptom or condition.
     Use for: sections where reader recognition of a visible symptom is the priority.
-    Example: "If your ${material.toLowerCase()} shows dull patches that will not shift after cleaning..."
+    Do NOT require a fixed phrase such as "If your...". Vary the sentence structure naturally.
+    Example: "Dull patches that will not shift after cleaning may indicate a surface or finish problem."
 
     Style B — FACT-FIRST: Open with the physical reality or named condition.
     Use for: mechanism explanations, cause-and-effect sections.
