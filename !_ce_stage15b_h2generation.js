@@ -801,7 +801,11 @@ Do not change:
 - a decision heading into a generic informational heading;
 - or any other section role merely to make the heading pass Rule 17.
 The corrected H2 must continue to satisfy the same section function in the article structure.
-If the failing H2 is currently carrying a required article-type or TSM coverage element, that coverage must remain present after correction.
+If the failing H2 belongs to a section carrying a required article-type or TSM coverage element, preserve the section's structural purpose but do NOT require secondary coverage terminology to remain in the H2.
+
+The H2 must continue to express only the single dominant homeowner-facing idea.
+
+Any secondary TSM or article-type coverage may remain in H3s or body content within that governed section.
 Do not over-correct a heading merely because it contains a process-related word.
 A process word does not automatically mean the heading contains two topics.
 Do not expose the rejected candidate headings in the final output.
@@ -1220,26 +1224,45 @@ ${generatedH2s}
 Two separate coverage lists are given above:
 1. Required Entity Coverage
 2. TSM Requirements
-Check the generated H2 headings against BOTH lists independently.
-An item satisfying one list does not automatically satisfy the other.
-For each item in BOTH lists, state whether it is covered and by which H2(s).
+
+This is an H2-level structural check only.
+
+Do NOT require every coverage item or TSM requirement to appear literally in an H2.
+
+For each item, determine whether:
+- an existing H2 clearly represents the dominant section topic connected to that requirement; OR
+- the requirement is secondary coverage that can legitimately be carried by H3s or body content within an existing governed section.
+
+Secondary coverage must NOT cause an H2 to FAIL merely because the wording is absent from the heading.
+
+TSM requirement names are internal structural labels and must never be required as reader-facing H2 wording.
+
 OUTPUT FORMAT:
 LIST: Required Entity Coverage
 ITEM: [coverage item text]
-COVERED: YES / NO
-BY: [H2 heading text, or "none"]
+STATUS: H2 REPRESENTED / H3-BODY COVERAGE / NOT STRUCTURALLY COVERED
+BY: [H2 heading text, governed section, or "none"]
+
 Repeat for every Required Entity Coverage item.
+
 Then:
+
 LIST: TSM Requirements
 ITEM: [TSM requirement name]
-COVERED: YES / NO
-BY: [H2 heading text, or "none"]
+STATUS: H2 REPRESENTED / H3-BODY COVERAGE / NOT STRUCTURALLY COVERED
+BY: [H2 heading text, governed section, or "none"]
+
 Repeat for every TSM Requirement item.
+
 Last line:
 CHECK 1.5B-COVERAGE: PASS
-only if every item in BOTH lists is covered.
-Otherwise:
-CHECK 1.5B-COVERAGE: FAIL
+
+PASS when every item is either:
+- H2 REPRESENTED; or
+- H3-BODY COVERAGE within an appropriate governed section.
+
+FAIL only when an item is:
+NOT STRUCTURALLY COVERED.
 `.trim();
   return prompt;
 }
@@ -1510,37 +1533,27 @@ function buildStage15BPrompt() {
     articleType ===
     "Case Study";
   const ARTICLE_ANGLE_DEFINITIONS = {
-    "Diagnostic-Cause-Led": {
-      overview:
-        "Open by identifying the technical cause of the problem before describing the fix.",
-      mapping:
-        "SECTION 1 (Project Context): frame the entry point as noticing the SYMPTOM, then naming the underlying CAUSE. SECTION 2 (Problem & Intervention): explain the cause in more depth, then the correction. SECTION 3 (Measurable Outcome): the result once the cause was addressed. SECTION 4 (Maintenance Handover & Escalation Link): frame around preventing this same CAUSE from recurring."
-    },
-    "Chronological/Step-by-Step": {
-      overview:
-        "Follow the actual sequence of the job as it happened, stage by stage, without reordering for diagnostic effect.",
-      mapping:
-        "SECTION 1 (Project Context): arrival and initial assessment. SECTION 2 (Problem & Intervention): the job as a sequence of steps/stages in the order they happened. SECTION 3 (Measurable Outcome): the result at the end of the sequence. SECTION 4 (Maintenance Handover & Escalation Link): frame as the final practical stage in the sequence."
-    },
-    "Contrast/Before-After-Led": {
-      overview:
-        "Structure the narrative around explicit before/after comparison as the organising device.",
-      mapping:
-        "SECTION 1 (Project Context): introduce the before condition clearly. SECTION 2 (Problem & Intervention): the intervention, still referencing what it changed from. SECTION 3 (Measurable Outcome): explicit before-vs-after framing. SECTION 4 (Maintenance Handover & Escalation Link): frame as what keeps the after state from sliding back to before."
-    },
-    "Assessment-Pathway/Self-Test-Led": {
-      overview:
-        "Structure the narrative around helping the reader assess their own floor's condition, ending with self-assessment language.",
-      mapping:
-        "SECTION 1 (Project Context): frame the entry point in terms a reader can self-recognise. SECTION 2 (Problem & Intervention): present the professional decision rationale. SECTION 3 (Measurable Outcome): frame the outcome partly as a capability statement. SECTION 4 (Maintenance Handover & Escalation Link): close with self-check maintenance language."
-    },
-    "Finish-Recovery/Shine-Led": {
-      overview:
-        "Centre the narrative on the visual/finish transformation as the core throughline, with technical process subordinate to the finish story.",
-      mapping:
-        "SECTION 1 (Project Context): frame the entry point around finish or appearance loss. SECTION 2 (Problem & Intervention): explain why cleaning alone cannot fix a finish problem, then the mechanical correction. SECTION 3 (Measurable Outcome): emphasise the finish outcome. SECTION 4 (Maintenance Handover & Escalation Link): frame around protecting the restored finish."
-    }
-  };
+  "Diagnostic-Cause-Led": {
+    overview:
+      "Open by identifying the technical cause of the problem before describing the fix."
+  },
+  "Chronological/Step-by-Step": {
+    overview:
+      "Follow the actual sequence of the job as it happened, stage by stage, without reordering for diagnostic effect."
+  },
+  "Contrast/Before-After-Led": {
+    overview:
+      "Structure the narrative around explicit before/after comparison as the organising device."
+  },
+  "Assessment-Pathway/Self-Test-Led": {
+    overview:
+      "Structure the narrative around helping the reader assess their own floor's condition, ending with self-assessment language."
+  },
+  "Finish-Recovery/Shine-Led": {
+    overview:
+      "Centre the narrative on the visual/finish transformation as the core throughline, with technical process subordinate to the finish story."
+  }
+};
   const articleAngleData =
     ARTICLE_ANGLE_DEFINITIONS[
       articleAngle
@@ -1578,7 +1591,9 @@ Where several Stage 1.5A sections share the same TSM Order, give each section an
 
 Preserve the chronological project sequence established by Stage 1.5A.
 
-For maintenance or aftercare sections, frame the H2 around the genuine maintenance handover or protection stage assigned to that section.
+For maintenance or aftercare sections, frame the H2 around the practical everyday action the homeowner will recognise, such as routine cleaning, protection from spills or ongoing care.
+
+Use plain homeowner language only. Do not describe the internal governance role in the H2.
 
 For outcome sections, frame the H2 around the actual project result assigned by Stage 1.5A.
 
@@ -1804,7 +1819,7 @@ Possible later H3/body topic:
 "When Persistent Soiling Needs Further Assessment"
 
 WRONG:
-"Simple Upkeep Replaced the Failed Cleaning Routine: Intervention Steps, Maintenance Handover and Escalation Guidance"
+"Simple Upkeep Replaced the Failed Cleaning Routine: Cleaning Steps, Ongoing Care and When to Get More Help"
 
 CORRECT:
 "Simple Upkeep Replaced the Failed Cleaning Routine"
@@ -1870,29 +1885,18 @@ REWRITE BRIEF:
 ${rewriteBrief}
 If the Rewrite Brief above is NOT "Not Applicable", adapt the tone, vocabulary and specific angle of every H2 to align with it.
 The H2s must still respect the article-type rules and governed section roles.
---- REQUIRED ENTITY COVERAGE — HARD LOCK ---
-This article type MUST cover the following elements somewhere within the governed article structure:
-${requiredEntityCoverage ||
-  'Not specified for this article type.'}
+--- H2 SCOPE — HARD LOCK ---
+Stage 1.5B generates reader-facing H2 headings only.
 
-These are COVERAGE REQUIREMENTS, not mandatory H2 wording.
+Do NOT use Required Entity Coverage, TSM role names or other governance classifications as H2 wording.
 
-Do NOT force every coverage item into an H2.
+The governed article structure already determines what each section must cover.
 
 For each numbered section:
-- use the H2 for the single dominant reader-facing idea only;
-- secondary coverage may be carried by an H3 or body content;
-- governance labels such as "Maintenance Handover", "Escalation", "Escalation Link", "Internal Link", "Problem & Intervention", "Measurable Outcome", "Project Context" or any TSM Order name must NEVER appear in an H2;
-- do not copy, paraphrase, append, compress or translate internal governance terminology into reader-facing H2 wording merely to prove coverage;
-- if secondary governance coverage is still required, carry it in an H3 or body content instead.
-
-If a coverage requirement contains two distinct ideas, do not join them together in one H2.
-
-Where Stage 1.5A has already created separate sections, give those ideas separate H2s.
-
-Where Stage 1.5A has only one section, keep the dominant idea in the H2 and leave secondary coverage for an H3 or body content.
-
-Do not omit required article coverage, but do not make the H2 carry every supporting element.
+- write one clear homeowner-facing H2;
+- express only the dominant topic of that section;
+- leave secondary requirements for H3s and body content;
+- never append internal coverage terminology to prove compliance.
 --- SYSTEM INSTRUCTION ---
 Stage 1.5A has created a section structure below.
 Your ONLY job is to create an H2 heading for each section.
@@ -2096,9 +2100,17 @@ HARD FIX RULES:
 4. Do not change a heading merely because another version sounds stronger.
 5. Do not add, remove, merge, split or renumber sections.
 6. Preserve the existing section-to-topic relationship from Stage 1.5A.
-7. A COVERED: NO item must be resolved by an actual H2 wording change where the current headings do not clearly represent it.
-8. Do not merely explain that an existing vague H2 could cover the missing item.
-The returned H2 itself must make the required coverage clear.
+7. A COVERED: NO item does NOT automatically require an H2 wording change.
+
+Required coverage may be satisfied by the governed section's H3s or body content where that coverage is secondary to the section's main reader-facing topic.
+
+8. Do not force secondary coverage into an H2 merely to make the coverage check pass.
+
+The returned H2 must continue to express only ONE dominant homeowner-facing idea.
+
+If the missing coverage belongs naturally within the existing governed section but is secondary to its main topic, preserve the H2 unchanged and treat that requirement as H3/body-content coverage.
+
+Never append governance terminology, TSM role names or secondary coverage requirements to an H2.
 9. If one existing H2 can safely represent the missing item without changing its governed section role, apply the MINIMUM CHANGE STANDARD above to that H2 only.
 10. If satisfying a missing item would require changing the governed purpose of a section, inventing a new section, or changing a COVERED: YES heading, do NOT force the change.
 NO NEW FACTS — HARD LOCK:
