@@ -1545,40 +1545,74 @@ function buildStage15BPrompt() {
     ARTICLE_ANGLE_DEFINITIONS[
       articleAngle
     ];
+
   const articleAngleBlock =
     (
       isCaseStudy &&
       articleAngle &&
       articleAngleData
     )
-      ? `
---- ARTICLE ANGLE — HARD LOCK ---
-This Case Study has been assigned the "${articleAngle}" structural shape.
-This governs HOW each of the fixed TSM sections is framed and worded.
+    ? `
+--- ARTICLE ANGLE — GOVERNING FRAME ---
+This Case Study has been assigned the "${articleAngle}" narrative shape.
+
 Story Framework tells you WHAT happened.
-Article Angle tells you HOW to frame and sequence that content.
+Article Angle tells you HOW that real project story should be framed.
+
 SHAPE OVERVIEW:
 ${articleAngleData.overview}
-MANDATORY SECTION-BY-SECTION MAPPING:
-${articleAngleData.mapping}
-This mapping is a Hard Lock.
-Every H2 must reflect its section's assigned framing above while preserving the Story Framework content.
-CRITICAL — SECTION 4 SCOPE:
-This project's restoration is COMPLETE.
-Section 4 is a maintenance handover to the homeowner who just paid for this restoration.
-It must contain genuine, specific advice for keeping THIS floor in good condition going forward.
+
+IMPORTANT:
+Stage 1.5A now defines the authoritative section structure.
+
+Do NOT force this Case Study into a four-section pattern.
+Do NOT assume:
+- Section 1 must equal Project Context;
+- Section 2 must contain all Problem & Intervention content;
+- Section 3 must equal Measurable Outcome;
+- Section 4 must equal Maintenance Handover.
+
+Instead, apply the Article Angle across the actual SECTION structure supplied by Stage 1.5A.
+
+Where several Stage 1.5A sections share the same TSM Order, give each section an H2 that reflects its own distinct project stage while still supporting the overall Article Angle.
+
+Preserve the chronological project sequence established by Stage 1.5A.
+
+For maintenance or aftercare sections, frame the H2 around the genuine maintenance handover or protection stage assigned to that section.
+
+For outcome sections, frame the H2 around the actual project result assigned by Stage 1.5A.
+
+The Article Angle must guide wording and emphasis only.
+It must NOT change, merge, remove, renumber or compress the Stage 1.5A sections.
 --- END ARTICLE ANGLE ---
 `
-      : '';
+    : '';
   const structure15A =
-    String(
-      sheet
-        .getRange(row, 99)
-        .getValue() || ""
-    ).trim();
-  if (!structure15A) {
-    return 'ERROR: No Stage 1.5A output found. Run W1.5A first.';
-  }
+  String(
+    sheet
+      .getRange(row, 99)
+      .getValue() || ""
+  ).trim();
+
+if (!structure15A) {
+  return 'ERROR: No Stage 1.5A output found. Run W1.5A first.';
+}
+
+/*
+ * W1.5B must not see internal TSM role names because they can leak
+ * into reader-facing H2 headings.
+ *
+ * Example:
+ * SECTION 7: Order 4 — Maintenance Handover & Escalation Link — 100–120 words
+ *
+ * becomes:
+ * SECTION 7: 100–120 words
+ */
+const structure15AForH2 =
+  structure15A.replace(
+    /^(SECTION\s+\d+:)\s*Order\s+\d+\s+—\s+.*?\s+—\s+(\d+[–-]\d+\s+words.*)$/gmi,
+    '$1 $2'
+  );
   const recoveryBlueprint =
     String(
       d["Recovery Blueprint"] ||
@@ -1702,16 +1736,72 @@ The H2 sequence must guide the reader logically from problem to solution.
 Do not create overlapping or redundant headings covering the same ground twice.
 2. E-E-A-T SIGNAL
 Headings should demonstrate hands-on expertise through natural specificity without becoming a summary.
-3. SCANNABILITY — HARD LOCK
-H2s must be short and punchy.
-A heading should be understandable in one glance.
-Rich technical vocabulary belongs in H3s or body text, not crammed into the H2 itself.
-4. SINGLE TOPIC PER HEADING
-Each H2 must cover exactly one main idea.
-Do not combine two different section purposes into one heading.
+3. SCANNABILITY & READER CLARITY — HARD LOCK
+H2s must be short, clear and immediately understandable to a non-technical homeowner.
 
-Do not turn the H2 into a compressed contents list.
-Avoid a main heading followed by a colon and a list of section functions, stages or coverage requirements.
+A heading should explain what the reader would actually notice, experience or recognise.
+
+Do NOT use vague or abstract phrases such as:
+- "lost its definition";
+- "lost clarity";
+- "visual definition";
+- "surface presentation";
+- "appearance recovery";
+- "floor definition";
+- or similar wording that requires interpretation.
+
+Translate abstract wording into the visible homeowner problem.
+
+WRONG:
+"The Epsom Ceramic Floor Had Lost Its Definition"
+
+CORRECT:
+"The Epsom Ceramic Floor Still Looked Dirty After Mopping"
+
+Before returning each H2, ask:
+"Would an ordinary homeowner immediately understand what this means without reading the paragraph below?"
+
+If NO, rewrite the H2 in plain, visible, everyday language.
+
+Rich technical vocabulary and abstract diagnostic language belong in H3s or body text, not in the H2.
+4. SINGLE TOPIC PER HEADING — HARD LOCK
+Each H2 must cover exactly ONE main reader-facing idea.
+
+Do not combine two different purposes, decisions, stages or outcomes in one H2.
+
+A heading must FAIL this rule if it joins two distinct ideas using:
+- "and";
+- "plus";
+- "while";
+- "as well as";
+- a colon;
+- an em dash;
+- or another joining construction,
+
+where each side could reasonably stand as a separate heading topic.
+
+When a governed section contains more than one legitimate idea, use this hierarchy:
+
+1. If Stage 1.5A has already created separate numbered sections for those ideas:
+   give each SECTION its own H2.
+
+2. If Stage 1.5A contains only one numbered section:
+   choose the single dominant homeowner-facing idea for the H2.
+
+3. Treat secondary supporting material as H3 or body-content territory.
+   Do NOT force secondary coverage into the H2 merely because it appears in the TSM requirement, Rewrite Brief, Required Entity Coverage or section description.
+
+4. W1.5B must NOT invent an additional numbered H2 section.
+   If a second idea genuinely deserves its own H2, that structural split belongs in Stage 1.5A.
+
+WRONG:
+"The New Routine Suited Daily Pet Traffic—and When to Escalate Persistent Soil"
+
+CORRECT H2:
+"A Simpler Cleaning Routine for a Busy Family Home"
+
+Possible later H3/body topic:
+"When Persistent Soiling Needs Further Assessment"
 
 WRONG:
 "Simple Upkeep Replaced the Failed Cleaning Routine: Intervention Steps, Maintenance Handover and Escalation Guidance"
@@ -1719,7 +1809,12 @@ WRONG:
 CORRECT:
 "Simple Upkeep Replaced the Failed Cleaning Routine"
 
-Where a section contains several related supporting elements, choose the single dominant homeowner-facing idea for the H2 and leave the supporting elements to the H3s or body text.
+Do not turn an H2 into a compressed contents list.
+
+Before returning each H2, internally ask:
+"Does this heading promise exactly one main section topic?"
+
+If NO, simplify it to the dominant topic and leave the secondary idea for H3 or body content.
 
 5. HEADING VARIETY AND STRUCTURAL FRAMING — HARD LOCK
 Do not repeat the governed material name, material class or close variants in every H2.
@@ -1753,15 +1848,16 @@ ${sfOutcome}
 STORY DIRECTION:
 ${sfStoryDirection}
 H2 STORY FRAMEWORK RULES:
-- Section 1 H2 MUST open from the entry point represented by:
+- The first relevant opening section must reflect the entry point represented by:
   "${sfWhatTheyFound}"
-- The narrative must move through:
+- The section sequence must move naturally through:
   "${sfConstraint}"
-  as a turning point.
-- The process section H2 must reflect:
+  as a turning point where relevant.
+- Any section or sections covering the professional intervention must collectively reflect:
   "${sfApproach}"
-- The outcome section H2 must reflect:
+- Any section assigned to outcome or measurable result must reflect:
   "${sfOutcome}"
+- Where Stage 1.5A contains several sections sharing the same TSM role, each H2 must represent that section's distinct stage rather than repeating the same general idea.
 - The overall story direction is:
   "${sfStoryDirection}"
 - Do NOT default to generic dark, dirty or dull framing unless that matches the entry point above.
@@ -1775,12 +1871,28 @@ ${rewriteBrief}
 If the Rewrite Brief above is NOT "Not Applicable", adapt the tone, vocabulary and specific angle of every H2 to align with it.
 The H2s must still respect the article-type rules and governed section roles.
 --- REQUIRED ENTITY COVERAGE — HARD LOCK ---
-This article type MUST cover the following elements somewhere across its H2 sections:
+This article type MUST cover the following elements somewhere within the governed article structure:
 ${requiredEntityCoverage ||
   'Not specified for this article type.'}
-Every item listed above must be represented by at least one H2 heading or clearly covered within a governed section.
-You do not need one H2 per item.
-Do not omit any required coverage item.
+
+These are COVERAGE REQUIREMENTS, not mandatory H2 wording.
+
+Do NOT force every coverage item into an H2.
+
+For each numbered section:
+- use the H2 for the single dominant reader-facing idea only;
+- secondary coverage may be carried by an H3 or body content;
+- governance labels such as "Maintenance Handover", "Escalation", "Escalation Link", "Internal Link", "Problem & Intervention", "Measurable Outcome", "Project Context" or any TSM Order name must NEVER appear in an H2;
+- do not copy, paraphrase, append, compress or translate internal governance terminology into reader-facing H2 wording merely to prove coverage;
+- if secondary governance coverage is still required, carry it in an H3 or body content instead.
+
+If a coverage requirement contains two distinct ideas, do not join them together in one H2.
+
+Where Stage 1.5A has already created separate sections, give those ideas separate H2s.
+
+Where Stage 1.5A has only one section, keep the dominant idea in the H2 and leave secondary coverage for an H3 or body content.
+
+Do not omit required article coverage, but do not make the H2 carry every supporting element.
 --- SYSTEM INSTRUCTION ---
 Stage 1.5A has created a section structure below.
 Your ONLY job is to create an H2 heading for each section.
@@ -1807,7 +1919,7 @@ Use plain language instead.
 --- RECOVERY BLUEPRINT ---
 ${recoveryBlueprint || 'No Recovery Blueprint available.'}
 --- SECTION STRUCTURE FROM STAGE 1.5A ---
-${structure15A}
+${structure15AForH2}
 --- HUB-INTRO HANDLING RULE ---
 If the section structure includes:
 HUB-INTRO: id="hub-intro" | H2="None" | CONTENT="One orienting sentence and a quick-links navigation list only"

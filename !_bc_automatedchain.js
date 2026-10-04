@@ -4497,7 +4497,7 @@ function bc_runStage3Automated() {
       );
     }
 
-    var promptData = buildHumanisationPrompt(finalW2B3Html);;
+    var promptData = buildHumanisationPrompt(finalW2B3Html);
   if (!promptData.success) throw new Error(promptData.message);
 
   var apiResult = bc_sendPromptViaOpenAI(promptData.prompt, 8000);
