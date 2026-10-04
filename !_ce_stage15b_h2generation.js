@@ -1481,10 +1481,23 @@ function buildStage15BPrompt() {
       ""
     ).trim();
   const rewriteBrief =
-    String(
-      d["Page Rewrite Brief"] ||
-      "Not Applicable"
-    ).trim();
+  String(
+    d["Page Rewrite Brief"] ||
+    "Not Applicable"
+  ).trim();
+
+    /*
+    * H2 generation needs the page's subject and scope,
+    * but not internal escalation/query-governance instructions.
+    */
+    const rewriteBriefForH2 =
+      rewriteBrief
+        .split('|')
+        .filter(function(part) {
+          return !/^\s*(ESCALATION BOUNDARY|QUERY PRECISION ACTION)\s*:/i.test(part);
+        })
+        .join(' | ')
+        .trim();
   const sfWhatTheyFound =
     String(
       d["ac_entry_condition"] ||
@@ -1882,7 +1895,7 @@ H2 STORY FRAMEWORK RULES:
 ${articleAngleBlock}
 --- PRIMARY THEMATIC GOVERNANCE ---
 REWRITE BRIEF:
-${rewriteBrief}
+${rewriteBriefForH2 || "Not Applicable"}
 If the Rewrite Brief above is NOT "Not Applicable", adapt the tone, vocabulary and specific angle of every H2 to align with it.
 The H2s must still respect the article-type rules and governed section roles.
 --- H2 SCOPE — HARD LOCK ---
@@ -1953,7 +1966,7 @@ If HUB-INTRO is present in the section structure, preserve it unchanged.
 Output ONLY HUB-INTRO if present, followed by the section numbers with H2s.
 If no HUB-INTRO is present, start with SECTION 1.
 Last line must be:
-Stage 1.5B complete. Waiting for Stage 1.5C.
+Stage 1.5B MAIN GENERATOR complete. Waiting for Stage 1.5C.
 `.trim();
   return prompt;
 }
