@@ -292,7 +292,7 @@ Images: marble-crystals.webp
 Images: marble-before.webp, marble-after.webp
 Do not invent filenames.
 ESCALATION-BOUNDARY PRODUCT IMAGE RULE — HARD LOCK:
-If an image depicts a professional-only product or material named inside an escalation boundary, assign it to the professional escalation or handoff section.
+If an image depicts a professional-only product or material, assign it to the governed section that actually covers that professional intervention, protection or aftercare topic.
 Do not place a professional-only product image beside DIY avoidance advice in a way that visually suggests homeowner use.
 IMAGE CONTEXT RULE — HARD LOCK:
 Every image used in the eventual article must have substantive explanatory text before it.
@@ -342,7 +342,22 @@ Use a maximum of approximately 3-4 visual patterns across the entire article.
 Sections below roughly 200 words rarely need a visual pattern.
 `;
   prompt += `
+--- ORIGINAL ARTICLE EVIDENCE — HARD LOCK ---
+
+For a Case Study, the original article HTML below is the factual evidence source for what actually happened on this project.
+
+Do not introduce a product, defect, condition, treatment, cause or outcome merely because it appears in the Recovery Blueprint.
+
+A Case Study entity may be used only when it is supported by:
+- the original article evidence below; or
+- the governed Stage 1.5A / Stage 1.5B structure.
+
+ORIGINAL ARTICLE HTML:
+
+${originalHtml || "No original article HTML available."}
+
 --- ENTITY SELECTION ---
+
 Use entities from the Recovery Blueprint below.
 Select only entities genuinely relevant to the section topic.
 Prefer 1-3 entities per section.
@@ -364,6 +379,12 @@ Its:
 Internal link:
 field must contain the exact Feeds Hub URL above, unless no hub URL exists.
 Do not populate Internal link for unrelated sections.
+
+If the section's TSM Requirement is NOT exactly "Internal Link to Hub", its Internal link field MUST be:
+
+Internal link: None
+
+Do not add a hub link merely because it would be useful or relevant.
 --- SECTION LOAD BUDGET — HARD LOCK ---
 Before assigning enrichment elements to a section, calculate the approximate load:
 - Image assigned: 40 words
@@ -396,27 +417,34 @@ WRONG:
 CORRECT:
 "Detail the two-step filling process."
 WRONG:
-"Explain the Tailored Maintenance Handover."
+
+"Explain the Maintenance Handover and Escalation Link."
+
 CORRECT:
-"Explain the maintenance routine given to the homeowner, tailored to this floor."
+
+"Explain the practical aftercare advice relevant to this section in plain homeowner language."
 The Content Brief tells the later writer what concept to cover.
+
 It must not accidentally encourage governance entity labels to appear verbatim in body copy.
+
+TSM Requirement names are internal governance labels.
+
+Do not repeat a TSM Requirement name in the Content Brief unless the same words are natural reader-facing language.
+
+Translate the requirement into plain language describing what the section should actually cover.
 --- AUTHORITY DISTRIBUTION RULE — HARD LOCK ---
-For Case Study structures using the standard four-section authority sequence:
-Section 1:
-entry condition and problem identification only.
-Do not front-load:
-- technical mechanism;
-- process rationale;
-- specialist judgement;
-- or final outcome.
-Section 2:
-technical mechanism and cause explanation.
-Section 3:
-professional judgement and process rationale.
-Section 4:
-outcome, transformation, maintenance handover or the governed final-section role.
-Where the Stage 1.5A structure differs from this standard pattern, follow Stage 1.5A rather than forcing the four-section example.
+
+For Case Studies, follow the actual Stage 1.5A section structure and project chronology.
+
+Do not assume a fixed four-section sequence.
+
+Each section must keep the purpose already assigned by Stage 1.5A.
+
+Where one governed coverage role spans several sections, enrich each section according to its distinct project stage.
+
+Do not merge several stages into one section merely because they share the same TSM Requirement.
+
+Maintenance, aftercare and escalation coverage may be placed in H3s or body content where secondary to the section's main reader-facing topic.
 --- FRESH GOVERNED SECTION STRUCTURE FROM W1.5A ---
 ${structure15A}
 --- FRESH VALIDATED H2 SET FROM W1.5B ---
@@ -452,11 +480,22 @@ Internal link: None
 --- LIST ELIGIBILITY — RULE 16 GATE ---
 For each numbered section decide whether a list is genuinely appropriate.
 Mark:
+
 List eligible: YES — procedural/diagnostic only
+
 only when ALL THREE conditions are true:
-1. The items are genuinely discrete.
-2. There will be at least four items.
-3. The reader benefits from scanning and identifying them rather than reading connected explanation.
+
+1. The section itself contains at least four genuinely discrete procedural steps or diagnostic checks. Tools, products, floor areas, components or pieces of equipment do NOT count as separate items unless each represents its own distinct action or diagnostic decision.
+
+2. Those four or more items are explicitly supported by the section's governed purpose and Content Brief.
+
+3. The reader benefits from scanning and identifying those items rather than reading connected explanation.
+
+Do not mark a section YES merely because the topic is procedural.
+
+If the Content Brief describes fewer than four distinct items or stages, mark:
+
+List eligible: NO — prose required
 If any condition fails:
 List eligible: NO — prose required
 A section with fewer than four discrete items must be marked NO.
@@ -477,13 +516,13 @@ Visual Pattern: [Symptom-Anchor / Diagnostic-Sequence / Comparison-Paragraphs / 
 List eligible: [YES — procedural/diagnostic only / YES — named product steps preserved from original HTML / NO — prose required]
 Images: [exact eligible filenames separated by commas, or None]
 Videos: [exact iframe src URL(s), or None]
-Entities to include: [0-3 entities from Recovery Blueprint that directly support THIS SECTION'S governed TSM Requirement, Primary Entity and Rewrite Brief scope, or "None"]
+Entities to include: [0-3 entities from Recovery Blueprint that directly support THIS SECTION'S reader-facing H2, governed purpose, Primary Entity and Rewrite Brief scope, or "None"]
 
 ENTITY ROLE GATE — HARD LOCK:
 A Recovery Blueprint entity is NOT automatically required body coverage merely because it is technically valid for the material.
 
 Before assigning any entity:
-1. Confirm it directly serves the section's stated TSM Requirement.
+1. Confirm it directly serves the section's reader-facing H2 and governed purpose.
 2. Confirm it supports the page's Primary Entity and Article Type.
 3. Confirm it does not introduce an intent prohibited or minimised by the Rewrite Brief SCOPE BOUNDARY.
 4. Confirm it does not turn a principle-level or decision-support section into a standalone cleaning, repair, maintenance, sealing, polishing or other method workflow.
@@ -660,9 +699,14 @@ function ce_getStage15CGovernedRequirements_() {
     };
   }
   const expectedSections = [];
-  const expectedH2s = {};
+
+const expectedH2s = {};
+
+const expectedTsmRequirements = {};
+
+const expectedWordBudgets = {};
   const structureRegex =
-    /^SECTION\s+(\d+):/gmi;
+  /^SECTION\s+(\d+):\s*Order\s+\d+\s+—\s+(.+?)\s+—\s+(\d+[–-]\d+\s+words)/gmi;
   let structureMatch;
   while (
     (
@@ -673,20 +717,38 @@ function ce_getStage15CGovernedRequirements_() {
     ) !== null
   ) {
     const number =
-      Number(
-        structureMatch[1]
-      );
-    if (
-      expectedSections.indexOf(
-        number
-      ) === -1
-    ) {
-      expectedSections.push(
-        number
-      );
-    }
-  }
-  expectedSections.sort(
+  Number(
+    structureMatch[1]
+  );
+
+const tsmRequirement =
+  String(
+    structureMatch[2] || ''
+  ).trim();
+
+const wordBudget =
+  String(
+    structureMatch[3] || ''
+  ).trim();
+
+if (
+  expectedSections.indexOf(
+    number
+  ) === -1
+) {
+  expectedSections.push(
+    number
+  );
+}
+
+expectedTsmRequirements[number] =
+  tsmRequirement;
+
+expectedWordBudgets[number] =
+  wordBudget;
+}
+
+expectedSections.sort(
     function(a, b) {
       return a - b;
     }
@@ -764,9 +826,16 @@ function ce_getStage15CGovernedRequirements_() {
     expectedSections:
       expectedSections,
     expectedH2s:
-      expectedH2s,
-    expectsHubIntro:
-      expectsHubIntro
+    expectedH2s,
+
+  expectedTsmRequirements:
+    expectedTsmRequirements,
+
+  expectedWordBudgets:
+    expectedWordBudgets,
+
+  expectsHubIntro:
+    expectsHubIntro
   };
 }
 /* ============================================================

@@ -817,7 +817,7 @@ SECTION 1: Heading H2: [unchanged or corrected H2]
 SECTION 2: Heading H2: [unchanged or corrected H2]
 ...
 Last line must be:
-Stage 1.5B complete. Waiting for Stage 1.5C.
+Stage 1.5B GOVERNANCE FIX complete. Waiting for Stage 1.5C.
 `.trim();
   return prompt;
 }

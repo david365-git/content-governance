@@ -456,8 +456,67 @@ function saveStage15CEnrichedPlan(plan) {
         }
       );
     }
+        governed.expectedSections.forEach(
+      function(number) {
+        const blockRegex =
+          new RegExp(
+            '^SECTION\\s+' +
+            number +
+            ':[\\s\\S]*?(?=^SECTION\\s+\\d+:|^Stage 1\\.5C complete\\.|$)',
+            'mi'
+          );
+
+        const blockMatch =
+          cleanedPlan.match(blockRegex);
+
+        if (!blockMatch) {
+          return;
+        }
+
+        const block =
+          blockMatch[0];
+
+        const tsmMatch =
+          block.match(
+            /^TSM Requirement:\s*(.+)$/mi
+          );
+
+        const budgetMatch =
+          block.match(
+            /^Word Budget:\s*(.+)$/mi
+          );
+
+        if (
+          tsmMatch &&
+          tsmMatch[1].trim() !==
+          governed.expectedTsmRequirements[number]
+        ) {
+          errors.push(
+            'SECTION ' +
+            number +
+            ' TSM Requirement does not exactly match W1.5A.'
+          );
+        }
+
+        if (
+          budgetMatch &&
+          budgetMatch[1].trim() !==
+          governed.expectedWordBudgets[number]
+        ) {
+          errors.push(
+            'SECTION ' +
+            number +
+            ' Word Budget does not exactly match W1.5A.'
+          );
+        }
+      }
+    );
+
+    
+
     const completionLine =
-      'Stage 1.5C complete. Waiting for Stage 1.5D.';
+  'Stage 1.5C complete. Waiting for Stage 1.5D.';
+
     if (
       !cleanedPlan.endsWith(
         completionLine
