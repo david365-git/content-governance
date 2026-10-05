@@ -22,6 +22,8 @@ function buildStage15APrompt() {
   const material      = d["Stone Type"]      || "UNKNOWN";
   const articleType   = d["Article Type"]    || "General";
   const primaryEntity = d["Primary Entity"] || material;
+  const locality      = String(d["Locality"] || "").trim();
+  const parentArea    = String(d["Parent Area"] || "").trim();
   const commFlag      = d["COMM Flag"]      || "No";
   const geoctaFlag    = d["GEOCTA Flag"]    || "No";
 
@@ -122,6 +124,8 @@ MATERIAL: ${material}
 ARTICLE TYPE: ${articleType}
 TIER: ${tierLabel}
 PRIMARY ENTITY: ${primaryEntity}
+LOCALITY: ${locality || "(not supplied)"}
+PARENT AREA: ${parentArea || "(not supplied)"}
 MINIMUM WORD BUDGET: ${tierWordCount} words
 COMM FLAG: ${commFlag}
 GEOCTA FLAG: ${geoctaFlag}
@@ -218,6 +222,14 @@ Article Type: ${articleType}
 On-Page Content Expectations: ${onPageExpectations}
 ${reasoning ? 'Content Strategy: ' + reasoning : ''}
 
+${articleType === "Case Study" ? `
+CASE STUDY LOCATION RULE — HARD LOCK:
+Use the actual LOCALITY value supplied above wherever the project location is named.
+Use PARENT AREA only where it is factually useful and natural.
+Never output placeholders such as [Town/City], [Location], [Area], [Locality], [Parent Area], or similar template text.
+If LOCALITY is supplied, do not replace it with a generic location label.
+` : ""}
+
 --- TSM REQUIREMENTS (${material} ${tierLabel}) ---
 ${tsmBlock}
 
@@ -281,6 +293,13 @@ Then output the section mapping using this format:
 SECTION 1: Order [N] — [Requirement Name] — [min]–[max] words
 
 For Case Study, Method Guide, Diagnostic Guide and Educational Guide articles, the same Order [N] may appear on more than one SECTION where several genuine reader-facing sections collectively satisfy that TSM coverage role.
+
+WORD BUDGET SPLIT — HARD LOCK:
+When one TSM Order is represented by more than one SECTION, SPLIT that Order's governed word range across those sections.
+The combined minimums of all sections carrying that Order must equal the governed minimum for that Order.
+The combined maximums of all sections carrying that Order must equal the governed maximum for that Order.
+Do NOT give each repeated section a fresh independent allowance.
+Example: if Order 2 is governed at 700–840 words and appears across five sections, those five section ranges together must total exactly 700–840 words.
 
 Do not duplicate an Order merely to increase section count. Repeat an Order only where the article genuinely needs separate sections for distinct parts of that coverage area.
 ...
