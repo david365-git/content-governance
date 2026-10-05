@@ -372,19 +372,25 @@ ${entityGapAnalysis || "No W0 Entity Gap Analysis available for this row."}
 --- INTERNAL LINK TO HUB — HARD LOCK ---
 Feeds Hub URL:
 ${feedsHub || "none available — omit internal link"}
-If a section's TSM Requirement is:
-Internal Link to Hub
-then that section's Content Brief must explicitly direct the reader toward the hub.
-Its:
-Internal link:
-field must contain the exact Feeds Hub URL above, unless no hub URL exists.
-Do not populate Internal link for unrelated sections.
+Every article should contain one contextual internal link to its Feeds Hub when a Feeds Hub URL is available.
 
-If the section's TSM Requirement is NOT exactly "Internal Link to Hub", its Internal link field MUST be:
+The hub link is an enrichment requirement. It does NOT alter, replace or create a TSM Requirement.
+
+Preserve every section's Stage 1.5A TSM Requirement verbatim.
+
+Assign the hub link to the single most contextually appropriate governed section.
+
+That section's:
+
+Internal link:
+
+field must contain the exact Feeds Hub URL above.
+
+All other numbered sections must use:
 
 Internal link: None
 
-Do not add a hub link merely because it would be useful or relevant.
+Never rename a section's TSM Requirement to "Internal Link to Hub" in order to assign the link.
 --- SECTION LOAD BUDGET — HARD LOCK ---
 Before assigning enrichment elements to a section, calculate the approximate load:
 - Image assigned: 40 words
@@ -530,7 +536,7 @@ Before assigning any entity:
 
 The Rewrite Brief scope overrides Recovery Blueprint completeness.
 Do not force technical entities into a section merely to achieve entity coverage.
-Internal link: [exact Feeds Hub URL only where governed, otherwise None]
+Internal link: [exact Feeds Hub URL in the single most contextually appropriate section when a Feeds Hub URL exists; otherwise None]
 Do not omit any required field.
 Do not add extra fields.
 Do not include commentary between sections.
@@ -543,7 +549,7 @@ Before finalising, internally verify:
 5. Every eligible original image is assigned exactly once unless the same source image is genuinely reused in the original content.
 6. Every original video is preserved.
 7. HUB-INTRO is preserved if present.
-8. Internal Link to Hub is assigned only to the governed section.
+8. The Feeds Hub link is assigned to exactly one contextually appropriate section without changing that section's Stage 1.5A TSM Requirement.
 9. No section has been overloaded beyond its available word budget.
 10. No enrichment choice changes the governed purpose of a section.
 Last line must be exactly:
