@@ -459,12 +459,12 @@ function saveStage15CEnrichedPlan(plan) {
         governed.expectedSections.forEach(
       function(number) {
         const blockRegex =
-          new RegExp(
-            '^SECTION\\s+' +
-            number +
-            ':[\\s\\S]*?(?=^SECTION\\s+\\d+:|^Stage 1\\.5C complete\\.|$)',
-            'mi'
-          );
+        new RegExp(
+          '(?:^|\\n)SECTION\\s+' +
+          number +
+          ':[\\s\\S]*?(?=\\nSECTION\\s+\\d+:|\\nStage 1\\.5C complete\\.|$)',
+          'i'
+        );
 
         const blockMatch =
           cleanedPlan.match(blockRegex);
@@ -822,3 +822,4 @@ function saveStage15EOptimizations(optimizations) {
     };
   }
 }
+

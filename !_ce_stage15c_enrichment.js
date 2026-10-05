@@ -863,3 +863,15 @@ function ce_stripStage15CCodeFences_(text) {
     )
     .trim();
 }
+
+function testStage15CGovernedRequirements() {
+  const governed = ce_getStage15CGovernedRequirements_();
+
+  Logger.log(
+    JSON.stringify(
+      governed.expectedTsmRequirements,
+      null,
+      2
+    )
+  );
+}
