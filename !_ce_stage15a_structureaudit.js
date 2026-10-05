@@ -259,9 +259,16 @@ Preserve useful existing H2/H3 sections where they represent genuine project sta
 
 If the original article is haphazard, reorganise only as much as necessary to create a clear chronological project story.
 
-For Case Study articles only: if the project problem or challenge is only described in the opening introduction and there is no clear H2 introducing it, create a dedicated Problem/Challenge section before the intervention sequence.
+CASE STUDY PROBLEM SECTION — HARD LOCK:
+For Case Study articles, inspect the existing article structure before mapping sections.
 
-Do not add that section if an existing H2 already clearly introduces the problem.
+If there is no existing H2 that clearly introduces the homeowner's project problem or challenge, you MUST create a dedicated Order 2 — Problem & Intervention section before any assessment, test clean, cleaning, repair, rinsing, sealing or other intervention section.
+
+The heading for this dedicated section must describe the homeowner's problem or the floor condition only. It must NOT describe the solution, test clean, cleaning method, repair, rinsing, sealing or outcome.
+
+Do not add a new problem section only when an existing H2 already clearly performs that problem/challenge role.
+
+AUDIT CHECK 10 must FAIL if a Case Study needs this dedicated problem/challenge section and the proposed mapping omits it.
 
 A TSM role such as Problem & Intervention may legitimately span several sections, for example:
 - homeowner problem or challenge;
