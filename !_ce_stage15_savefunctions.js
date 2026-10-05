@@ -48,6 +48,127 @@ function saveStage15AStructure(structure) {
         };
       }
 
+      // Reject unresolved location/template placeholders.
+      if (/\[(?:Town\/City|Location|Area|Locality|Parent Area)\]/i.test(cleanedStructure)) {
+        return {
+          success: false,
+          message:
+            'W1.5A contains an unresolved location placeholder — structure not saved to CU.'
+        };
+      }
+
+      // Hard-lock aggregate word budgets for repeated TSM Orders.
+      const d = getActiveRowDataMap();
+      const material = d["Stone Type"] || "UNKNOWN";
+      const articleType = d["Article Type"] || "General";
+      const secondaryIntents =
+        String(d["Secondary Intent Decisions"] || "");
+
+      const tierMap = {
+        "Hub Page":          "Tier 1",
+        "Educational Guide": "Tier 1",
+        "Method Guide":      "Tier 2",
+        "Service Page":      "Tier 2",
+        "Geo Service Page":  "Tier 2",
+        "Diagnostic Guide":  "Tier 3",
+        "Buyer Guide":       "Tier 3",
+        "FAQ Spoke":         "Tier 3",
+        "Case Study":        "Tier 4"
+      };
+
+      const tierLabel = tierMap[articleType] || "Tier 2";
+      let tsmData =
+        getTierStructuralRequirements(
+          material,
+          tierLabel,
+          articleType
+        ) || [];
+
+      tsmData = tsmData.filter(function(req) {
+        return !secondaryIntents.includes(
+          "N — " + req.name
+        );
+      });
+
+      const expectedByOrder = {};
+      tsmData.forEach(function(req, index) {
+        const minWords = Number(req.wordCount || 0);
+        expectedByOrder[index + 1] = {
+          name: String(req.name || ""),
+          min: minWords,
+          max: Math.round(minWords * 1.2)
+        };
+      });
+
+      const actualByOrder = {};
+      const sectionLineRegex =
+        /^SECTION\s+\d+:\s*Order\s+(\d+)\b[^\n]*?—\s*(\d+)\s*[–-]\s*(\d+)\s+words\b/gmi;
+
+      let sectionMatch;
+      while ((sectionMatch = sectionLineRegex.exec(cleanedStructure)) !== null) {
+        const order = Number(sectionMatch[1]);
+        const minWords = Number(sectionMatch[2]);
+        const maxWords = Number(sectionMatch[3]);
+
+        if (!actualByOrder[order]) {
+          actualByOrder[order] = {
+            min: 0,
+            max: 0
+          };
+        }
+
+        actualByOrder[order].min += minWords;
+        actualByOrder[order].max += maxWords;
+      }
+
+      const budgetErrors = [];
+
+      Object.keys(expectedByOrder).forEach(function(key) {
+        const order = Number(key);
+        const expected = expectedByOrder[order];
+        const actual = actualByOrder[order];
+
+        if (!actual) {
+          budgetErrors.push(
+            'Order ' + order +
+            ' (' + expected.name + ') has no mapped word budget.'
+          );
+          return;
+        }
+
+        if (
+          actual.min !== expected.min ||
+          actual.max !== expected.max
+        ) {
+          budgetErrors.push(
+            'Order ' + order +
+            ' (' + expected.name + ') totals ' +
+            actual.min + '–' + actual.max +
+            ' words; governed total is ' +
+            expected.min + '–' + expected.max + '.'
+          );
+        }
+      });
+
+      Object.keys(actualByOrder).forEach(function(key) {
+        const order = Number(key);
+        if (!expectedByOrder[order]) {
+          budgetErrors.push(
+            'Unexpected Order ' + order +
+            ' appears in the section mapping.'
+          );
+        }
+      });
+
+      if (budgetErrors.length > 0) {
+        return {
+          success: false,
+          message:
+            'W1.5A word-budget validation failed — structure not saved to CU. ' +
+            budgetErrors.join(' | ')
+        };
+      }
+
       // Save to Column CU (99)
       const cell = sheet.getRange(row, 99);
       cell.setValue(cleanedStructure);
