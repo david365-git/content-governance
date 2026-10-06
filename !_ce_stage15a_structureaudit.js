@@ -309,6 +309,37 @@ Do NOT give each repeated section a fresh independent allowance.
 Example: if Order 2 is governed at 700–840 words and appears across five sections, those five section ranges together must total exactly 700–840 words.
 
 Do not duplicate an Order merely to increase section count. Repeat an Order only where the article genuinely needs separate sections for distinct parts of that coverage area.
+
+HEADING HIERARCHY — HARD LOCK:
+For every numbered SECTION, assign either H2 or H3.
+
+Use H2 when the section is a major independent reader-facing stage, problem, decision, outcome, maintenance topic or change in the project story.
+
+Use H3 only when the section is an identifiable sub-process or sub-stage that clearly belongs underneath the immediately preceding H2.
+An H3 must:
+- be subordinate to the preceding H2;
+- describe part of the same broader process or stage;
+- make less sense as a standalone major section than as a child of that H2.
+
+Typical H3 candidates include separate professional-cleaning sub-processes such as scrubbing, rinsing, extraction, drying or another clearly subordinate step beneath a broader cleaning/restoration H2.
+
+Do NOT use H3 for:
+- the homeowner's core problem;
+- a major assessment or decision;
+- a distinct treatment stage that changes the story direction;
+- the measurable outcome;
+- maintenance handover;
+- any section that should stand independently for the reader.
+
+Never begin the article structure with H3.
+Never place an H3 after another H3 unless both clearly belong to the same most recent H2 parent.
+Preserve an existing H3 where it still functions as a genuine sub-process.
+If an existing heading is H2 but is clearly only a subordinate sub-process of the preceding H2, it may be demoted to H3.
+
+For every mapped section, include the heading level and a concise working topic using this exact pattern:
+SECTION 1: Order [N] — [Requirement Name] — [min]–[max] words — H2: [working section topic]
+or:
+SECTION 2: Order [N] — [Requirement Name] — [min]–[max] words — H3: [working sub-process topic]
 ...
 
 --- OUTPUT INSTRUCTION ---
