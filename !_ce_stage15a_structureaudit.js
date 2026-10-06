@@ -19,8 +19,9 @@ function buildStage15APrompt() {
   if (row < 2) return 'ERROR: Select a data row (row 2 or below).';
 
   const d             = getActiveRowDataMap();
-  const material      = d["Stone Type"]      || "UNKNOWN";
-  const articleType   = d["Article Type"]    || "General";
+  const material      = String(d["Stone Type"] || "UNKNOWN").trim();
+  const articleType   = String(d["Article Type"] || "").replace(/\s+/g, " ").trim();
+  const articleTypeKey = articleType.toLowerCase();
   const primaryEntity = d["Primary Entity"] || material;
   const locality      = String(d["Locality"] || "").trim();
   const parentArea    = String(d["Parent Area"] || "").trim();
@@ -35,18 +36,27 @@ const existingStructure = String(d["Current Headings"] || "").trim();
 
   // Auto-detect tier from Article Type
   const tierMap = {
-    "Hub Page":          "Tier 1",
-    "Educational Guide": "Tier 1",
-    "Method Guide":      "Tier 2",
-    "Service Page":      "Tier 2",
-    "Geo Service Page":  "Tier 2",
-    "Diagnostic Guide":  "Tier 3",
-    "Buyer Guide":       "Tier 3",
-    "FAQ Spoke":         "Tier 3",
-    "Case Study":        "Tier 4"
+    "hub page":          "Tier 1",
+    "educational guide": "Tier 1",
+    "method guide":      "Tier 2",
+    "service page":      "Tier 2",
+    "geo service page":  "Tier 2",
+    "diagnostic guide":  "Tier 3",
+    "buyer guide":       "Tier 3",
+    "faq spoke":         "Tier 3",
+    "case study":        "Tier 4"
   };
 
-  const tierLabel = tierMap[articleType] || "Tier 2";
+  if (!articleType) {
+    return 'ERROR: Article Type is blank for the selected row.';
+  }
+
+  const tierLabel = tierMap[articleTypeKey];
+
+  if (!tierLabel) {
+    return 'ERROR: Unrecognised Article Type "' + articleType +
+           '". Check the Article Type value in the selected posts row.';
+  }
 
   // Get TSM requirements for this tier
   let tsmData = getTierStructuralRequirements(material, tierLabel, articleType);
