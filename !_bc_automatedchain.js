@@ -2318,6 +2318,11 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
           );
         }
 
+        var finalRule17BeforeFix =
+          String(
+            cvCell.getValue() || ''
+          ).trim();
+
         var finalRule17Fix =
           bc_sendPromptViaOpenAI(
             finalRule17FixPrompt,
@@ -2342,6 +2347,20 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
         if (!finalRule17Save.success) {
           throw new Error(
             finalRule17Save.message
+          );
+        }
+
+        var finalRule17AfterFix =
+          String(
+            cvCell.getValue() || ''
+          ).trim();
+
+        if (
+          finalRule17AfterFix ===
+          finalRule17BeforeFix
+        ) {
+          throw new Error(
+            'Final Rule 17 repair produced no change in CV.'
           );
         }
 
@@ -2448,6 +2467,22 @@ function bc_runH2GovernanceW15BAutomated() {
     return { success: true, message: saveResult.message, cost: totalCost };
   }
 
+  var h2sBeforeGovernanceFix =
+    String(
+      SpreadsheetApp
+        .getActiveSpreadsheet()
+        .getSheetByName('posts')
+        .getRange(
+          SpreadsheetApp
+            .getActiveSpreadsheet()
+            .getSheetByName('posts')
+            .getActiveRange()
+            .getRow(),
+          100
+        )
+        .getValue() || ''
+    ).trim();
+
   var fixPrompt = buildH2GovernanceFixPromptW15B();
   if (typeof fixPrompt !== 'string' || fixPrompt.indexOf('ERROR') === 0) {
     throw new Error('FAIL saved, but fix prompt could not be built — ' + fixPrompt);
@@ -2462,6 +2497,31 @@ function bc_runH2GovernanceW15BAutomated() {
 
   var saveH2sResult = saveStage15BH2s(fixResult.text);
   if (!saveH2sResult.success) throw new Error(saveH2sResult.message);
+
+  var h2sAfterGovernanceFix =
+    String(
+      SpreadsheetApp
+        .getActiveSpreadsheet()
+        .getSheetByName('posts')
+        .getRange(
+          SpreadsheetApp
+            .getActiveSpreadsheet()
+            .getSheetByName('posts')
+            .getActiveRange()
+            .getRow(),
+          100
+        )
+        .getValue() || ''
+    ).trim();
+
+  if (
+    h2sAfterGovernanceFix ===
+    h2sBeforeGovernanceFix
+  ) {
+    throw new Error(
+      'Rule 17 repair produced no change in CV.'
+    );
+  }
 
   var recheckPrompt = buildH2GovernanceCheckPromptW15B();
   var recheckResult = bc_sendPromptViaOpenAI(
