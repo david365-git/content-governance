@@ -348,6 +348,19 @@ For a Case Study, the original article HTML below is the factual evidence source
 
 Do not introduce a product, defect, condition, treatment, cause or outcome merely because it appears in the Recovery Blueprint.
 
+CERAMIC TILE SEALING — HARD LOCK:
+Ceramic tile sealing is permitted where the project evidence supports it.
+Do NOT assume that a glazed ceramic tile surface cannot or must not be sealed.
+A project may legitimately record sealer applied to:
+- the ceramic tile surface;
+- the grout joints;
+- or both tile and grout.
+
+Preserve the sealing scope stated in the original article evidence.
+If the source says sealer was applied to the floor, including the grout joints, do NOT rewrite that as grout-only sealing.
+If the source says grout only was sealed, preserve grout-only.
+Do not invent a broader sealing scope than the evidence supports.
+
 A Case Study entity may be used only when it is supported by:
 - the original article evidence below; or
 - the governed Stage 1.5A / Stage 1.5B structure.
