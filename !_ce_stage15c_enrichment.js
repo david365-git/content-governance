@@ -514,7 +514,7 @@ Do not invent a product name that is not present in the source HTML.
 If HUB-INTRO exists, output it first in the exact special format above.
 Then output EVERY numbered section.
 For each numbered section use exactly this structure:
-SECTION [N]: Heading H2: [copy the Stage 1.5B H2 verbatim]
+SECTION [N]: Heading H2/H3: [copy the Stage 1.5B section heading line verbatim, including its H2 or H3 level]
 TSM Requirement: [copy the Stage 1.5A TSM Requirement verbatim]
 Word Budget: [copy the Stage 1.5A Word Budget verbatim]
 Content Brief: [1-2 sentences]
@@ -707,6 +707,7 @@ function ce_getStage15CGovernedRequirements_() {
   const expectedSections = [];
 
 const expectedH2s = {};
+const expectedHeadingLevels = {};
 
 const expectedTsmRequirements = {};
 
@@ -769,7 +770,7 @@ expectedSections.sort(
     };
   }
   const h2Regex =
-    /^SECTION\s+(\d+):\s*(?:Heading H2:\s*)?(.+)$/gmi;
+    /^SECTION\s+(\d+):\s*Heading\s+(H[23]):\s*(.+)$/gmi;
   let h2Match;
   while (
     (
@@ -783,13 +784,19 @@ expectedSections.sort(
       Number(
         h2Match[1]
       );
+    const level =
+      String(
+        h2Match[2] || 'H2'
+      ).toUpperCase();
     const heading =
       String(
-        h2Match[2] || ''
+        h2Match[3] || ''
       ).trim();
     if (heading) {
       expectedH2s[number] =
         heading;
+      expectedHeadingLevels[number] =
+        level;
     }
   }
   const missingH2s = [];
@@ -810,7 +817,7 @@ expectedSections.sort(
     return {
       success: false,
       message:
-        'Current W1.5B output is incomplete — missing H2 for SECTION ' +
+        'Current W1.5B output is incomplete — missing governed heading for SECTION ' +
         missingH2s.join(', SECTION ') +
         '.'
     };
@@ -833,6 +840,9 @@ expectedSections.sort(
       expectedSections,
     expectedH2s:
     expectedH2s,
+
+  expectedHeadingLevels:
+    expectedHeadingLevels,
 
   expectedTsmRequirements:
     expectedTsmRequirements,
