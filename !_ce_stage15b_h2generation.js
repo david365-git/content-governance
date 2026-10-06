@@ -845,8 +845,19 @@ ${siblingHeadings
   : ''}
 ${minimumChangeStandard}
 --- TASK ---
-Rewrite ONLY the H2 headings listed above as failing.
-Every other H2 heading in the current set must be copied back EXACTLY unchanged — same wording, same SECTION number, same order.
+Rewrite ONLY the headings listed above as failing.
+Every other heading in the current set must be copied back EXACTLY unchanged — same wording, same SECTION number, same H2/H3 level, same order.
+
+MANDATORY CORRECTION — HARD LOCK:
+Every heading listed in FAILING HEADINGS must be changed.
+Do NOT return a failing heading character-for-character unchanged.
+The corrected wording must directly resolve the specific TEST failure and follow the supplied WHAT TO CHANGE instruction where one is present.
+If the failure can be resolved with a minimal wording change, make that minimal change.
+Passing headings must not change.
+
+HEADING LEVEL — HARD LOCK:
+Preserve the exact H2 or H3 level already present for every SECTION.
+Never promote H3 to H2 and never demote H2 to H3.
 For each failing heading, apply Rule 17 corrections:
 - If it failed Test 1 (Section Match):
   correct only the wording that misrepresents, narrows, broadens or changes the section's existing purpose.
@@ -878,7 +889,8 @@ For EACH failing H2:
       - creates two consecutive question-format H2s;
       - repeats an opening construction such as "Are your...", "Is your...", "Why...", "How...", "When..." or "What..." where an adjacent H2 already uses the same construction.
 4. Select the strongest remaining candidate.
-5. Return ONLY that selected corrected heading in the final H2 list.
+5. Confirm internally that the selected replacement is NOT identical to the failing heading and that it resolves the stated failure.
+6. Return ONLY that selected corrected heading in the final heading list.
 Apply the MINIMUM CHANGE STANDARD above.
 Do not make any additional stylistic or structural change beyond what is required to make the failing H2 pass its identified Rule 17 test(s).
 STRUCTURAL ROLE PRESERVATION — HARD LOCK:
@@ -902,10 +914,15 @@ Do not expose the rejected candidate headings in the final output.
 Do NOT rewrite, improve, or rephrase any heading not listed above as failing — even if you think it could be better.
 Only the listed failing headings may change.
 --- OUTPUT FORMAT ---
-Output the COMPLETE H2 list, in the same SECTION N order as the current set, with only the failing headings corrected:
-SECTION 1: Heading H2: [unchanged or corrected H2]
-SECTION 2: Heading H2: [unchanged or corrected H2]
+Output the COMPLETE heading list, in the same SECTION N order as the current set, with only the failing headings corrected.
+
+Copy the existing heading level for every SECTION exactly:
+SECTION 1: Heading H2: [unchanged or corrected heading]
+SECTION 2: Heading H3: [unchanged or corrected heading]
+SECTION 3: Heading H2: [unchanged or corrected heading]
 ...
+
+Use H2 or H3 according to the level already present in CURRENT H2 HEADINGS. Do not output a generic level.
 Last line must be:
 Stage 1.5B GOVERNANCE FIX complete. Waiting for Stage 1.5C.
 `.trim();
