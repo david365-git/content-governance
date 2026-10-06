@@ -3310,10 +3310,10 @@ function saveW2BHtmlToSheet(html) {
     // --------------------------------------------
 
     const expectedSections = [];
-    const expectedH2s = {};
+    const expectedHeadings = {};
 
     const planRegex =
-      /^SECTION\s+(\d+):\s*(?:Heading H2:\s*)?(.+)$/gmi;
+      /^SECTION\s+(\d+):\s*(?:Heading\s+(H[23]):\s*)?(.+)$/gmi;
 
     let planMatch;
 
@@ -3331,17 +3331,24 @@ function saveW2BHtmlToSheet(html) {
           planMatch[1]
         );
 
+      const headingLevel =
+        String(
+          planMatch[2] || "H2"
+        ).toUpperCase();
+
       const heading =
         String(
-          planMatch[2] || ""
+          planMatch[3] || ""
         ).trim();
 
       expectedSections.push(
         number
       );
 
-      expectedH2s[number] =
-        heading;
+      expectedHeadings[number] = {
+        level: headingLevel,
+        text: heading
+      };
     }
 
     if (
@@ -3355,7 +3362,7 @@ function saveW2BHtmlToSheet(html) {
     }
 
     // --------------------------------------------
-    // EXTRACT GENERATED SECTIONS + H2s
+    // EXTRACT GENERATED SECTIONS + GOVERNED HEADING LEVELS
     // --------------------------------------------
 
     const generatedSections = [];
@@ -3384,22 +3391,27 @@ function saveW2BHtmlToSheet(html) {
       continue;
     }
 
-    const h2Match =
+    const headingMatch =
       block.match(
-        /<h2\b[^>]*>([\s\S]*?)<\/h2>/i
+        /<(h[23])\b[^>]*>([\s\S]*?)<\/\1>/i
       );
 
-      if (!h2Match) {
+      if (!headingMatch) {
         errors.push(
-          "A generated <section> block is missing its H2."
+          "A generated <section> block is missing its governed H2/H3 heading."
         );
 
         continue;
       }
 
+      const headingLevel =
+        String(
+          headingMatch[1] || ""
+        ).toUpperCase();
+
       const heading =
         String(
-          h2Match[1] || ""
+          headingMatch[2] || ""
         )
           .replace(/<[^>]+>/g, "")
           .replace(/&amp;/g, "&")
@@ -3408,9 +3420,10 @@ function saveW2BHtmlToSheet(html) {
           .replace(/&nbsp;/g, " ")
           .trim();
 
-      generatedSections.push(
-        heading
-      );
+      generatedSections.push({
+        level: headingLevel,
+        text: heading
+      });
     }
 
     if (
@@ -3427,7 +3440,7 @@ function saveW2BHtmlToSheet(html) {
     }
 
     // --------------------------------------------
-    // H2 LOCK
+    // GOVERNED HEADING LEVEL + TEXT LOCK
     // --------------------------------------------
 
     expectedSections.forEach(
@@ -3440,14 +3453,35 @@ function saveW2BHtmlToSheet(html) {
           return;
         }
 
+        const expected =
+          expectedHeadings[number];
+
+        const generated =
+          generatedSections[index];
+
         if (
-          generatedSections[index] !==
-          expectedH2s[number]
+          generated.level !==
+          expected.level
         ) {
           errors.push(
             "SECTION " +
             number +
-            " H2 does not exactly match the governed CX heading."
+            " heading level is " +
+            generated.level +
+            " but governed CX requires " +
+            expected.level +
+            "."
+          );
+        }
+
+        if (
+          generated.text !==
+          expected.text
+        ) {
+          errors.push(
+            "SECTION " +
+            number +
+            " heading does not exactly match the governed CX heading."
           );
         }
       }
