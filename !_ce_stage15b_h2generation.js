@@ -396,6 +396,12 @@ Examples:
 - Marble must not become generic "stone" where the heading is intended to describe this article specifically.
 
 When this fails, make the smallest wording correction necessary by replacing the incorrect material reference with the governed material. Do not otherwise rewrite the heading.
+
+CASE STUDY EVIDENCE LOCK:
+For Case Studies, a heading must not narrow or broaden what the source says actually happened.
+Restrictive wording such as "only", "solely", "just" or "exclusively" must FAIL when the supplied project evidence does not explicitly support that restriction.
+This includes sealing scope: do not convert evidence of floor/tile-and-grout sealing into grout-only sealing.
+
 FAIL only when it clearly:
 - introduces a new topic, service, method, material, outcome or decision;
 - changes a diagnosis section into a remedy section;
@@ -560,7 +566,7 @@ Do NOT fail merely because a heading mentions cleaning, sealing, repair, restora
 FAIL where a heading clearly recommends, implies or normalises a process, chemical, coating, tool or treatment that conflicts with the supplied material governance.
 Examples include:
 - abrasive refinishing of glazed ceramic where prohibited;
-- sealing a non-porous tile face where governance says it should not be sealed;
+- describing a sealing treatment in a way that contradicts the supplied material governance or original project evidence;
 - acidic treatment where the material governance prohibits acid.
 Only fail where the contradiction is clear.
 3. SUBSTRATE VS SURFACE CONFUSION
@@ -1626,6 +1632,33 @@ if (!structure15A) {
   return 'ERROR: No Stage 1.5A output found. Run W1.5A first.';
 }
 
+// ORIGINAL ARTICLE EVIDENCE — CASE STUDY FACT LOCK
+const postId = String(d["Post ID"] || "").trim();
+let originalHtml = "";
+if (postId) {
+  try {
+    const exportSheet = ss.getSheetByName("site-export");
+    if (exportSheet) {
+      const exportData = exportSheet.getDataRange().getValues();
+      if (exportData.length > 0) {
+        const exportHeaders = exportData[0];
+        const idCol = exportHeaders.indexOf("ID");
+        const htmlCol = exportHeaders.indexOf("Full Post HTML");
+        if (idCol > -1 && htmlCol > -1) {
+          for (let i = 1; i < exportData.length; i++) {
+            if (String(exportData[i][idCol]).trim() === postId) {
+              originalHtml = String(exportData[i][htmlCol] || "").trim();
+              break;
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    originalHtml = "";
+  }
+}
+
 /*
  * W1.5B must not see internal TSM role names because they can leak
  * into reader-facing H2 headings.
@@ -1893,6 +1926,23 @@ H2 STORY FRAMEWORK RULES:
 `
   : ''}
 ${articleAngleBlock}
+${isCaseStudy ? `
+--- ORIGINAL ARTICLE EVIDENCE — HARD LOCK ---
+For a Case Study, the original article HTML below is the factual authority for what actually happened on the project.
+Heading wording must preserve the scope of the recorded work.
+Do NOT narrow, broaden, contradict or reinterpret a treatment merely to make a heading shorter or more technically cautious.
+Words such as "only", "solely", "just" or "exclusively" may be used only when the original article evidence explicitly supports that restriction.
+
+CERAMIC TILE SEALING — HARD LOCK:
+Ceramic tile sealing is permitted when the project evidence records it.
+A project may record sealer applied to the tile surface, the grout joints, or both tile and grout.
+If the source says sealer was applied to the floor, including the grout joints, do NOT rewrite that as grout-only sealing.
+If the source says grout only was sealed, preserve grout-only.
+
+ORIGINAL ARTICLE HTML:
+${originalHtml || "No original article HTML available."}
+--- END ORIGINAL ARTICLE EVIDENCE ---
+` : ""}
 --- PRIMARY THEMATIC GOVERNANCE ---
 REWRITE BRIEF:
 ${rewriteBriefForH2 || "Not Applicable"}
