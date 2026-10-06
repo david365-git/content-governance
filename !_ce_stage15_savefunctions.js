@@ -218,17 +218,24 @@ function saveStage15BH2s(h2s) {
       };
     }
 
-    // Determine exactly which numbered sections W1.5A requires.
+    // Determine exactly which numbered sections W1.5A requires
+    // and preserve the governed H2/H3 level.
     const expectedSections = [];
-    const sectionRegex = /^SECTION\s+(\d+):/gmi;
+    const expectedLevels = {};
+    const sectionRegex = /^SECTION\s+(\d+):([^\n]*)$/gmi;
     let match;
 
     while ((match = sectionRegex.exec(structure)) !== null) {
       const number = Number(match[1]);
+      const line = String(match[2] || '');
+      const levelMatch = line.match(/(?:—|-)\s*(H[23])\s*:/i);
+      const level = levelMatch ? levelMatch[1].toUpperCase() : 'H2';
 
       if (expectedSections.indexOf(number) === -1) {
         expectedSections.push(number);
       }
+
+      expectedLevels[number] = level;
     }
 
     expectedSections.sort(function(a, b) {
@@ -269,17 +276,39 @@ function saveStage15BH2s(h2s) {
       }
 
       const number = Number(sectionMatch[1]);
-      let heading = String(sectionMatch[2] || '').trim();
+      let payload = String(sectionMatch[2] || '').trim();
 
-      // Accept either:
-      // SECTION 1: Heading H2: Example
-      // or
-      // SECTION 1: Example
-      heading = heading.replace(/^Heading H2:\s*/i, '').trim();
+      const explicitLevelMatch =
+        payload.match(/^Heading\s+(H[23]):\s*(.+)$/i);
+
+      let suppliedLevel = '';
+      let heading = payload;
+
+      if (explicitLevelMatch) {
+        suppliedLevel = explicitLevelMatch[1].toUpperCase();
+        heading = String(explicitLevelMatch[2] || '').trim();
+      } else {
+        heading = payload.replace(/^Heading\s+H\d:\s*/i, '').trim();
+      }
 
       if (!heading) {
         errors.push(
-          'SECTION ' + number + ' has no H2 heading.'
+          'SECTION ' + number + ' has no heading.'
+        );
+        return;
+      }
+
+      const expectedLevel =
+        expectedLevels[number] || 'H2';
+
+      if (
+        suppliedLevel &&
+        suppliedLevel !== expectedLevel
+      ) {
+        errors.push(
+          'SECTION ' + number +
+          ' must remain ' + expectedLevel +
+          ' as governed by W1.5A.'
         );
         return;
       }
@@ -294,7 +323,9 @@ function saveStage15BH2s(h2s) {
       foundSections[number] =
         'SECTION ' +
         number +
-        ': Heading H2: ' +
+        ': Heading ' +
+        expectedLevel +
+        ': ' +
         heading;
     });
 
@@ -324,7 +355,7 @@ function saveStage15BH2s(h2s) {
       return {
         success: false,
         message:
-          'W1.5B H2 set rejected — CV not changed. ' +
+          'W1.5B heading set rejected — CV not changed. ' +
           errors.join(' | ')
       };
     }
@@ -361,7 +392,7 @@ function saveStage15BH2s(h2s) {
     return {
       success: true,
       message:
-        'Validated H2 set saved to Column CV — ' +
+        'Validated H2/H3 heading set saved to Column CV — ' +
         expectedSections.length +
         ' governed section(s).'
     };
@@ -436,7 +467,7 @@ function saveStage15CEnrichedPlan(plan) {
     const errors = [];
     const foundSections = {};
     const sectionRegex =
-      /^SECTION\s+(\d+):\s*(?:Heading H2:\s*)?(.+)$/gmi;
+      /^SECTION\s+(\d+):\s*Heading\s+(H[23]):\s*(.+)$/gmi;
     let match;
     while (
       (
@@ -450,9 +481,13 @@ function saveStage15CEnrichedPlan(plan) {
         Number(
           match[1]
         );
+      const level =
+        String(
+          match[2] || 'H2'
+        ).toUpperCase();
       const heading =
         String(
-          match[2] || ''
+          match[3] || ''
         ).trim();
       if (
         foundSections[number]
@@ -463,8 +498,10 @@ function saveStage15CEnrichedPlan(plan) {
           ' appears more than once.'
         );
       } else {
-        foundSections[number] =
-          heading;
+        foundSections[number] = {
+          level: level,
+          heading: heading
+        };
       }
     }
     governed.expectedSections.forEach(
@@ -480,13 +517,24 @@ function saveStage15CEnrichedPlan(plan) {
           return;
         }
         if (
-          foundSections[number] !==
+          foundSections[number].heading !==
           governed.expectedH2s[number]
         ) {
           errors.push(
             'SECTION ' +
             number +
-            ' H2 does not exactly match W1.5B.'
+            ' heading does not exactly match W1.5B.'
+          );
+        }
+
+        if (
+          foundSections[number].level !==
+          governed.expectedHeadingLevels[number]
+        ) {
+          errors.push(
+            'SECTION ' +
+            number +
+            ' heading level does not exactly match W1.5B.'
           );
         }
       }
