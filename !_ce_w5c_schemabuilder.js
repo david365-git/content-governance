@@ -533,7 +533,13 @@ function generateSchemaForActiveRow() {
             var rowId = String(exportData[e][expIdIdx]).trim().replace(/\.0$/, "");
             if (rowId === postId) {
               var pubDate = parseSheetDate(exportData[e][pubColIdx]);
-              if (pubDate) datePublished = pubDate.toISOString().split("T")[0];
+              if (pubDate) {
+                var pubIso = pubDate.toISOString().split("T")[0];
+                // WordPress may contain a future scheduled publication date.
+                // Schema generated before that scheduled date must not claim a future
+                // datePublished while dateModified is today, so cap it at today.
+                datePublished = pubIso > today ? today : pubIso;
+              }
               // dateModified intentionally left as today's date (see const today above) —
               // W5C is only ever run after a genuine content change, so today is correct.
               break;
