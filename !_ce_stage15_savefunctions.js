@@ -464,6 +464,106 @@ function saveStage15CEnrichedPlan(plan) {
         })
         .join('\n')
         .trim();
+
+    // Canonicalise governed fields from W1.5A before validation.
+    // W1.5C may enrich a section, but it must never redefine
+    // the TSM Requirement or Word Budget inherited from CU.
+    governed.expectedSections.forEach(
+      function(number) {
+        const blockRegex =
+          new RegExp(
+            '(^|\\n)(SECTION\\s+' +
+            number +
+            ':[\\s\\S]*?)(?=\\nSECTION\\s+\\d+:|\\nStage 1\\.5C complete\\.|$)',
+            'i'
+          );
+
+        cleanedPlan =
+          cleanedPlan.replace(
+            blockRegex,
+            function(fullMatch, prefix, block) {
+              let canonicalBlock =
+                String(block || '');
+
+              const governedTsm =
+                governed.expectedTsmRequirements[number];
+
+              const governedBudget =
+                governed.expectedWordBudgets[number];
+
+              if (
+                /^TSM Requirement:/mi.test(
+                  canonicalBlock
+                )
+              ) {
+                canonicalBlock =
+                  canonicalBlock.replace(
+                    /^TSM Requirement:.*$/mi,
+                    'TSM Requirement: ' +
+                    governedTsm
+                  );
+              } else {
+                const firstBreak =
+                  canonicalBlock.indexOf(
+                    '\n'
+                  );
+
+                if (firstBreak === -1) {
+                  canonicalBlock +=
+                    '\nTSM Requirement: ' +
+                    governedTsm;
+                } else {
+                  canonicalBlock =
+                    canonicalBlock.slice(
+                      0,
+                      firstBreak + 1
+                    ) +
+                    'TSM Requirement: ' +
+                    governedTsm +
+                    '\n' +
+                    canonicalBlock.slice(
+                      firstBreak + 1
+                    );
+                }
+              }
+
+              if (
+                /^Word Budget:/mi.test(
+                  canonicalBlock
+                )
+              ) {
+                canonicalBlock =
+                  canonicalBlock.replace(
+                    /^Word Budget:.*$/mi,
+                    'Word Budget: ' +
+                    governedBudget
+                  );
+              } else {
+                const tsmLineRegex =
+                  /^TSM Requirement:.*$/mi;
+
+                canonicalBlock =
+                  canonicalBlock.replace(
+                    tsmLineRegex,
+                    function(tsmLine) {
+                      return (
+                        tsmLine +
+                        '\nWord Budget: ' +
+                        governedBudget
+                      );
+                    }
+                  );
+              }
+
+              return (
+                prefix +
+                canonicalBlock
+              );
+            }
+          );
+      }
+    );
+
     const errors = [];
     const foundSections = {};
     const sectionRegex =
