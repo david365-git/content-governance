@@ -1898,21 +1898,25 @@ REWRITE BRIEF:
 ${rewriteBriefForH2 || "Not Applicable"}
 If the Rewrite Brief above is NOT "Not Applicable", adapt the tone, vocabulary and specific angle of every H2 to align with it.
 The H2s must still respect the article-type rules and governed section roles.
---- H2 SCOPE — HARD LOCK ---
-Stage 1.5B generates reader-facing H2 headings only.
+--- HEADING SCOPE — HARD LOCK ---
+Stage 1.5B generates reader-facing headings while preserving the H2/H3 hierarchy governed by Stage 1.5A.
 
 Do NOT use Required Entity Coverage, TSM role names or other governance classifications as H2 wording.
 
 The governed article structure already determines what each section must cover.
 
 For each numbered section:
-- write one clear homeowner-facing H2;
+- read the H2 or H3 level assigned by Stage 1.5A;
+- preserve that heading level exactly;
+- write one clear homeowner-facing heading at that level;
 - express only the dominant topic of that section;
-- leave secondary requirements for H3s and body content;
+- leave secondary requirements for body content or lower-level support where appropriate;
+- never promote an H3 sub-process to H2;
+- never demote an H2 major section to H3;
 - never append internal coverage terminology to prove compliance.
 --- SYSTEM INSTRUCTION ---
 Stage 1.5A has created a section structure below.
-Your ONLY job is to create an H2 heading for each section.
+Your ONLY job is to create the reader-facing heading for each section while preserving the H2/H3 level assigned by Stage 1.5A.
 The H2 rule that applies depends on the article type — read the ARTICLE TYPE H2 RULE block carefully before generating any headings.
 ${h2RuleBlock}
     --- SYMPTOM-FIRST RULE (applies to all article types EXCEPT Geo Service Page) ---
@@ -1954,16 +1958,18 @@ ${siblingHeadings
     '\n--- END EXISTING SILO HEADINGS ---\n'
   : ''}
 --- TASK ---
-For each numbered section in the structure above, create an H2 heading.
+For each numbered section in the structure above, create a heading at the exact H2 or H3 level assigned by Stage 1.5A.
 Apply the ARTICLE TYPE H2 RULE for this article type.
 If HUB-INTRO is present, preserve it unchanged and do not generate an H2 for it.
 OUTPUT FORMAT:
 SECTION 1: Heading H2: [Your H2]
-SECTION 2: Heading H2: [Your H2]
+SECTION 2: Heading H3: [Your H3]
+SECTION 3: Heading H2: [Your H2]
 ...
+Use the heading level assigned to each section by Stage 1.5A.
 --- OUTPUT INSTRUCTION ---
 If HUB-INTRO is present in the section structure, preserve it unchanged.
-Output ONLY HUB-INTRO if present, followed by the section numbers with H2s.
+Output ONLY HUB-INTRO if present, followed by the section numbers with their governed H2/H3 headings.
 If no HUB-INTRO is present, start with SECTION 1.
 Last line must be:
 Stage 1.5B MAIN GENERATOR complete. Waiting for Stage 1.5C.
