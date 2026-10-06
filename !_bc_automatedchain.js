@@ -2301,15 +2301,78 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
 
       if (!finalRule17.passed) {
 
-        bc_appendGovernancePipelineException(
-          'W1.5B — Final Rule 17 Recheck',
-          finalRule17.rawResult ||
-          'A post-heading-fix governance repair caused the final H2 set to fail Rule 17.'
+        log.push(
+          'Final Rule 17 Recheck: FAIL — running one final targeted W1.5B.1 correction.'
         );
 
+        var finalRule17FixPrompt =
+          buildH2GovernanceFixPromptW15B();
+
+        if (
+          typeof finalRule17FixPrompt !== 'string' ||
+          finalRule17FixPrompt.indexOf('ERROR') === 0
+        ) {
+          throw new Error(
+            'Final Rule 17 FAIL, but targeted fix prompt could not be built — ' +
+            finalRule17FixPrompt
+          );
+        }
+
+        var finalRule17Fix =
+          bc_sendPromptViaOpenAI(
+            finalRule17FixPrompt,
+            null,
+            MODEL_CHEAP
+          );
+
+        if (!finalRule17Fix.success) {
+          throw new Error(
+            finalRule17Fix.message
+          );
+        }
+
+        totalCost +=
+          finalRule17Fix.cost;
+
+        var finalRule17Save =
+          saveStage15BH2s(
+            finalRule17Fix.text
+          );
+
+        if (!finalRule17Save.success) {
+          throw new Error(
+            finalRule17Save.message
+          );
+        }
+
         log.push(
-          'Final Rule 17 Recheck: FAIL recorded in GJ.'
+          'Final Rule 17 Repair: corrected headings saved to CV.'
         );
+
+        var finalRule17Confirmation =
+          bc_runH2GovernanceCheckOnlyW15B();
+
+        totalCost +=
+          finalRule17Confirmation.cost;
+
+        if (!finalRule17Confirmation.passed) {
+
+          bc_appendGovernancePipelineException(
+            'W1.5B — Final Rule 17 Recheck',
+            finalRule17Confirmation.rawResult ||
+            'Final targeted W1.5B.1 correction did not resolve all Rule 17 failures.'
+          );
+
+          log.push(
+            'Final Rule 17 Confirmation: FAIL recorded in GJ after one final correction attempt.'
+          );
+
+        } else {
+
+          log.push(
+            'Final Rule 17 Confirmation: PASS after targeted W1.5B.1 correction.'
+          );
+        }
 
       } else {
 
