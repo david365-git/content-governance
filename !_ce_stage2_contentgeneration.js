@@ -531,6 +531,12 @@ bare fact, with no stated reason, has failed this rule.
   CORRECT: "A surface sealer was chosen for this floor because the repairs
   needed a film that would bind the new filler to the surrounding stone,
   rather than the invisible, no-film protection an impregnating sealer gives."
+CERAMIC TILE SEALING — HARD LOCK:
+Ceramic tile sealing is not prohibited.
+Where the governed plan or source evidence states that sealer was applied to the ceramic tile, the grout, or both, preserve that scope accurately.
+Do NOT automatically convert a ceramic-tile sealing treatment into grout-only sealing merely because the tile is glazed.
+Do not broaden the sealing scope beyond the supplied evidence.
+
 This applies to any decision point named in the article — sealer type, filler
 type, honing grit sequence, cleaning chemistry, extraction method, or repair
 technique. The reason does not need its own sentence — it can be folded into
