@@ -808,43 +808,56 @@ function applyCoherenceFix(rawJson) {
 
     /*
      * =====================================================
-     * H2 HARD LOCK
+     * GOVERNED HEADING HARD LOCK (H2 OR H3)
      * =====================================================
      */
 
-    const existingH2Match =
+    const existingHeadingMatch =
       existingSection.match(
-        /<h2\b[^>]*>[\s\S]*?<\/h2>/i
+        /<(h[23])\b[^>]*>[\s\S]*?<\/\1>/i
       );
 
-    const replacementH2Match =
+    const replacementHeadingMatch =
       replacementHtml.match(
-        /<h2\b[^>]*>[\s\S]*?<\/h2>/i
+        /<(h[23])\b[^>]*>[\s\S]*?<\/\1>/i
       );
 
     if (
-      !existingH2Match ||
-      !replacementH2Match
+      !existingHeadingMatch ||
+      !replacementHeadingMatch
     ) {
       return {
         success: false,
         message:
           'Section ' +
           sectionNumber +
-          ' is missing its governed H2.'
+          ' is missing its governed H2/H3 heading.'
       };
     }
 
     if (
-      existingH2Match[0] !==
-      replacementH2Match[0]
+      existingHeadingMatch[1].toLowerCase() !==
+      replacementHeadingMatch[1].toLowerCase()
     ) {
       return {
         success: false,
         message:
           'Section ' +
           sectionNumber +
-          ' attempted to change its governed H2.'
+          ' attempted to change its governed heading level.'
+      };
+    }
+
+    if (
+      existingHeadingMatch[0] !==
+      replacementHeadingMatch[0]
+    ) {
+      return {
+        success: false,
+        message:
+          'Section ' +
+          sectionNumber +
+          ' attempted to change its governed heading.'
       };
     }
 
