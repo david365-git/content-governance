@@ -1107,24 +1107,68 @@ function buildDeferredCheckPrompt(html) {
     if (firstP) sec1Opening = firstP[0];
   }
 
-  // Extract all H2s and their first paragraphs
+  // Read the governed CX plan so Check 4 can judge each opener
+  // against its actual section role instead of forcing symptom-first
+  // wording on process, treatment, outcome or maintenance sections.
+  var governedPlan = String(sheet.getRange(row, 102).getValue() || '').trim();
+  var governedRoles = {};
+  var currentGovernedSection = null;
+
+  governedPlan.split(/\r?\n/).forEach(function(line) {
+    var secMatch = String(line).match(/^SECTION\s+(\d+):/i);
+    if (secMatch) {
+      currentGovernedSection = Number(secMatch[1]);
+      if (!governedRoles[currentGovernedSection]) {
+        governedRoles[currentGovernedSection] = {
+          tsm: '',
+          brief: ''
+        };
+      }
+      return;
+    }
+
+    if (!currentGovernedSection) return;
+
+    var tsmMatch = String(line).match(/^TSM Requirement:\s*(.+)$/i);
+    if (tsmMatch) {
+      governedRoles[currentGovernedSection].tsm = tsmMatch[1].trim();
+      return;
+    }
+
+    var briefMatch = String(line).match(/^Content Brief:\s*(.+)$/i);
+    if (briefMatch) {
+      governedRoles[currentGovernedSection].brief = briefMatch[1].trim();
+    }
+  });
+
+  // Extract governed H2/H3 headings and their first paragraphs.
   var sectionOpeners = [];
   var secRe = /<section[^>]*id="([^"]+)"[^>]*>([\s\S]*?)<\/section>/gi;
   var sm;
   while ((sm = secRe.exec(html)) !== null) {
-    var h2m = sm[2].match(/<h2[^>]*>([\s\S]*?)<\/h2>/i);
+    var headingMatch = sm[2].match(/<(h[23])[^>]*>([\s\S]*?)<\/\1>/i);
     var pm  = sm[2].match(/<p[^>]*>([\s\S]*?)<\/p>/i);
-    if (h2m && pm) {
+    if (headingMatch && pm) {
+      var sectionNumberMatch = String(sm[1]).match(/section-(\d+)/i);
+      var sectionNumber = sectionNumberMatch ? Number(sectionNumberMatch[1]) : 0;
+      var governed = governedRoles[sectionNumber] || { tsm: '', brief: '' };
+
       sectionOpeners.push({
-        id:    sm[1],
-        h2:    h2m[1].replace(/<[^>]+>/g, '').trim(),
-        opens: pm[1].replace(/<[^>]+>/g, '').trim().substring(0, 200)
+        id: sm[1],
+        headingLevel: headingMatch[1].toUpperCase(),
+        heading: headingMatch[2].replace(/<[^>]+>/g, '').trim(),
+        tsm: governed.tsm,
+        brief: governed.brief,
+        opens: pm[1].replace(/<[^>]+>/g, '').trim().substring(0, 240)
       });
     }
   }
 
   var sectionOpenerBlock = sectionOpeners.map(function(s) {
-    return 'Section "' + s.id + '" — H2: "' + s.h2 + '"\nOpening: "' + s.opens + '"';
+    return 'Section "' + s.id + '" — ' + s.headingLevel + ': "' + s.heading + '"\n' +
+      'Governed TSM role: ' + (s.tsm || 'not specified') + '\n' +
+      'Governed content brief: ' + (s.brief || 'not specified') + '\n' +
+      'Opening: "' + s.opens + '"';
   }).join('\n\n');
 
   return 'DEFERRED EDITORIAL AUDIT — CHECKS 1, 4, 5, 7\n' +
@@ -1150,8 +1194,13 @@ function buildDeferredCheckPrompt(html) {
     '------------------------------------------------------------\n' +
     'CHECK 4 — SECTION OPENING TONE (SYMPTOM FIRST)\n' +
     '------------------------------------------------------------\n' +
-    'Each section opening sentence must orient the reader to their problem before introducing mechanism or technical terms.\n' +
-    'Review the section openers below. Flag any section whose first sentence opens with mechanism, entity name, or process rather than homeowner symptom.\n\n' +
+    'Judge each section opening against its GOVERNED TSM ROLE and CONTENT BRIEF from CX.\n' +
+    'Symptom-first wording is required only where the governed role/brief is establishing the homeowner-visible problem, condition, diagnostic uncertainty or project context.\n' +
+    'Do NOT fail a section merely because it opens with an assessment, decision, process, treatment, result or maintenance action when that is the governed purpose of the section.\n' +
+    'For intervention/process/treatment sections, an action-first opening is valid when it directly continues the documented project and does not introduce unrelated mechanism.\n' +
+    'For measurable-outcome sections, result-first wording is valid. For maintenance-handover sections, advice/routine-first wording is valid.\n' +
+    'H3 process subsections may naturally open with the specific process step they govern.\n' +
+    'Flag only genuine mismatches where the opening does not orient the reader to the section\'s governed purpose, or front-loads unrelated technical mechanism before the required context.\n\n' +
     'SECTION OPENERS:\n' + sectionOpenerBlock + '\n\n' +
     'OUTPUT FORMAT:\n' +
     'CHECK 4: PASS|FAIL|REVIEW\n' +
