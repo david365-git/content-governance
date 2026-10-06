@@ -341,6 +341,76 @@ function buildH2GovernanceCheckPromptW15B() {
   const articleType =
     d["Article Type"] ||
     "General";
+
+  const postId =
+    String(
+      d["Post ID"] ||
+      ""
+    ).trim();
+
+  let originalHtml = "";
+
+  if (
+    articleType === "Case Study" &&
+    postId
+  ) {
+    try {
+      const exportSheet =
+        ss.getSheetByName(
+          "site-export"
+        );
+
+      if (exportSheet) {
+        const exportData =
+          exportSheet
+            .getDataRange()
+            .getValues();
+
+        if (exportData.length > 0) {
+          const exportHeaders =
+            exportData[0];
+
+          const idCol =
+            exportHeaders.indexOf(
+              "ID"
+            );
+
+          const htmlCol =
+            exportHeaders.indexOf(
+              "Full Post HTML"
+            );
+
+          if (
+            idCol > -1 &&
+            htmlCol > -1
+          ) {
+            for (
+              let i = 1;
+              i < exportData.length;
+              i++
+            ) {
+              if (
+                String(
+                  exportData[i][idCol]
+                ).trim() === postId
+              ) {
+                originalHtml =
+                  String(
+                    exportData[i][htmlCol] ||
+                    ""
+                  ).trim();
+
+                break;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      originalHtml = "";
+    }
+  }
+
   const minimumChangeStandard =
     bc_getMinimumChangeStandard_();
   const prompt = `
@@ -398,9 +468,23 @@ Examples:
 When this fails, make the smallest wording correction necessary by replacing the incorrect material reference with the governed material. Do not otherwise rewrite the heading.
 
 CASE STUDY EVIDENCE LOCK:
-For Case Studies, a heading must not narrow or broaden what the source says actually happened.
-Restrictive wording such as "only", "solely", "just" or "exclusively" must FAIL when the supplied project evidence does not explicitly support that restriction.
-This includes sealing scope: do not convert evidence of floor/tile-and-grout sealing into grout-only sealing.
+For Case Studies, the ORIGINAL ARTICLE EVIDENCE below is the factual authority for what actually happened.
+
+A heading must not narrow or broaden the recorded treatment, problem, process or outcome.
+Restrictive wording such as "only", "solely", "just" or "exclusively" must FAIL when the original article evidence does not explicitly support that restriction.
+
+CERAMIC TILE SEALING — HARD LOCK:
+If the original article records sealer applied to the floor, tile surface, grout joints, or any combination of them, the heading must preserve that scope accurately.
+Do NOT convert evidence of floor or tile-and-grout sealing into grout-only sealing.
+Do NOT infer that glazed ceramic tile cannot be sealed.
+Do NOT broaden grout-only evidence into tile-and-grout sealing.
+
+ORIGINAL ARTICLE EVIDENCE:
+${articleType === "Case Study"
+  ? (originalHtml || "No original article HTML available.")
+  : "Not Applicable — this is not a Case Study."}
+
+Before passing TEST 4 for a Case Study heading about treatment scope, compare the heading directly against this evidence.
 
 FAIL only when it clearly:
 - introduces a new topic, service, method, material, outcome or decision;
