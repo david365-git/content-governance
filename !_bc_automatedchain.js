@@ -465,6 +465,220 @@ function bc_clearGovernancePipelineExceptions() {
   };
 }
 
+
+/* ============================================================
+   MASTER — STONE TYPE BATCH CONTENT INTELLIGENCE
+   Uses LIVE posts-sheet row order only.
+   No click data, filter state, ranking, or stored ordering.
+============================================================ */
+
+function bc_getMasterStoneTypeBatchOptions() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("posts");
+
+  if (!sheet) {
+    return { success: false, message: "Posts sheet not found.", stoneTypes: [] };
+  }
+
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+
+  if (lastRow < 2) {
+    return { success: true, stoneTypes: [] };
+  }
+
+  var headers = sheet
+    .getRange(1, 1, 1, lastCol)
+    .getValues()[0]
+    .map(function(h) { return String(h || "").trim(); });
+
+  var stoneIdx = headers.indexOf("Stone Type");
+
+  if (stoneIdx === -1) {
+    return {
+      success: false,
+      message: 'Column "Stone Type" not found.',
+      stoneTypes: []
+    };
+  }
+
+  var values = sheet
+    .getRange(2, stoneIdx + 1, lastRow - 1, 1)
+    .getValues();
+
+  var seen = {};
+  var ordered = [];
+
+  values.forEach(function(r) {
+    var value = String(r[0] || "").trim();
+    if (!value) return;
+
+    var key = value.toLowerCase();
+
+    if (!seen[key]) {
+      seen[key] = {
+        name: value,
+        count: 0
+      };
+      ordered.push(seen[key]);
+    }
+
+    seen[key].count++;
+  });
+
+  return {
+    success: true,
+    stoneTypes: ordered
+  };
+}
+
+
+function bc_getMasterStoneTypeBatchRows(stoneType) {
+  var target = String(stoneType || "").trim();
+
+  if (!target) {
+    return {
+      success: false,
+      message: "Select a Stone Type first.",
+      rows: []
+    };
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("posts");
+
+  if (!sheet) {
+    return { success: false, message: "Posts sheet not found.", rows: [] };
+  }
+
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+
+  var headers = sheet
+    .getRange(1, 1, 1, lastCol)
+    .getValues()[0]
+    .map(function(h) { return String(h || "").trim(); });
+
+  var stoneIdx = headers.indexOf("Stone Type");
+  var titleIdx = headers.indexOf("Title");
+
+  if (stoneIdx === -1) {
+    return {
+      success: false,
+      message: 'Column "Stone Type" not found.',
+      rows: []
+    };
+  }
+
+  var data = sheet
+    .getRange(2, 1, Math.max(0, lastRow - 1), lastCol)
+    .getValues();
+
+  var rows = [];
+
+  for (var i = 0; i < data.length; i++) {
+    var currentStone = String(data[i][stoneIdx] || "").trim();
+
+    if (currentStone.toLowerCase() !== target.toLowerCase()) {
+      continue;
+    }
+
+    rows.push({
+      row: i + 2,
+      title: titleIdx > -1
+        ? String(data[i][titleIdx] || "").trim()
+        : ""
+    });
+  }
+
+  return {
+    success: true,
+    stoneType: target,
+    rows: rows,
+    total: rows.length
+  };
+}
+
+
+function bc_runMasterStoneTypeContentIntelligenceRow(row, expectedStoneType) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("posts");
+
+  if (!sheet) {
+    return { success: false, message: "Posts sheet not found.", cost: 0 };
+  }
+
+  row = Number(row);
+
+  if (!row || row < 2 || row > sheet.getLastRow()) {
+    return { success: false, message: "Invalid posts row: " + row, cost: 0 };
+  }
+
+  var headers = sheet
+    .getRange(1, 1, 1, sheet.getLastColumn())
+    .getValues()[0]
+    .map(function(h) { return String(h || "").trim(); });
+
+  var stoneIdx = headers.indexOf("Stone Type");
+  var titleIdx = headers.indexOf("Title");
+
+  if (stoneIdx === -1) {
+    return {
+      success: false,
+      message: 'Column "Stone Type" not found.',
+      cost: 0
+    };
+  }
+
+  var liveStone = String(
+    sheet.getRange(row, stoneIdx + 1).getValue() || ""
+  ).trim();
+
+  if (
+    expectedStoneType &&
+    liveStone.toLowerCase() !==
+      String(expectedStoneType).trim().toLowerCase()
+  ) {
+    return {
+      success: false,
+      message:
+        "Row " + row +
+        ' is now "' + liveStone +
+        '" rather than "' + expectedStoneType +
+        '". Batch stopped to avoid processing the wrong article.',
+      cost: 0
+    };
+  }
+
+  var title = titleIdx > -1
+    ? String(sheet.getRange(row, titleIdx + 1).getValue() || "").trim()
+    : "";
+
+  sheet.setActiveRange(sheet.getRange(row, 1));
+
+  var result = bc_runFullGovernanceChainAutomated();
+
+  if (!result) {
+    return {
+      success: false,
+      row: row,
+      title: title,
+      message: "Content Intelligence returned no result.",
+      cost: 0
+    };
+  }
+
+  return {
+    success: result.success !== false,
+    row: row,
+    title: title,
+    stoneType: liveStone,
+    message: result.message || "",
+    log: result.log || "",
+    cost: Number(result.cost || 0)
+  };
+}
+
 function bc_contentIntelligencePreflight_() {
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
