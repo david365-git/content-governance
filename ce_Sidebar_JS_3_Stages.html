@@ -5086,6 +5086,1197 @@ function runW8EAutomated() {
 
     .bc_runW8EAutomated();
 }
+
+var _masterStoneBatchRunning = false;
+var _masterStoneBatchTimer = null;
+var _masterStoneBatchStartedAt = 0;
+var _masterStoneBatchRows = [];
+var _masterStoneBatchIndex = 0;
+var _masterStoneBatchCost = 0;
+var _masterStoneBatchStoneType = '';
+
+function masterLoadStoneTypeBatchOptions() {
+  var select = document.getElementById('masterStoneTypeBatchSelect');
+  var status = document.getElementById('masterStoneBatchStatus');
+  var btn = document.getElementById('masterLoadStoneTypesBtn');
+
+  if (!select || !status) return;
+
+  btn.disabled = true;
+  status.textContent = 'Loading live Stone Types…';
+  status.style.color = '#555';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      btn.disabled = false;
+
+      if (!res || !res.success) {
+        status.textContent =
+          '❌ ' +
+          (res && res.message
+            ? res.message
+            : 'Could not load Stone Types.');
+        status.style.color = '#c62828';
+        return;
+      }
+
+      select.innerHTML =
+        '<option value="">— Select Stone Type —</option>';
+
+      (res.stoneTypes || []).forEach(function(item) {
+        var option = document.createElement('option');
+        option.value = item.name;
+        option.textContent =
+          item.name + ' (' + item.count + ')';
+        select.appendChild(option);
+      });
+
+      status.textContent =
+        '✔ Live Stone Types loaded from posts sheet.';
+      status.style.color = '#2e7d32';
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      status.textContent = '❌ ' + err.message;
+      status.style.color = '#c62828';
+    })
+    .bc_getMasterStoneTypeBatchOptions();
+}
+
+
+function masterRunStoneTypeBatch() {
+  if (_masterStoneBatchRunning) return;
+
+  var select =
+    document.getElementById('masterStoneTypeBatchSelect');
+
+  var stoneType =
+    select ? String(select.value || '').trim() : '';
+
+  var status =
+    document.getElementById('masterStoneBatchStatus');
+
+  if (!stoneType) {
+    status.textContent = '❌ Select a Stone Type first.';
+    status.style.color = '#c62828';
+    return;
+  }
+
+  var btn =
+    document.getElementById('masterBtnStoneTypeBatch');
+
+  btn.disabled = true;
+  btn.textContent = 'Loading rows…';
+
+  status.textContent =
+    'Loading live ' + stoneType + ' rows in sheet order…';
+  status.style.color = '#555';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+
+      if (!res || !res.success) {
+        btn.disabled = false;
+        btn.textContent = '▶ Run Selected Stone Type';
+        status.textContent =
+          '❌ ' +
+          (res && res.message
+            ? res.message
+            : 'Could not load batch rows.');
+        status.style.color = '#c62828';
+        return;
+      }
+
+      _masterStoneBatchRows = res.rows || [];
+
+      if (!_masterStoneBatchRows.length) {
+        btn.disabled = false;
+        btn.textContent = '▶ Run Selected Stone Type';
+        status.textContent =
+          '❌ No matching rows found for ' + stoneType + '.';
+        status.style.color = '#c62828';
+        return;
+      }
+
+      _masterStoneBatchRunning = true;
+      _masterStoneBatchIndex = 0;
+      _masterStoneBatchCost = 0;
+      _masterStoneBatchStoneType = stoneType;
+      _masterStoneBatchStartedAt = Date.now();
+
+      document.getElementById(
+        'masterStoneBatchProgress'
+      ).textContent =
+        '0 of ' + _masterStoneBatchRows.length;
+
+      document.getElementById(
+        'masterStoneBatchSeconds'
+      ).textContent = '0s';
+
+      document.getElementById(
+        'masterStoneBatchLog'
+      ).textContent =
+        'Batch started — ' +
+        stoneType +
+        ' — ' +
+        _masterStoneBatchRows.length +
+        ' row(s).';
+
+      btn.textContent = 'Running batch…';
+
+      _masterStoneBatchTimer =
+        setInterval(function() {
+          var seconds =
+            Math.floor(
+              (Date.now() -
+               _masterStoneBatchStartedAt) / 1000
+            );
+
+          document.getElementById(
+            'masterStoneBatchSeconds'
+          ).textContent =
+            seconds + 's';
+        }, 1000);
+
+      masterRunNextStoneTypeBatchRow();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      btn.textContent = '▶ Run Selected Stone Type';
+      status.textContent = '❌ ' + err.message;
+      status.style.color = '#c62828';
+    })
+    .bc_getMasterStoneTypeBatchRows(stoneType);
+}
+
+
+function masterRunNextStoneTypeBatchRow() {
+  var status =
+    document.getElementById('masterStoneBatchStatus');
+
+  var btn =
+    document.getElementById('masterBtnStoneTypeBatch');
+
+  var currentBox =
+    document.getElementById('masterStoneBatchCurrent');
+
+  var logBox =
+    document.getElementById('masterStoneBatchLog');
+
+  if (
+    !_masterStoneBatchRunning ||
+    _masterStoneBatchIndex >=
+      _masterStoneBatchRows.length
+  ) {
+    if (_masterStoneBatchTimer) {
+      clearInterval(_masterStoneBatchTimer);
+      _masterStoneBatchTimer = null;
+    }
+
+    _masterStoneBatchRunning = false;
+
+    btn.disabled = false;
+    btn.textContent = '▶ Run Selected Stone Type';
+
+    var elapsed =
+      Math.floor(
+        (Date.now() -
+         _masterStoneBatchStartedAt) / 1000
+      );
+
+    status.textContent =
+      '✔ ' +
+      _masterStoneBatchStoneType +
+      ' batch complete — ' +
+      _masterStoneBatchRows.length +
+      ' of ' +
+      _masterStoneBatchRows.length +
+      ' processed — ' +
+      elapsed +
+      's — Cost: 
+
+  var btn = document.getElementById('masterBtnIntelligence');
+  var status = document.getElementById('masterStatusIntelligence');
+  var logBox = document.getElementById('masterLogIntelligence');
+
+  var startTime = Date.now();
+
+  btn.disabled = true;
+  btn.innerText = 'Running Content Intelligence… 0s';
+
+  status.textContent = '⏳ Content Intelligence running… 0s';
+  status.style.color = '#555';
+
+  if (logBox) {
+    logBox.style.display = 'block';
+    logBox.textContent = '';
+  }
+
+  var timer = setInterval(function() {
+
+    var elapsed =
+      Math.floor((Date.now() - startTime) / 1000);
+
+    btn.innerText =
+      'Running Content Intelligence… ' +
+      elapsed +
+      's';
+
+    status.textContent =
+      '⏳ Content Intelligence running… ' +
+      elapsed +
+      's';
+
+  }, 1000);
+
+  google.script.run
+
+    .withSuccessHandler(function(res) {
+
+      clearInterval(timer);
+
+      btn.disabled = false;
+      btn.innerText = '▶ Content Intelligence Automation';
+
+      var elapsed =
+        Math.floor((Date.now() - startTime) / 1000);
+
+      if (res && res.success) {
+
+        status.textContent =
+          '✔ Content Intelligence complete — ' +
+          elapsed +
+          's';
+
+        status.style.color = '#2e7d32';
+
+        if (logBox) {
+
+          var formattedLog = res.log
+            ? res.log.split(' | ').join('\n')
+            : '';
+
+          logBox.textContent =
+            res.message +
+            (formattedLog
+              ? '\n\n' + formattedLog
+              : '');
+        }
+
+      } else {
+
+        status.textContent =
+          '❌ ' +
+          ((res && res.message)
+            ? res.message
+            : 'Content Intelligence failed.');
+
+        status.style.color = '#c62828';
+      }
+    })
+
+    .withFailureHandler(function(err) {
+
+      clearInterval(timer);
+
+      btn.disabled = false;
+      btn.innerText = '▶ Content Intelligence Automation';
+
+      status.textContent =
+        '❌ ' + err.message;
+
+      status.style.color = '#c62828';
+    })
+
+    .bc_runFullGovernanceChainAutomated();
+}
+
+function masterRunContentGeneration() {
+
+  var btn =
+    document.getElementById('masterBtnGeneration');
+
+  var status =
+    document.getElementById('masterStatusGeneration');
+
+  var logBox =
+    document.getElementById('masterLogGeneration');
+
+  var startTime = Date.now();
+  var pipelineRow = null;
+
+  var pipelineStages = [
+    'Pre-AC',
+    'AC',
+    'W-1',
+    'W1A-W1D',
+    'W1.5A',
+    'W1.5B',
+    'W1.5C',
+    'W1.5D',
+    'W1.5E',
+    'W2B',
+    'W2B.05',
+    'W2B.1',
+    'W2B.2',
+    'W2B.3'
+  ];
+
+  btn.disabled = true;
+  btn.innerText = 'Running…';
+
+  status.textContent =
+    '⏳ Starting Content Generation… 0s';
+
+  status.style.color = '#555';
+
+  logBox.textContent =
+    'Stage: Starting...\n' +
+    'Progress: 0 / 14\n' +
+    'Cost: $0.0000';
+
+  var timer = setInterval(function() {
+
+    var elapsed =
+      Math.floor(
+        (Date.now() - startTime) / 1000
+      );
+
+    status.textContent =
+      '⏳ Content Generation running… ' +
+      elapsed +
+      's';
+
+  }, 1000);
+
+
+  google.script.run
+
+    .withSuccessHandler(function(startRes) {
+
+      if (!startRes || !startRes.success) {
+
+        clearInterval(timer);
+
+        btn.disabled = false;
+        btn.innerText =
+          '▶ Run Content Generation → W2C';
+
+        status.textContent =
+          '❌ ' +
+          (
+            startRes && startRes.message
+              ? startRes.message
+              : 'Could not start pipeline.'
+          );
+
+        status.style.color = '#c62828';
+
+        return;
+      }
+
+
+      pipelineRow = startRes.row;
+
+
+      var logPoller =
+        setInterval(function() {
+
+          if (!pipelineRow) return;
+
+          google.script.run
+
+            .withSuccessHandler(function(logRes) {
+
+              if (
+                !logRes ||
+                !logRes.success
+              ) return;
+
+
+              var logText =
+                String(logRes.log || '');
+
+              var lines =
+                logText.split(/\r?\n/);
+
+              var completed = 0;
+              var runningCost = 0;
+              var lastCompleted = '—';
+
+
+              pipelineStages.forEach(
+                function(stageName) {
+
+                  var prefix =
+                    '✓ ' +
+                    stageName +
+                    ' complete — $';
+
+                  for (
+                    var i = 0;
+                    i < lines.length;
+                    i++
+                  ) {
+
+                    if (
+                      lines[i].indexOf(prefix) === 0
+                    ) {
+
+                      completed++;
+
+                      lastCompleted =
+                        '✓ ' + stageName;
+
+                      var costMatch =
+                        lines[i].match(
+                          /\$([0-9.]+)/
+                        );
+
+                      if (costMatch) {
+
+                        runningCost +=
+                          Number(
+                            costMatch[1] || 0
+                          );
+                      }
+
+                      break;
+                    }
+                  }
+                }
+              );
+
+
+              var currentStage =
+                completed >= pipelineStages.length
+                  ? 'Complete'
+                  : pipelineStages[completed];
+
+
+              logBox.textContent =
+                'Stage: ' +
+                currentStage +
+                '\n' +
+                'Progress: ' +
+                completed +
+                ' / 14\n' +
+                'Cost: $' +
+                runningCost.toFixed(4) +
+                '\n' +
+                'Last completed: ' +
+                lastCompleted +
+                '\n\n' +
+                logText;
+
+            })
+
+            .getPipelineRunLog(
+              pipelineRow
+            );
+
+        }, 1500);
+
+
+      google.script.run
+
+        .withSuccessHandler(function(res) {
+
+          clearInterval(timer);
+          clearInterval(logPoller);
+
+          var elapsed =
+            (
+              (Date.now() - startTime) /
+              1000
+            ).toFixed(1);
+
+
+          btn.disabled = false;
+
+          btn.innerText =
+            '▶ Run Content Generation → W2C';
+
+
+          if (res && res.success) {
+
+            status.textContent =
+              '✔ Content Generation complete — ' +
+              elapsed +
+              's';
+
+            status.style.color = '#2e7d32';
+
+            logBox.textContent +=
+              '\n\n✔ Pre-AC → W2B.3 complete.' +
+              '\n➡ Now open Content Engine 2C.';
+
+          } else if (
+            res &&
+            res.stopped
+          ) {
+
+            status.textContent =
+              '■ ' + res.message;
+
+            status.style.color = '#c62828';
+
+          } else {
+
+            status.textContent =
+              '❌ ' +
+              (
+                res && res.message
+                  ? res.message
+                  : 'Automation failed.'
+              );
+
+            status.style.color = '#c62828';
+          }
+
+                    google.script.run
+            .withSuccessHandler(function(finalLogRes) {
+
+              if (
+                finalLogRes &&
+                finalLogRes.success &&
+                finalLogRes.log
+              ) {
+                logBox.textContent =
+                  finalLogRes.log +
+                  '\n\n✔ Pre-AC → W2B.3 complete.' +
+                  '\n➡ Now open Content Engine 2C.';
+              }
+
+              pipelineRow = null;
+            })
+            .getPipelineRunLog(pipelineRow);
+        })
+
+        .withFailureHandler(function(err) {
+
+          clearInterval(timer);
+          clearInterval(logPoller);
+
+          btn.disabled = false;
+
+          btn.innerText =
+            '▶ Run Content Generation → W2C';
+
+          status.textContent =
+            '❌ ' + err.message;
+
+          status.style.color = '#c62828';
+
+          pipelineRow = null;
+        })
+
+        .pipelineRunPreACToW2B3(
+          pipelineRow
+        );
+
+    })
+
+    .withFailureHandler(function(err) {
+
+      clearInterval(timer);
+
+      btn.disabled = false;
+
+      btn.innerText =
+        '▶ Run Content Generation → W2C';
+
+      status.textContent =
+        '❌ Could not start pipeline: ' +
+        err.message;
+
+      status.style.color = '#c62828';
+
+    })
+
+    .bc_startPipelineRun();
+}
+
+function masterRunRecoveryToW8E() {
+
+  var select = document.getElementById('masterRecoveryStart');
+  var btn = document.getElementById('masterBtnRecovery');
+  var status = document.getElementById('masterStatusRecovery');
+  var logBox = document.getElementById('masterLogRecovery');
+
+  var startStage = select ? select.value : '';
+
+  if (!startStage) {
+    status.textContent = '❌ Select a recovery start stage.';
+    status.style.color = '#c62828';
+    return;
+  }
+
+  var startTime = Date.now();
+  var pipelineRow = null;
+
+  btn.disabled = true;
+  btn.innerText = 'Running…';
+
+  status.textContent =
+    '⏳ Starting recovery ' +
+    startStage +
+    ' → W8E… 0s';
+
+  status.style.color = '#555';
+
+  logBox.textContent =
+    'Recovery start: ' +
+    startStage +
+    '\nTarget: W8E';
+
+  var timer = setInterval(function() {
+    var elapsed = Math.floor((Date.now() - startTime) / 1000);
+    status.textContent =
+      '⏳ Recovery ' +
+      startStage +
+      ' → W8E running… ' +
+      elapsed +
+      's';
+  }, 1000);
+
+  google.script.run
+    .withSuccessHandler(function(startRes) {
+
+      if (!startRes || !startRes.success) {
+        clearInterval(timer);
+        btn.disabled = false;
+        btn.innerText = '▶ Run Selected Stage → W8E';
+        status.textContent =
+          '❌ ' +
+          (startRes && startRes.message
+            ? startRes.message
+            : 'Could not start recovery pipeline.');
+        status.style.color = '#c62828';
+        return;
+      }
+
+      pipelineRow = startRes.row;
+
+      var logPoller = setInterval(function() {
+        if (!pipelineRow) return;
+
+        google.script.run
+          .withSuccessHandler(function(logRes) {
+            if (logRes && logRes.success && logRes.log) {
+              logBox.textContent = logRes.log;
+            }
+          })
+          .getPipelineRunLog(pipelineRow);
+      }, 1500);
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+
+          clearInterval(timer);
+          clearInterval(logPoller);
+
+          var elapsed =
+            ((Date.now() - startTime) / 1000).toFixed(1);
+
+          btn.disabled = false;
+          btn.innerText = '▶ Run Selected Stage → W8E';
+
+          if (res && res.success) {
+            status.textContent =
+              '✔ Recovery ' +
+              startStage +
+              ' → W8E complete — ' +
+              elapsed +
+              's';
+            status.style.color = '#2e7d32';
+          } else if (res && res.stopped) {
+            status.textContent = '■ ' + res.message;
+            status.style.color = '#c62828';
+          } else {
+            status.textContent =
+              '❌ ' +
+              (res && res.message
+                ? res.message
+                : 'Recovery automation failed.');
+            status.style.color = '#c62828';
+          }
+
+          google.script.run
+            .withSuccessHandler(function(finalLogRes) {
+              if (finalLogRes && finalLogRes.success && finalLogRes.log) {
+                logBox.textContent = finalLogRes.log;
+              }
+              pipelineRow = null;
+            })
+            .getPipelineRunLog(pipelineRow);
+        })
+        .withFailureHandler(function(err) {
+          clearInterval(timer);
+          clearInterval(logPoller);
+          btn.disabled = false;
+          btn.innerText = '▶ Run Selected Stage → W8E';
+          status.textContent = '❌ ' + err.message;
+          status.style.color = '#c62828';
+          pipelineRow = null;
+        })
+        .pipelineResumeToW8E(
+          pipelineRow,
+          startStage
+        );
+    })
+    .withFailureHandler(function(err) {
+      clearInterval(timer);
+      btn.disabled = false;
+      btn.innerText = '▶ Run Selected Stage → W8E';
+      status.textContent =
+        '❌ Could not start recovery pipeline: ' +
+        err.message;
+      status.style.color = '#c62828';
+    })
+    .bc_startPipelineRun();
+}
+
+
+function masterRunW3ToW8E() {
+
+  var btn =
+    document.getElementById('masterBtnFinal');
+
+  var status =
+    document.getElementById('masterStatusFinal');
+
+  var logBox =
+    document.getElementById('masterLogFinal');
+
+  var w6Notice =
+    document.getElementById('masterW6Notice');
+
+  var startTime = Date.now();
+  var pipelineRow = null;
+
+  var stages = [
+    'W3',
+    'W4B',
+    'W4',
+    'W4.5',
+    'W5',
+    'W5C',
+    'W8E'
+  ];
+
+  btn.disabled = true;
+  btn.innerText = 'Running…';
+
+  status.textContent =
+    '⏳ Starting W3 → W8E… 0s';
+
+  status.style.color = '#555';
+
+  logBox.textContent =
+    'Stage: Starting...\n' +
+    'Progress: 0 / 7\n' +
+    'Cost: $0.0000';
+
+  if (w6Notice) {
+    w6Notice.style.display = 'none';
+  }
+
+  var timer = setInterval(function() {
+
+    var elapsed =
+      Math.floor(
+        (Date.now() - startTime) / 1000
+      );
+
+    status.textContent =
+      '⏳ W3 → W8E running… ' +
+      elapsed +
+      's';
+
+  }, 1000);
+
+
+  google.script.run
+
+    .withSuccessHandler(function(startRes) {
+
+      if (!startRes || !startRes.success) {
+
+        clearInterval(timer);
+
+        btn.disabled = false;
+        btn.innerText = '▶ Run W3 → W8E';
+
+        status.textContent =
+          '❌ ' +
+          (
+            startRes && startRes.message
+              ? startRes.message
+              : 'Could not start pipeline.'
+          );
+
+        status.style.color = '#c62828';
+
+        return;
+      }
+
+
+      pipelineRow = startRes.row;
+
+
+      var logPoller =
+        setInterval(function() {
+
+          if (!pipelineRow) return;
+
+          google.script.run
+
+            .withSuccessHandler(function(logRes) {
+
+              if (
+                !logRes ||
+                !logRes.success
+              ) return;
+
+              var logText =
+                String(logRes.log || '');
+
+              var lines =
+                logText.split(/\r?\n/);
+
+              var completed = 0;
+              var runningCost = 0;
+              var lastCompleted = '—';
+
+              stages.forEach(function(stageName) {
+
+                var prefix =
+                  '✓ ' +
+                  stageName +
+                  ' complete — $';
+
+                for (
+                  var i = 0;
+                  i < lines.length;
+                  i++
+                ) {
+
+                  if (
+                    lines[i].indexOf(prefix) === 0
+                  ) {
+
+                    completed++;
+
+                    lastCompleted =
+                      '✓ ' + stageName;
+
+                    var costMatch =
+                      lines[i].match(
+                        /\$([0-9.]+)/
+                      );
+
+                    if (costMatch) {
+                      runningCost +=
+                        Number(
+                          costMatch[1] || 0
+                        );
+                    }
+
+                    break;
+                  }
+                }
+              });
+
+
+              var currentStage =
+                completed >= stages.length
+                  ? 'Complete'
+                  : stages[completed];
+
+
+              logBox.textContent =
+                'Stage: ' +
+                currentStage +
+                '\n' +
+                'Progress: ' +
+                completed +
+                ' / 7\n' +
+                'Cost: $' +
+                runningCost.toFixed(4) +
+                '\n' +
+                'Last completed: ' +
+                lastCompleted +
+                '\n\n' +
+                logText;
+
+            })
+
+            .getPipelineRunLog(
+              pipelineRow
+            );
+
+        }, 1500);
+
+
+      google.script.run
+
+        .withSuccessHandler(function(res) {
+
+          clearInterval(timer);
+          clearInterval(logPoller);
+
+          var elapsed =
+            (
+              (Date.now() - startTime) /
+              1000
+            ).toFixed(1);
+
+          btn.disabled = false;
+          btn.innerText =
+            '▶ Run W3 → W8E';
+
+
+          if (res && res.success) {
+
+            status.textContent =
+              '✔ W3 → W8E complete — ' +
+              elapsed +
+              's';
+
+            status.style.color = '#2e7d32';
+
+            google.script.run
+
+              .withSuccessHandler(function(finalLogRes) {
+
+                if (
+                  finalLogRes &&
+                  finalLogRes.success &&
+                  finalLogRes.log
+                ) {
+
+                  logBox.textContent =
+                    finalLogRes.log +
+                    '\n\n✔ W3 → W8E complete.' +
+                    '\n➡ Go to W6.';
+                }
+
+                if (w6Notice) {
+                  w6Notice.style.display = 'block';
+                }
+
+                pipelineRow = null;
+              })
+
+              .getPipelineRunLog(
+                pipelineRow
+              );
+
+          } else if (
+            res &&
+            res.stopped
+          ) {
+
+            status.textContent =
+              '■ ' + res.message;
+
+            status.style.color = '#c62828';
+
+            pipelineRow = null;
+
+          } else {
+
+            status.textContent =
+              '❌ ' +
+              (
+                res && res.message
+                  ? res.message
+                  : 'Automation failed.'
+              );
+
+            status.style.color = '#c62828';
+
+            pipelineRow = null;
+          }
+        })
+
+        .withFailureHandler(function(err) {
+
+          clearInterval(timer);
+          clearInterval(logPoller);
+
+          btn.disabled = false;
+          btn.innerText =
+            '▶ Run W3 → W8E';
+
+          status.textContent =
+            '❌ ' + err.message;
+
+          status.style.color = '#c62828';
+
+          pipelineRow = null;
+        })
+
+        .pipelineRunW3ToW8E(
+          pipelineRow
+        );
+
+    })
+
+    .withFailureHandler(function(err) {
+
+      clearInterval(timer);
+
+      btn.disabled = false;
+      btn.innerText =
+        '▶ Run W3 → W8E';
+
+      status.textContent =
+        '❌ Could not start pipeline: ' +
+        err.message;
+
+      status.style.color = '#c62828';
+
+    })
+
+    .bc_startPipelineRun();
+}
+</script> +
+      _masterStoneBatchCost.toFixed(4);
+
+    status.style.color = '#2e7d32';
+
+    currentBox.textContent =
+      'Current row: —\n' +
+      'Article: —\n' +
+      'Stage: Complete';
+
+    return;
+  }
+
+  var item =
+    _masterStoneBatchRows[
+      _masterStoneBatchIndex
+    ];
+
+  currentBox.textContent =
+    'Current row: ' + item.row + '\n' +
+    'Article: ' + (item.title || '—') + '\n' +
+    'Stage: Content Intelligence';
+
+  status.textContent =
+    '⏳ Processing ' +
+    (_masterStoneBatchIndex + 1) +
+    ' of ' +
+    _masterStoneBatchRows.length +
+    ' — row ' +
+    item.row;
+
+  status.style.color = '#555';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+
+      if (!res || !res.success) {
+        if (_masterStoneBatchTimer) {
+          clearInterval(_masterStoneBatchTimer);
+          _masterStoneBatchTimer = null;
+        }
+
+        _masterStoneBatchRunning = false;
+
+        btn.disabled = false;
+        btn.textContent =
+          '▶ Run Selected Stone Type';
+
+        status.textContent =
+          '❌ Batch stopped on row ' +
+          item.row +
+          ' (' +
+          (_masterStoneBatchIndex + 1) +
+          ' of ' +
+          _masterStoneBatchRows.length +
+          ') — ' +
+          (res && res.message
+            ? res.message
+            : 'Content Intelligence failed.');
+
+        status.style.color = '#c62828';
+
+        currentBox.textContent =
+          'Current row: ' + item.row + '\n' +
+          'Article: ' + (item.title || '—') + '\n' +
+          'Stage: FAILED';
+
+        if (res && res.log) {
+          logBox.textContent +=
+            '\n\nRow ' +
+            item.row +
+            ' FAILED\n' +
+            res.log;
+        }
+
+        return;
+      }
+
+      _masterStoneBatchCost +=
+        Number(res.cost || 0);
+
+      _masterStoneBatchIndex++;
+
+      document.getElementById(
+        'masterStoneBatchProgress'
+      ).textContent =
+        _masterStoneBatchIndex +
+        ' of ' +
+        _masterStoneBatchRows.length;
+
+      logBox.textContent +=
+        '\n\n✔ Row ' +
+        item.row +
+        ' complete' +
+        (item.title ? ' — ' + item.title : '') +
+        '\n' +
+        (res.message || '');
+
+      logBox.scrollTop =
+        logBox.scrollHeight;
+
+      masterRunNextStoneTypeBatchRow();
+    })
+    .withFailureHandler(function(err) {
+      if (_masterStoneBatchTimer) {
+        clearInterval(_masterStoneBatchTimer);
+        _masterStoneBatchTimer = null;
+      }
+
+      _masterStoneBatchRunning = false;
+
+      btn.disabled = false;
+      btn.textContent =
+        '▶ Run Selected Stone Type';
+
+      status.textContent =
+        '❌ Batch stopped on row ' +
+        item.row +
+        ' — ' +
+        err.message;
+
+      status.style.color = '#c62828';
+
+      currentBox.textContent =
+        'Current row: ' + item.row + '\n' +
+        'Article: ' + (item.title || '—') + '\n' +
+        'Stage: FAILED';
+    })
+    .bc_runMasterStoneTypeContentIntelligenceRow(
+      item.row,
+      _masterStoneBatchStoneType
+    );
+}
+
+
 function masterRunContentIntelligence() {
 
   var btn = document.getElementById('masterBtnIntelligence');
