@@ -18,7 +18,7 @@
     <button id="grpbtn-publish"      onclick="selectGroup('publish')"      style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">PUBLISH</button>
     <button id="grpbtn-media"        onclick="selectGroup('media')"        style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">MEDIA</button>
     <button id="grpbtn-refinement"   onclick="selectGroup('refinement')"   style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#6a1b9a;color:#fff;letter-spacing:0.5px">REFINE</button>
-    <button id="grpbtn-master" onclick="selectGroup('master')" style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#1565c0;color:#fff;letter-spacing:0.5px">MASTER</button>
+    <button id="grpbtn-master" onclick="selectGroup('master')" style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#d81b60;color:#fff;letter-spacing:0.5px">MASTER AUTOMATION</button>
   </div>
 
   <!-- ── Thread indicator ── -->
@@ -126,8 +126,8 @@
     },
     master: {
     label: 'MASTER AUTOMATION',
-    thread: '🟦 Guided automation from Content Intelligence through W8E',
-    threadColor: '#1565c0',
+    thread: '🩷 Guided automation from Content Intelligence through W8E',
+    threadColor: '#d81b60',
     first: 'master-automation',
     stages: [
       { id: 'master-automation', label: 'Master Automation' }
@@ -171,7 +171,13 @@
     /* ── Highlight active group button ── */
     ['classify','analysis','governance','humanisation','output','publish','media','refinement','master'].forEach(function(k) {
       var btn = document.getElementById('grpbtn-' + k);
-      if (btn) btn.style.background = (k === groupKey) ? '#1565c0' : '#546e7a';
+      if (btn) {
+        if (k === 'master') {
+          btn.style.background = (k === groupKey) ? '#ad1457' : '#d81b60';
+        } else {
+          btn.style.background = (k === groupKey) ? '#1565c0' : '#546e7a';
+        }
+      }
     });
 
     /* ── Thread indicator ── */
@@ -217,8 +223,8 @@
         highlightActiveStageBtn(idx);
       };
     }
-    /* Auto-select CLASSIFY on load */
-    selectGroup('classify');
-    navGoTo('ac');
+    /* Open the requested group when launched from a dedicated menu item.
+       Normal Content Engine launches still default to CLASSIFY. */
+    selectGroup(window.CE_INITIAL_GROUP || 'classify');
   });
 </script>
