@@ -620,6 +620,105 @@ function bc_contentIntelligencePreflight_() {
   };
 }
 
+function runMasterContentIntelligenceBatchRow(row, expectedStoneType) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("posts");
+
+  if (!sheet) {
+    return { success: false, message: "Posts sheet not found." };
+  }
+
+  row = Number(row);
+
+  if (!row || row < 2 || row > sheet.getLastRow()) {
+    return { success: false, message: "Invalid posts row: " + row };
+  }
+
+  var headers = sheet
+    .getRange(1, 1, 1, sheet.getLastColumn())
+    .getValues()[0]
+    .map(function(h) { return String(h || "").trim(); });
+
+  var stoneIdx = headers.indexOf("Stone Type");
+  var titleIdx = headers.indexOf("Title");
+
+  if (stoneIdx === -1) {
+    return { success: false, message: 'Column "Stone Type" not found.' };
+  }
+
+  var liveStone = String(
+    sheet.getRange(row, stoneIdx + 1).getValue() || ""
+  ).trim();
+
+  if (
+    expectedStoneType &&
+    liveStone.toLowerCase() !==
+      String(expectedStoneType).trim().toLowerCase()
+  ) {
+    return {
+      success: false,
+      message:
+        "Row " + row +
+        ' is now "' + liveStone +
+        '" rather than "' + expectedStoneType +
+        '". Batch stopped to avoid processing the wrong article.'
+    };
+  }
+
+  var title = titleIdx > -1
+    ? String(sheet.getRange(row, titleIdx + 1).getValue() || "").trim()
+    : "";
+
+  sheet.setActiveRange(sheet.getRange(row, 1));
+
+  try {
+    var result = bc_runFullGovernanceChainAutomated();
+
+    if (!result || !result.success) {
+      return {
+        success: false,
+        row: row,
+        title: title,
+        stoneType: liveStone,
+        message:
+          result && result.message
+            ? result.message
+            : "Content Intelligence failed.",
+        log:
+          result && result.log
+            ? result.log
+            : "",
+        cost:
+          result && result.cost
+            ? Number(result.cost)
+            : 0
+      };
+    }
+
+    return {
+      success: true,
+      row: row,
+      title: title,
+      stoneType: liveStone,
+      message: result.message || "Content Intelligence complete.",
+      log: result.log || "",
+      cost: Number(result.cost || 0)
+    };
+
+  } catch (e) {
+    return {
+      success: false,
+      row: row,
+      title: title,
+      stoneType: liveStone,
+      message: e && e.message ? e.message : String(e),
+      log: "",
+      cost: 0
+    };
+  }
+}
+
+
 function bc_runFullGovernanceChainAutomated() {
   var preflight = bc_contentIntelligencePreflight_();
 
