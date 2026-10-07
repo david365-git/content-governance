@@ -25,6 +25,115 @@
 
 
     <!-- ═══════════════════════════════════════════════════════
+         GSC STONE TYPE BATCH — FIRST CONTROL
+         ═══════════════════════════════════════════════════════ -->
+
+    <div style="
+      margin-bottom:16px;
+      padding:10px;
+      border:2px solid #d81b60;
+      border-radius:6px;
+      background:#fce4ec;">
+
+      <div style="
+        font-weight:700;
+        color:#ad1457;
+        margin-bottom:6px;">
+        GSC Stone Type Batch
+      </div>
+
+      <div style="
+        font-size:12px;
+        margin-bottom:8px;">
+        Starts at the first occurrence of the selected Stone Type and works downward through every matching row in live sheet order.
+      </div>
+
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <select id="masterGSCStoneType"
+                style="
+                  flex:1;
+                  min-width:0;
+                  padding:7px;
+                  font-family:JetBrains Mono,monospace;
+                  font-size:11px;
+                  border:1px solid #ad1457;
+                  border-radius:4px;
+                  background:#fff;">
+          <option value="">— Load Stone Types —</option>
+        </select>
+
+        <button
+          id="masterGSCLoadBtn"
+          style="background:#ad1457;color:#fff"
+          onclick="masterLoadGSCStoneTypes()">
+          ↻ Load
+        </button>
+      </div>
+
+      <button
+        id="masterGSCBatchBtn"
+        style="width:100%;background:#d81b60;color:#fff"
+        onclick="masterRunGSCStoneTypeBatch()">
+        ▶ Run GSC for Selected Stone Type
+      </button>
+
+      <div id="masterGSCBatchStatus"
+           class="status-bar pending"
+           style="margin-top:8px;">
+        Load Stone Types to begin.
+      </div>
+
+      <div style="
+        margin-top:8px;
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:6px;
+        font-family:JetBrains Mono,monospace;
+        font-size:11px;">
+
+        <div style="padding:6px;background:#fff;border-radius:4px;">
+          <strong>Elapsed</strong><br>
+          <span id="masterGSCBatchSeconds">0s</span>
+        </div>
+
+        <div style="padding:6px;background:#fff;border-radius:4px;">
+          <strong>Processed</strong><br>
+          <span id="masterGSCBatchProgress">0 of 0</span>
+        </div>
+
+      </div>
+
+      <div id="masterGSCBatchCurrent"
+           style="
+             margin-top:8px;
+             padding:7px;
+             background:#fff;
+             border-radius:4px;
+             font-family:JetBrains Mono,monospace;
+             font-size:11px;
+             white-space:pre-wrap;">
+        Current row: —
+Article: —
+Stage: —
+      </div>
+
+      <div id="masterGSCBatchLog"
+           style="
+             margin-top:8px;
+             max-height:180px;
+             overflow:auto;
+             padding:7px;
+             background:#fff;
+             border-radius:4px;
+             font-family:JetBrains Mono,monospace;
+             font-size:10px;
+             white-space:pre-wrap;">
+      </div>
+
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
          1 — CONTENT INTELLIGENCE
          ═══════════════════════════════════════════════════════ -->
 
