@@ -1017,8 +1017,9 @@ function reconcileImageSuggestions(sourceKey) {
 /* ============================================================
    STAGE 2C — SAVE FINAL HTML
    Saves the pasted HTML (with images added in place of the
-   suggestion comments) to column FL (168), overwriting the
-   placeholder version.
+   suggestion comments) to both:
+   - FL (168) — approved W2C media-review HTML
+   - CT (98)  — New HTML used by the downstream pipeline
 ============================================================ */
 function saveW2CFinalHtmlToSheet(html) {
   if (!html || !html.trim()) {
@@ -1030,7 +1031,8 @@ function saveW2CFinalHtmlToSheet(html) {
   var row   = posts.getActiveRange().getRow();
   var finalHtml = html.trim();
 
-    posts.getRange(row, 168).setValue(finalHtml); // FL only
+  posts.getRange(row, 168).setValue(finalHtml); // FL
+  posts.getRange(row, 98).setValue(finalHtml);  // CT
 
   return {
     success: true,
