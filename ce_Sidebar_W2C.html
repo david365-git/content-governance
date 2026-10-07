@@ -162,7 +162,7 @@
           class="btn-copy"
           onclick="w2cSaveUpdatedHtml()"
           style="background:#37474f;color:#fff">
-          ✔ Save Updated HTML to FL
+          ✔ Save Updated HTML to FL + CT
         </button>
 
       </div>
@@ -1069,7 +1069,7 @@ function w2cCopyUpdatedHtml() {
 
 
 /* ============================================================
-   SAVE UPDATED HTML TO COLUMN FL
+   SAVE UPDATED HTML TO COLUMNS FL + CT
 ============================================================ */
 
 function w2cSaveUpdatedHtml() {
@@ -1106,7 +1106,7 @@ function w2cSaveUpdatedHtml() {
     '#555';
 
   resultDiv.innerText =
-    'Saving updated HTML to FL…';
+    'Saving updated HTML to FL and CT…';
 
 
   google.script.run
@@ -1123,7 +1123,7 @@ function w2cSaveUpdatedHtml() {
             '#2e7d32';
 
           resultDiv.innerText =
-            '✔ Updated HTML saved to column FL.';
+            '✔ Updated HTML saved to columns FL and CT.';
 
           document.getElementById(
             'statusW2C'
@@ -1133,7 +1133,7 @@ function w2cSaveUpdatedHtml() {
           document.getElementById(
             'statusW2C'
           ).innerText =
-            '✔ W2C media review complete — FL contains the approved media version.';
+            '✔ W2C media review complete — approved media HTML saved to FL and CT.';
 
         } else {
 
