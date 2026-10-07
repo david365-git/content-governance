@@ -5490,6 +5490,147 @@ function masterRunContentGeneration() {
     .bc_startPipelineRun();
 }
 
+function masterRunRecoveryToW8E() {
+
+  var select = document.getElementById('masterRecoveryStart');
+  var btn = document.getElementById('masterBtnRecovery');
+  var status = document.getElementById('masterStatusRecovery');
+  var logBox = document.getElementById('masterLogRecovery');
+
+  var startStage = select ? select.value : '';
+
+  if (!startStage) {
+    status.textContent = '❌ Select a recovery start stage.';
+    status.style.color = '#c62828';
+    return;
+  }
+
+  var startTime = Date.now();
+  var pipelineRow = null;
+
+  btn.disabled = true;
+  btn.innerText = 'Running…';
+
+  status.textContent =
+    '⏳ Starting recovery ' +
+    startStage +
+    ' → W8E… 0s';
+
+  status.style.color = '#555';
+
+  logBox.textContent =
+    'Recovery start: ' +
+    startStage +
+    '\nTarget: W8E';
+
+  var timer = setInterval(function() {
+    var elapsed = Math.floor((Date.now() - startTime) / 1000);
+    status.textContent =
+      '⏳ Recovery ' +
+      startStage +
+      ' → W8E running… ' +
+      elapsed +
+      's';
+  }, 1000);
+
+  google.script.run
+    .withSuccessHandler(function(startRes) {
+
+      if (!startRes || !startRes.success) {
+        clearInterval(timer);
+        btn.disabled = false;
+        btn.innerText = '▶ Run Selected Stage → W8E';
+        status.textContent =
+          '❌ ' +
+          (startRes && startRes.message
+            ? startRes.message
+            : 'Could not start recovery pipeline.');
+        status.style.color = '#c62828';
+        return;
+      }
+
+      pipelineRow = startRes.row;
+
+      var logPoller = setInterval(function() {
+        if (!pipelineRow) return;
+
+        google.script.run
+          .withSuccessHandler(function(logRes) {
+            if (logRes && logRes.success && logRes.log) {
+              logBox.textContent = logRes.log;
+            }
+          })
+          .getPipelineRunLog(pipelineRow);
+      }, 1500);
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+
+          clearInterval(timer);
+          clearInterval(logPoller);
+
+          var elapsed =
+            ((Date.now() - startTime) / 1000).toFixed(1);
+
+          btn.disabled = false;
+          btn.innerText = '▶ Run Selected Stage → W8E';
+
+          if (res && res.success) {
+            status.textContent =
+              '✔ Recovery ' +
+              startStage +
+              ' → W8E complete — ' +
+              elapsed +
+              's';
+            status.style.color = '#2e7d32';
+          } else if (res && res.stopped) {
+            status.textContent = '■ ' + res.message;
+            status.style.color = '#c62828';
+          } else {
+            status.textContent =
+              '❌ ' +
+              (res && res.message
+                ? res.message
+                : 'Recovery automation failed.');
+            status.style.color = '#c62828';
+          }
+
+          google.script.run
+            .withSuccessHandler(function(finalLogRes) {
+              if (finalLogRes && finalLogRes.success && finalLogRes.log) {
+                logBox.textContent = finalLogRes.log;
+              }
+              pipelineRow = null;
+            })
+            .getPipelineRunLog(pipelineRow);
+        })
+        .withFailureHandler(function(err) {
+          clearInterval(timer);
+          clearInterval(logPoller);
+          btn.disabled = false;
+          btn.innerText = '▶ Run Selected Stage → W8E';
+          status.textContent = '❌ ' + err.message;
+          status.style.color = '#c62828';
+          pipelineRow = null;
+        })
+        .pipelineResumeToW8E(
+          pipelineRow,
+          startStage
+        );
+    })
+    .withFailureHandler(function(err) {
+      clearInterval(timer);
+      btn.disabled = false;
+      btn.innerText = '▶ Run Selected Stage → W8E';
+      status.textContent =
+        '❌ Could not start recovery pipeline: ' +
+        err.message;
+      status.style.color = '#c62828';
+    })
+    .bc_startPipelineRun();
+}
+
+
 function masterRunW3ToW8E() {
 
   var btn =
