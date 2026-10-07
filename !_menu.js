@@ -10,6 +10,7 @@ function onOpen(e) {
     .addItem('📋 Batch Build Authority Briefs', 'bc_batchBuildAuthorityBriefs')
     .addSeparator()
     .addItem('🤖 Content Engine (ChatGPT) Stage 1 — ', 'openBuildContentEnginePromptFromActiveRowChatGPTSidebar')
+    .addItem('🩷 Content Engine — Master Automation', 'openMasterContentAutomationSidebar')
     .addItem('New Article AC', 'da_openNewArticleSidebar')
     .addItem('🛒 Generate Azon Product HTML', 'generateAzonProductHTML')
     .addSeparator()
@@ -129,4 +130,26 @@ function openStep1Sidebar() {
     .setTitle('Step 1 — Structure Audit')
     .setWidth(400);
   SpreadsheetApp.getUi().showSidebar(html);
+}
+
+/**
+ * Opens the Content Engine directly on the pink Master Automation window.
+ * Kept as a dedicated menu action so Master Automation is always reachable
+ * even if the normal Content Engine opens on another navigation group.
+ */
+function openMasterContentAutomationSidebar() {
+  var template = HtmlService.createTemplateFromFile('ce_Sidebar_Main');
+  var output = template.evaluate();
+
+  var content = output.getContent();
+  content = content.replace(
+    '<head>',
+    '<head><script>window.CE_INITIAL_GROUP="master";</script>'
+  );
+
+  output
+    .setContent(content)
+    .setTitle('Content Engine — Master Automation');
+
+  SpreadsheetApp.getUi().showSidebar(output);
 }
