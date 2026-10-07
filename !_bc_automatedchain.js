@@ -1025,6 +1025,12 @@ if (!preflight.success) {
     row
   );
 
+  // Content Intelligence complete — mark Column D blue with black text.
+  postsSheet
+    .getRange(row, 4)
+    .setBackground("#2196F3")
+    .setFontColor("#000000");
+
 
   var elapsedMinutes =
     Math.floor(
@@ -9432,6 +9438,33 @@ function bc_runW8EAutomated() {
       finalStatus =
         "PASS";
     }
+
+
+    /*
+     * =========================================================
+     * MARK W8E COMPLETE
+     * =========================================================
+     */
+
+    var w8Ss =
+      SpreadsheetApp
+        .getActiveSpreadsheet();
+
+    var w8Sheet =
+      w8Ss.getSheetByName(
+        "posts"
+      );
+
+    var w8Row =
+      w8Sheet
+        .getActiveCell()
+        .getRow();
+
+    // W8E complete — mark Column D pink with white text.
+    w8Sheet
+      .getRange(w8Row, 4)
+      .setBackground("#D81B60")
+      .setFontColor("#FFFFFF");
 
 
     /*
