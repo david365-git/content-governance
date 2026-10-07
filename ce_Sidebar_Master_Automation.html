@@ -71,131 +71,7 @@
 
 
     <!-- ═══════════════════════════════════════════════════════
-         2 — CONTENT GENERATION TO W2C
-         ═══════════════════════════════════════════════════════ -->
-
-    <div style="
-      margin-bottom:16px;
-      padding:10px;
-      border:1px solid #ddd;
-      border-radius:6px;">
-
-      <div style="
-        font-weight:700;
-        margin-bottom:6px;">
-        2 — Content Generation → W2C
-      </div>
-
-      <div id="masterStatusGeneration"
-           class="status-bar pending">
-        Ready to run Content Generation through to W2C.
-      </div>
-
-      <div id="masterLogGeneration"
-           style="
-             margin-top:8px;
-             font-family:JetBrains Mono,monospace;
-             font-size:11px;
-             white-space:pre-wrap;">
-      </div>
-
-      <div class="btn-row"
-           style="margin-top:8px">
-
-        <button
-          id="masterBtnGeneration"
-          style="background:#6a1b9a;color:#fff"
-          onclick="masterRunContentGeneration()">
-
-          ▶ Run Content Generation → W2C
-
-        </button>
-
-      </div>
-
-    </div>
-
-
-    <!-- ═══════════════════════════════════════════════════════
-         CONTENT ENGINE 2C HUMAN GATE
-         ═══════════════════════════════════════════════════════ -->
-
-    <div id="master2CNotice"
-         style="
-           margin-bottom:16px;
-           padding:12px;
-           background:#fff8e1;
-           border:1px solid #ffb300;
-           border-radius:6px;">
-
-      <div style="
-        font-weight:700;
-        color:#e65100;
-        margin-bottom:5px;">
-        Manual Media Stage
-      </div>
-
-      <div>
-        ➡ Open <strong>Content Engine 2C</strong> and complete the media stage.
-      </div>
-
-      <div style="
-        margin-top:5px;
-        font-size:12px;">
-        When Content Engine 2C is complete, return here and run the next automation.
-      </div>
-
-    </div>
-
-
-    <!-- ═══════════════════════════════════════════════════════
-         3 — W3 TO W8E
-         ═══════════════════════════════════════════════════════ -->
-
-    <div style="
-      margin-bottom:16px;
-      padding:10px;
-      border:1px solid #ddd;
-      border-radius:6px;">
-
-      <div style="
-        font-weight:700;
-        margin-bottom:6px;">
-        3 — Final Content Automation
-      </div>
-
-      <div id="masterStatusFinal"
-           class="status-bar pending">
-        Run after Content Engine 2C has been completed.
-      </div>
-
-      <div id="masterLogFinal"
-           style="
-             margin-top:8px;
-             font-family:JetBrains Mono,monospace;
-             font-size:11px;
-             white-space:pre-wrap;">
-      </div>
-
-      <div class="btn-row"
-           style="margin-top:8px">
-
-        <button
-          id="masterBtnFinal"
-          style="background:#00695c;color:#fff"
-          onclick="masterRunW3ToW8E()">
-
-          ▶ Run W3 → W8E
-
-        </button>
-
-      </div>
-
-    </div>
-
-
-    <!-- ═══════════════════════════════════════════════════════
-         RECOVERY — RUN FROM SELECTED STAGE TO W8E
+         2 — AUTOMATION RUNNER
          ═══════════════════════════════════════════════════════ -->
 
     <div style="
@@ -209,13 +85,13 @@
         font-weight:700;
         color:#ad1457;
         margin-bottom:6px;">
-        Recovery — Run From Selected Stage → W8E
+        2 — Automatic Workflow
       </div>
 
       <div style="
         font-size:12px;
         margin-bottom:8px;">
-        Choose the first stage to rerun. Earlier stages are skipped and automation continues from the selected stage through W8E.
+        Choose the stage to start from. The automation will continue from that stage through W8E.
       </div>
 
       <select id="masterRecoveryStart"
@@ -253,7 +129,7 @@
 
       <div id="masterStatusRecovery"
            class="status-bar pending">
-        Select a stage, then run recovery through W8E.
+        Select a stage, then run through W8E.
       </div>
 
       <div id="masterLogRecovery"
@@ -271,6 +147,48 @@
           onclick="masterRunRecoveryToW8E()">
           ▶ Run Selected Stage → W8E
         </button>
+      </div>
+
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         3 — MANUAL / FINAL WINDOWS
+         ═══════════════════════════════════════════════════════ -->
+
+    <div style="
+      margin-bottom:16px;
+      padding:10px;
+      border:1px solid #ddd;
+      border-radius:6px;">
+
+      <div style="
+        font-weight:700;
+        margin-bottom:8px;">
+        3 — Continue to Manual / Final Windows
+      </div>
+
+      <div class="btn-row"
+           style="display:flex;flex-wrap:wrap;gap:6px">
+
+        <button
+          style="background:#2e7d32;color:#fff"
+          onclick="navGoTo(16)">
+          W6
+        </button>
+
+        <button
+          style="background:#6a1b9a;color:#fff"
+          onclick="navGoTo('10b')">
+          Image Insertion
+        </button>
+
+        <button
+          style="background:#546e7a;color:#fff"
+          onclick="navGoTo('fi')">
+          Featured Image
+        </button>
+
       </div>
 
     </div>
