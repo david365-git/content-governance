@@ -134,6 +134,120 @@ Stage: —
 
 
     <!-- ═══════════════════════════════════════════════════════
+         CONTENT INTELLIGENCE STONE TYPE BATCH
+         ═══════════════════════════════════════════════════════ -->
+
+    <div style="
+      margin-bottom:16px;
+      padding:10px;
+      border:2px solid #1565c0;
+      border-radius:6px;
+      background:#e3f2fd;">
+
+      <div style="
+        font-weight:700;
+        color:#0d47a1;
+        margin-bottom:6px;">
+        Content Intelligence Stone Type Batch
+      </div>
+
+      <div style="
+        font-size:12px;
+        margin-bottom:8px;">
+        Runs Content Intelligence for every row matching the selected Stone Type in live sheet order. Fresh GSC data under 30 days old is skipped automatically.
+      </div>
+
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <select id="masterCIStoneType"
+                style="
+                  flex:1;
+                  min-width:0;
+                  padding:7px;
+                  font-family:JetBrains Mono,monospace;
+                  font-size:11px;
+                  border:1px solid #1565c0;
+                  border-radius:4px;
+                  background:#fff;">
+          <option value="">— Load Stone Types —</option>
+        </select>
+
+        <button
+          id="masterCILoadBtn"
+          style="background:#1565c0;color:#fff"
+          onclick="masterLoadCIStoneTypes()">
+          ↻ Load
+        </button>
+      </div>
+
+      <button
+        id="masterCIBatchBtn"
+        style="width:100%;background:#1565c0;color:#fff"
+        onclick="masterRunCIStoneTypeBatch()">
+        ▶ Run Content Intelligence for Selected Stone Type
+      </button>
+
+      <div id="masterCIBatchStatus"
+           class="status-bar pending"
+           style="margin-top:8px;">
+        Load Stone Types to begin.
+      </div>
+
+      <div style="
+        margin-top:8px;
+        display:grid;
+        grid-template-columns:1fr 1fr 1fr;
+        gap:6px;
+        font-family:JetBrains Mono,monospace;
+        font-size:11px;">
+
+        <div style="padding:6px;background:#fff;border-radius:4px;">
+          <strong>Elapsed</strong><br>
+          <span id="masterCIBatchSeconds">0s</span>
+        </div>
+
+        <div style="padding:6px;background:#fff;border-radius:4px;">
+          <strong>Processed</strong><br>
+          <span id="masterCIBatchProgress">0 of 0</span>
+        </div>
+
+        <div style="padding:6px;background:#fff;border-radius:4px;">
+          <strong>Cost</strong><br>
+          <span id="masterCIBatchCost">$0.0000</span>
+        </div>
+
+      </div>
+
+      <div id="masterCIBatchCurrent"
+           style="
+             margin-top:8px;
+             padding:7px;
+             background:#fff;
+             border-radius:4px;
+             font-family:JetBrains Mono,monospace;
+             font-size:11px;
+             white-space:pre-wrap;">
+        Current row: —
+Article: —
+Stage: —
+      </div>
+
+      <div id="masterCIBatchLog"
+           style="
+             margin-top:8px;
+             max-height:180px;
+             overflow:auto;
+             padding:7px;
+             background:#fff;
+             border-radius:4px;
+             font-family:JetBrains Mono,monospace;
+             font-size:10px;
+             white-space:pre-wrap;">
+      </div>
+
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
          1 — CONTENT INTELLIGENCE
          ═══════════════════════════════════════════════════════ -->
 
