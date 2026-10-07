@@ -5086,6 +5086,324 @@ function runW8EAutomated() {
 
     .bc_runW8EAutomated();
 }
+
+var _masterGSCBatchRunning = false;
+var _masterGSCBatchRows = [];
+var _masterGSCBatchIndex = 0;
+var _masterGSCBatchStoneType = '';
+var _masterGSCBatchStartedAt = 0;
+var _masterGSCBatchTimer = null;
+
+function masterLoadGSCStoneTypes() {
+  var select = document.getElementById('masterGSCStoneType');
+  var status = document.getElementById('masterGSCBatchStatus');
+  var btn = document.getElementById('masterGSCLoadBtn');
+
+  if (!select || !status || !btn) return;
+
+  btn.disabled = true;
+  status.textContent = 'Loading live Stone Types…';
+  status.style.color = '#555';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      btn.disabled = false;
+
+      if (!res || !res.success) {
+        status.textContent =
+          '❌ ' +
+          (res && res.message
+            ? res.message
+            : 'Could not load Stone Types.');
+        status.style.color = '#c62828';
+        return;
+      }
+
+      select.innerHTML =
+        '<option value="">— Select Stone Type —</option>';
+
+      (res.stoneTypes || []).forEach(function(item) {
+        var option = document.createElement('option');
+        option.value = item.name;
+        option.textContent =
+          item.name + ' (' + item.count + ')';
+        select.appendChild(option);
+      });
+
+      status.textContent = '✔ Live Stone Types loaded.';
+      status.style.color = '#2e7d32';
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      status.textContent = '❌ ' + err.message;
+      status.style.color = '#c62828';
+    })
+    .getMasterGSCStoneTypes();
+}
+
+
+function masterRunGSCStoneTypeBatch() {
+  if (_masterGSCBatchRunning) return;
+
+  var select =
+    document.getElementById('masterGSCStoneType');
+
+  var stoneType =
+    select ? String(select.value || '').trim() : '';
+
+  var status =
+    document.getElementById('masterGSCBatchStatus');
+
+  var btn =
+    document.getElementById('masterGSCBatchBtn');
+
+  if (!stoneType) {
+    status.textContent = '❌ Select a Stone Type first.';
+    status.style.color = '#c62828';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Loading rows…';
+
+  status.textContent =
+    'Loading live ' + stoneType + ' rows…';
+  status.style.color = '#555';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success) {
+        btn.disabled = false;
+        btn.textContent = '▶ Run GSC for Selected Stone Type';
+        status.textContent =
+          '❌ ' +
+          (res && res.message
+            ? res.message
+            : 'Could not load matching rows.');
+        status.style.color = '#c62828';
+        return;
+      }
+
+      _masterGSCBatchRows = res.rows || [];
+
+      if (!_masterGSCBatchRows.length) {
+        btn.disabled = false;
+        btn.textContent = '▶ Run GSC for Selected Stone Type';
+        status.textContent =
+          '❌ No matching rows found for ' + stoneType + '.';
+        status.style.color = '#c62828';
+        return;
+      }
+
+      _masterGSCBatchRunning = true;
+      _masterGSCBatchIndex = 0;
+      _masterGSCBatchStoneType = stoneType;
+      _masterGSCBatchStartedAt = Date.now();
+
+      document.getElementById(
+        'masterGSCBatchProgress'
+      ).textContent =
+        '0 of ' + _masterGSCBatchRows.length;
+
+      document.getElementById(
+        'masterGSCBatchSeconds'
+      ).textContent = '0s';
+
+      document.getElementById(
+        'masterGSCBatchLog'
+      ).textContent =
+        'GSC batch started — ' +
+        stoneType +
+        ' — ' +
+        _masterGSCBatchRows.length +
+        ' row(s).';
+
+      btn.textContent = 'Running GSC batch…';
+
+      _masterGSCBatchTimer =
+        setInterval(function() {
+          var seconds =
+            Math.floor(
+              (Date.now() -
+               _masterGSCBatchStartedAt) / 1000
+            );
+
+          document.getElementById(
+            'masterGSCBatchSeconds'
+          ).textContent =
+            seconds + 's';
+        }, 1000);
+
+      masterRunNextGSCBatchRow();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      btn.textContent = '▶ Run GSC for Selected Stone Type';
+      status.textContent = '❌ ' + err.message;
+      status.style.color = '#c62828';
+    })
+    .getMasterGSCRowsForStoneType(stoneType);
+}
+
+
+function masterRunNextGSCBatchRow() {
+  var status =
+    document.getElementById('masterGSCBatchStatus');
+
+  var btn =
+    document.getElementById('masterGSCBatchBtn');
+
+  var current =
+    document.getElementById('masterGSCBatchCurrent');
+
+  var log =
+    document.getElementById('masterGSCBatchLog');
+
+  if (
+    !_masterGSCBatchRunning ||
+    _masterGSCBatchIndex >= _masterGSCBatchRows.length
+  ) {
+    if (_masterGSCBatchTimer) {
+      clearInterval(_masterGSCBatchTimer);
+      _masterGSCBatchTimer = null;
+    }
+
+    _masterGSCBatchRunning = false;
+
+    btn.disabled = false;
+    btn.textContent = '▶ Run GSC for Selected Stone Type';
+
+    var elapsed =
+      Math.floor(
+        (Date.now() - _masterGSCBatchStartedAt) / 1000
+      );
+
+    status.textContent =
+      '✔ ' +
+      _masterGSCBatchStoneType +
+      ' GSC batch complete — ' +
+      _masterGSCBatchRows.length +
+      ' of ' +
+      _masterGSCBatchRows.length +
+      ' processed — ' +
+      elapsed +
+      's';
+
+    status.style.color = '#2e7d32';
+
+    current.textContent =
+      'Current row: —\n' +
+      'Article: —\n' +
+      'Stage: Complete';
+
+    return;
+  }
+
+  var item =
+    _masterGSCBatchRows[_masterGSCBatchIndex];
+
+  current.textContent =
+    'Current row: ' + item.row + '\n' +
+    'Article: ' + (item.title || '—') + '\n' +
+    'Stage: GSC Full Sync + Row Stats';
+
+  status.textContent =
+    '⏳ Processing ' +
+    (_masterGSCBatchIndex + 1) +
+    ' of ' +
+    _masterGSCBatchRows.length +
+    ' — row ' +
+    item.row;
+
+  status.style.color = '#555';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success) {
+        if (_masterGSCBatchTimer) {
+          clearInterval(_masterGSCBatchTimer);
+          _masterGSCBatchTimer = null;
+        }
+
+        _masterGSCBatchRunning = false;
+
+        btn.disabled = false;
+        btn.textContent = '▶ Run GSC for Selected Stone Type';
+
+        status.textContent =
+          '❌ Batch stopped on row ' +
+          item.row +
+          ' (' +
+          (_masterGSCBatchIndex + 1) +
+          ' of ' +
+          _masterGSCBatchRows.length +
+          ') — ' +
+          (res && res.message
+            ? res.message
+            : 'GSC processing failed.');
+
+        status.style.color = '#c62828';
+
+        current.textContent =
+          'Current row: ' + item.row + '\n' +
+          'Article: ' + (item.title || '—') + '\n' +
+          'Stage: FAILED';
+
+        return;
+      }
+
+      _masterGSCBatchIndex++;
+
+      document.getElementById(
+        'masterGSCBatchProgress'
+      ).textContent =
+        _masterGSCBatchIndex +
+        ' of ' +
+        _masterGSCBatchRows.length;
+
+      log.textContent +=
+        '\n✔ Row ' +
+        item.row +
+        ' — ' +
+        (item.title || 'Untitled') +
+        ' — ' +
+        (res.message || 'GSC complete');
+
+      log.scrollTop = log.scrollHeight;
+
+      masterRunNextGSCBatchRow();
+    })
+    .withFailureHandler(function(err) {
+      if (_masterGSCBatchTimer) {
+        clearInterval(_masterGSCBatchTimer);
+        _masterGSCBatchTimer = null;
+      }
+
+      _masterGSCBatchRunning = false;
+
+      btn.disabled = false;
+      btn.textContent = '▶ Run GSC for Selected Stone Type';
+
+      status.textContent =
+        '❌ Batch stopped on row ' +
+        item.row +
+        ' — ' +
+        err.message;
+
+      status.style.color = '#c62828';
+
+      current.textContent =
+        'Current row: ' + item.row + '\n' +
+        'Article: ' + (item.title || '—') + '\n' +
+        'Stage: FAILED';
+    })
+    .runMasterGSCBatchRow(
+      item.row,
+      _masterGSCBatchStoneType
+    );
+}
+
+
 function masterRunContentIntelligence() {
 
   var btn = document.getElementById('masterBtnIntelligence');
