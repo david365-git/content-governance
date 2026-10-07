@@ -5177,7 +5177,7 @@ function masterRunStoneTypeBatch() {
 
       if (!res || !res.success) {
         btn.disabled = false;
-        btn.textContent = '▶ Run Selected Stone Type';
+        btn.textContent = '▶ Run GSC for Selected Stone Type';
         status.textContent =
           '❌ ' +
           (res && res.message
@@ -5191,7 +5191,7 @@ function masterRunStoneTypeBatch() {
 
       if (!_masterStoneBatchRows.length) {
         btn.disabled = false;
-        btn.textContent = '▶ Run Selected Stone Type';
+        btn.textContent = '▶ Run GSC for Selected Stone Type';
         status.textContent =
           '❌ No matching rows found for ' + stoneType + '.';
         status.style.color = '#c62828';
@@ -5216,7 +5216,7 @@ function masterRunStoneTypeBatch() {
       document.getElementById(
         'masterStoneBatchLog'
       ).textContent =
-        'Batch started — ' +
+        'GSC batch started — ' +
         stoneType +
         ' — ' +
         _masterStoneBatchRows.length +
@@ -5242,7 +5242,7 @@ function masterRunStoneTypeBatch() {
     })
     .withFailureHandler(function(err) {
       btn.disabled = false;
-      btn.textContent = '▶ Run Selected Stone Type';
+      btn.textContent = '▶ Run GSC for Selected Stone Type';
       status.textContent = '❌ ' + err.message;
       status.style.color = '#c62828';
     })
@@ -5276,7 +5276,7 @@ function masterRunNextStoneTypeBatchRow() {
     _masterStoneBatchRunning = false;
 
     btn.disabled = false;
-    btn.textContent = '▶ Run Selected Stone Type';
+    btn.textContent = '▶ Run GSC for Selected Stone Type';
 
     var elapsed =
       Math.floor(
@@ -5369,7 +5369,7 @@ function masterRunNextStoneTypeBatchRow() {
           '❌ ' +
           ((res && res.message)
             ? res.message
-            : 'Content Intelligence failed.');
+            : 'GSC data processing failed.');
 
         status.style.color = '#c62828';
       }
@@ -6163,7 +6163,7 @@ function masterRunW3ToW8E() {
   currentBox.textContent =
     'Current row: ' + item.row + '\n' +
     'Article: ' + (item.title || '—') + '\n' +
-    'Stage: Content Intelligence';
+    'Stage: GSC Data Processing';
 
   status.textContent =
     '⏳ Processing ' +
@@ -6188,7 +6188,7 @@ function masterRunW3ToW8E() {
 
         btn.disabled = false;
         btn.textContent =
-          '▶ Run Selected Stone Type';
+          '▶ Run GSC for Selected Stone Type';
 
         status.textContent =
           '❌ Batch stopped on row ' +
@@ -6200,7 +6200,7 @@ function masterRunW3ToW8E() {
           ') — ' +
           (res && res.message
             ? res.message
-            : 'Content Intelligence failed.');
+            : 'GSC data processing failed.');
 
         status.style.color = '#c62828';
 
@@ -6255,7 +6255,7 @@ function masterRunW3ToW8E() {
 
       btn.disabled = false;
       btn.textContent =
-        '▶ Run Selected Stone Type';
+        '▶ Run GSC for Selected Stone Type';
 
       status.textContent =
         '❌ Batch stopped on row ' +
@@ -6270,7 +6270,7 @@ function masterRunW3ToW8E() {
         'Article: ' + (item.title || '—') + '\n' +
         'Stage: FAILED';
     })
-    .bc_runMasterStoneTypeContentIntelligenceRow(
+    .bc_runMasterStoneTypeGSCRow(
       item.row,
       _masterStoneBatchStoneType
     );
@@ -6353,7 +6353,7 @@ function masterRunContentIntelligence() {
           '❌ ' +
           ((res && res.message)
             ? res.message
-            : 'Content Intelligence failed.');
+            : 'GSC data processing failed.');
 
         status.style.color = '#c62828';
       }
