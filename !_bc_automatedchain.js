@@ -600,18 +600,18 @@ function bc_getMasterStoneTypeBatchRows(stoneType) {
 }
 
 
-function bc_runMasterStoneTypeContentIntelligenceRow(row, expectedStoneType) {
+function bc_runMasterStoneTypeGSCRow(row, expectedStoneType) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("posts");
 
   if (!sheet) {
-    return { success: false, message: "Posts sheet not found.", cost: 0 };
+    return { success: false, message: "Posts sheet not found." };
   }
 
   row = Number(row);
 
   if (!row || row < 2 || row > sheet.getLastRow()) {
-    return { success: false, message: "Invalid posts row: " + row, cost: 0 };
+    return { success: false, message: "Invalid posts row: " + row };
   }
 
   var headers = sheet
@@ -625,8 +625,7 @@ function bc_runMasterStoneTypeContentIntelligenceRow(row, expectedStoneType) {
   if (stoneIdx === -1) {
     return {
       success: false,
-      message: 'Column "Stone Type" not found.',
-      cost: 0
+      message: 'Column "Stone Type" not found.'
     };
   }
 
@@ -645,8 +644,7 @@ function bc_runMasterStoneTypeContentIntelligenceRow(row, expectedStoneType) {
         "Row " + row +
         ' is now "' + liveStone +
         '" rather than "' + expectedStoneType +
-        '". Batch stopped to avoid processing the wrong article.',
-      cost: 0
+        '". Batch stopped to avoid processing the wrong article.'
     };
   }
 
@@ -656,28 +654,35 @@ function bc_runMasterStoneTypeContentIntelligenceRow(row, expectedStoneType) {
 
   sheet.setActiveRange(sheet.getRange(row, 1));
 
-  var result = bc_runFullGovernanceChainAutomated();
+  try {
+    var syncResult = runGSCFullSyncActiveRow();
+    var statsResult = runGSCRowStatsActiveRow();
 
-  if (!result) {
+    return {
+      success: true,
+      row: row,
+      title: title,
+      stoneType: liveStone,
+      postId: syncResult && syncResult.postId ? syncResult.postId : "",
+      message:
+        "GSC Full Sync and Row Stats completed" +
+        (syncResult && syncResult.postId
+          ? " for Post ID " + syncResult.postId
+          : "") +
+        "."
+    };
+
+  } catch (e) {
     return {
       success: false,
       row: row,
       title: title,
-      message: "Content Intelligence returned no result.",
-      cost: 0
+      stoneType: liveStone,
+      message: e && e.message ? e.message : String(e)
     };
   }
-
-  return {
-    success: result.success !== false,
-    row: row,
-    title: title,
-    stoneType: liveStone,
-    message: result.message || "",
-    log: result.log || "",
-    cost: Number(result.cost || 0)
-  };
 }
+
 
 function bc_contentIntelligencePreflight_() {
 
