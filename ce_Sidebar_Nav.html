@@ -10,6 +10,7 @@
 
   <!-- ── Group buttons row ── -->
   <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:5px">
+    <button id="grpbtn-master"       onclick="selectGroup('master')"       style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#d81b60;color:#fff;letter-spacing:0.5px">AUTOMATIC — MASTER WORKFLOW</button>
     <button id="grpbtn-classify"     onclick="selectGroup('classify')"     style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">CLASSIFY</button>
     <button id="grpbtn-analysis"     onclick="selectGroup('analysis')"     style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">ANALYSIS</button>
     <button id="grpbtn-governance"   onclick="selectGroup('governance')"   style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">GOVERNANCE</button>
@@ -18,7 +19,6 @@
     <button id="grpbtn-publish"      onclick="selectGroup('publish')"      style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">PUBLISH</button>
     <button id="grpbtn-media"        onclick="selectGroup('media')"        style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#546e7a;color:#fff;letter-spacing:0.5px">MEDIA</button>
     <button id="grpbtn-refinement"   onclick="selectGroup('refinement')"   style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#6a1b9a;color:#fff;letter-spacing:0.5px">REFINE</button>
-    <button id="grpbtn-master" onclick="selectGroup('master')" style="font-family:JetBrains Mono,monospace;font-size:10px;font-weight:700;padding:3px 7px;border:none;border-radius:3px;cursor:pointer;background:#d81b60;color:#fff;letter-spacing:0.5px">MASTER AUTOMATION</button>
   </div>
 
   <!-- ── Thread indicator ── -->
@@ -125,7 +125,7 @@
       ]
     },
     master: {
-    label: 'MASTER AUTOMATION',
+    label: 'AUTOMATIC — MASTER WORKFLOW',
     thread: '🩷 Guided automation from Content Intelligence through W8E',
     threadColor: '#d81b60',
     first: 'master-automation',
@@ -225,6 +225,6 @@
     }
     /* Open the requested group when launched from a dedicated menu item.
        Normal Content Engine launches still default to CLASSIFY. */
-    selectGroup(window.CE_INITIAL_GROUP || 'classify');
+    selectGroup(window.CE_INITIAL_GROUP || 'master');
   });
 </script>
