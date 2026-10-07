@@ -4,17 +4,17 @@
 
 <div id="window-master-automation"
      class="window-card"
-     style="display:none;border-top:3px solid #1565c0">
+     style="display:none;border-top:3px solid #d81b60">
 
   <div class="window-header">
 
     <span class="window-label"
-          style="color:#1565c0">
+          style="color:#d81b60">
       Master Content Automation
     </span>
 
     <span class="tag"
-          style="background:#1565c0">
+          style="background:#d81b60">
       Guided Automation
     </span>
 
@@ -189,6 +189,88 @@
 
         </button>
 
+      </div>
+
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         RECOVERY — RUN FROM SELECTED STAGE TO W8E
+         ═══════════════════════════════════════════════════════ -->
+
+    <div style="
+      margin-bottom:16px;
+      padding:10px;
+      border:2px solid #d81b60;
+      border-radius:6px;
+      background:#fce4ec;">
+
+      <div style="
+        font-weight:700;
+        color:#ad1457;
+        margin-bottom:6px;">
+        Recovery — Run From Selected Stage → W8E
+      </div>
+
+      <div style="
+        font-size:12px;
+        margin-bottom:8px;">
+        Choose the first stage to rerun. Earlier stages are skipped and automation continues from the selected stage through W8E.
+      </div>
+
+      <select id="masterRecoveryStart"
+              style="
+                width:100%;
+                padding:7px;
+                margin-bottom:8px;
+                font-family:JetBrains Mono,monospace;
+                font-size:11px;
+                border:1px solid #ad1457;
+                border-radius:4px;
+                background:#fff;">
+        <option value="Pre-AC">Pre-AC</option>
+        <option value="AC">AC</option>
+        <option value="W-1">W-1</option>
+        <option value="W1A-W1D">W1A-W1D</option>
+        <option value="W1.5A">W1.5A</option>
+        <option value="W1.5B">W1.5B</option>
+        <option value="W1.5C">W1.5C</option>
+        <option value="W1.5D">W1.5D</option>
+        <option value="W1.5E">W1.5E</option>
+        <option value="W2B">W2B</option>
+        <option value="W2B.05">W2B.05</option>
+        <option value="W2B.1">W2B.1</option>
+        <option value="W2B.2">W2B.2</option>
+        <option value="W2B.3">W2B.3</option>
+        <option value="W3">W3</option>
+        <option value="W4B">W4B</option>
+        <option value="W4">W4</option>
+        <option value="W4.5">W4.5</option>
+        <option value="W5">W5</option>
+        <option value="W5C">W5C</option>
+        <option value="W8E">W8E</option>
+      </select>
+
+      <div id="masterStatusRecovery"
+           class="status-bar pending">
+        Select a stage, then run recovery through W8E.
+      </div>
+
+      <div id="masterLogRecovery"
+           style="
+             margin-top:8px;
+             font-family:JetBrains Mono,monospace;
+             font-size:11px;
+             white-space:pre-wrap;">
+      </div>
+
+      <div class="btn-row" style="margin-top:8px">
+        <button
+          id="masterBtnRecovery"
+          style="background:#d81b60;color:#fff"
+          onclick="masterRunRecoveryToW8E()">
+          ▶ Run Selected Stage → W8E
+        </button>
       </div>
 
     </div>
