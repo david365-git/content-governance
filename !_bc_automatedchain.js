@@ -690,13 +690,58 @@ if (!preflight.success) {
   // 1. GSC SYNC
   // =========================================================
   try {
-    var syncResult = runGSCFullSyncActiveRow();
-    runGSCRowStatsActiveRow();
+    var skipGSC = false;
+    var monitorDateText = String(
+      postsSheet.getRange(activeRow, 64).getDisplayValue() || ""
+    ).trim();
 
-    log.push(
-      'GSC Sync: completed for Post ID ' +
-      syncResult.postId
-    );
+    if (monitorDateText) {
+      var monitorDateParts = monitorDateText.split("—");
+
+      if (monitorDateParts.length === 2) {
+        var latestDateText = monitorDateParts[1].trim();
+        var latestDateParts = latestDateText.split("/");
+
+        if (latestDateParts.length === 3) {
+          var latestMonitorDate = new Date(
+            Number(latestDateParts[2]),
+            Number(latestDateParts[1]) - 1,
+            Number(latestDateParts[0])
+          );
+
+          latestMonitorDate.setHours(0, 0, 0, 0);
+
+          var today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          var monitorAgeDays = Math.floor(
+            (today.getTime() - latestMonitorDate.getTime()) / 86400000
+          );
+
+          if (monitorAgeDays >= 0 && monitorAgeDays < 30) {
+            skipGSC = true;
+
+            log.push(
+              'GSC Sync: skipped — Monitor data is ' +
+              monitorAgeDays +
+              ' days old (' +
+              latestDateText +
+              ')'
+            );
+          }
+        }
+      }
+    }
+
+    if (!skipGSC) {
+      var syncResult = runGSCFullSyncActiveRow();
+      runGSCRowStatsActiveRow();
+
+      log.push(
+        'GSC Sync: completed for Post ID ' +
+        syncResult.postId
+      );
+    }
 
   } catch (e) {
     return {
