@@ -620,6 +620,116 @@ function bc_contentIntelligencePreflight_() {
   };
 }
 
+
+function getMasterCIRowsForPostIds(postIdsText) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("posts");
+
+    if (!sheet) {
+      return { success: false, message: "Posts sheet not found." };
+    }
+
+    var rawLines = String(postIdsText || "")
+      .split(/\r?\n/)
+      .map(function(line) { return String(line || "").trim(); })
+      .filter(function(line) { return line !== ""; });
+
+    if (!rawLines.length) {
+      return { success: false, message: "Enter at least one Post ID, one per line." };
+    }
+
+    var requestedIds = [];
+    var seen = {};
+    var duplicates = [];
+
+    rawLines.forEach(function(id) {
+      if (seen[id]) {
+        duplicates.push(id);
+        return;
+      }
+      seen[id] = true;
+      requestedIds.push(id);
+    });
+
+    var data = sheet.getDataRange().getValues();
+
+    if (data.length < 2) {
+      return { success: false, message: "Posts sheet has no data rows." };
+    }
+
+    var headers = data[0].map(function(h) {
+      return String(h || "").trim();
+    });
+
+    var postIdIdx = headers.indexOf("Post ID");
+    var titleIdx = headers.indexOf("Title");
+    var stoneIdx = headers.indexOf("Stone Type");
+
+    if (postIdIdx === -1) {
+      return { success: false, message: 'Column "Post ID" not found.' };
+    }
+
+    if (stoneIdx === -1) {
+      return { success: false, message: 'Column "Stone Type" not found.' };
+    }
+
+    var byId = {};
+
+    for (var r = 1; r < data.length; r++) {
+      var id = String(data[r][postIdIdx] || "").trim();
+      if (!id) continue;
+
+      byId[id] = {
+        row: r + 1,
+        postId: id,
+        title: titleIdx > -1 ? String(data[r][titleIdx] || "").trim() : "",
+        stoneType: String(data[r][stoneIdx] || "").trim()
+      };
+    }
+
+    var rows = [];
+    var missing = [];
+
+    requestedIds.forEach(function(id) {
+      if (byId[id]) {
+        rows.push(byId[id]);
+      } else {
+        missing.push(id);
+      }
+    });
+
+    if (missing.length) {
+      return {
+        success: false,
+        message:
+          "These Post IDs were not found in Column D: " +
+          missing.join(", "),
+        missing: missing,
+        duplicates: duplicates
+      };
+    }
+
+    return {
+      success: true,
+      rows: rows,
+      count: rows.length,
+      duplicates: duplicates,
+      message:
+        rows.length +
+        " Post ID" +
+        (rows.length === 1 ? "" : "s") +
+        " loaded."
+    };
+
+  } catch (e) {
+    return {
+      success: false,
+      message: "getMasterCIRowsForPostIds error: " + e.message
+    };
+  }
+}
+
 function runMasterContentIntelligenceBatchRow(row, expectedStoneType) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("posts");
