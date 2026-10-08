@@ -248,6 +248,114 @@ Stage: —
 
 
     <!-- ═══════════════════════════════════════════════════════
+         CONTENT INTELLIGENCE POST ID BATCH
+         ═══════════════════════════════════════════════════════ -->
+
+    <div style="
+      margin-bottom:16px;
+      padding:10px;
+      border:2px solid #6a1b9a;
+      border-radius:6px;
+      background:#f3e5f5;">
+
+      <div style="
+        font-weight:700;
+        color:#4a148c;
+        margin-bottom:6px;">
+        Content Intelligence Post ID Batch
+      </div>
+
+      <div style="
+        font-size:12px;
+        margin-bottom:8px;">
+        Paste Post IDs from Column D, one per line. They will run through the same Content Intelligence automation in the order entered. Fresh GSC data under 30 days old is skipped automatically.
+      </div>
+
+      <textarea
+        id="masterCIPostIds"
+        placeholder="12345&#10;12346&#10;12347"
+        style="
+          width:100%;
+          height:110px;
+          box-sizing:border-box;
+          padding:7px;
+          margin-bottom:8px;
+          font-family:JetBrains Mono,monospace;
+          font-size:11px;
+          border:1px solid #6a1b9a;
+          border-radius:4px;
+          background:#fff;"></textarea>
+
+      <button
+        id="masterCIPostIdBatchBtn"
+        style="width:100%;background:#6a1b9a;color:#fff"
+        onclick="masterRunCIPostIdBatch()">
+        ▶ Run Content Intelligence for Post IDs
+      </button>
+
+      <div id="masterCIPostIdBatchStatus"
+           class="status-bar pending"
+           style="margin-top:8px;">
+        Enter Post IDs, one per line.
+      </div>
+
+      <div style="
+        margin-top:8px;
+        display:grid;
+        grid-template-columns:1fr 1fr 1fr;
+        gap:6px;
+        font-family:JetBrains Mono,monospace;
+        font-size:11px;">
+
+        <div style="padding:6px;background:#fff;border-radius:4px;">
+          <strong>Elapsed</strong><br>
+          <span id="masterCIPostIdBatchSeconds">0s</span>
+        </div>
+
+        <div style="padding:6px;background:#fff;border-radius:4px;">
+          <strong>Processed</strong><br>
+          <span id="masterCIPostIdBatchProgress">0 of 0</span>
+        </div>
+
+        <div style="padding:6px;background:#fff;border-radius:4px;">
+          <strong>Cost</strong><br>
+          <span id="masterCIPostIdBatchCost">$0.0000</span>
+        </div>
+
+      </div>
+
+      <div id="masterCIPostIdBatchCurrent"
+           style="
+             margin-top:8px;
+             padding:7px;
+             background:#fff;
+             border-radius:4px;
+             font-family:JetBrains Mono,monospace;
+             font-size:11px;
+             white-space:pre-wrap;">
+        Post ID: —
+Row: —
+Article: —
+Stage: —
+      </div>
+
+      <div id="masterCIPostIdBatchLog"
+           style="
+             margin-top:8px;
+             max-height:180px;
+             overflow:auto;
+             padding:7px;
+             background:#fff;
+             border-radius:4px;
+             font-family:JetBrains Mono,monospace;
+             font-size:10px;
+             white-space:pre-wrap;">
+      </div>
+
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
          1 — CONTENT INTELLIGENCE
          ═══════════════════════════════════════════════════════ -->
 
