@@ -5896,6 +5896,456 @@ function masterRunNextCIPostIdBatchRow() {
     );
 }
 
+
+var _masterCGPostIdBatchRunning = false;
+var _masterCGPostIdBatchRows = [];
+var _masterCGPostIdBatchIndex = 0;
+var _masterCGPostIdBatchStartedAt = 0;
+var _masterCGPostIdBatchTimer = null;
+var _masterCGPostIdBatchCost = 0;
+
+function masterRunCGPostIdBatch() {
+  if (_masterCGPostIdBatchRunning) return;
+
+  var input =
+    document.getElementById('masterCGPostIds');
+
+  var status =
+    document.getElementById('masterCGPostIdBatchStatus');
+
+  var btn =
+    document.getElementById('masterCGPostIdBatchBtn');
+
+  var text =
+    input
+      ? String(input.value || '').trim()
+      : '';
+
+  if (!text) {
+    status.textContent =
+      '❌ Enter at least one Post ID, one per line.';
+
+    status.style.color =
+      '#c62828';
+
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent =
+    'Loading Post IDs…';
+
+  status.textContent =
+    'Checking Post IDs against Column D…';
+
+  status.style.color =
+    '#555';
+
+  google.script.run
+
+    .withSuccessHandler(function(res) {
+
+      if (!res || !res.success) {
+        btn.disabled = false;
+
+        btn.textContent =
+          '▶ Run Content Generation Pre-AC → W8E';
+
+        status.textContent =
+          '❌ ' +
+          (
+            res && res.message
+              ? res.message
+              : 'Could not load Post IDs.'
+          );
+
+        status.style.color =
+          '#c62828';
+
+        return;
+      }
+
+      _masterCGPostIdBatchRows =
+        res.rows || [];
+
+      if (!_masterCGPostIdBatchRows.length) {
+        btn.disabled = false;
+
+        btn.textContent =
+          '▶ Run Content Generation Pre-AC → W8E';
+
+        status.textContent =
+          '❌ No matching Post IDs found.';
+
+        status.style.color =
+          '#c62828';
+
+        return;
+      }
+
+      _masterCGPostIdBatchRunning =
+        true;
+
+      _masterCGPostIdBatchIndex =
+        0;
+
+      _masterCGPostIdBatchStartedAt =
+        Date.now();
+
+      _masterCGPostIdBatchCost =
+        0;
+
+      document.getElementById(
+        'masterCGPostIdBatchProgress'
+      ).textContent =
+        '0 of ' +
+        _masterCGPostIdBatchRows.length;
+
+      document.getElementById(
+        'masterCGPostIdBatchSeconds'
+      ).textContent =
+        '0s';
+
+      document.getElementById(
+        'masterCGPostIdBatchCost'
+      ).textContent =
+        String.fromCharCode(36) +
+        '0.0000';
+
+      var logText =
+        'Content Generation batch started — ' +
+        _masterCGPostIdBatchRows.length +
+        ' row(s) — Pre-AC → W8E.';
+
+      if (
+        res.duplicates &&
+        res.duplicates.length
+      ) {
+        logText +=
+          '\nDuplicate Post IDs ignored: ' +
+          res.duplicates.join(', ');
+      }
+
+      document.getElementById(
+        'masterCGPostIdBatchLog'
+      ).textContent =
+        logText;
+
+      btn.textContent =
+        'Running Content Generation batch…';
+
+      _masterCGPostIdBatchTimer =
+        setInterval(function() {
+
+          var seconds =
+            Math.floor(
+              (
+                Date.now() -
+                _masterCGPostIdBatchStartedAt
+              ) / 1000
+            );
+
+          document.getElementById(
+            'masterCGPostIdBatchSeconds'
+          ).textContent =
+            seconds + 's';
+
+        }, 1000);
+
+      masterRunNextCGPostIdBatchRow();
+    })
+
+    .withFailureHandler(function(err) {
+
+      btn.disabled = false;
+
+      btn.textContent =
+        '▶ Run Content Generation Pre-AC → W8E';
+
+      status.textContent =
+        '❌ ' + err.message;
+
+      status.style.color =
+        '#c62828';
+    })
+
+    .getMasterCIRowsForPostIds(
+      text
+    );
+}
+
+function masterRunNextCGPostIdBatchRow() {
+
+  var status =
+    document.getElementById(
+      'masterCGPostIdBatchStatus'
+    );
+
+  var btn =
+    document.getElementById(
+      'masterCGPostIdBatchBtn'
+    );
+
+  var current =
+    document.getElementById(
+      'masterCGPostIdBatchCurrent'
+    );
+
+  var log =
+    document.getElementById(
+      'masterCGPostIdBatchLog'
+    );
+
+  if (
+    !_masterCGPostIdBatchRunning ||
+    _masterCGPostIdBatchIndex >=
+      _masterCGPostIdBatchRows.length
+  ) {
+
+    if (_masterCGPostIdBatchTimer) {
+      clearInterval(
+        _masterCGPostIdBatchTimer
+      );
+
+      _masterCGPostIdBatchTimer =
+        null;
+    }
+
+    _masterCGPostIdBatchRunning =
+      false;
+
+    btn.disabled =
+      false;
+
+    btn.textContent =
+      '▶ Run Content Generation Pre-AC → W8E';
+
+    var elapsed =
+      Math.floor(
+        (
+          Date.now() -
+          _masterCGPostIdBatchStartedAt
+        ) / 1000
+      );
+
+    status.textContent =
+      '✔ Content Generation batch complete — ' +
+      _masterCGPostIdBatchRows.length +
+      ' of ' +
+      _masterCGPostIdBatchRows.length +
+      ' processed — ' +
+      elapsed +
+      's — Cost: ' +
+      String.fromCharCode(36) +
+      _masterCGPostIdBatchCost.toFixed(4);
+
+    status.style.color =
+      '#2e7d32';
+
+    current.textContent =
+      'Post ID: —\n' +
+      'Row: —\n' +
+      'Article: —\n' +
+      'Stage: Complete';
+
+    return;
+  }
+
+  var item =
+    _masterCGPostIdBatchRows[
+      _masterCGPostIdBatchIndex
+    ];
+
+  current.textContent =
+    'Post ID: ' +
+    item.postId +
+    '\n' +
+    'Row: ' +
+    item.row +
+    '\n' +
+    'Article: ' +
+    (item.title || '—') +
+    '\n' +
+    'Stage: Pre-AC → W8E';
+
+  status.textContent =
+    '⏳ Processing ' +
+    (
+      _masterCGPostIdBatchIndex + 1
+    ) +
+    ' of ' +
+    _masterCGPostIdBatchRows.length +
+    ' — Post ID ' +
+    item.postId;
+
+  status.style.color =
+    '#555';
+
+  google.script.run
+
+    .withSuccessHandler(function(res) {
+
+      if (!res || !res.success) {
+
+        if (_masterCGPostIdBatchTimer) {
+          clearInterval(
+            _masterCGPostIdBatchTimer
+          );
+
+          _masterCGPostIdBatchTimer =
+            null;
+        }
+
+        _masterCGPostIdBatchRunning =
+          false;
+
+        btn.disabled =
+          false;
+
+        btn.textContent =
+          '▶ Run Content Generation Pre-AC → W8E';
+
+        status.textContent =
+          '❌ Batch stopped on Post ID ' +
+          item.postId +
+          ' — row ' +
+          item.row +
+          ' (' +
+          (
+            _masterCGPostIdBatchIndex + 1
+          ) +
+          ' of ' +
+          _masterCGPostIdBatchRows.length +
+          ') — ' +
+          (
+            res && res.message
+              ? res.message
+              : 'Content Generation failed.'
+          );
+
+        status.style.color =
+          '#c62828';
+
+        current.textContent =
+          'Post ID: ' +
+          item.postId +
+          '\n' +
+          'Row: ' +
+          item.row +
+          '\n' +
+          'Article: ' +
+          (item.title || '—') +
+          '\n' +
+          'Stage: FAILED';
+
+        if (res && res.log) {
+          log.textContent +=
+            '\n❌ Post ID ' +
+            item.postId +
+            ' — Row ' +
+            item.row +
+            '\n' +
+            String(res.log);
+
+          log.scrollTop =
+            log.scrollHeight;
+        }
+
+        return;
+      }
+
+      _masterCGPostIdBatchCost +=
+        Number(res.cost || 0);
+
+      _masterCGPostIdBatchIndex++;
+
+      document.getElementById(
+        'masterCGPostIdBatchProgress'
+      ).textContent =
+        _masterCGPostIdBatchIndex +
+        ' of ' +
+        _masterCGPostIdBatchRows.length;
+
+      document.getElementById(
+        'masterCGPostIdBatchCost'
+      ).textContent =
+        String.fromCharCode(36) +
+        _masterCGPostIdBatchCost.toFixed(4);
+
+      log.textContent +=
+        '\n✔ Post ID ' +
+        item.postId +
+        ' — Row ' +
+        item.row +
+        ' — ' +
+        (item.title || 'Untitled') +
+        ' — ' +
+        String.fromCharCode(36) +
+        Number(res.cost || 0).toFixed(4) +
+        ' — Pre-AC → W8E complete';
+
+      if (res.log) {
+        log.textContent +=
+          '\n' +
+          String(res.log);
+      }
+
+      log.scrollTop =
+        log.scrollHeight;
+
+      masterRunNextCGPostIdBatchRow();
+    })
+
+    .withFailureHandler(function(err) {
+
+      if (_masterCGPostIdBatchTimer) {
+        clearInterval(
+          _masterCGPostIdBatchTimer
+        );
+
+        _masterCGPostIdBatchTimer =
+          null;
+      }
+
+      _masterCGPostIdBatchRunning =
+        false;
+
+      btn.disabled =
+        false;
+
+      btn.textContent =
+        '▶ Run Content Generation Pre-AC → W8E';
+
+      status.textContent =
+        '❌ Batch stopped on Post ID ' +
+        item.postId +
+        ' — row ' +
+        item.row +
+        ' — ' +
+        err.message;
+
+      status.style.color =
+        '#c62828';
+
+      current.textContent =
+        'Post ID: ' +
+        item.postId +
+        '\n' +
+        'Row: ' +
+        item.row +
+        '\n' +
+        'Article: ' +
+        (item.title || '—') +
+        '\n' +
+        'Stage: FAILED';
+    })
+
+    .runMasterContentGenerationBatchRow(
+      item.row,
+      item.postId
+    );
+}
+
 function masterRunContentIntelligence() {
 
   var btn = document.getElementById('masterBtnIntelligence');
