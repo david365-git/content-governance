@@ -829,6 +829,163 @@ function runMasterContentIntelligenceBatchRow(row, expectedStoneType) {
 }
 
 
+
+function runMasterContentGenerationBatchRow(row, expectedPostId) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("posts");
+
+    if (!sheet) {
+      return {
+        success: false,
+        message: "Posts sheet not found.",
+        cost: 0
+      };
+    }
+
+    row = Number(row);
+
+    if (!row || row < 2 || row > sheet.getLastRow()) {
+      return {
+        success: false,
+        message: "Invalid posts row: " + row,
+        cost: 0
+      };
+    }
+
+    var headers = sheet
+      .getRange(1, 1, 1, sheet.getLastColumn())
+      .getValues()[0]
+      .map(function(h) {
+        return String(h || "").trim();
+      });
+
+    var postIdIdx = headers.indexOf("Post ID");
+    var titleIdx = headers.indexOf("Title");
+
+    if (postIdIdx === -1) {
+      return {
+        success: false,
+        message: 'Column "Post ID" not found.',
+        cost: 0
+      };
+    }
+
+    var livePostId = String(
+      sheet.getRange(row, postIdIdx + 1).getValue() || ""
+    ).trim();
+
+    if (
+      expectedPostId &&
+      livePostId !== String(expectedPostId).trim()
+    ) {
+      return {
+        success: false,
+        message:
+          "Row " + row +
+          " now contains Post ID " + livePostId +
+          " rather than " + expectedPostId +
+          ". Batch stopped to avoid processing the wrong article.",
+        cost: 0
+      };
+    }
+
+    var title = titleIdx > -1
+      ? String(sheet.getRange(row, titleIdx + 1).getValue() || "").trim()
+      : "";
+
+    sheet.setActiveRange(
+      sheet.getRange(row, 1)
+    );
+
+    var startResult =
+      bc_startPipelineRun();
+
+    if (
+      !startResult ||
+      startResult.success === false
+    ) {
+      return {
+        success: false,
+        row: row,
+        postId: livePostId,
+        title: title,
+        message:
+          startResult && startResult.message
+            ? startResult.message
+            : "Could not initialise pipeline.",
+        cost: 0
+      };
+    }
+
+    var result =
+      pipelineResumeToW8E(
+        row,
+        "Pre-AC"
+      );
+
+    var logResult =
+      getPipelineRunLog(row);
+
+    if (
+      !result ||
+      result.success === false
+    ) {
+      return {
+        success: false,
+        stopped:
+          result &&
+          result.stopped === true,
+        row: row,
+        postId: livePostId,
+        title: title,
+        message:
+          result && result.message
+            ? result.message
+            : "Content Generation pipeline failed.",
+        log:
+          logResult && logResult.success
+            ? String(logResult.log || "")
+            : "",
+        cost:
+          Number(
+            result && result.cost
+              ? result.cost
+              : 0
+          )
+      };
+    }
+
+    return {
+      success: true,
+      row: row,
+      postId: livePostId,
+      title: title,
+      message: "Pre-AC → W8E complete.",
+      log:
+        logResult && logResult.success
+          ? String(logResult.log || "")
+          : "",
+      cost: Number(result.cost || 0),
+      w8e: result.w8e || null
+    };
+
+  } catch (e) {
+    return {
+      success: false,
+      row: Number(row) || 0,
+      postId: String(expectedPostId || ""),
+      title: "",
+      message:
+        e && e.message
+          ? e.message
+          : String(e),
+      log: "",
+      cost: 0
+    };
+  }
+}
+
 function bc_runFullGovernanceChainAutomated() {
   var preflight = bc_contentIntelligencePreflight_();
 
