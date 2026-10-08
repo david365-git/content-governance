@@ -356,6 +356,114 @@ Stage: —
 
 
     <!-- ═══════════════════════════════════════════════════════
+         CONTENT GENERATION POST ID BATCH — PRE-AC TO W8E
+         ═══════════════════════════════════════════════════════ -->
+
+    <div style="
+      margin-bottom:16px;
+      padding:10px;
+      border:2px solid #d81b60;
+      border-radius:6px;
+      background:#fce4ec;">
+
+      <div style="
+        font-weight:700;
+        color:#ad1457;
+        margin-bottom:6px;">
+        Content Generation Post ID Batch
+      </div>
+
+      <div style="
+        font-size:12px;
+        margin-bottom:8px;">
+        Paste Post IDs from Column D, one per line. Each article runs through the full Content Generation pipeline from Pre-AC through W8E before the next Post ID starts.
+      </div>
+
+      <textarea
+        id="masterCGPostIds"
+        placeholder="12345&#10;12346&#10;12347"
+        style="
+          width:100%;
+          height:110px;
+          box-sizing:border-box;
+          padding:7px;
+          margin-bottom:8px;
+          font-family:JetBrains Mono,monospace;
+          font-size:11px;
+          border:1px solid #d81b60;
+          border-radius:4px;
+          background:#fff;"></textarea>
+
+      <button
+        id="masterCGPostIdBatchBtn"
+        style="width:100%;background:#d81b60;color:#fff"
+        onclick="masterRunCGPostIdBatch()">
+        ▶ Run Content Generation Pre-AC → W8E
+      </button>
+
+      <div id="masterCGPostIdBatchStatus"
+           class="status-bar pending"
+           style="margin-top:8px;">
+        Enter Post IDs, one per line.
+      </div>
+
+      <div style="
+        margin-top:8px;
+        display:grid;
+        grid-template-columns:1fr 1fr 1fr;
+        gap:6px;
+        font-family:JetBrains Mono,monospace;
+        font-size:11px;">
+
+        <div style="padding:6px;background:#fff;border-radius:4px;">
+          <strong>Elapsed</strong><br>
+          <span id="masterCGPostIdBatchSeconds">0s</span>
+        </div>
+
+        <div style="padding:6px;background:#fff;border-radius:4px;">
+          <strong>Processed</strong><br>
+          <span id="masterCGPostIdBatchProgress">0 of 0</span>
+        </div>
+
+        <div style="padding:6px;background:#fff;border-radius:4px;">
+          <strong>Cost</strong><br>
+          <span id="masterCGPostIdBatchCost">$0.0000</span>
+        </div>
+
+      </div>
+
+      <div id="masterCGPostIdBatchCurrent"
+           style="
+             margin-top:8px;
+             padding:7px;
+             background:#fff;
+             border-radius:4px;
+             font-family:JetBrains Mono,monospace;
+             font-size:11px;
+             white-space:pre-wrap;">
+        Post ID: —
+Row: —
+Article: —
+Stage: —
+      </div>
+
+      <div id="masterCGPostIdBatchLog"
+           style="
+             margin-top:8px;
+             max-height:220px;
+             overflow:auto;
+             padding:7px;
+             background:#fff;
+             border-radius:4px;
+             font-family:JetBrains Mono,monospace;
+             font-size:10px;
+             white-space:pre-wrap;">
+      </div>
+
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
          1 — CONTENT INTELLIGENCE
          ═══════════════════════════════════════════════════════ -->
 
