@@ -5617,6 +5617,285 @@ function masterRunNextCIBatchRow() {
     .runMasterContentIntelligenceBatchRow(item.row, _masterCIBatchStoneType);
 }
 
+
+var _masterCIPostIdBatchRunning = false;
+var _masterCIPostIdBatchRows = [];
+var _masterCIPostIdBatchIndex = 0;
+var _masterCIPostIdBatchStartedAt = 0;
+var _masterCIPostIdBatchTimer = null;
+var _masterCIPostIdBatchCost = 0;
+
+function masterRunCIPostIdBatch() {
+  if (_masterCIPostIdBatchRunning) return;
+
+  var input = document.getElementById('masterCIPostIds');
+  var status = document.getElementById('masterCIPostIdBatchStatus');
+  var btn = document.getElementById('masterCIPostIdBatchBtn');
+  var text = input ? String(input.value || '').trim() : '';
+
+  if (!text) {
+    status.textContent = '❌ Enter at least one Post ID, one per line.';
+    status.style.color = '#c62828';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Loading Post IDs…';
+  status.textContent = 'Checking Post IDs against Column D…';
+  status.style.color = '#555';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success) {
+        btn.disabled = false;
+        btn.textContent = '▶ Run Content Intelligence for Post IDs';
+        status.textContent =
+          '❌ ' +
+          (res && res.message
+            ? res.message
+            : 'Could not load Post IDs.');
+        status.style.color = '#c62828';
+        return;
+      }
+
+      _masterCIPostIdBatchRows = res.rows || [];
+
+      if (!_masterCIPostIdBatchRows.length) {
+        btn.disabled = false;
+        btn.textContent = '▶ Run Content Intelligence for Post IDs';
+        status.textContent = '❌ No matching Post IDs found.';
+        status.style.color = '#c62828';
+        return;
+      }
+
+      _masterCIPostIdBatchRunning = true;
+      _masterCIPostIdBatchIndex = 0;
+      _masterCIPostIdBatchStartedAt = Date.now();
+      _masterCIPostIdBatchCost = 0;
+
+      document.getElementById('masterCIPostIdBatchProgress').textContent =
+        '0 of ' + _masterCIPostIdBatchRows.length;
+
+      document.getElementById('masterCIPostIdBatchSeconds').textContent = '0s';
+      document.getElementById('masterCIPostIdBatchCost').textContent =
+        String.fromCharCode(36) + '0.0000';
+
+      var logText =
+        'Post ID batch started — ' +
+        _masterCIPostIdBatchRows.length +
+        ' row(s).';
+
+      if (res.duplicates && res.duplicates.length) {
+        logText +=
+          '\nDuplicate Post IDs ignored: ' +
+          res.duplicates.join(', ');
+      }
+
+      document.getElementById('masterCIPostIdBatchLog').textContent =
+        logText;
+
+      btn.textContent = 'Running Post ID batch…';
+
+      _masterCIPostIdBatchTimer = setInterval(function() {
+        var seconds = Math.floor(
+          (Date.now() - _masterCIPostIdBatchStartedAt) / 1000
+        );
+
+        document.getElementById('masterCIPostIdBatchSeconds').textContent =
+          seconds + 's';
+      }, 1000);
+
+      masterRunNextCIPostIdBatchRow();
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      btn.textContent = '▶ Run Content Intelligence for Post IDs';
+      status.textContent = '❌ ' + err.message;
+      status.style.color = '#c62828';
+    })
+    .getMasterCIRowsForPostIds(text);
+}
+
+function masterRunNextCIPostIdBatchRow() {
+  var status = document.getElementById('masterCIPostIdBatchStatus');
+  var btn = document.getElementById('masterCIPostIdBatchBtn');
+  var current = document.getElementById('masterCIPostIdBatchCurrent');
+  var log = document.getElementById('masterCIPostIdBatchLog');
+
+  if (
+    !_masterCIPostIdBatchRunning ||
+    _masterCIPostIdBatchIndex >= _masterCIPostIdBatchRows.length
+  ) {
+    if (_masterCIPostIdBatchTimer) {
+      clearInterval(_masterCIPostIdBatchTimer);
+      _masterCIPostIdBatchTimer = null;
+    }
+
+    _masterCIPostIdBatchRunning = false;
+    btn.disabled = false;
+    btn.textContent = '▶ Run Content Intelligence for Post IDs';
+
+    var elapsed = Math.floor(
+      (Date.now() - _masterCIPostIdBatchStartedAt) / 1000
+    );
+
+    status.textContent =
+      '✔ Post ID Content Intelligence batch complete — ' +
+      _masterCIPostIdBatchRows.length +
+      ' of ' +
+      _masterCIPostIdBatchRows.length +
+      ' processed — ' +
+      elapsed +
+      's — Cost: ' +
+      String.fromCharCode(36) +
+      _masterCIPostIdBatchCost.toFixed(4);
+
+    status.style.color = '#2e7d32';
+
+    current.textContent =
+      'Post ID: —\n' +
+      'Row: —\n' +
+      'Article: —\n' +
+      'Stage: Complete';
+
+    return;
+  }
+
+  var item =
+    _masterCIPostIdBatchRows[_masterCIPostIdBatchIndex];
+
+  current.textContent =
+    'Post ID: ' + item.postId + '\n' +
+    'Row: ' + item.row + '\n' +
+    'Article: ' + (item.title || '—') + '\n' +
+    'Stage: Content Intelligence';
+
+  status.textContent =
+    '⏳ Processing ' +
+    (_masterCIPostIdBatchIndex + 1) +
+    ' of ' +
+    _masterCIPostIdBatchRows.length +
+    ' — Post ID ' +
+    item.postId;
+
+  status.style.color = '#555';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (!res || !res.success) {
+        if (_masterCIPostIdBatchTimer) {
+          clearInterval(_masterCIPostIdBatchTimer);
+          _masterCIPostIdBatchTimer = null;
+        }
+
+        _masterCIPostIdBatchRunning = false;
+        btn.disabled = false;
+        btn.textContent = '▶ Run Content Intelligence for Post IDs';
+
+        status.textContent =
+          '❌ Batch stopped on Post ID ' +
+          item.postId +
+          ' — row ' +
+          item.row +
+          ' (' +
+          (_masterCIPostIdBatchIndex + 1) +
+          ' of ' +
+          _masterCIPostIdBatchRows.length +
+          ') — ' +
+          (res && res.message
+            ? res.message
+            : 'Content Intelligence failed.');
+
+        status.style.color = '#c62828';
+
+        current.textContent =
+          'Post ID: ' + item.postId + '\n' +
+          'Row: ' + item.row + '\n' +
+          'Article: ' + (item.title || '—') + '\n' +
+          'Stage: FAILED';
+
+        if (res && res.log) {
+          log.textContent +=
+            '\n❌ Post ID ' +
+            item.postId +
+            ' — Row ' +
+            item.row +
+            ' — ' +
+            String(res.log).split(' | ').join(' / ');
+
+          log.scrollTop = log.scrollHeight;
+        }
+
+        return;
+      }
+
+      _masterCIPostIdBatchCost += Number(res.cost || 0);
+      _masterCIPostIdBatchIndex++;
+
+      document.getElementById('masterCIPostIdBatchProgress').textContent =
+        _masterCIPostIdBatchIndex +
+        ' of ' +
+        _masterCIPostIdBatchRows.length;
+
+      document.getElementById('masterCIPostIdBatchCost').textContent =
+        String.fromCharCode(36) +
+        _masterCIPostIdBatchCost.toFixed(4);
+
+      log.textContent +=
+        '\n✔ Post ID ' +
+        item.postId +
+        ' — Row ' +
+        item.row +
+        ' — ' +
+        (item.title || 'Untitled') +
+        ' — ' +
+        String.fromCharCode(36) +
+        Number(res.cost || 0).toFixed(4) +
+        ' — ' +
+        (res.message || 'Content Intelligence complete');
+
+      if (res.log) {
+        log.textContent +=
+          '\n  ' +
+          String(res.log).split(' | ').join('\n  ');
+      }
+
+      log.scrollTop = log.scrollHeight;
+
+      masterRunNextCIPostIdBatchRow();
+    })
+    .withFailureHandler(function(err) {
+      if (_masterCIPostIdBatchTimer) {
+        clearInterval(_masterCIPostIdBatchTimer);
+        _masterCIPostIdBatchTimer = null;
+      }
+
+      _masterCIPostIdBatchRunning = false;
+      btn.disabled = false;
+      btn.textContent = '▶ Run Content Intelligence for Post IDs';
+
+      status.textContent =
+        '❌ Batch stopped on Post ID ' +
+        item.postId +
+        ' — row ' +
+        item.row +
+        ' — ' +
+        err.message;
+
+      status.style.color = '#c62828';
+
+      current.textContent =
+        'Post ID: ' + item.postId + '\n' +
+        'Row: ' + item.row + '\n' +
+        'Article: ' + (item.title || '—') + '\n' +
+        'Stage: FAILED';
+    })
+    .runMasterContentIntelligenceBatchRow(
+      item.row,
+      item.stoneType
+    );
+}
+
 function masterRunContentIntelligence() {
 
   var btn = document.getElementById('masterBtnIntelligence');
