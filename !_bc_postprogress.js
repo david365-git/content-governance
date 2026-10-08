@@ -200,6 +200,13 @@ function bc_writeWPToProgress() {
       progressSheet.getRange(r + 1, colIndex['WP'] + 1).setValue('Done');
       progressSheet.getRange(r + 1, colIndex['WP-date'] + 1).setValue(now);
       postsSheet.getRange(activeRow, 87).setValue(now);
+
+      // W6 Copy for WordPress complete — mark Column D light yellow with blue text.
+      postsSheet
+        .getRange(activeRow, 4)
+        .setBackground('#FFF2CC')
+        .setFontColor('#0000FF');
+
       var flagCell = postsSheet.getRange(activeRow, 1);
       var existingFlag = String(flagCell.getValue() || '').trim();
       var newFlag = existingFlag.indexOf('H') > -1 ? 'HP' : 'P';
