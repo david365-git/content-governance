@@ -3982,6 +3982,170 @@ function ce_findInternalFactConsistencyFinding_(html) {
   );
 }
 
+function bc_applyVisibleTextFactCheckFixes_(fixes) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName('posts');
+  var row = sh.getActiveCell().getRow();
+  var html = String(sh.getRange(row, 187).getValue() || '');
+
+  if (!html) {
+    return { success: false, message: 'GE is empty.' };
+  }
+
+  if (!Array.isArray(fixes) || fixes.length === 0) {
+    return { success: false, message: 'No fixes supplied.' };
+  }
+
+  function decodeEntity_(entity) {
+    var map = {
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&quot;': '"',
+      '&#39;': "'",
+      '&apos;': "'",
+      '&nbsp;': ' '
+    };
+    return map[entity] !== undefined ? map[entity] : entity;
+  }
+
+  function buildVisibleMap_(source) {
+    var text = '';
+    var starts = [];
+    var ends = [];
+    var i = 0;
+
+    while (i < source.length) {
+      if (source[i] === '<') {
+        var close = source.indexOf('>', i);
+        if (close === -1) {
+          i++;
+        } else {
+          i = close + 1;
+        }
+        continue;
+      }
+
+      if (source[i] === '&') {
+        var semi = source.indexOf(';', i);
+        if (semi > i && semi - i <= 10) {
+          var entity = source.slice(i, semi + 1);
+          var decoded = decodeEntity_(entity);
+          if (decoded !== entity && decoded.length === 1) {
+            text += decoded;
+            starts.push(i);
+            ends.push(semi + 1);
+            i = semi + 1;
+            continue;
+          }
+        }
+      }
+
+      text += source[i];
+      starts.push(i);
+      ends.push(i + 1);
+      i++;
+    }
+
+    return { text: text, starts: starts, ends: ends };
+  }
+
+  var validationErrors = [];
+  var prepared = [];
+
+  fixes.forEach(function(fix, index) {
+    var label = String(fix.fixLabel || ('Fix ' + (index + 1)));
+    var target = String(fix.targetText || '');
+    var replacement =
+      (typeof fix.newText === 'string') ? fix.newText : null;
+
+    if (!target) {
+      validationErrors.push(label + ' — targetText is missing.');
+      return;
+    }
+
+    if (replacement === null) {
+      validationErrors.push(label + ' — newText must be a string.');
+      return;
+    }
+
+    var mapped = buildVisibleMap_(html);
+    var first = mapped.text.indexOf(target);
+    var second = first === -1 ? -1 : mapped.text.indexOf(target, first + 1);
+
+    if (first === -1) {
+      validationErrors.push(label + ' — targetText not found in visible article text.');
+      return;
+    }
+
+    if (second !== -1) {
+      validationErrors.push(label + ' — targetText is not unique in visible article text.');
+      return;
+    }
+
+    var htmlStart = mapped.starts[first];
+    var htmlEnd = mapped.ends[first + target.length - 1];
+    var htmlSpan = html.slice(htmlStart, htmlEnd);
+
+    // Do not allow the semantic replacement to consume a governed link.
+    if (/<a\b/i.test(htmlSpan) || /<\/a>/i.test(htmlSpan)) {
+      validationErrors.push(
+        label + ' — targetText crosses an <a> link; choose wording outside the governed link.'
+      );
+      return;
+    }
+
+    prepared.push({
+      label: label,
+      start: htmlStart,
+      end: htmlEnd,
+      newText: replacement
+    });
+  });
+
+  if (validationErrors.length > 0) {
+    return {
+      success: false,
+      message:
+        'Visible-text fact-check fix batch rejected — no changes applied. ' +
+        validationErrors.join(' | ')
+    };
+  }
+
+  // Apply from end to start so earlier character positions stay valid.
+  prepared.sort(function(a, b) {
+    return b.start - a.start;
+  });
+
+  var updated = html;
+
+  prepared.forEach(function(item) {
+    updated =
+      updated.slice(0, item.start) +
+      item.newText +
+      updated.slice(item.end);
+  });
+
+  sh.getRange(row, 187).setValue(updated);
+
+  if (typeof logPipelineResume === 'function') {
+    logPipelineResume(
+      'W2B.05 — Visible-Text Fact-Check Fixes Applied Atomically (GE)',
+      ''
+    );
+  }
+
+  return {
+    success: true,
+    message:
+      prepared.length +
+      '/' +
+      prepared.length +
+      ' visible-text fact-check fix(es) applied atomically to GE.'
+  };
+}
+
+
 function bc_runFactCheckFullAutomated() {
 
   var totalCost = 0;
@@ -4186,9 +4350,8 @@ function bc_runFactCheckFullAutomated() {
 
     // Normal path: apply the fixes proposed by the SAME fact-check call.
     var atomicFixResult =
-      applyFactCheckFix(
-        JSON.stringify(parsed.fixes),
-        'EU'
+      bc_applyVisibleTextFactCheckFixes_(
+        parsed.fixes
       );
 
     lastFixMessage = atomicFixResult.message;
@@ -4197,7 +4360,7 @@ function bc_runFactCheckFullAutomated() {
 
       bc_appendGovernancePipelineException(
         'W2B.05 — Fact Check',
-        'Atomic fact-check fixes were rejected — ' +
+        'Visible-text atomic fact-check fixes were rejected — ' +
         atomicFixResult.message +
         '\n\nFACT-CHECK RESPONSE:\n' +
         checkResult.text
