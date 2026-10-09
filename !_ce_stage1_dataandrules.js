@@ -69,6 +69,111 @@ function getSiloRoleMap(material) {
 
 
 
+/* ============================================================
+   ORIGINAL HTML INTERNAL-URL NORMALISER
+   Before W1A sends legacy article HTML to the model, replace
+   only Abbey Floor Care href URLs whose FINAL SLUG matches
+   exactly one current URL in posts Column C.
+
+   Safety rules:
+   - href attributes only — never image/src URLs.
+   - Abbey Floor Care domain only.
+   - Exact final-slug match only.
+   - Exactly one matching current posts URL required.
+   - Ambiguous or unmatched URLs are preserved unchanged.
+   - Query strings and fragments from the old href are preserved.
+   - This changes prompt context only; it does not edit site-export.
+============================================================ */
+function normaliseOriginalHtmlInternalUrls(html) {
+  var sourceHtml = String(html || "");
+  if (!sourceHtml) return sourceHtml;
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var postsSheet = ss.getSheetByName("posts");
+  if (!postsSheet) return sourceHtml;
+
+  var headers = postsSheet
+    .getRange(1, 1, 1, postsSheet.getLastColumn())
+    .getValues()[0]
+    .map(function(h) {
+      return String(h || "").trim();
+    });
+
+  var urlIdx = headers.indexOf("URL");
+  if (urlIdx === -1) return sourceHtml;
+
+  var lastRow = postsSheet.getLastRow();
+  if (lastRow < 2) return sourceHtml;
+
+  var urls = postsSheet
+    .getRange(2, urlIdx + 1, lastRow - 1, 1)
+    .getValues();
+
+  var bySlug = {};
+
+  function getSlug(url) {
+    var clean = String(url || "")
+      .trim()
+      .replace(/[?#].*$/, "")
+      .replace(/\/+$/, "");
+
+    if (!clean) return "";
+
+    var parts = clean.split("/");
+    return String(parts[parts.length - 1] || "").trim().toLowerCase();
+  }
+
+  urls.forEach(function(row) {
+    var currentUrl = String(row[0] || "").trim();
+    if (!currentUrl) return;
+
+    var slug = getSlug(currentUrl);
+    if (!slug) return;
+
+    if (!bySlug[slug]) {
+      bySlug[slug] = [];
+    }
+
+    if (bySlug[slug].indexOf(currentUrl) === -1) {
+      bySlug[slug].push(currentUrl);
+    }
+  });
+
+  return sourceHtml.replace(
+    /(href\s*=\s*["'])(https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk\/[^"'<>\s]+)(["'])/gi,
+    function(match, prefix, oldUrl, suffix) {
+      var oldSlug = getSlug(oldUrl);
+      if (!oldSlug) return match;
+
+      var matches = bySlug[oldSlug] || [];
+
+      if (matches.length !== 1) {
+        return match;
+      }
+
+      var currentUrl = matches[0];
+
+      var extraMatch = String(oldUrl).match(/([?#].*)$/);
+      var extra = extraMatch ? extraMatch[1] : "";
+
+      var oldComparable = String(oldUrl)
+        .replace(/[?#].*$/, "")
+        .replace(/\/+$/, "");
+
+      var newComparable = String(currentUrl)
+        .replace(/[?#].*$/, "")
+        .replace(/\/+$/, "");
+
+      if (oldComparable === newComparable) {
+        return match;
+      }
+
+      return prefix + currentUrl + extra + suffix;
+    }
+  );
+}
+
+
 function buildStage1APrompt() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const d = getActiveRowDataMap();
@@ -119,7 +224,7 @@ function buildStage1APrompt() {
   for (let i = 1; i < exportData.length; i++) {
     if (String(exportData[i][idIndex]) === String(postID)) {
       rawHTML      = String(exportData[i][htmlIndex] || "");
-      originalHTML = cleanHtmlForLLM(rawHTML);
+      originalHTML = cleanHtmlForLLM(normaliseOriginalHtmlInternalUrls(rawHTML));
       break;
     }
   }
