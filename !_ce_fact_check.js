@@ -292,7 +292,7 @@ Any one of these failures means the fact check must NOT return a clean PASS.
 
     If no, do not flag it merely because of the words "stone" or "tile".
 OUTPUT FORMAT — HARD LOCK:
-Return ONLY valid JSON. No markdown fences, no commentary before or after the JSON.
+Return ONLY valid JSON. No markdown fences and no commentary outside the JSON.
 
 If there are no issues, return exactly:
 {
@@ -309,46 +309,34 @@ If issues are found, return:
     {
       "fixLabel": "short label",
       "issueType": "FACTUAL CONTRADICTION or UNSUPPORTED EMBELLISHMENT",
-      "old": "exact verbatim fragment from the REWRITTEN ARTICLE",
-      "new": "minimum corrected replacement supported by the source/governance",
+      "targetText": "smallest exact VISIBLE-TEXT fragment from the rewritten article that identifies the unsupported wording",
+      "newText": "minimum corrected visible text",
       "sourceEvidence": "brief supporting evidence"
     }
   ]
 }
 
-ATOMIC FIX RULES:
-1. Every "old" value MUST be copied exactly from the REWRITTEN ARTICLE HTML, character-for-character.
-2. Copy the literal HTML, not the rendered/plain-text sentence. Preserve every tag, attribute, entity and punctuation mark that appears inside the selected fragment.
-3. If the visible wording contains inline markup such as <strong>, <em>, <a>, <span> or other tags, those tags MUST appear in "old" exactly where they appear in the article HTML.
-4. Before returning each fix, verify mentally that the complete "old" string can be found verbatim in the supplied REWRITTEN ARTICLE HTML.
-5. Each "old" value must be specific enough to occur exactly once.
-6. "new" must make the minimum correction needed. Preserve surrounding HTML structure wherever possible.
-7. Preserve all valid HTML. Do not damage or convert <a href="..."> links.
-8. Do not alter a governed href unless the href itself is the factual problem.
-9. If a sentence contains a valid governed link but unsupported surrounding wording, preserve the complete <a ...>...</a> element exactly and correct only the unsupported wording around it.
-10. Do not propose a fix for wording that is merely a reasonable semantic equivalent of the source.
-11. Do not replace one unsupported claim with another.
-12. If deletion is the safest correction, use an empty string for "new".
-13. The fixes must be directly usable by deterministic exact find-and-replace without another AI call.
+VISIBLE-TEXT FIX RULES — HARD LOCK:
+1. targetText is NOT HTML. Copy the visible wording exactly as a reader would see it.
+2. Use the smallest distinctive unsupported phrase, clause or sentence that occurs once in the rewritten article.
+3. Do not include <p>, <strong>, <a>, href values or any other HTML markup in targetText.
+4. Do not include a governed link's anchor text in targetText unless that anchor text itself is factually wrong.
+5. If unsupported wording appears before or after a valid governed link, target only the unsupported wording outside the link.
+6. newText must be the minimum factual correction supported by the original source/governance.
+7. If deletion is safest, use an empty string for newText.
+8. Do not propose fixes for reasonable semantic equivalents of the source.
+9. Do not replace one unsupported claim with another.
+10. The application code will locate targetText inside the HTML while ignoring markup and will preserve unrelated HTML automatically.
 
-EXACT HTML MATCHING — CRITICAL:
-Choose the smallest exact substring from the REWRITTEN ARTICLE HTML that safely identifies the wording to change.
+EXAMPLE:
+Visible article wording:
+"The floor was cleaned and a related Northampton project shows the same importance of matching mechanical refinement."
 
-Do not add opening or closing block tags unless they are genuinely adjacent to the selected text in the supplied HTML.
+If only the claim after the governed link is unsupported, a suitable targetText is:
+"shows the same importance of matching mechanical refinement"
 
-If the target sentence sits inside a longer paragraph, copy only that exact sentence or clause. Do not wrap it in <p>...</p> unless the paragraph actually starts and ends there.
-
-Example:
-Article HTML:
-<p>Supported opening sentence. Target sentence here. Supported closing sentence.</p>
-
-Correct "old":
-"Target sentence here."
-
-Incorrect "old":
-"<p>Target sentence here.</p>"
-
-Before returning JSON, verify that every "old" value appears verbatim in the supplied REWRITTEN ARTICLE HTML. If it does not, shorten it until it is a unique exact substring. Preserve any inline tags that genuinely occur inside the selected substring.`;
+Do not copy surrounding HTML or the href.
+`;
 
   return { success: true, prompt: prompt, postId: postId, title: title };
 }
