@@ -4017,46 +4017,74 @@ function bc_runFactCheckFullAutomated() {
 
     totalCost += checkResult.cost;
 
-  // HARD MATERIAL-CATEGORY CHECK
-  // Run this independently of the AI fact-check result.
-  var currentFactCheckHtml = String(
-    sh.getRange(row, 187).getValue() || ''
-  ).trim();
+    var currentFactCheckHtml = String(
+      sh.getRange(row, 187).getValue() || ''
+    ).trim();
 
-  var materialIntegrity =
-  ce_checkMaterialCategoryIntegrity_(currentFactCheckHtml);
+    // Keep the existing deterministic hard checks independent of the AI.
+    var materialIntegrity =
+      ce_checkMaterialCategoryIntegrity_(currentFactCheckHtml);
 
-  var consistencyFinding =
-    ce_findInternalFactConsistencyFinding_(
-      currentFactCheckHtml
-    );
+    var consistencyFinding =
+      ce_findInternalFactConsistencyFinding_(
+        currentFactCheckHtml
+      );
 
-  var consistencyOnlyFail = false;
+    var consistencyOnlyFail = false;
+    var parsed = null;
 
-  if (!materialIntegrity.passed) {
+    // New W2B.05 contract: the FIRST fact-check call returns the atomic
+    // old/new fixes itself. No second AI fix call is needed for normal
+    // fact-check findings.
+    try {
+      var cleanedFactCheck = String(checkResult.text || '')
+        .trim()
+        .replace(/^\`\`\`json/i, '')
+        .replace(/^\`\`\`/, '')
+        .replace(/\`\`\`$/, '')
+        .trim();
 
-    checkResult.text =
-      materialIntegrity.finding +
-      '\n\nOVERALL: FAIL (1 issue found)';
+      parsed = JSON.parse(cleanedFactCheck);
+    } catch (parseError) {
+      throw new Error(
+        'W2B.05 returned invalid JSON: ' + parseError.message
+      );
+    }
 
-  } else if (consistencyFinding) {
+    if (
+      !parsed ||
+      (parsed.status !== 'PASS' && parsed.status !== 'FAIL') ||
+      !Array.isArray(parsed.fixes)
+    ) {
+      throw new Error(
+        'W2B.05 returned JSON in an unexpected format.'
+      );
+    }
 
-    consistencyOnlyFail = true;
+    // Deterministic hard checks still take priority.
+    if (!materialIntegrity.passed) {
 
-    checkResult.text =
-      consistencyFinding +
-      '\n\nOVERALL: FAIL (1 issue found)';
-  }
+      parsed = {
+        status: 'FAIL',
+        summary: materialIntegrity.finding,
+        fixes: []
+      };
 
-  var isFail = /OVERALL:\s*FAIL/i.test(checkResult.text);
+    } else if (consistencyFinding) {
+
+      consistencyOnlyFail = true;
+
+      parsed = {
+        status: 'FAIL',
+        summary: consistencyFinding,
+        fixes: []
+      };
+    }
 
     // PASS
-    if (!isFail) {
+    if (parsed.status === 'PASS') {
 
-      // Only copy EU to GE when it passed first time.
-      // After a fix, GE already contains the corrected HTML.
       if (attempt === 0) {
-
         var passResult = passThroughFactCheckToGE();
 
         if (!passResult.success) {
@@ -4071,7 +4099,7 @@ function bc_runFactCheckFullAutomated() {
             ? 'Fact-check PASS — no changes needed. Saved in column GE.'
             : 'Fact-check PASS after ' +
               attempt +
-              ' automated fix attempt(s). ' +
+              ' atomic fix attempt(s). ' +
               lastFixMessage +
               ' Final corrected HTML saved in column GE.',
         text: checkResult.text,
@@ -4079,78 +4107,117 @@ function bc_runFactCheckFullAutomated() {
       };
     }
 
-        // FAIL after maximum attempts — record exception and allow pipeline to continue
-    if (attempt === maxFixAttempts) {
+    // Deterministic checks currently do not generate exact old/new pairs.
+    // Preserve the existing repair fallback only for those rare hard-check
+    // failures; ordinary AI fact-check failures never use a second AI call.
+    if (parsed.fixes.length === 0) {
 
-    bc_appendGovernancePipelineException(
-      'W2B.05 — Fact Check',
-      checkResult.text
-    );
+      if (attempt === maxFixAttempts) {
 
-    if (consistencyOnlyFail) {
+        bc_appendGovernancePipelineException(
+          'W2B.05 — Fact Check',
+          parsed.summary || checkResult.text
+        );
 
-      return {
-        success: true,
-        warning: true,
-        message:
-          'Internal fact consistency issue remains after ' +
-          maxFixAttempts +
-          ' automated fix attempts — recorded in GJ and pipeline continuing.',
-        text: checkResult.text,
-        cost: totalCost
-      };
-    }
-
-    return {
-      success: false,
-      message:
-        'Fact-check still FAILING after ' +
-        maxFixAttempts +
-        ' automated fix attempts — recorded in GJ.',
-      text: checkResult.text,
-      cost: totalCost
-    };
-  }
-
-    attempt++;
-
-    var fixResult =
-      bc_runFactCheckFixAutomated(checkResult.text);
-
-    totalCost += fixResult.cost;
-
-    lastFixMessage = fixResult.message;
-
-        if (!fixResult.success) {
-
-  bc_appendGovernancePipelineException(
-    'W2B.05 — Fact Check',
-    'Automated fix could not be applied — ' + fixResult.message
-      );
-
-      if (consistencyOnlyFail) {
+        if (consistencyOnlyFail) {
+          return {
+            success: true,
+            warning: true,
+            message:
+              'Internal fact consistency issue remains after ' +
+              maxFixAttempts +
+              ' automated fix attempts — recorded in GJ and pipeline continuing.',
+            text: checkResult.text,
+            cost: totalCost
+          };
+        }
 
         return {
-          success: true,
-          warning: true,
+          success: false,
           message:
-            'Internal fact consistency repair could not be applied safely — recorded in GJ and pipeline continuing.',
+            'Fact-check still FAILING after ' +
+            maxFixAttempts +
+            ' automated fix attempts — recorded in GJ.',
           text: checkResult.text,
           cost: totalCost
         };
       }
 
+      attempt++;
+
+      var fallbackFixResult =
+        bc_runFactCheckFixAutomated(
+          parsed.summary || checkResult.text
+        );
+
+      totalCost += fallbackFixResult.cost;
+      lastFixMessage = fallbackFixResult.message;
+
+      if (!fallbackFixResult.success) {
+
+        bc_appendGovernancePipelineException(
+          'W2B.05 — Fact Check',
+          'Automated fallback fix could not be applied — ' +
+          fallbackFixResult.message
+        );
+
+        if (consistencyOnlyFail) {
+          return {
+            success: true,
+            warning: true,
+            message:
+              'Internal fact consistency repair could not be applied safely — recorded in GJ and pipeline continuing.',
+            text: checkResult.text,
+            cost: totalCost
+          };
+        }
+
+        return {
+          success: false,
+          message:
+            'Fact-check FAIL detected, but fallback fix could not be applied — recorded in GJ.',
+          text: checkResult.text,
+          cost: totalCost
+        };
+      }
+
+      continue;
+    }
+
+    // Normal path: apply the fixes proposed by the SAME fact-check call.
+    var atomicFixResult =
+      applyFactCheckFix(
+        JSON.stringify(parsed.fixes),
+        'EU'
+      );
+
+    lastFixMessage = atomicFixResult.message;
+
+    if (!atomicFixResult.success) {
+
+      bc_appendGovernancePipelineException(
+        'W2B.05 — Fact Check',
+        'Atomic fact-check fixes were rejected — ' +
+        atomicFixResult.message +
+        '\n\nFACT-CHECK RESPONSE:\n' +
+        checkResult.text
+      );
+
       return {
         success: false,
         message:
-          'Fact-check FAIL detected, but automated fix could not be applied — recorded in GJ.',
+          'Fact-check found issues, but its atomic fixes could not be applied safely — recorded in GJ.',
         text: checkResult.text,
         cost: totalCost
       };
     }
+
+    attempt++;
+
+    // Loop now performs only a fresh fact-check of the corrected GE.
+    // There is no separate AI fix-generation call.
   }
 }
-
 
 function bc_runSimilarityCheckAutomated() {
 
