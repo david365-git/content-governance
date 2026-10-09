@@ -4056,6 +4056,7 @@ function bc_applyVisibleTextFactCheckFixes_(fixes) {
   fixes.forEach(function(fix, index) {
     var label = String(fix.fixLabel || ('Fix ' + (index + 1)));
     var target = String(fix.targetText || '');
+    var contextText = String(fix.contextText || '');
     var replacement =
       (typeof fix.newText === 'string') ? fix.newText : null;
 
@@ -4070,17 +4071,71 @@ function bc_applyVisibleTextFactCheckFixes_(fixes) {
     }
 
     var mapped = buildVisibleMap_(html);
-    var first = mapped.text.indexOf(target);
-    var second = first === -1 ? -1 : mapped.text.indexOf(target, first + 1);
 
-    if (first === -1) {
+    var occurrences = [];
+    var searchFrom = 0;
+    var foundAt = -1;
+
+    while ((foundAt = mapped.text.indexOf(target, searchFrom)) !== -1) {
+      occurrences.push(foundAt);
+      searchFrom = foundAt + Math.max(1, target.length);
+    }
+
+    if (occurrences.length === 0) {
       validationErrors.push(label + ' — targetText not found in visible article text.');
       return;
     }
 
-    if (second !== -1) {
-      validationErrors.push(label + ' — targetText is not unique in visible article text.');
-      return;
+    var first = -1;
+
+    if (occurrences.length === 1) {
+      first = occurrences[0];
+    } else {
+      if (!contextText) {
+        validationErrors.push(
+          label +
+          ' — targetText is not unique in visible article text and contextText was not supplied.'
+        );
+        return;
+      }
+
+      var contextHits = [];
+      var contextFrom = 0;
+      var contextAt = -1;
+
+      while ((contextAt = mapped.text.indexOf(contextText, contextFrom)) !== -1) {
+        contextHits.push(contextAt);
+        contextFrom = contextAt + Math.max(1, contextText.length);
+      }
+
+      if (contextHits.length === 0) {
+        validationErrors.push(label + ' — contextText not found in visible article text.');
+        return;
+      }
+
+      var candidates = occurrences.filter(function(targetPos) {
+        return contextHits.some(function(contextPos) {
+          var contextEnd = contextPos + contextText.length;
+          var targetEnd = targetPos + target.length;
+
+          // Same local passage: overlap, containment, or within 350 visible chars.
+          return (
+            (targetPos >= contextPos && targetPos <= contextEnd) ||
+            (contextPos >= targetPos && contextPos <= targetEnd) ||
+            Math.abs(targetPos - contextPos) <= 350
+          );
+        });
+      });
+
+      if (candidates.length !== 1) {
+        validationErrors.push(
+          label +
+          ' — contextText did not identify exactly one target occurrence.'
+        );
+        return;
+      }
+
+      first = candidates[0];
     }
 
     var htmlStart = mapped.starts[first];
