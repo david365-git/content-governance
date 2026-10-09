@@ -51,6 +51,27 @@ function buildFactCheckPrompt(sourceColumn) {
     ""
   ).trim();
 
+  const finalSectionPlan = String(
+    rowMap["W1.5D Final Plan"] ||
+    rowMap["Final Plan"] ||
+    ""
+  ).trim();
+
+  const authorityBrief = String(
+    rowMap["Authority Brief"] ||
+    ""
+  ).trim();
+
+  const feedsHub = String(
+    rowMap["Feeds Hub"] ||
+    ""
+  ).trim();
+
+  const safeHandoffPages = String(
+    rowMap["Safe Handoff Pages"] ||
+    ""
+  ).trim();
+
   // Automatically recheck a previously saved fix if one exists — GE holds
   // the W2B.05 Fixed HTML from an earlier fact-check fix pass. Checking GE
   // first (regardless of which source column was originally audited) means
@@ -106,7 +127,29 @@ LOCALITY: ${governedLocality || "Not supplied"}
 PAGE REWRITE BRIEF:
 ${rewriteBrief || "No active Rewrite Brief supplied."}
 
-ORIGINAL SOURCE ARTICLE (ground truth — what actually happened):
+APPROVED PIPELINE GOVERNANCE:
+AUTHORITY BRIEF:
+${authorityBrief || "No Authority Brief supplied."}
+
+W1.5D FINAL SECTION PLAN:
+${finalSectionPlan || "No W1.5D Final Plan supplied."}
+
+FEEDS HUB:
+${feedsHub || "None supplied."}
+
+SAFE HANDOFF PAGES:
+${safeHandoffPages || "None supplied."}
+
+EVIDENCE HIERARCHY — HARD LOCK:
+1. The ORIGINAL SOURCE ARTICLE is authoritative for historical project facts: what was found, what work was actually carried out, quantities, products, customer actions, site conditions and outcomes.
+2. The governed MATERIAL, ARTICLE TYPE, LOCALITY, AUTHORITY BRIEF, PAGE REWRITE BRIEF and W1.5D FINAL SECTION PLAN are authoritative for approved framing, structure, internal links, maintenance handoff, explanatory context and other pipeline-required additions.
+3. Do NOT flag content merely because it was not stated verbatim in the original source when it is explicitly required or clearly authorised by the approved pipeline governance above.
+4. Governance may add explanatory or maintenance guidance, but it does NOT authorise invention of new historical project facts. A statement such as "the client was advised..." still requires source evidence unless the source or governance explicitly establishes that this happened.
+5. Generic technical explanation is allowed when it explains a documented process or material behaviour and does not introduce a new unsupported project event, measurement, product, cause or outcome.
+6. Governed internal links, hub links, safe-handoff links and the standard no-obligation assessment CTA are permitted pipeline additions and must NOT be flagged merely because the old source article used different signposting or offered a quotation instead.
+7. When governance and the original source appear to conflict about a historical project fact, the ORIGINAL SOURCE ARTICLE wins.
+
+ORIGINAL SOURCE ARTICLE (ground truth for historical project facts):
 ${originalHtml}
 
 REWRITTEN ARTICLE (column ${targetCol} — check this against the source above):
@@ -117,7 +160,13 @@ Compare the rewritten article against the original source. Identify every claim 
 1. FACTUAL CONTRADICTION — directly contradicts or invents something not present in the original (e.g. the rewrite says the floor moved/was unstable, but the original never mentions this).
 2. UNSUPPORTED EMBELLISHMENT — adds dramatic framing, severity, or narrative colour with no supporting evidence in the original (e.g. "looked beyond saving", "felt embarrassed", "structural movement" when the original describes a routine, undramatic job).
 
-Do NOT flag: natural paraphrasing, expanded technical explanation of a process that IS mentioned in the original (e.g. explaining why alkaline cleaner is used, when the original just says "we used alkaline cleaner"), or reasonable inference directly supported by stated facts (e.g. if the original says tiles were cracked and filled, describing the repair process in more technical detail is fine).
+Do NOT flag: natural paraphrasing, expanded technical explanation of a process that IS mentioned in the original (e.g. explaining why alkaline cleaner is used, when the original just says "we used alkaline cleaner"), reasonable inference directly supported by stated facts (e.g. if the original says tiles were cracked and filled, describing the repair process in more technical detail is fine), or content explicitly required/authorised by the approved pipeline governance above.
+
+Before flagging any sentence as unsupported, perform this check in order:
+A. Is it supported by the original source as a historical project fact?
+B. If not, is it explicitly required or clearly authorised by the Authority Brief, Rewrite Brief, W1.5D Final Plan, governed links/handoff, or standard pipeline CTA?
+C. If yes to B, do not flag it unless it contradicts the original project's facts.
+D. Only flag it when it is neither source-supported nor governance-authorised, or when governance wording has been turned into a false claim about what actually happened on this project.
 
 ADDITIONAL FACTUAL INTEGRITY CHECKS — HARD LOCK
 
