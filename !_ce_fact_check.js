@@ -291,16 +291,42 @@ Any one of these failures means the fact check must NOT return a clean PASS.
     TYPE: FACTUAL CONTRADICTION
 
     If no, do not flag it merely because of the words "stone" or "tile".
-For each issue found, output:
-ISSUE: [brief description]
-TYPE: FACTUAL CONTRADICTION / UNSUPPORTED EMBELLISHMENT
-QUOTE FROM REWRITE: "[exact fabricated/embellished text]"
-SOURCE EVIDENCE: [what the original actually says on this point, or "not mentioned at all" if the original says nothing relevant]
+OUTPUT FORMAT — HARD LOCK:
+Return ONLY valid JSON. No markdown fences, no commentary before or after the JSON.
 
-If no issues are found, state: "No factual contradictions or unsupported embellishments found — rewrite is fully grounded in the source article."
+If there are no issues, return exactly:
+{
+  "status": "PASS",
+  "summary": "No factual contradictions or unsupported embellishments found.",
+  "fixes": []
+}
 
-End with:
-OVERALL: PASS (no issues) or FAIL ([N] issue(s) found)`;
+If issues are found, return:
+{
+  "status": "FAIL",
+  "summary": "Brief factual-integrity summary.",
+  "fixes": [
+    {
+      "fixLabel": "short label",
+      "issueType": "FACTUAL CONTRADICTION or UNSUPPORTED EMBELLISHMENT",
+      "old": "exact verbatim fragment from the REWRITTEN ARTICLE",
+      "new": "minimum corrected replacement supported by the source/governance",
+      "sourceEvidence": "brief supporting evidence"
+    }
+  ]
+}
+
+ATOMIC FIX RULES:
+1. Every "old" value MUST be copied exactly from the rewritten article, character-for-character.
+2. Each "old" value must be specific enough to occur exactly once.
+3. "new" must make the minimum correction needed. Do not rewrite surrounding material unnecessarily.
+4. Preserve all valid HTML. Do not damage or convert <a href="..."> links.
+5. Do not alter a governed href unless the href itself is the factual problem.
+6. If a sentence contains a valid governed link but unsupported surrounding wording, correct only the unsupported wording and preserve the link.
+7. Do not propose a fix for wording that is merely a reasonable semantic equivalent of the source.
+8. Do not replace one unsupported claim with another.
+9. If deletion is the safest correction, use an empty string for "new".
+10. The fixes must be directly usable by deterministic exact find-and-replace without another AI call.`;
 
   return { success: true, prompt: prompt, postId: postId, title: title };
 }
