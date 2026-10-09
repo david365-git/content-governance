@@ -3936,7 +3936,7 @@ function bc_runFactCheckFixAutomated(findingsText) {
 
   var apiResult = bc_sendPromptViaOpenAI(
     promptData.prompt,
-    4000,
+    8000,
     MODEL_CHEAP
   );
   if (!apiResult.success) throw new Error(apiResult.message);
