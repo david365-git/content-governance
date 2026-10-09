@@ -320,22 +320,30 @@ VISIBLE-TEXT FIX RULES — HARD LOCK:
 1. targetText is NOT HTML. Copy the visible wording exactly as a reader would see it.
 2. Use the smallest distinctive unsupported phrase, clause or sentence that occurs once in the rewritten article.
 3. Do not include <p>, <strong>, <a>, href values or any other HTML markup in targetText.
-4. Do not include a governed link's anchor text in targetText unless that anchor text itself is factually wrong.
-5. If unsupported wording appears before or after a valid governed link, target only the unsupported wording outside the link.
-6. newText must be the minimum factual correction supported by the original source/governance.
-7. If deletion is safest, use an empty string for newText.
-8. Do not propose fixes for reasonable semantic equivalents of the source.
-9. Do not replace one unsupported claim with another.
-10. The application code will locate targetText inside the HTML while ignoring markup and will preserve unrelated HTML automatically.
+4. newText must be the minimum factual correction supported by the original source/governance.
+5. If deletion is safest, use an empty string for newText.
+6. Do not propose fixes for reasonable semantic equivalents of the source.
+7. Do not replace one unsupported claim with another.
+8. The application code will locate targetText inside the HTML while ignoring markup and will preserve unrelated HTML automatically.
+
+GOVERNED LINK PRESERVATION — HARD LOCK:
+9. targetText MAY include visible anchor text when the unsupported wording cannot be corrected naturally without spanning a valid governed link.
+10. If targetText spans one or more existing <a> links, preserve each link by placing [[LINK_1]], [[LINK_2]], etc. in newText at the point where that existing link should remain.
+11. Do NOT reproduce the URL, <a> tag or anchor HTML yourself. The application code will substitute the ORIGINAL exact <a>...</a> element for each [[LINK_N]] placeholder.
+12. Every existing link crossed by targetText must have one matching placeholder in newText, in the same order.
+13. Do not use a [[LINK_N]] placeholder when targetText does not cross a link.
 
 EXAMPLE:
 Visible article wording:
-"The floor was cleaned and a related Northampton project shows the same importance of matching mechanical refinement."
+"I directed the client towards a terrazzo floor maintenance routine because correct maintenance matters."
 
-If only the claim after the governed link is unsupported, a suitable targetText is:
-"shows the same importance of matching mechanical refinement"
+If "terrazzo floor maintenance routine" is an existing governed link and the client-direction claim is unsupported, a valid fix is:
+targetText:
+"I directed the client towards a terrazzo floor maintenance routine because correct maintenance matters."
+newText:
+"For further maintenance guidance, see [[LINK_1]]."
 
-Do not copy surrounding HTML or the href.
+The application code will preserve the original governed <a> element exactly.
 `;
 
   return { success: true, prompt: prompt, postId: postId, title: title };
