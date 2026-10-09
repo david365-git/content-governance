@@ -317,16 +317,28 @@ If issues are found, return:
 }
 
 ATOMIC FIX RULES:
-1. Every "old" value MUST be copied exactly from the rewritten article, character-for-character.
-2. Each "old" value must be specific enough to occur exactly once.
-3. "new" must make the minimum correction needed. Do not rewrite surrounding material unnecessarily.
-4. Preserve all valid HTML. Do not damage or convert <a href="..."> links.
-5. Do not alter a governed href unless the href itself is the factual problem.
-6. If a sentence contains a valid governed link but unsupported surrounding wording, correct only the unsupported wording and preserve the link.
-7. Do not propose a fix for wording that is merely a reasonable semantic equivalent of the source.
-8. Do not replace one unsupported claim with another.
-9. If deletion is the safest correction, use an empty string for "new".
-10. The fixes must be directly usable by deterministic exact find-and-replace without another AI call.`;
+1. Every "old" value MUST be copied exactly from the REWRITTEN ARTICLE HTML, character-for-character.
+2. Copy the literal HTML, not the rendered/plain-text sentence. Preserve every tag, attribute, entity and punctuation mark that appears inside the selected fragment.
+3. If the visible wording contains inline markup such as <strong>, <em>, <a>, <span> or other tags, those tags MUST appear in "old" exactly where they appear in the article HTML.
+4. Before returning each fix, verify mentally that the complete "old" string can be found verbatim in the supplied REWRITTEN ARTICLE HTML.
+5. Each "old" value must be specific enough to occur exactly once.
+6. "new" must make the minimum correction needed. Preserve surrounding HTML structure wherever possible.
+7. Preserve all valid HTML. Do not damage or convert <a href="..."> links.
+8. Do not alter a governed href unless the href itself is the factual problem.
+9. If a sentence contains a valid governed link but unsupported surrounding wording, preserve the complete <a ...>...</a> element exactly and correct only the unsupported wording around it.
+10. Do not propose a fix for wording that is merely a reasonable semantic equivalent of the source.
+11. Do not replace one unsupported claim with another.
+12. If deletion is the safest correction, use an empty string for "new".
+13. The fixes must be directly usable by deterministic exact find-and-replace without another AI call.
+
+EXACT HTML EXAMPLE:
+If the article contains:
+<p><strong>After restoration</strong>, adhesive no longer dominated the appearance.</p>
+
+Then "old" must include the literal <strong> tags if that whole sentence is selected. It is NOT acceptable to return:
+"After restoration, adhesive no longer dominated the appearance."
+
+Return the exact HTML fragment instead.`;
 
   return { success: true, prompt: prompt, postId: postId, title: title };
 }
