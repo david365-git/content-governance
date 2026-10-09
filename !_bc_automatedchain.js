@@ -4257,7 +4257,11 @@ function bc_runFactCheckFullAutomated() {
     );
   }
 
-  sh.getRange(row, 187).setValue(currentEU); // GE — fresh working copy
+  // W2B.05 always starts clean: discard any previous GE result,
+  // then seed GE from the current W2B Raw HTML in EU.
+  var geCell = sh.getRange(row, 187);
+  geCell.clearContent();
+  geCell.setValue(currentEU);
 
   while (attempt <= maxFixAttempts) {
 
