@@ -310,6 +310,7 @@ If issues are found, return:
       "fixLabel": "short label",
       "issueType": "FACTUAL CONTRADICTION or UNSUPPORTED EMBELLISHMENT",
       "targetText": "smallest exact VISIBLE-TEXT fragment from the rewritten article that identifies the unsupported wording",
+      "contextText": "optional nearby exact visible text that disambiguates targetText when targetText occurs more than once; otherwise use an empty string",
       "newText": "minimum corrected visible text",
       "sourceEvidence": "brief supporting evidence"
     }
@@ -318,13 +319,16 @@ If issues are found, return:
 
 VISIBLE-TEXT FIX RULES — HARD LOCK:
 1. targetText is NOT HTML. Copy the visible wording exactly as a reader would see it.
-2. Use the smallest distinctive unsupported phrase, clause or sentence that occurs once in the rewritten article.
-3. Do not include <p>, <strong>, <a>, href values or any other HTML markup in targetText.
-4. newText must be the minimum factual correction supported by the original source/governance.
-5. If deletion is safest, use an empty string for newText.
-6. Do not propose fixes for reasonable semantic equivalents of the source.
-7. Do not replace one unsupported claim with another.
-8. The application code will locate targetText inside the HTML while ignoring markup and will preserve unrelated HTML automatically.
+2. Prefer the smallest distinctive unsupported phrase, clause or sentence that occurs once in the rewritten article.
+3. If targetText occurs more than once, keep targetText concise and set contextText to a nearby exact visible-text fragment from the same sentence or paragraph that makes the intended occurrence unique.
+4. contextText must be an exact visible-text substring from the rewritten article and must occur in the same local passage as targetText.
+5. If targetText is already unique, set contextText to an empty string.
+6. Do not include <p>, <strong>, <a>, href values or any other HTML markup in targetText or contextText.
+7. newText must be the minimum factual correction supported by the original source/governance.
+8. If deletion is safest, use an empty string for newText.
+9. Do not propose fixes for reasonable semantic equivalents of the source.
+10. Do not replace one unsupported claim with another.
+11. The application code will locate targetText inside the HTML while ignoring markup, use contextText only when needed to disambiguate duplicates, and preserve unrelated HTML automatically.
 
 GOVERNED LINK PRESERVATION — HARD LOCK:
 9. targetText MAY include visible anchor text when the unsupported wording cannot be corrected naturally without spanning a valid governed link.
