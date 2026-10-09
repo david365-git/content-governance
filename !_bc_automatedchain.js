@@ -4154,10 +4154,10 @@ function bc_applyVisibleTextFactCheckFixes_(fixes) {
     var htmlEnd = mapped.ends[first + visibleTarget.length - 1];
     var htmlSpan = html.slice(htmlStart, htmlEnd);
     // Include an adjacent closing anchor tag when the target ends inside a link.
-    var opens = (htmlSpan.match(/<a\\b[^>]*>/gi) || []).length;
-    var closes = (htmlSpan.match(/<\\/a\\s*>/gi) || []).length;
+    var opens = (htmlSpan.match(/<a\b[^>]*>/gi) || []).length;
+    var closes = (htmlSpan.match(/<\/a\s*>/gi) || []).length;
     if (opens === closes + 1) {
-      var closeTag = html.slice(htmlEnd).match(/^<\\/a\\s*>/i);
+      var closeTag = html.slice(htmlEnd).match(/^<\/a\s*>/i);
       if (closeTag) {
         htmlEnd += closeTag[0].length;
         htmlSpan = html.slice(htmlStart, htmlEnd);
