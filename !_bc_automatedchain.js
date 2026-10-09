@@ -4072,13 +4072,25 @@ function bc_applyVisibleTextFactCheckFixes_(fixes) {
 
     var mapped = buildVisibleMap_(html);
 
+    // The AI occasionally includes literal HTML closing tags in targetText,
+    // although the fact-check contract requests visible text only.
+    // Match against the same visible-text representation used for the article.
+    // Never use the stripped string as replacement HTML.
+    var visibleTarget = buildVisibleMap_(target).text;
+    var visibleContext = buildVisibleMap_(contextText).text;
+
+    if (!visibleTarget.trim()) {
+      validationErrors.push(label + ' — targetText contains no visible text.');
+      return;
+    }
+
     var occurrences = [];
     var searchFrom = 0;
     var foundAt = -1;
 
-    while ((foundAt = mapped.text.indexOf(target, searchFrom)) !== -1) {
+    while ((foundAt = mapped.text.indexOf(visibleTarget, searchFrom)) !== -1) {
       occurrences.push(foundAt);
-      searchFrom = foundAt + Math.max(1, target.length);
+      searchFrom = foundAt + Math.max(1, visibleTarget.length);
     }
 
     if (occurrences.length === 0) {
@@ -4091,7 +4103,7 @@ function bc_applyVisibleTextFactCheckFixes_(fixes) {
     if (occurrences.length === 1) {
       first = occurrences[0];
     } else {
-      if (!contextText) {
+      if (!visibleContext) {
         validationErrors.push(
           label +
           ' — targetText is not unique in visible article text and contextText was not supplied.'
@@ -4103,9 +4115,9 @@ function bc_applyVisibleTextFactCheckFixes_(fixes) {
       var contextFrom = 0;
       var contextAt = -1;
 
-      while ((contextAt = mapped.text.indexOf(contextText, contextFrom)) !== -1) {
+      while ((contextAt = mapped.text.indexOf(visibleContext, contextFrom)) !== -1) {
         contextHits.push(contextAt);
-        contextFrom = contextAt + Math.max(1, contextText.length);
+        contextFrom = contextAt + Math.max(1, visibleContext.length);
       }
 
       if (contextHits.length === 0) {
@@ -4115,8 +4127,8 @@ function bc_applyVisibleTextFactCheckFixes_(fixes) {
 
       var candidates = occurrences.filter(function(targetPos) {
         return contextHits.some(function(contextPos) {
-          var contextEnd = contextPos + contextText.length;
-          var targetEnd = targetPos + target.length;
+          var contextEnd = contextPos + visibleContext.length;
+          var targetEnd = targetPos + visibleTarget.length;
 
           // Same local passage: overlap, containment, or within 350 visible chars.
           return (
@@ -4139,7 +4151,7 @@ function bc_applyVisibleTextFactCheckFixes_(fixes) {
     }
 
     var htmlStart = mapped.starts[first];
-    var htmlEnd = mapped.ends[first + target.length - 1];
+    var htmlEnd = mapped.ends[first + visibleTarget.length - 1];
     var htmlSpan = html.slice(htmlStart, htmlEnd);
 
     // If the visible target crosses governed links, preserve the ORIGINAL
@@ -4198,6 +4210,18 @@ function bc_applyVisibleTextFactCheckFixes_(fixes) {
         'Visible-text fact-check fix batch rejected — no changes applied. ' +
         validationErrors.join(' | ')
     };
+  }
+
+  // Reject overlapping replacements before writing anything to GE.
+  var ordered = prepared.slice().sort(function(a, b) { return a.start - b.start; });
+  for (var p = 1; p < ordered.length; p++) {
+    if (ordered[p].start < ordered[p - 1].end) {
+      return {
+        success: false,
+        message: 'Visible-text fact-check fix batch rejected — no changes applied. ' +
+          ordered[p - 1].label + ' overlaps ' + ordered[p].label + '.'
+      };
+    }
   }
 
   // Apply from end to start so earlier character positions stay valid.
