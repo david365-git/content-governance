@@ -160,13 +160,42 @@ Compare the rewritten article against the original source. Identify every claim 
 1. FACTUAL CONTRADICTION — directly contradicts or invents something not present in the original (e.g. the rewrite says the floor moved/was unstable, but the original never mentions this).
 2. UNSUPPORTED EMBELLISHMENT — adds dramatic framing, severity, or narrative colour with no supporting evidence in the original (e.g. "looked beyond saving", "felt embarrassed", "structural movement" when the original describes a routine, undramatic job).
 
-Do NOT flag: natural paraphrasing, expanded technical explanation of a process that IS mentioned in the original (e.g. explaining why alkaline cleaner is used, when the original just says "we used alkaline cleaner"), reasonable inference directly supported by stated facts (e.g. if the original says tiles were cracked and filled, describing the repair process in more technical detail is fine), or content explicitly required/authorised by the approved pipeline governance above.
+Do NOT flag:
+- natural paraphrasing that preserves the same factual meaning;
+- wording that is slightly more specific but remains a reasonable description of the same documented action;
+- expanded technical explanation of a process that IS mentioned in the original;
+- reasonable inference directly supported by stated facts;
+- content explicitly required/authorised by the approved pipeline governance above.
+
+SEMANTIC EQUIVALENCE RULE — HARD LOCK:
+Judge factual meaning, not exact wording.
+
+A rewrite does NOT fail merely because it uses different words from the source.
+
+Examples that are normally acceptable when they preserve the same factual meaning:
+- "cleaned the floor" -> "scrubbed the floor"
+- "removed dirt" -> "lifted embedded soil"
+- "polished the floor" -> "refined the finish"
+
+However, fail wording that introduces a genuinely new factual detail not supported by the source.
+
+Examples:
+- "cleaned the floor" -> "acid cleaned the floor"
+- "cleaned the floor" -> "steam cleaned the floor"
+- "cleaned the floor" -> "scrubbed the floor with a rotary machine"
+- "cleaned the floor" -> "deep cleaned the floor over two days"
+
+The test is:
+Does the rewritten wording merely describe the same documented action in different or slightly more detailed language, or does it introduce a new method, product, duration, cause, severity, result, customer action, measurement, or project event?
+
+If it preserves the same underlying fact, PASS it.
+If it introduces a genuinely new unsupported fact, flag it.
 
 Before flagging any sentence as unsupported, perform this check in order:
-A. Is it supported by the original source as a historical project fact?
+A. Is it semantically supported by the original source as the same historical project fact, even if the wording differs?
 B. If not, is it explicitly required or clearly authorised by the Authority Brief, Rewrite Brief, W1.5D Final Plan, governed links/handoff, or standard pipeline CTA?
 C. If yes to B, do not flag it unless it contradicts the original project's facts.
-D. Only flag it when it is neither source-supported nor governance-authorised, or when governance wording has been turned into a false claim about what actually happened on this project.
+D. Only flag it when it is neither semantically source-supported nor governance-authorised, or when governance wording has been turned into a false claim about what actually happened on this project.
 
 ADDITIONAL FACTUAL INTEGRITY CHECKS — HARD LOCK
 
