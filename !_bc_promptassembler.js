@@ -1471,8 +1471,67 @@ function bc_sendPromptViaOpenAI(promptText, maxTokens, modelOverride) {
     return { success: false, message: (data.error && data.error.message) || 'OpenAI API error' };
   }
 
-  var promptTokens     = data.usage.prompt_tokens;
-  var completionTokens = data.usage.completion_tokens;
+  if (
+    !data.choices ||
+    !data.choices.length ||
+    !data.choices[0].message
+  ) {
+    return {
+      success: false,
+      message:
+        'OpenAI returned HTTP 200 but no usable choice/message.'
+    };
+  }
+
+  var promptTokens =
+    data.usage && data.usage.prompt_tokens
+      ? Number(data.usage.prompt_tokens)
+      : 0;
+
+  var completionTokens =
+    data.usage && data.usage.completion_tokens
+      ? Number(data.usage.completion_tokens)
+      : 0;
+
+  var finishReason =
+    String(
+      data.choices[0].finish_reason || 'unknown'
+    );
+
+  var messageObject =
+    data.choices[0].message || {};
+
+  var responseText =
+    messageObject.content == null
+      ? ''
+      : String(messageObject.content);
+
+  var refusalText =
+    messageObject.refusal == null
+      ? ''
+      : String(messageObject.refusal);
+
+  if (!responseText.trim()) {
+    return {
+      success: false,
+      message:
+        'OpenAI returned HTTP 200 but the response text was empty. ' +
+        'Finish reason: ' +
+        finishReason +
+        '. Completion tokens: ' +
+        completionTokens +
+        (
+          refusalText
+            ? '. Refusal: ' + refusalText
+            : '. No refusal text was returned.'
+        ),
+      promptTokens: promptTokens,
+      completionTokens: completionTokens,
+      finishReason: finishReason,
+      refusal: refusalText
+    };
+  }
+
   var PRICING = {
   'gpt-5.6-luna':  { input: 0.20, output: 1.20 },
   'gpt-5.6-terra': { input: 2.00, output: 12.00 },
@@ -1483,14 +1542,14 @@ function bc_sendPromptViaOpenAI(promptText, maxTokens, modelOverride) {
 
 var rates = PRICING[model] || PRICING[MODEL_MID];
   var cost = (promptTokens / 1000000 * rates.input) + (completionTokens / 1000000 * rates.output);
-  var finishReason = data.choices[0].finish_reason;
+
   if (finishReason === 'length') {
     Logger.log('WARNING: OpenAI response truncated by max_tokens limit.');
   }
 
   return {
     success: true,
-    text: data.choices[0].message.content,
+    text: responseText,
     promptTokens: promptTokens,
     completionTokens: completionTokens,
     cost: cost,
