@@ -331,14 +331,24 @@ ATOMIC FIX RULES:
 12. If deletion is the safest correction, use an empty string for "new".
 13. The fixes must be directly usable by deterministic exact find-and-replace without another AI call.
 
-EXACT HTML EXAMPLE:
-If the article contains:
-<p><strong>After restoration</strong>, adhesive no longer dominated the appearance.</p>
+EXACT HTML MATCHING — CRITICAL:
+Choose the smallest exact substring from the REWRITTEN ARTICLE HTML that safely identifies the wording to change.
 
-Then "old" must include the literal <strong> tags if that whole sentence is selected. It is NOT acceptable to return:
-"After restoration, adhesive no longer dominated the appearance."
+Do not add opening or closing block tags unless they are genuinely adjacent to the selected text in the supplied HTML.
 
-Return the exact HTML fragment instead.`;
+If the target sentence sits inside a longer paragraph, copy only that exact sentence or clause. Do not wrap it in <p>...</p> unless the paragraph actually starts and ends there.
+
+Example:
+Article HTML:
+<p>Supported opening sentence. Target sentence here. Supported closing sentence.</p>
+
+Correct "old":
+"Target sentence here."
+
+Incorrect "old":
+"<p>Target sentence here.</p>"
+
+Before returning JSON, verify that every "old" value appears verbatim in the supplied REWRITTEN ARTICLE HTML. If it does not, shorten it until it is a unique exact substring. Preserve any inline tags that genuinely occur inside the selected substring.`;
 
   return { success: true, prompt: prompt, postId: postId, title: title };
 }
