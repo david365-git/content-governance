@@ -117,239 +117,116 @@ function buildFactCheckPrompt(sourceColumn) {
   }
 
   const prompt =
-`You are fact-checking a rewritten article against its original source, to catch fabricated facts and unsupported embellishments introduced during an AI content rewrite pipeline.
+`You are performing W2B.05 PROJECT FACT CHECK.
 
-GOVERNED PAGE CONTEXT:
+PURPOSE:
+Check whether the rewritten case study has invented, contradicted or materially exaggerated facts about the ACTUAL documented project.
+
+This stage is NOT a general technical fact-check, SEO check, internal-link check, heading check or governance-compliance check. Other stages handle those jobs.
+
+PAGE CONTEXT:
 MATERIAL: ${governedMaterial || "Not supplied"}
 ARTICLE TYPE: ${articleType || "Not supplied"}
 LOCALITY: ${governedLocality || "Not supplied"}
 
-PAGE REWRITE BRIEF:
+SHORT REWRITE SCOPE:
 ${rewriteBrief || "No active Rewrite Brief supplied."}
 
-APPROVED PIPELINE GOVERNANCE:
-AUTHORITY BRIEF:
-${authorityBrief || "No Authority Brief supplied."}
-
-W1.5D FINAL SECTION PLAN:
-${finalSectionPlan || "No W1.5D Final Plan supplied."}
-
-FEEDS HUB:
-${feedsHub || "None supplied."}
-
-SAFE HANDOFF PAGES:
-${safeHandoffPages || "None supplied."}
-
-EVIDENCE HIERARCHY — HARD LOCK:
-1. The ORIGINAL SOURCE ARTICLE is authoritative for historical project facts: what was found, what work was actually carried out, quantities, products, customer actions, site conditions and outcomes.
-2. The governed MATERIAL, ARTICLE TYPE, LOCALITY, AUTHORITY BRIEF, PAGE REWRITE BRIEF and W1.5D FINAL SECTION PLAN are authoritative for approved framing, structure, internal links, maintenance handoff, explanatory context and other pipeline-required additions.
-3. Do NOT flag content merely because it was not stated verbatim in the original source when it is explicitly required or clearly authorised by the approved pipeline governance above.
-4. Governance may add explanatory or maintenance guidance, but it does NOT authorise invention of new historical project facts. A statement such as "the client was advised..." still requires source evidence unless the source or governance explicitly establishes that this happened.
-5. Generic technical explanation is allowed when it explains a documented process or material behaviour and does not introduce a new unsupported project event, measurement, product, cause or outcome.
-6. Governed internal links, hub links, safe-handoff links and the standard no-obligation assessment CTA are permitted pipeline additions and must NOT be flagged merely because the old source article used different signposting or offered a quotation instead.
-7. When governance and the original source appear to conflict about a historical project fact, the ORIGINAL SOURCE ARTICLE wins.
-
-ORIGINAL SOURCE ARTICLE (ground truth for historical project facts):
+ORIGINAL SOURCE ARTICLE — GROUND TRUTH FOR WHAT ACTUALLY HAPPENED:
 ${originalHtml}
 
-REWRITTEN ARTICLE (column ${targetCol} — check this against the source above):
+REWRITTEN ARTICLE — CHECK PROJECT CLAIMS IN THIS VERSION:
 ${generatedHtml}
 
-TASK:
-Compare the rewritten article against the original source. Identify every claim in the rewritten article that either:
-1. FACTUAL CONTRADICTION — directly contradicts or invents something not present in the original (e.g. the rewrite says the floor moved/was unstable, but the original never mentions this).
-2. UNSUPPORTED EMBELLISHMENT — adds dramatic framing, severity, or narrative colour with no supporting evidence in the original (e.g. "looked beyond saving", "felt embarrassed", "structural movement" when the original describes a routine, undramatic job).
+CORE RULE — HARD LOCK:
+The ORIGINAL SOURCE ARTICLE is authoritative for historical project facts, including:
+- what the client/homeowner did or said;
+- what condition was actually found;
+- what work was actually carried out;
+- specific tools, products, chemicals, quantities, grit sizes or timings actually used;
+- what the restorer actually advised the client;
+- what result was actually observed.
 
-Do NOT flag:
-- natural paraphrasing that preserves the same factual meaning;
-- wording that is slightly more specific but remains a reasonable description of the same documented action;
-- expanded technical explanation of a process that IS mentioned in the original;
-- reasonable inference directly supported by stated facts;
-- content explicitly required/authorised by the approved pipeline governance above.
+Judge meaning, NOT exact wording.
 
-SEMANTIC EQUIVALENCE RULE — HARD LOCK:
-Judge factual meaning, not exact wording.
-
-A rewrite does NOT fail merely because it uses different words from the source.
-
-Examples that are normally acceptable when they preserve the same factual meaning:
+PASS reasonable semantic equivalents.
+Examples:
 - "cleaned the floor" -> "scrubbed the floor"
 - "removed dirt" -> "lifted embedded soil"
 - "polished the floor" -> "refined the finish"
 
-However, fail wording that introduces a genuinely new factual detail not supported by the source.
-
+FAIL only when the rewrite introduces a genuinely new or contradictory PROJECT fact.
 Examples:
-- "cleaned the floor" -> "acid cleaned the floor"
-- "cleaned the floor" -> "steam cleaned the floor"
-- "cleaned the floor" -> "scrubbed the floor with a rotary machine"
-- "cleaned the floor" -> "deep cleaned the floor over two days"
+- source says "cleaned" but rewrite says "steam cleaned";
+- source says "honed progressively" but rewrite invents exact grit sizes;
+- source says guidance was given, but rewrite invents specific advice the client was told;
+- rewrite invents a customer action, property condition, cause, duration, measurement or observed result.
 
-The test is:
-Does the rewritten wording merely describe the same documented action in different or slightly more detailed language, or does it introduce a new method, product, duration, cause, severity, result, customer action, measurement, or project event?
+DO NOT FLAG:
+- ordinary paraphrasing that preserves the same factual meaning;
+- general technical explanation that is clearly presented as general explanation rather than something that happened on this job;
+- headings, internal links, CTA wording, SEO wording or general maintenance signposting merely because they were not in the old article;
+- approved explanatory material that does not turn into a claim that it happened on this project.
 
-If it preserves the same underlying fact, PASS it.
-If it introduces a genuinely new unsupported fact, flag it.
+IMPORTANT DISTINCTION:
+"Terrazzo can be damaged by unsuitable chemicals." = general explanation; do not fact-check here.
+"I warned the client not to use unsuitable chemicals." = project event; must be supported by the original source.
 
-Before flagging any sentence as unsupported, perform this check in order:
-A. Is it semantically supported by the original source as the same historical project fact, even if the wording differs?
-B. If not, is it explicitly required or clearly authorised by the Authority Brief, Rewrite Brief, W1.5D Final Plan, governed links/handoff, or standard pipeline CTA?
-C. If yes to B, do not flag it unless it contradicts the original project's facts.
-D. Only flag it when it is neither semantically source-supported nor governance-authorised, or when governance wording has been turned into a false claim about what actually happened on this project.
+Likewise:
+"Routine dust control can help reduce abrasive soil." = general guidance; do not fact-check here.
+"I told the client to remove grit before every damp mop." = project advice; must be supported by the source.
 
-ADDITIONAL FACTUAL INTEGRITY CHECKS — HARD LOCK
+CLASSIFY ONLY:
+1. FACTUAL CONTRADICTION — the rewrite states a project fact that conflicts with the source.
+2. UNSUPPORTED EMBELLISHMENT — the rewrite presents a new project-specific fact, severity, event, customer action, treatment detail or result that the source does not support.
 
-In addition to checking factual claims against the supplied sources, inspect the article for the following internal contradictions and unsupported claims.
+Before flagging anything, ask:
+"Is this sentence claiming that something actually happened on this Northampton project?"
+If NO, do not flag it in W2B.05 unless it directly contradicts the documented project.
+If YES, compare its meaning with the original source.
 
-A. MATERIAL IDENTITY
-Check that every material description matches the governed Material Entity.
-Examples:
-- Ceramic Tile and Porcelain Tile must not be described as natural stone or "stone".
-- Natural stone terminology must not be transferred automatically to manufactured tile.
-Flag any material-category contradiction.
-
-B. LOCALITY INTEGRITY
-For a locality-specific page, identify the governed locality from the supplied governance data.
-Flag any unrelated town, county, city or region introduced into the article body unless it is explicitly supported as relevant context.
-Raw search-query terms do not constitute evidence that another locality belongs in the article.
-
-C. UNSUPPORTED BUSINESS OR AUTHORITY CLAIMS
-Flag words or statements such as:
-vetted, approved, accredited, certified, guaranteed, trusted, recommended, authorised, leading, award-winning
-unless supplied evidence establishes the claim.
-
-D. INVENTED PROJECT OR CUSTOMER NARRATIVE
-Flag any statement implying a real assessment, project, customer, property or completed intervention unless the supplied source material establishes that event.
-Examples:
-"After assessing this installation..."
-"The homeowner..."
-"On this project..."
-"We found..."
-
-E. TREATMENT/MATERIAL CONTRADICTIONS
-Check that treatments recommended in one part of the article do not contradict material guidance elsewhere.
-Example: if the article correctly states that the ceramic tile itself normally needs no sealer, later wording must not imply routine resealing of the ceramic floor unless the wording clearly concerns a separate sealable component and is supported.
-
-F. CLAIM-BEARING HEADINGS
-Check H2/H3 headings for unsupported factual or quality claims as well as the body text.
-
-Any one of these failures means the fact check must NOT return a clean PASS.
-
-  MANDATORY MATERIAL-CATEGORY PRE-PASS CHECK
-
-  Before returning PASS, determine the physical material category of the governed MATERIAL.
-
-  Distinguish between:
-  - natural stone;
-  - fired clay / ceramic / porcelain tile;
-  - other manufactured tile or flooring materials.
-
-  The word "tile" describes an installation form and may legitimately apply to many materials, including natural stone.
-
-  The word "stone", however, must not be used to describe the governed material itself unless that material is actually natural stone.
-
-  Therefore:
-  - Slate may legitimately be described as stone and as tile.
-  - Marble, limestone, travertine and granite may legitimately be described as stone and as tile.
-  - Ceramic, porcelain, terracotta, quarry tile, Victorian tile, Edwardian tile and encaustic tile must not be described as natural stone merely because they are installed as tiles.
-
-  Before PASS, scan the complete rewritten article for any sentence where "stone" or "natural stone" refers back to the governed material.
-
-  If the governed material is not natural stone and the article describes that material as stone, report:
-  TYPE: FACTUAL CONTRADICTION
-
-  Do not return PASS while such a contradiction remains.
-
-  CLASSIFICATION LOCK:
-  Every failure found under A-F above MUST be reported as:
-  TYPE: FACTUAL CONTRADICTION
-
-  Do not silently treat these integrity failures as stylistic, editorial, optional or outside the original-source comparison.
-
-  The governed Material, Article Type, Locality and Rewrite Brief supplied above are authoritative governance evidence.
-
-  MATERIAL IDENTITY RULE:
-    Judge material terminology against the governed material category, not against a single banned word.
-
-    Do not flag a term merely because it uses "tile" or "stone".
-    Many governed materials may legitimately be described as tiles, including slate, terracotta, quarry tile, Victorian tile, Edwardian tile and encaustic tile.
-
-    Flag only where the wording assigns the material to the wrong physical or material category.
-
-    Examples:
-    - Ceramic Tile described as natural stone → FACTUAL CONTRADICTION.
-    - Porcelain Tile described as natural stone → FACTUAL CONTRADICTION.
-    - Slate described as a tile installation → not automatically a contradiction.
-    - Terracotta described as tile → not automatically a contradiction.
-    - Quarry Tile described as tile → not automatically a contradiction.
-    - Victorian, Edwardian or Encaustic flooring described as tile → not automatically a contradiction.
-
-    The test is:
-    Does the wording materially misclassify what the governed material actually is?
-
-    If yes, report:
-    TYPE: FACTUAL CONTRADICTION
-
-    If no, do not flag it merely because of the words "stone" or "tile".
 OUTPUT FORMAT — HARD LOCK:
 Return ONLY valid JSON. No markdown fences and no commentary outside the JSON.
 
-If there are no issues, return exactly:
+If there are no issues:
 {
   "status": "PASS",
-  "summary": "No factual contradictions or unsupported embellishments found.",
+  "summary": "No unsupported project facts found.",
   "fixes": []
 }
 
-If issues are found, return:
+If issues are found:
 {
   "status": "FAIL",
-  "summary": "Brief factual-integrity summary.",
+  "summary": "Brief summary.",
   "fixes": [
     {
       "fixLabel": "short label",
       "issueType": "FACTUAL CONTRADICTION or UNSUPPORTED EMBELLISHMENT",
-      "targetText": "smallest exact VISIBLE-TEXT fragment from the rewritten article that identifies the unsupported wording",
-      "contextText": "optional nearby exact visible text that disambiguates targetText when targetText occurs more than once; otherwise use an empty string",
-      "newText": "minimum corrected visible text",
-      "sourceEvidence": "brief supporting evidence"
+      "targetText": "smallest exact visible-text fragment identifying the unsupported project claim",
+      "contextText": "nearby exact visible text only if needed to distinguish duplicate targetText; otherwise empty string",
+      "newText": "minimum corrected visible wording supported by the original source",
+      "sourceEvidence": "brief source evidence"
     }
   ]
 }
 
-VISIBLE-TEXT FIX RULES — HARD LOCK:
-1. targetText is NOT HTML. Copy the visible wording exactly as a reader would see it.
-2. Prefer the smallest distinctive unsupported phrase, clause or sentence that occurs once in the rewritten article.
-3. If targetText occurs more than once, keep targetText concise and set contextText to a nearby exact visible-text fragment from the same sentence or paragraph that makes the intended occurrence unique.
-4. contextText must be an exact visible-text substring from the rewritten article and must occur in the same local passage as targetText.
-5. If targetText is already unique, set contextText to an empty string.
-6. Do not include <p>, <strong>, <a>, href values or any other HTML markup in targetText or contextText.
-7. newText must be the minimum factual correction supported by the original source/governance.
-8. If deletion is safest, use an empty string for newText.
-9. Do not propose fixes for reasonable semantic equivalents of the source.
-10. Do not replace one unsupported claim with another.
-11. The application code will locate targetText inside the HTML while ignoring markup, use contextText only when needed to disambiguate duplicates, and preserve unrelated HTML automatically.
+ATOMIC FIX RULES:
+1. targetText and contextText are visible text, not HTML.
+2. Prefer a short, unique targetText.
+3. If targetText occurs more than once, provide contextText from the same local sentence/paragraph.
+4. newText must make the minimum correction necessary.
+5. If deletion is safest, use an empty newText.
+6. Do not replace one unsupported project fact with another.
+7. Preserve general explanatory material that is not itself a false project claim.
 
-GOVERNED LINK PRESERVATION — HARD LOCK:
-9. targetText MAY include visible anchor text when the unsupported wording cannot be corrected naturally without spanning a valid governed link.
-10. If targetText spans one or more existing <a> links, preserve each link by placing [[LINK_1]], [[LINK_2]], etc. in newText at the point where that existing link should remain.
-11. Do NOT reproduce the URL, <a> tag or anchor HTML yourself. The application code will substitute the ORIGINAL exact <a>...</a> element for each [[LINK_N]] placeholder.
-12. Every existing link crossed by targetText must have one matching placeholder in newText, in the same order.
-13. Do not use a [[LINK_N]] placeholder when targetText does not cross a link.
+LINK PRESERVATION:
+8. targetText may span visible anchor text when necessary.
+9. If targetText crosses an existing link, put [[LINK_1]], [[LINK_2]], etc. in newText wherever the original link must remain.
+10. Do not reproduce URLs or HTML. The application code restores the original exact anchor HTML.
+11. Every crossed link must have a matching placeholder in the same order.
 
-EXAMPLE:
-Visible article wording:
-"I directed the client towards a terrazzo floor maintenance routine because correct maintenance matters."
-
-If "terrazzo floor maintenance routine" is an existing governed link and the client-direction claim is unsupported, a valid fix is:
-targetText:
-"I directed the client towards a terrazzo floor maintenance routine because correct maintenance matters."
-newText:
-"For further maintenance guidance, see [[LINK_1]]."
-
-The application code will preserve the original governed <a> element exactly.
-`;
-
+Return the JSON only.`;
   return { success: true, prompt: prompt, postId: postId, title: title };
 }
 function buildFactCheckFixPrompt(findingsText, sourceColumn) {
