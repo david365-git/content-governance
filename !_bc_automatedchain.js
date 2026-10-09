@@ -4087,10 +4087,43 @@ function bc_applyVisibleTextFactCheckFixes_(fixes) {
     var htmlEnd = mapped.ends[first + target.length - 1];
     var htmlSpan = html.slice(htmlStart, htmlEnd);
 
-    // Do not allow the semantic replacement to consume a governed link.
-    if (/<a\b/i.test(htmlSpan) || /<\/a>/i.test(htmlSpan)) {
+    // If the visible target crosses governed links, preserve the ORIGINAL
+    // exact anchor HTML using [[LINK_1]], [[LINK_2]], etc. placeholders.
+    var anchors = htmlSpan.match(/<a\b[^>]*>[\s\S]*?<\/a>/gi) || [];
+    var replacementHtml = replacement;
+
+    if (anchors.length > 0) {
+      for (var a = 0; a < anchors.length; a++) {
+        var placeholder = '[[LINK_' + (a + 1) + ']]';
+
+        if (replacementHtml.indexOf(placeholder) === -1) {
+          validationErrors.push(
+            label +
+            ' — targetText crosses ' +
+            anchors.length +
+            ' <a> link(s), but newText is missing ' +
+            placeholder +
+            '.'
+          );
+          return;
+        }
+
+        replacementHtml =
+          replacementHtml.replace(
+            placeholder,
+            anchors[a]
+          );
+      }
+
+      if (/\[\[LINK_\d+\]\]/.test(replacementHtml)) {
+        validationErrors.push(
+          label + ' — newText contains an unmatched link placeholder.'
+        );
+        return;
+      }
+    } else if (/\[\[LINK_\d+\]\]/.test(replacementHtml)) {
       validationErrors.push(
-        label + ' — targetText crosses an <a> link; choose wording outside the governed link.'
+        label + ' — newText contains a link placeholder but targetText crosses no link.'
       );
       return;
     }
@@ -4099,7 +4132,7 @@ function bc_applyVisibleTextFactCheckFixes_(fixes) {
       label: label,
       start: htmlStart,
       end: htmlEnd,
-      newText: replacement
+      newText: replacementHtml
     });
   });
 
