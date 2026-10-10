@@ -167,6 +167,14 @@ Judge meaning, not literal wording. Minor word choice, style, SEO, headings, CTA
 When uncertain or when no demonstrable material error exists, PASS or PASS WITH NOTES rather than FAIL.
 For every FAIL fix, choose the smallest uniquely matchable visible-text fragment, and preserve existing links. Never use a fix to introduce unrelated editorial changes.
 
+COMPLETE FIRST-PASS REVIEW — HARD LOCK:
+Before returning the first response, inspect the ENTIRE rewritten article from the opening to the final paragraph, including introduction, each section, captions, conclusions and aftercare.
+Cross-check every material project-specific assertion against the original source and the 14 criteria above. In particular, review who performed actions, client reactions or expectations, room and locality, terrazzo binder or substrate type, equipment actually used, sealer classification and documented outcomes.
+Make a second complete internal sweep for material errors you may have overlooked. Consolidate ALL demonstrable material errors into the FIRST FAIL response; do not stop after finding the first few.
+Do not ration findings, invent issues to fill a quota, or broaden the materiality threshold. Supplementary technical education remains permitted.
+Each fix must address a distinct material error, and must be independently justified by precise evidence. Only after completing both sweeps return the JSON.
+On verification, apply exactly the same materiality threshold; do not introduce stricter editorial standards or reclassify harmless background explanations as project facts.
+
 CLASSIFICATION:
 PASS: No material errors and no noteworthy uncertainty.
 PASS_WITH_NOTES: No material errors, but minor uncertainty or editorial observation worth recording; do not propose corrections.
