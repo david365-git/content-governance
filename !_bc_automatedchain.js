@@ -4470,6 +4470,25 @@ function bc_runFactCheckFullAutomated() {
       continue;
     }
 
+    // The final verification may still FAIL after all permitted repairs.
+    // Record that outcome explicitly rather than falling out of the loop
+    // and returning undefined to the Master Workflow.
+    if (attempt >= maxFixAttempts) {
+      bc_appendGovernancePipelineException(
+        'W2B.05 — Fact Check',
+        'Final verification still FAIL after ' + maxFixAttempts +
+        ' correction attempts. ' + (parsed.summary || '') +
+        '\n\nFACT-CHECK RESPONSE:\n' + checkResult.text
+      );
+      return {
+        success: false,
+        message: 'Fact-check still FAIL after ' + maxFixAttempts +
+          ' correction attempts — final findings recorded in GJ.',
+        text: checkResult.text,
+        cost: totalCost
+      };
+    }
+
     // Normal path: apply the fixes proposed by the SAME fact-check call.
     var atomicFixResult =
       bc_applyVisibleTextFactCheckFixes_(
@@ -4502,6 +4521,12 @@ function bc_runFactCheckFullAutomated() {
     // Loop now performs only a fresh fact-check of the corrected GE.
     // There is no separate AI fix-generation call.
   }
+
+  return {
+    success: false,
+    message: 'W2B.05 stopped without a PASS — check GJ for details.',
+    cost: totalCost
+  };
 }
 
 function bc_runSimilarityCheckAutomated() {
