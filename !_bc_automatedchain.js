@@ -4270,6 +4270,30 @@ function bc_runFactCheckFullAutomated() {
   var maxFixAttempts = 3;
   var attempt = 0;
   var lastFixMessage = '';
+  var diagnosticRunId = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmmss') +
+    '-' + Utilities.getUuid().slice(0, 8);
+  function recordW2B05_(step, status, summary, details) {
+    try {
+      var log = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('W2B05 Audit Log');
+      if (!log) {
+        log = SpreadsheetApp.getActiveSpreadsheet().insertSheet('W2B05 Audit Log');
+        log.appendRow(['Timestamp', 'Run ID', 'Post Row', 'Check/Attempt', 'Step', 'Status', 'Summary', 'Full Details', 'GE Length', 'Cost So Far']);
+        log.setFrozenRows(1);
+      }
+      // A Sheet cell has a 50,000-character limit; split long responses
+      // across successive audit rows so nothing is silently discarded.
+      var raw = String(details == null ? '' : details);
+      var pieces = raw.match(/[\\s\\S]{1,45000}/g) || [''];
+      var geLength = String(sh.getRange(row, 187).getValue() || '').length;
+      for (var z = 0; z < pieces.length; z++) {
+        log.appendRow([new Date(), diagnosticRunId, row, attempt,
+          step + (pieces.length > 1 ? ' (part ' + (z + 1) + '/' + pieces.length + ')' : ''),
+          status, String(summary || ''), pieces[z], geLength, totalCost]);
+      }
+    } catch (logError) {
+      console.error('W2B.05 diagnostic logging failed: ' + logError);
+    }
+  }
 
   // Start every automated W2B.05 session from the CURRENT EU.
   // This prevents an old GE from a previous test/run being re-used.
@@ -4292,16 +4316,19 @@ function bc_runFactCheckFullAutomated() {
   var geCell = sh.getRange(row, 187);
   geCell.clearContent();
   geCell.setValue(currentEU);
+  recordW2B05_('START', 'START', 'GE reset from current EU', 'EU characters: ' + currentEU.length);
 
   while (attempt <= maxFixAttempts) {
 
     var checkResult = bc_runFactCheckAutomated();
 
     if (!checkResult.success) {
+      recordW2B05_('FACT CHECK API', 'ERROR', checkResult.message, JSON.stringify(checkResult));
       throw new Error(checkResult.message);
     }
 
-    totalCost += checkResult.cost;
+    totalCost += Number(checkResult.cost || 0);
+    recordW2B05_('AI RESPONSE', 'RETURNED', 'Full raw fact-check response', checkResult.text);
 
     var currentFactCheckHtml = String(
       sh.getRange(row, 187).getValue() || ''
@@ -4332,9 +4359,8 @@ function bc_runFactCheckFullAutomated() {
 
       parsed = JSON.parse(cleanedFactCheck);
     } catch (parseError) {
-      throw new Error(
-        'W2B.05 returned invalid JSON: ' + parseError.message
-      );
+      recordW2B05_('PARSE', 'ERROR', parseError.message, checkResult.text);
+      throw new Error('W2B.05 returned invalid JSON: ' + parseError.message);
     }
 
     if (
@@ -4346,6 +4372,8 @@ function bc_runFactCheckFullAutomated() {
         'W2B.05 returned JSON in an unexpected format.'
       );
     }
+
+    recordW2B05_('PARSED RESULT', parsed.status, parsed.summary, JSON.stringify(parsed.fixes));
 
     // Deterministic hard checks still take priority.
     if (!materialIntegrity.passed) {
@@ -4367,6 +4395,10 @@ function bc_runFactCheckFullAutomated() {
       };
     }
 
+    if (!materialIntegrity.passed || consistencyFinding) {
+      recordW2B05_('HARD CHECK', 'FAIL', parsed.summary, JSON.stringify({materialIntegrity: materialIntegrity, consistencyFinding: consistencyFinding}));
+    }
+
     // PASS
     if (parsed.status === 'PASS') {
 
@@ -4378,6 +4410,7 @@ function bc_runFactCheckFullAutomated() {
         }
       }
 
+      recordW2B05_('FINAL', 'PASS', 'Fact-check passed', lastFixMessage);
       return {
         success: true,
         message:
@@ -4399,6 +4432,7 @@ function bc_runFactCheckFullAutomated() {
     if (parsed.fixes.length === 0) {
 
       if (attempt === maxFixAttempts) {
+        recordW2B05_('FINAL', 'FAIL', parsed.summary, checkResult.text);
 
         bc_appendGovernancePipelineException(
           'W2B.05 — Fact Check',
@@ -4436,7 +4470,8 @@ function bc_runFactCheckFullAutomated() {
           parsed.summary || checkResult.text
         );
 
-      totalCost += fallbackFixResult.cost;
+      totalCost += Number(fallbackFixResult.cost || 0);
+      recordW2B05_('FALLBACK FIX', fallbackFixResult.success ? 'APPLIED' : 'REJECTED', fallbackFixResult.message, JSON.stringify(fallbackFixResult));
       lastFixMessage = fallbackFixResult.message;
 
       if (!fallbackFixResult.success) {
@@ -4474,6 +4509,7 @@ function bc_runFactCheckFullAutomated() {
     // Record that outcome explicitly rather than falling out of the loop
     // and returning undefined to the Master Workflow.
     if (attempt >= maxFixAttempts) {
+      recordW2B05_('FINAL', 'FAIL', 'Correction limit reached', checkResult.text);
       bc_appendGovernancePipelineException(
         'W2B.05 — Fact Check',
         'Final verification still FAIL after ' + maxFixAttempts +
@@ -4496,6 +4532,7 @@ function bc_runFactCheckFullAutomated() {
       );
 
     lastFixMessage = atomicFixResult.message;
+    recordW2B05_('ATOMIC FIX', atomicFixResult.success ? 'APPLIED' : 'REJECTED', atomicFixResult.message, JSON.stringify(parsed.fixes));
 
     if (!atomicFixResult.success) {
 
@@ -4522,6 +4559,7 @@ function bc_runFactCheckFullAutomated() {
     // There is no separate AI fix-generation call.
   }
 
+  recordW2B05_('FINAL', 'FAIL', 'Loop exited without PASS', lastFixMessage);
   return {
     success: false,
     message: 'W2B.05 stopped without a PASS — check GJ for details.',
