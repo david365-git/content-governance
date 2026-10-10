@@ -162,12 +162,14 @@ Do not require the source article to substantiate general trade knowledge, mater
 Do not turn general education into a purported historical event. Distinguish "this is how a planetary grinder works" from "we used 400-grit diamonds on this job".
 Never fail just because a technically sound explanatory detail is absent from the original case study.
 
-ESTABLISHED RESTORATION KNOWLEDGE — HARD LOCK:
-Preserve technically sound descriptions of inherent material behaviour and the normal limitations of repair or restoration, even when the original case-study record does not describe those principles.
-For terrazzo, colour-matched epoxy repairs can blend with the surrounding floor but are not completely invisible; this general limitation applies to old and new terrazzo. Differences in aggregate, binder, colour or finish may remain detectable. Do not mark this general explanation as an unsupported project observation.
-Separate GENERAL PRINCIPLES from SPECIFIC PROJECT EVENTS. "Terrazzo repairs cannot be guaranteed invisible" is general technical knowledge. "The Northampton repairs showed a visible colour mismatch on close inspection" asserts an actual observation and requires project evidence.
-Still flag claims that materials or steps were ACTUALLY USED on the job without support, such as saying similar marble chips were added to the epoxy when the source only documents colour-matched epoxy. Make the smallest correction to that action; keep adjacent sound technical explanation intact.
-Do not replace a sound technical explanation with weaker wording simply because the source does not repeat the explanation.
+ESTABLISHED STONE AND TILE RESTORATION KNOWLEDGE — HARD LOCK:
+Apply this rule to ALL materials and article types: marble, limestone, travertine, terrazzo, granite, slate, sandstone, terracotta, Victorian and quarry tiles, porcelain, glazed and unglazed ceramic tiles, grout, and other stone or tile surfaces.
+Preserve technically sound general explanations of each material's properties, cleaning chemistry, surface finishes, porosity, equipment, methods, maintenance, and inherent repair or restoration limitations, even if those principles are not described in the original article.
+For example, repairs to stone, terrazzo and tiles may be blended carefully but cannot be assumed completely invisible; differences in aggregate, colour, grain, texture, glaze or finish can remain detectable. This is general technical education, not a claim that a particular defect was observed on the job.
+Distinguish GENERAL PRINCIPLES from PROJECT-SPECIFIC FACTS. General explanations of how grinding, honing, polishing, sealing, grout cleaning or tile repairs work are permissible if accurate and applicable. Claims that a particular product, machine, grit, repair material or treatment was ACTUALLY USED, or that a specific limitation was OBSERVED on this project, must be supported by the original project evidence.
+Do not infer that a specific sealer was impregnating or film-forming, that a particular floor had a given binder or substrate, or that a client observed a repair difference unless supported by evidence.
+When a sentence combines an undocumented project action with valid general technical explanation, correct only the unsupported action and retain the explanation.
+Do not reject technical information merely because it adds useful detail beyond the original case-study record.
 Do not remove useful technical detail solely to make the article less specific.
 Do not invent certainty where product formulation, substrate condition or client actions are unknown.
 Judge meaning, not literal wording. Minor word choice, style, SEO, headings, CTA, hyperlinks and non-material ambiguity are outside this check.
