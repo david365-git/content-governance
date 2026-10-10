@@ -3909,10 +3909,20 @@ function bc_runStage15EAutomated() {
   };
 }
 
-function bc_runFactCheckAutomated() {
+function bc_runFactCheckAutomated(verificationFixes) {
   var startTime = Date.now();
   var promptData = buildFactCheckPrompt('EU');
   if (!promptData.success) throw new Error(promptData.message);
+
+  if (Array.isArray(verificationFixes) && verificationFixes.length) {
+    promptData.prompt += '\n\nFINAL VERIFICATION MODE — OVERRIDES THE COMPLETE FIRST-PASS REVIEW INSTRUCTION ABOVE:\n' +
+      'Review ONLY whether the following original material errors were corrected and whether those precise edits introduced a new material factual contradiction. ' +
+      'Do NOT start a second full-article search or introduce unrelated new findings. ' +
+      'If the listed corrections are sound, return PASS with fixes: []. ' +
+      'If any listed correction remains materially wrong, return FAIL with only its specific safe replacement. ' +
+      'If uncertain rather than demonstrably incorrect, return PASS_WITH_NOTES and no fixes.\n' +
+      'ORIGINAL FINDINGS AND APPLIED CORRECTIONS:\n' + JSON.stringify(verificationFixes);
+  }
 
   var apiResult = bc_sendPromptViaOpenAI(
   promptData.prompt,
@@ -4270,6 +4280,7 @@ function bc_runFactCheckFullAutomated() {
   var maxFixAttempts = 1; // One correction batch, then one independent verification.
   var attempt = 0;
   var lastFixMessage = '';
+  var appliedFirstPassFixes = null;
   var diagnosticRunId = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmmss') +
     '-' + Utilities.getUuid().slice(0, 8);
   function recordW2B05_(step, status, summary, details) {
@@ -4320,7 +4331,7 @@ function bc_runFactCheckFullAutomated() {
 
   while (attempt <= maxFixAttempts) {
 
-    var checkResult = bc_runFactCheckAutomated();
+    var checkResult = bc_runFactCheckAutomated(attempt > 0 ? appliedFirstPassFixes : null);
 
     if (!checkResult.success) {
       recordW2B05_('FACT CHECK API', 'ERROR', checkResult.message, JSON.stringify(checkResult));
@@ -4507,6 +4518,7 @@ function bc_runFactCheckFullAutomated() {
       };
     }
 
+    appliedFirstPassFixes = parsed.fixes;
     attempt++;
 
     // Loop now performs only a fresh fact-check of the corrected GE.
