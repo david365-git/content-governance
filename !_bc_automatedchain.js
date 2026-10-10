@@ -4267,7 +4267,7 @@ function bc_applyVisibleTextFactCheckFixes_(fixes) {
 function bc_runFactCheckFullAutomated() {
 
   var totalCost = 0;
-  var maxFixAttempts = 3;
+  var maxFixAttempts = 1; // One correction batch, then one independent verification.
   var attempt = 0;
   var lastFixMessage = '';
   var diagnosticRunId = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmmss') +
@@ -4365,7 +4365,7 @@ function bc_runFactCheckFullAutomated() {
 
     if (
       !parsed ||
-      (parsed.status !== 'PASS' && parsed.status !== 'FAIL') ||
+      (parsed.status !== 'PASS' && parsed.status !== 'PASS_WITH_NOTES' && parsed.status !== 'FAIL') ||
       !Array.isArray(parsed.fixes)
     ) {
       throw new Error(
@@ -4397,6 +4397,24 @@ function bc_runFactCheckFullAutomated() {
 
     if (!materialIntegrity.passed || consistencyFinding) {
       recordW2B05_('HARD CHECK', 'FAIL', parsed.summary, JSON.stringify({materialIntegrity: materialIntegrity, consistencyFinding: consistencyFinding}));
+    }
+
+    // PASS WITH NOTES is non-blocking: preserve GE and record the observation.
+    if (parsed.status === 'PASS_WITH_NOTES') {
+      if (attempt === 0) {
+        var notesPass = passThroughFactCheckToGE();
+        if (!notesPass.success) throw new Error(notesPass.message);
+      }
+      recordW2B05_('FINAL', 'PASS_WITH_NOTES', parsed.summary, checkResult.text);
+      bc_appendGovernancePipelineException('W2B.05 — Non-blocking Notes',
+        parsed.summary || 'Minor factual review observations.');
+      return {
+        success: true,
+        warning: true,
+        message: 'Fact-check PASS WITH NOTES — observation recorded in GJ. GE preserved.',
+        text: checkResult.text,
+        cost: totalCost
+      };
     }
 
     // PASS
@@ -4513,13 +4531,12 @@ function bc_runFactCheckFullAutomated() {
       bc_appendGovernancePipelineException(
         'W2B.05 — Fact Check',
         'Final verification still FAIL after ' + maxFixAttempts +
-        ' correction attempts. ' + (parsed.summary || '') +
+        ' correction attempt. ' + (parsed.summary || '') +
         '\n\nFACT-CHECK RESPONSE:\n' + checkResult.text
       );
       return {
         success: false,
-        message: 'Fact-check still FAIL after ' + maxFixAttempts +
-          ' correction attempts — final findings recorded in GJ.',
+        message: 'Fact-check still FAIL after one correction batch and verification — findings recorded in GJ.',
         text: checkResult.text,
         cost: totalCost
       };
