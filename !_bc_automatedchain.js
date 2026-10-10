@@ -4283,7 +4283,7 @@ function bc_runFactCheckFullAutomated() {
       // A Sheet cell has a 50,000-character limit; split long responses
       // across successive audit rows so nothing is silently discarded.
       var raw = String(details == null ? '' : details);
-      var pieces = raw.match(/[\\s\\S]{1,45000}/g) || [''];
+      var pieces = raw.match(/[\s\S]{1,45000}/g) || [''];
       var geLength = String(sh.getRange(row, 187).getValue() || '').length;
       for (var z = 0; z < pieces.length; z++) {
         log.appendRow([new Date(), diagnosticRunId, row, attempt,
