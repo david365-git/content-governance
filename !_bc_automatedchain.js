@@ -4448,79 +4448,16 @@ function bc_runFactCheckFullAutomated() {
     // Preserve the existing repair fallback only for those rare hard-check
     // failures; ordinary AI fact-check failures never use a second AI call.
     if (parsed.fixes.length === 0) {
-
-      if (attempt === maxFixAttempts) {
-        recordW2B05_('FINAL', 'FAIL', parsed.summary, checkResult.text);
-
-        bc_appendGovernancePipelineException(
-          'W2B.05 — Fact Check',
-          parsed.summary || checkResult.text
-        );
-
-        if (consistencyOnlyFail) {
-          return {
-            success: true,
-            warning: true,
-            message:
-              'Internal fact consistency issue remains after ' +
-              maxFixAttempts +
-              ' automated fix attempts — recorded in GJ and pipeline continuing.',
-            text: checkResult.text,
-            cost: totalCost
-          };
-        }
-
-        return {
-          success: false,
-          message:
-            'Fact-check still FAILING after ' +
-            maxFixAttempts +
-            ' automated fix attempts — recorded in GJ.',
-          text: checkResult.text,
-          cost: totalCost
-        };
-      }
-
-      attempt++;
-
-      var fallbackFixResult =
-        bc_runFactCheckFixAutomated(
-          parsed.summary || checkResult.text
-        );
-
-      totalCost += Number(fallbackFixResult.cost || 0);
-      recordW2B05_('FALLBACK FIX', fallbackFixResult.success ? 'APPLIED' : 'REJECTED', fallbackFixResult.message, JSON.stringify(fallbackFixResult));
-      lastFixMessage = fallbackFixResult.message;
-
-      if (!fallbackFixResult.success) {
-
-        bc_appendGovernancePipelineException(
-          'W2B.05 — Fact Check',
-          'Automated fallback fix could not be applied — ' +
-          fallbackFixResult.message
-        );
-
-        if (consistencyOnlyFail) {
-          return {
-            success: true,
-            warning: true,
-            message:
-              'Internal fact consistency repair could not be applied safely — recorded in GJ and pipeline continuing.',
-            text: checkResult.text,
-            cost: totalCost
-          };
-        }
-
-        return {
-          success: false,
-          message:
-            'Fact-check FAIL detected, but fallback fix could not be applied — recorded in GJ.',
-          text: checkResult.text,
-          cost: totalCost
-        };
-      }
-
-      continue;
+      recordW2B05_('FINAL', 'FAIL', 'Material error without safe exact correction', checkResult.text);
+      bc_appendGovernancePipelineException('W2B.05 — Fact Check',
+        'Material check failed without exact safe corrections. ' +
+        (parsed.summary || '') + '\n\nFACT-CHECK RESPONSE:\n' + checkResult.text);
+      return {
+        success: false,
+        message: 'Fact-check FAIL — no safe correction batch supplied; findings in GJ.',
+        text: checkResult.text,
+        cost: totalCost
+      };
     }
 
     // The final verification may still FAIL after all permitted repairs.
