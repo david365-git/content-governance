@@ -161,6 +161,13 @@ FAIL only for a clear material factual contradiction, materially misleading proj
 Do not require the source article to substantiate general trade knowledge, material science, typical equipment behaviour, illustrative grit numbers, general maintenance advice, explanatory reasons for using a method, or contextual links.
 Do not turn general education into a purported historical event. Distinguish "this is how a planetary grinder works" from "we used 400-grit diamonds on this job".
 Never fail just because a technically sound explanatory detail is absent from the original case study.
+
+ESTABLISHED RESTORATION KNOWLEDGE — HARD LOCK:
+Preserve technically sound descriptions of inherent material behaviour and the normal limitations of repair or restoration, even when the original case-study record does not describe those principles.
+For terrazzo, colour-matched epoxy repairs can blend with the surrounding floor but are not completely invisible; this general limitation applies to old and new terrazzo. Differences in aggregate, binder, colour or finish may remain detectable. Do not mark this general explanation as an unsupported project observation.
+Separate GENERAL PRINCIPLES from SPECIFIC PROJECT EVENTS. "Terrazzo repairs cannot be guaranteed invisible" is general technical knowledge. "The Northampton repairs showed a visible colour mismatch on close inspection" asserts an actual observation and requires project evidence.
+Still flag claims that materials or steps were ACTUALLY USED on the job without support, such as saying similar marble chips were added to the epoxy when the source only documents colour-matched epoxy. Make the smallest correction to that action; keep adjacent sound technical explanation intact.
+Do not replace a sound technical explanation with weaker wording simply because the source does not repeat the explanation.
 Do not remove useful technical detail solely to make the article less specific.
 Do not invent certainty where product formulation, substrate condition or client actions are unknown.
 Judge meaning, not literal wording. Minor word choice, style, SEO, headings, CTA, hyperlinks and non-material ambiguity are outside this check.
