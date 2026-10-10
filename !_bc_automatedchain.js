@@ -4630,134 +4630,22 @@ function bc_runSimilarityFixAutomated(findingsText) {
 }
 
 function bc_runSimilarityFullAutomated() {
-
-  // FIRST: check article type before making any API call
-  var d = getActiveRowDataMap();
-  var articleType = String(d["Article Type"] || "").trim();
-
-  // Similarity Check only applies to Case Studies
-  if (articleType !== 'Case Study') {
-
-    var skipResult = passThroughSimilarityCheckToGF();
-
-    if (!skipResult.success) {
-      throw new Error(skipResult.message);
-    }
-
-    return {
-      success: true,
-      message:
-        'Similarity check skipped — Article Type is "' +
-        articleType +
-        '". GE copied unchanged to column GF. No API cost.',
-      text: '',
-      cost: 0
-    };
+  // W2B.1 disabled by design: do not assess or rewrite similarity.
+  // Preserve the column contract for W2B.2 by copying GE to GF.
+  var passResult = passThroughSimilarityCheckToGF();
+  if (!passResult || passResult.success === false) {
+    throw new Error(passResult && passResult.message
+      ? passResult.message
+      : 'W2B.1 pass-through failed to copy GE to GF.');
   }
 
-
-  // CASE STUDY — run similarity check normally
-  var totalCost = 0;
-  var maxFixAttempts = 3;
-  var attempt = 0;
-  var lastFixMessage = '';
-
-  while (attempt <= maxFixAttempts) {
-
-    var checkResult =
-      bc_runSimilarityCheckAutomated();
-
-    if (!checkResult.success) {
-      throw new Error(checkResult.message);
-    }
-
-    totalCost += checkResult.cost;
-
-    var isFail =
-      /SEVERITY:\s*GENUINE RISK/i.test(checkResult.text);
-
-    // PASS
-    if (!isFail) {
-
-      // If it passed first time, copy GE unchanged to GF.
-      // After a fix, GF already contains the corrected HTML.
-      if (attempt === 0) {
-
-        var passResult =
-          passThroughSimilarityCheckToGF();
-
-        if (!passResult.success) {
-          throw new Error(passResult.message);
-        }
-      }
-
-      return {
-        success: true,
-        message:
-          attempt === 0
-            ? 'Similarity check PASS — no changes needed. GE copied unchanged to column GF.'
-            : 'Similarity check PASS after ' +
-              attempt +
-              ' automated fix attempt(s). ' +
-              lastFixMessage +
-              ' Final corrected HTML saved in column GF.',
-        text: checkResult.text,
-        cost: totalCost
-      };
-    }
-
-        // Still failing after maximum attempts
-      if (attempt === maxFixAttempts) {
-
-        bc_appendGovernancePipelineException(
-          'W2B.1 — Similarity',
-          checkResult.text ||
-            (
-              'Still showing GENUINE RISK after ' +
-              maxFixAttempts +
-              ' automated fix attempts.'
-            )
-        );
-
-        return {
-          success: false,
-          message:
-            'Similarity check still showing GENUINE RISK after ' +
-            maxFixAttempts +
-            ' automated fix attempts — recorded in GJ.',
-          text: checkResult.text,
-          cost: totalCost
-        };
-      }
-
-    attempt++;
-
-    var fixResult =
-      bc_runSimilarityFixAutomated(checkResult.text);
-
-    totalCost += fixResult.cost;
-
-    lastFixMessage = fixResult.message;
-
-        if (!fixResult.success) {
-
-        bc_appendGovernancePipelineException(
-          'W2B.1 — Similarity',
-          'Similarity risk detected, but automated fix could not be applied — ' +
-          fixResult.message +
-          '\n\nFINAL CHECK REPORT:\n' +
-          (checkResult.text || '')
-        );
-
-        return {
-          success: false,
-          message:
-            'Similarity risk detected, but automated fix could not be applied — recorded in GJ.',
-          text: checkResult.text,
-          cost: totalCost
-        };
-      }
-  }
+  return {
+    success: true,
+    skipped: true,
+    message: 'W2B.1 similarity check bypassed — GE copied unchanged to GF. No AI cost.',
+    text: '',
+    cost: 0
+  };
 }
 
 function bc_runRewriteBriefComplianceW2BAutomated() {
