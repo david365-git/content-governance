@@ -4174,15 +4174,11 @@ function bc_applyVisibleTextFactCheckFixes_(fixes) {
         var placeholder = '[[LINK_' + (a + 1) + ']]';
 
         if (replacementHtml.indexOf(placeholder) === -1) {
-          validationErrors.push(
-            label +
-            ' — targetText crosses ' +
-            anchors.length +
-            ' <a> link(s), but newText is missing ' +
-            placeholder +
-            '.'
-          );
-          return;
+          if (anchors.length !== 1 || !replacementHtml.trim()) {
+            validationErrors.push(label + ' — link preservation is ambiguous.');
+            return;
+          }
+          replacementHtml = replacementHtml.trim() + ' (see ' + placeholder + ')';
         }
 
         replacementHtml =
