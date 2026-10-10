@@ -138,78 +138,70 @@ ${originalHtml}
 REWRITTEN ARTICLE — CHECK PROJECT CLAIMS IN THIS VERSION:
 ${generatedHtml}
 
-CORE RULE — HARD LOCK:
-The ORIGINAL SOURCE ARTICLE is authoritative for historical project facts, including:
-- what the client/homeowner did or said;
-- what condition was actually found;
-- what work was actually carried out;
-- specific tools, products, chemicals, quantities, grit sizes or timings actually used;
-- what the restorer actually advised the client;
-- what result was actually observed.
+FACT-CHECK SCOPE — MATERIAL ERRORS ONLY:
+This is a focused check of the documented project, not a line-by-line challenge to technical explanation.
+Check:
+1. Correct material identity and any material distinctions.
+2. Correct room, floor area and indoor/outdoor setting.
+3. Correct town/locality and project location.
+4. Correct original defect or reason for the work.
+5. Correct treatments and steps actually performed, with no contradictory invented action.
+6. Correct material/product compatibility.
+7. Correct sealer classification: impregnating versus surface coating, and colour-enhancing versus non-enhancing. Do not infer a sealer's type solely from its described effect.
+8. Equipment and methods: flag only a clear contradiction with the documented work; allow general equipment explanations, typical abrasives and illustrative grit sequences.
+9. Work sequence: flag material contradictions, not harmless narrative rearrangement.
+10. Existing damage: flag invented serious defects or falsely asserted causes.
+11. Results: flag demonstrably false or materially misleading outcomes, not reasonable general benefits clearly distinguished from observed results.
+12. Client actions, quotations, approvals, reactions or specific advice: flag fabricated project events, not general homeowner guidance.
+13. Safety: flag only a clear and significant material-damage risk or unsafe instruction, not reasonable professional explanations.
+14. Internal consistency: flag contradictory material, room, location, sealer, treatment, quantity or outcome claims.
 
-Judge meaning, NOT exact wording.
+MATERIALITY RULE — HARD LOCK:
+FAIL only for a clear material factual contradiction, materially misleading project-specific claim, or significant unsafe recommendation. The finding must identify the concrete error and the supporting source evidence or clear technical incompatibility.
+Do not require the source article to substantiate general trade knowledge, material science, typical equipment behaviour, illustrative grit numbers, general maintenance advice, explanatory reasons for using a method, or contextual links.
+Do not turn general education into a purported historical event. Distinguish "this is how a planetary grinder works" from "we used 400-grit diamonds on this job".
+Never fail just because a technically sound explanatory detail is absent from the original case study.
+Do not remove useful technical detail solely to make the article less specific.
+Do not invent certainty where product formulation, substrate condition or client actions are unknown.
+Judge meaning, not literal wording. Minor word choice, style, SEO, headings, CTA, hyperlinks and non-material ambiguity are outside this check.
+When uncertain or when no demonstrable material error exists, PASS or PASS WITH NOTES rather than FAIL.
+For every FAIL fix, choose the smallest uniquely matchable visible-text fragment, and preserve existing links. Never use a fix to introduce unrelated editorial changes.
 
-PASS reasonable semantic equivalents.
-Examples:
-- "cleaned the floor" -> "scrubbed the floor"
-- "removed dirt" -> "lifted embedded soil"
-- "polished the floor" -> "refined the finish"
-
-FAIL only when the rewrite introduces a genuinely new or contradictory PROJECT fact.
-Examples:
-- source says "cleaned" but rewrite says "steam cleaned";
-- source says "honed progressively" but rewrite invents exact grit sizes;
-- source says guidance was given, but rewrite invents specific advice the client was told;
-- rewrite invents a customer action, property condition, cause, duration, measurement or observed result.
-
-DO NOT FLAG:
-- ordinary paraphrasing that preserves the same factual meaning;
-- general technical explanation that is clearly presented as general explanation rather than something that happened on this job;
-- headings, internal links, CTA wording, SEO wording or general maintenance signposting merely because they were not in the old article;
-- approved explanatory material that does not turn into a claim that it happened on this project.
-
-IMPORTANT DISTINCTION:
-"Terrazzo can be damaged by unsuitable chemicals." = general explanation; do not fact-check here.
-"I warned the client not to use unsuitable chemicals." = project event; must be supported by the original source.
-
-Likewise:
-"Routine dust control can help reduce abrasive soil." = general guidance; do not fact-check here.
-"I told the client to remove grit before every damp mop." = project advice; must be supported by the source.
-
-CLASSIFY ONLY:
-1. FACTUAL CONTRADICTION — the rewrite states a project fact that conflicts with the source.
-2. UNSUPPORTED EMBELLISHMENT — the rewrite presents a new project-specific fact, severity, event, customer action, treatment detail or result that the source does not support.
-
-Before flagging anything, ask:
-"Is this sentence claiming that something actually happened on this Northampton project?"
-If NO, do not flag it in W2B.05 unless it directly contradicts the documented project.
-If YES, compare its meaning with the original source.
+CLASSIFICATION:
+PASS: No material errors and no noteworthy uncertainty.
+PASS_WITH_NOTES: No material errors, but minor uncertainty or editorial observation worth recording; do not propose corrections.
+FAIL: At least one material error meeting the criteria above, with safe exact corrections.
 
 OUTPUT FORMAT — HARD LOCK:
-Return ONLY valid JSON. No markdown fences and no commentary outside the JSON.
-
-If there are no issues:
+Return ONLY valid JSON, no fences.
+For PASS:
 {
   "status": "PASS",
-  "summary": "No unsupported project facts found.",
+  "summary": "No material factual errors found.",
   "fixes": []
 }
-
-If issues are found:
+For PASS WITH NOTES:
+{
+  "status": "PASS_WITH_NOTES",
+  "summary": "Brief non-blocking observation.",
+  "fixes": []
+}
+For FAIL:
 {
   "status": "FAIL",
-  "summary": "Brief summary.",
+  "summary": "Brief description of the material factual errors.",
   "fixes": [
     {
       "fixLabel": "short label",
-      "issueType": "FACTUAL CONTRADICTION or UNSUPPORTED EMBELLISHMENT",
-      "targetText": "smallest exact visible-text fragment identifying the unsupported project claim",
-      "contextText": "nearby exact visible text only if needed to distinguish duplicate targetText; otherwise empty string",
-      "newText": "minimum corrected visible wording supported by the original source",
-      "sourceEvidence": "brief source evidence"
+      "issueType": "FACTUAL CONTRADICTION or MATERIAL UNSUPPORTED PROJECT CLAIM or MATERIAL SAFETY ERROR",
+      "targetText": "unique exact visible-text fragment of the error",
+      "contextText": "exact nearby visible text only if target repeats, otherwise empty string",
+      "newText": "minimal replacement; blank only if safe to delete",
+      "sourceEvidence": "precise source contradiction or demonstrable technical incompatibility"
     }
   ]
 }
+Only include genuinely material FAIL findings. Return all such findings together in the initial review.
 
 ATOMIC FIX RULES:
 1. targetText and contextText are visible text, not HTML.
