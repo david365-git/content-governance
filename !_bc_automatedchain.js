@@ -4577,36 +4577,55 @@ function bc_runSimilarityFixAutomated(findingsText) {
   var startTime = Date.now();
 
   if (!findingsText || !findingsText.trim()) {
-    throw new Error(
-      'No similarity check findings provided — run the check first.'
-    );
+    throw new Error('No similarity check findings provided — run the check first.');
   }
 
-  var promptData =
-    buildSimilarityFixPrompt(findingsText, 'GE');
-
+  var promptData = buildSimilarityFixPrompt(findingsText, 'GE');
   if (!promptData.success) throw new Error(promptData.message);
 
-  var apiResult = bc_sendPromptViaOpenAI(
-    promptData.prompt,
-    4000,
-    MODEL_CHEAP
-  );
+  // Shared, accurate trade terminology is not evidence of copied content.
+  // The source text in each proposed edit must be copied exactly from GE.
+  var safetyRules = '\\n\\nW2B.1 SIMILARITY FIX SAFETY — HARD LOCK:\\n' +
+    'Do not rewrite or delete accurate shared stone/tile technical knowledge, ' +
+    'including pH-neutral cleaning, diamond progression, sealer behaviour, ' +
+    'maintenance advice and unavoidable repair limitations, merely because ' +
+    'other case studies describe the same established facts. Only change ' +
+    'genuinely distinctive duplicated phrasing or boilerplate. Preserve actual ' +
+    'project facts, figures, images, links and method sequence.\\n' +
+    'For EVERY replacement, copy the OLD fragment VERBATIM from the CURRENT GE ' +
+    'article text supplied in this prompt. Never paraphrase, reconstruct or ' +
+    'quote a comparison article as the OLD fragment. If exact source text ' +
+    'cannot be located, omit that edit rather than inventing a match.';
 
-  if (!apiResult.success) throw new Error(apiResult.message);
+  var totalCost = 0;
+  var lastResult = null;
+  for (var retry = 0; retry < 2; retry++) {
+    var repairPrompt = promptData.prompt + safetyRules;
+    if (retry > 0) {
+      repairPrompt += '\\n\\nPREVIOUS BATCH WAS REJECTED WITHOUT APPLYING ANY CHANGES: ' +
+        String(lastResult.message || '') +
+        '\\nRegenerate the complete fix response using only OLD text copied ' +
+        'exactly from the unchanged GE article. Do not return a partial or ' +
+        'approximate old fragment.';
+    }
 
-  var applyResult =
-    applySimilarityFix(apiResult.text, 'GE');
+    var apiResult = bc_sendPromptViaOpenAI(repairPrompt, 4000, MODEL_CHEAP);
+    if (!apiResult.success) throw new Error(apiResult.message);
+    totalCost += apiResult.cost;
 
-  bc_addToApiCostAndTime(
-    apiResult.cost,
-    (Date.now() - startTime) / 1000
-  );
+    lastResult = applySimilarityFix(apiResult.text, 'GE');
+    if (lastResult.success) break;
 
+    // Retry only when the atomic batch was rejected due to a missing OLD
+    // fragment. All other failures must remain blocking.
+    if (!/OLD fragment not found in article/i.test(String(lastResult.message || ''))) break;
+  }
+
+  bc_addToApiCostAndTime(totalCost, (Date.now() - startTime) / 1000);
   return {
-    success: applyResult.success,
-    message: applyResult.message,
-    cost: apiResult.cost
+    success: lastResult.success,
+    message: lastResult.message,
+    cost: totalCost
   };
 }
 
