@@ -4789,7 +4789,7 @@ function bc_runRewriteBriefComplianceW2BAutomated() {
 
     var apiResult = bc_sendPromptViaOpenAI(
       prompt,
-      3000,
+      8000,
       MODEL_CHEAP
     );
 
