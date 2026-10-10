@@ -4687,6 +4687,18 @@ function bc_runRewriteBriefComplianceW2BAutomated() {
 
     var prompt = buildRewriteBriefComplianceCheckPromptW2B();
 
+    // A previous FAIL can list sections by headings or indices that are
+    // no longer present after a successful correction. The stale scoped
+    // report is not grounds for stopping: discard just that report and
+    // perform a fresh whole-article compliance check on the current GG.
+    if (typeof prompt === 'string' &&
+        /Could not locate the previously failing section\(s\) in the current article HTML/i.test(prompt)) {
+      if (complianceCol > -1) {
+        sh.getRange(row, complianceCol + 1).clearContent();
+      }
+      prompt = buildRewriteBriefComplianceCheckPromptW2B();
+    }
+
     if (typeof prompt !== 'string' || prompt.indexOf('ERROR') === 0) {
       throw new Error(prompt);
     }
