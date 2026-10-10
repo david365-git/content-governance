@@ -132,11 +132,21 @@ LOCALITY: ${governedLocality || "Not supplied"}
 SHORT REWRITE SCOPE:
 ${rewriteBrief || "No active Rewrite Brief supplied."}
 
-ORIGINAL SOURCE ARTICLE — GROUND TRUTH FOR WHAT ACTUALLY HAPPENED:
+ORIGINAL SOURCE ARTICLE — HISTORICAL REFERENCE, NOT AN EXHAUSTIVE TECHNICAL RECORD:
 ${originalHtml}
 
 REWRITTEN ARTICLE — CHECK PROJECT CLAIMS IN THIS VERSION:
 ${generatedHtml}
+
+EVIDENCE PRIORITY — HARD LOCK:
+The original article is a historical reference but may omit accurate details. Absence of a statement is NOT evidence it is false. A FAIL requires a demonstrable contradiction or an objectively significant error, not merely missing corroboration.
+Protect accurate professional background, mechanisms and ordinary technical detail. Do not use "not documented" alone as the sourceEvidence for FAIL.
+If a detail cannot be confirmed or denied, use PASS_WITH_NOTES with no fixes, rather than deleting it.
+Do not assume that a colour-enhancing sealer is a surface coating merely because the original omitted "impregnating". Conversely, confirm actual product behaviour when material to classification.
+For the Northampton terrazzo example, the owner has confirmed: a cement matrix; colour-enhancing impregnating sealer and its pore-penetration/protective behaviour; the client removed all wooden boards; and the work area was a busy hallway. These known facts must not be labelled unsupported on that project. Do not transfer these Northampton facts to other projects.
+Distinguish generic repair limitations (such as repairs not being perfectly invisible) from a specific observed defect.
+Only propose an automatic edit where the corrected wording resolves an unambiguous, material error. Otherwise PASS_WITH_NOTES with no changes.
+Do not flag generic, accurate technical explanations simply because they add useful detail.
 
 FACT-CHECK SCOPE — MATERIAL ERRORS ONLY:
 This is a focused check of the documented project, not a line-by-line challenge to technical explanation.
@@ -187,7 +197,7 @@ On verification, apply exactly the same materiality threshold; do not introduce 
 CLASSIFICATION:
 PASS: No material errors and no noteworthy uncertainty.
 PASS_WITH_NOTES: No material errors, but minor uncertainty or editorial observation worth recording; do not propose corrections.
-FAIL: At least one material error meeting the criteria above, with safe exact corrections.
+FAIL: Only demonstrably false or materially contradictory statements, with unambiguous safe exact corrections. Doubt or missing documentation alone is PASS_WITH_NOTES.
 
 OUTPUT FORMAT — HARD LOCK:
 Return ONLY valid JSON, no fences.
