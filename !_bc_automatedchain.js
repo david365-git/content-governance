@@ -4551,9 +4551,10 @@ function bc_runSimilarityCheckAutomated() {
     };
   }
 
+  // Allow room for reasoning tokens before the similarity report is generated.
   var apiResult = bc_sendPromptViaOpenAI(
     promptData.prompt,
-    2000,
+    8000,
     MODEL_CHEAP
   );
 
