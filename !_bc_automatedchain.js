@@ -4873,13 +4873,17 @@ function bc_runRewriteBriefComplianceW2BAutomated() {
         /(?:OLD text was not found in GG|OLD fragment not found in (?:GG|article))/i
           .test(String(applyResult.message || ''));
 
-      if (unmatchedTextOnly) {
+      var emptyFixResponse =
+        /No fixes found in JSON response/i.test(String(applyResult.message || ''));
+
+      if (unmatchedTextOnly || emptyFixResponse) {
         return {
           success: true,
           warning: true,
           compliancePassed: false,
-          message: 'W2B.2 UNRESOLVED (not PASS): unmatched correction recorded in GJ; ' +
-            'GG preserved and pipeline continuing to W2B.3.',
+          message: 'W2B.2 UNRESOLVED (not PASS): ' +
+            (emptyFixResponse ? 'no usable fixes returned' : 'unmatched correction') +
+            ' — recorded in GJ; GG preserved and pipeline continuing to W2B.3.',
           cost: totalCost
         };
       }
