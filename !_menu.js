@@ -13,6 +13,7 @@ function onOpen(e) {
     .addItem('🩷 Content Engine — Master Automation', 'openMasterContentAutomationSidebar')
     .addItem('New Article AC', 'da_openNewArticleSidebar')
     .addItem('🛒 Generate Azon Product HTML', 'generateAzonProductHTML')
+    .addItem('🛒 Generate AZON CSS Product HTML (B40)', 'generateAzonCssProductHtml')
     .addSeparator()
     .addItem("🪨 Select Stone & Update Benchmarks", "openStoneSelector")
     .addItem('🛡️ Run Strategic Action Evaluation', 'evaluateActiveRowStrategicLogic')
