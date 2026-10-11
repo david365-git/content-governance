@@ -4694,6 +4694,14 @@ function bc_runRewriteBriefComplianceW2BAutomated() {
     'Judge the actual scope of the whole article, not the presence of maintenance words or a single handover paragraph. ' +
     'Preserve relevant project-specific aftercare while correcting genuine drift.\\n';
 
+  var buyerGuideRule = '\\n\\nBUYER GUIDE MAINTENANCE CONTEXT — OVERRIDING SCOPE CLARIFICATION:\\n' +
+    'For ALL stone and tile Buyer Guides, brief maintenance context is permitted when explaining restoration value, future upkeep, lifecycle cost, protection limits or contractor scope. ' +
+    'A mention of pH-neutral cleaning, grit removal, compatible cleaning methods, or appropriate resealing is NOT itself a maintenance workflow and must not trigger FAIL. ' +
+    'A contextual link to a separate maintenance article is also permitted. ' +
+    'FAIL for maintenance drift only if detailed step-by-step care instructions or extensive maintenance-focused sections displace the central buyer decision. ' +
+    'Do not turn a general Buyer Guide into a claimed case study: never assert that a specific homeowner or client was told something, a site was visited, or a particular treatment was carried out unless the underlying evidence documents it. ' +
+    'If such invented project events occur, correct only those claims, preserving the accurate general guidance and the buying focus.\\n';
+
   while (fixAttempt <= maxFixAttempts) {
 
     var prompt = buildRewriteBriefComplianceCheckPromptW2B();
@@ -4716,6 +4724,9 @@ function bc_runRewriteBriefComplianceW2BAutomated() {
 
     if (String(sh.getRange(row, 8).getValue()).trim() === 'Case Study') {
       prompt += aftercareRule;
+    }
+    if (String(sh.getRange(row, 8).getValue()).trim() === 'Buyer Guide') {
+      prompt += buyerGuideRule;
     }
 
     var isRecheck =
@@ -4823,6 +4834,9 @@ function bc_runRewriteBriefComplianceW2BAutomated() {
 
     if (String(sh.getRange(row, 8).getValue()).trim() === 'Case Study') {
       fixPrompt += aftercareRule;
+    }
+    if (String(sh.getRange(row, 8).getValue()).trim() === 'Buyer Guide') {
+      fixPrompt += buyerGuideRule;
     }
 
     var fixResult = bc_sendPromptViaOpenAI(
