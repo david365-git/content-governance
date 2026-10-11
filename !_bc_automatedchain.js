@@ -4852,6 +4852,24 @@ function bc_runRewriteBriefComplianceW2BAutomated() {
         'Fix could not be applied safely — ' + applyResult.message
       );
 
+      // A rejected exact-text batch must not be described as a PASS, but
+      // must not stop the batch solely because the AI quoted stale text.
+      // applyRewriteBriefFixW2B is atomic: rejected batches leave GG unchanged.
+      var unmatchedTextOnly =
+        /(?:OLD text was not found in GG|OLD fragment not found in (?:GG|article))/i
+          .test(String(applyResult.message || ''));
+
+      if (unmatchedTextOnly) {
+        return {
+          success: true,
+          warning: true,
+          compliancePassed: false,
+          message: 'W2B.2 UNRESOLVED (not PASS): unmatched correction recorded in GJ; ' +
+            'GG preserved and pipeline continuing to W2B.3.',
+          cost: totalCost
+        };
+      }
+
       return {
         success: false,
         message:
