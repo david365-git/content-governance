@@ -4683,6 +4683,17 @@ function bc_runRewriteBriefComplianceW2BAutomated() {
     sh.getRange(row, complianceCol + 1).clearContent();
   }
 
+  // The case-study matrix explicitly requires maintenance handover.
+  // A brief project-specific aftercare explanation is not a standalone guide.
+  var aftercareRule = '\\n\\nCASE STUDY AFTERCARE — OVERRIDING SCOPE CLARIFICATION:\\n' +
+    'For ALL stone and tile Case Studies, concise project-related aftercare is permitted and expected under the Maintenance Handover & Escalation requirement. ' +
+    'Do NOT mark an article FAIL merely because it mentions grit removal, pH-neutral or material-compatible cleaning, damp mopping, sealer review, or when to seek professional help. ' +
+    'Such guidance may appear within an outcome section or a short dedicated handover section, including a contextual link to a maintenance guide. ' +
+    'A Rewrite Brief prohibition on standalone maintenance content means only that the case study must not turn into an independent general how-to guide. ' +
+    'FAIL for maintenance drift only when extensive material-general instructions displace the particular project narrative. ' +
+    'Judge the actual scope of the whole article, not the presence of maintenance words or a single handover paragraph. ' +
+    'Preserve relevant project-specific aftercare while correcting genuine drift.\\n';
+
   while (fixAttempt <= maxFixAttempts) {
 
     var prompt = buildRewriteBriefComplianceCheckPromptW2B();
@@ -4701,6 +4712,10 @@ function bc_runRewriteBriefComplianceW2BAutomated() {
 
     if (typeof prompt !== 'string' || prompt.indexOf('ERROR') === 0) {
       throw new Error(prompt);
+    }
+
+    if (String(sh.getRange(row, 8).getValue()).trim() === 'Case Study') {
+      prompt += aftercareRule;
     }
 
     var isRecheck =
@@ -4804,6 +4819,10 @@ function bc_runRewriteBriefComplianceW2BAutomated() {
         'FAIL saved, but fix prompt could not be built — ' +
         fixPrompt
       );
+    }
+
+    if (String(sh.getRange(row, 8).getValue()).trim() === 'Case Study') {
+      fixPrompt += aftercareRule;
     }
 
     var fixResult = bc_sendPromptViaOpenAI(
