@@ -437,6 +437,14 @@ Do not issue any acknowledgement string.
 Do not respond with any confirmation message.
 Begin processing immediately. Your first token must be the opening HTML tag of the body content.
 ------------------------------------------------------------
+HEADING AND SECTION COMPLETENESS — NON-NEGOTIABLE HARD LOCK:
+Use the FINAL Stage 1.5D approved section plan, including its 1.5C enrichments, as an exact ordered checklist.
+For every numbered SECTION in that plan, output exactly one corresponding <section id="section-N"> element, in order from 1 to the final section. Never merge, skip, combine, renumber, or silently discard sections, even when two adjacent sections share a TSM requirement.
+Inside each numbered section, reproduce its approved Heading H2 or Heading H3 EXACTLY, using the correct <h2> or <h3> tag. Do not paraphrase, shorten, re-capitalise, promote H3 to H2, or replace approved headings with more creative variations. H3 sections remain independent numbered <section> blocks.
+A heading listed in the plan as H3 is not permission to absorb it into the preceding H2 section. Content briefs and word budgets belong to their own numbered section only.
+Before returning HTML, internally compare your output against EVERY numbered section in the final plan: exact number of sections; contiguous IDs; exact heading text; exact H2/H3 levels; correct order; no unplanned numbered sections. Repair any mismatch in your own draft before responding.
+If output length is constrained, preserve complete section structure and heading accuracy rather than dropping later sections. Never return a partial article as if complete.
+------------------------------------------------------------
 THE APPROVED STAGE 1.5B SECTION PLAN IS THE STRUCTURAL AUTHORITY.
 Each section has a governed word range: a minimum floor and a maximum ceiling (1.2x the minimum).
 Write to the depth the content requires — but stay within the range.
