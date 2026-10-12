@@ -2212,6 +2212,44 @@ if (pairs["Secondary Intent Decisions"]) {
   }
 }
 
+/**
+ * Restore any mandatory Stage 1.5D internal links omitted by W2B.
+ * Only inserts into the numbered section specified by CX; never relaxes
+ * the existing saveW2BHtmlToSheet validation.
+ */
+function bc_repairMissingW2BInternalLinks_(html, approvedPlan) {
+  var output = String(html || '');
+  var plan = String(approvedPlan || '');
+  var blocks = plan.split(/(?=^SECTION\\s+\\d+\\s*:\\s*Heading\\s+H[23]\\s*:)/gmi);
+  var inserted = [];
+
+  blocks.forEach(function(block) {
+    var numberMatch = block.match(/^SECTION\\s+(\\d+)\\s*:/im);
+    if (!numberMatch) return;
+    var sectionNumber = Number(numberMatch[1]);
+    var lineMatch = block.match(/^Internal link:\\s*(.+)$/im);
+    if (!lineMatch) return;
+    var urls = String(lineMatch[1]).match(/https?:\\/\\/[^\\s,;<>]+/g) || [];
+    urls.forEach(function(rawUrl) {
+      var url = rawUrl.replace(/[.)]+$/, '');
+      if (output.indexOf(url) !== -1 || output.indexOf(url.replace(/&/g, '&amp;')) !== -1) return;
+      var openTag = new RegExp('<section\\\\b[^>]*\\\\bid\\\\s*=\\\\s*["\\\\\']section-' + sectionNumber + '["\\\\\'][^>]*>', 'i');
+      var found = openTag.exec(output);
+      if (!found) return; // Let existing structural validation report missing section.
+      var sectionStart = found.index + found[0].length;
+      var closeIndex = output.indexOf('</section>', sectionStart);
+      if (closeIndex < 0) return;
+      var slug = url.split('/').filter(Boolean).pop() || 'related guidance';
+      var text = slug.replace(/[-_]+/g, ' ').replace(/\\s+/g, ' ').trim();
+      var anchor = '<p>For related information, see <a href="' + url.replace(/&/g, '&amp;') + '">' +
+        text.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</a>.</p>\\n';
+      output = output.slice(0, closeIndex) + anchor + output.slice(closeIndex);
+      inserted.push('section-' + sectionNumber + ': ' + url);
+    });
+  });
+  return { html: output, inserted: inserted };
+}
+
 function bc_runStage2BAutomated() {
   var startTime = Date.now();
   var totalCost = 0;
@@ -2316,9 +2354,16 @@ function bc_runStage2BAutomated() {
   totalCost +=
     apiResult.cost;
 
+  // Repair deterministic, governed link omissions before EU validation.
+  // The original W2B HTML validator remains the final authority.
+  var linkRepair = bc_repairMissingW2BInternalLinks_(
+    apiResult.text,
+    currentCX
+  );
+
   var saveResult =
     saveW2BHtmlToSheet(
-      apiResult.text
+      linkRepair.html
     );
 
   bc_addToApiCostAndTime(
