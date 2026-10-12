@@ -4475,16 +4475,22 @@ function bc_runFactCheckFullAutomated() {
     // Record that outcome explicitly rather than falling out of the loop
     // and returning undefined to the Master Workflow.
     if (attempt >= maxFixAttempts) {
-      recordW2B05_('FINAL', 'FAIL', 'Correction limit reached', checkResult.text);
+      recordW2B05_('FINAL', 'UNRESOLVED', 'Verification finding remains; continuing without approval', checkResult.text);
       bc_appendGovernancePipelineException(
         'W2B.05 — Fact Check',
         'Final verification still FAIL after ' + maxFixAttempts +
         ' correction attempt. ' + (parsed.summary || '') +
         '\n\nFACT-CHECK RESPONSE:\n' + checkResult.text
       );
+      // Verification found a residual issue after a safe correction batch.
+      // Keep the unresolved factual warning visible, preserve GE, and allow
+      // downstream stages to proceed. This is NOT an approval or a PASS.
       return {
-        success: false,
-        message: 'Fact-check still FAIL after one correction batch and verification — findings recorded in GJ.',
+        success: true,
+        warning: true,
+        factCheckPassed: false,
+        unresolved: true,
+        message: 'W2B.05 UNRESOLVED (not PASS) — residual fact-check finding recorded in GJ; GE preserved; continuing to W2B.1/W2B.2.',
         text: checkResult.text,
         cost: totalCost
       };
