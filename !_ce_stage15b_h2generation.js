@@ -446,6 +446,14 @@ Do NOT fail for:
 - stylistic improvements;
 - wording that is understandable but could later be humanised;
 - generic suffixes unless they genuinely make the heading unclear.
+TEST 3 — DUPLICATE INTENT AND DISTINCT SECTION PURPOSE:
+Compare each heading with its neighbour and with the governed section role.
+When one section records the finished visual result and the following section covers aftercare, maintenance advice or client handover, the second heading must describe that distinct practical purpose. Do NOT repeat the finished-result claim as a generic return, completion or handover.
+Example:
+SECTION 4: "The Finished Floor Had a Richer, More Uniform Shine"
+SECTION 5: "The Walsall Hallway Was Returned After Restoration"
+FAIL SECTION 5 when its governed content is cleaning and maintenance advice; prefer "Helping the Homeowner Maintain the Polished Floor".
+Do not invent an aftercare section where the approved section role does not provide one.
 TEST 3 — DUPLICATE INTENT:
 The heading must have a distinguishable purpose from the other H2s.
 FAIL only when another H2 would lead the reader to expect substantially the same section content.
@@ -1956,6 +1964,11 @@ Before returning each H2, ask:
 If NO, rewrite the H2 in plain, visible, everyday language.
 
 Use plain English in H2s. A familiar technical process term is acceptable when it names the real subject of a Method Guide, Case Study stage or comparison; explain specialist mechanisms in the body.
+SECTION DISTINCTION RULE — HARD LOCK
+If the approved plan has a finished-result section followed by maintenance, aftercare or handover, make the latter heading about the actual advice or ongoing care, not another statement that the work was completed.
+Preserve the existing section's approved role: never add new care claims merely to improve heading variety.
+A process heading may name grinding and honing together when both are part of its approved dominant stage; do not truncate the section to the start of grinding if honing is also central.
+
 4. SINGLE TOPIC PER HEADING — HARD LOCK
 Each H2 must cover exactly ONE main reader-facing idea.
 Prefer 5–12 words where possible; never compress multiple treatment stages into an H2 merely to prove coverage.
