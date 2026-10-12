@@ -8745,9 +8745,16 @@ function bc_runW5Automated() {
       }
 
 
+      // When GSC data is unavailable, preserve the governed Primary Search
+      // Term verbatim, even when it is longer than the general 2–6-word
+      // guidance. This avoids rejecting a locked eight-word search query.
+      var isLockedPrimaryTerm =
+        !!w5LockedKeyphrase &&
+        keyphrase.toLowerCase() === String(w5LockedKeyphrase).trim().toLowerCase();
+
       if (
-        words.length < 2 ||
-        words.length > 6
+        !isLockedPrimaryTerm &&
+        (words.length < 2 || words.length > 6)
       ) {
 
         issues.push(
