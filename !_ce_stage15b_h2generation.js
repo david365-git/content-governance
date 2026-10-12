@@ -1870,9 +1870,23 @@ ${reasoning
   ? 'Content Strategy: ' +
     reasoning
   : ''}
-Apply the symptom-first rule below.
-H2s must describe the homeowner's problem, not the technical mechanism.
+Apply the article-type narrative guidance below.
+Choose a symptom-led, process-led, explanatory or decision-led heading according to this section's reader purpose, not a universal symptom-first formula.
 `;
+  // Article-type narrative guidance: the heading sequence must serve the
+  // reader's real task, not force every page into a symptom-first template.
+  const typeNarrativeGuidance = ({
+    "Case Study": "Experience-led project narrative: use recorded discovery, observations, client decisions, treatment stages and outcomes. Preserve first-hand specificity; do not imply unrecorded procedures or results.",
+    "Diagnostic Guide": "Symptom-led diagnostic explanation: help readers recognise observable differences, distinguish plausible causes, understand safe checks and know when assessment is needed.",
+    "Method Guide": "Practical sequential instruction: organise headings around preparation, method choices, safe stages, limitations and checks on the result. Process-led headings are appropriate.",
+    "Educational Guide": "Evidence-led explanatory writing: introduce the question, explain relevant mechanisms in plain language, then implications and sensible action. Do not make every section a symptom.",
+    "Buyer Guide": "Decision-led comparative writing: organise around options, trade-offs, suitability, warning signs and selecting an appropriate solution. Preserve the actual buying decision.",
+    "Service Page": "Service-led problem/solution writing: clarify suitability, assessment, the actual service, realistic outcomes and how to enquire without inventing credentials or guarantees.",
+    "Geo Service Page": "Locally relevant service explanation: describe the local service, suitable problems, assessment, process and contact; do not invent local jobs or property characteristics.",
+    "Hub Page": "Authoritative topic overview: orient readers, organise distinct subtopics and guide them to the appropriate deeper resource. Avoid repeating narrow symptom headings.",
+    "Correction Article": "Misconception-led corrective explanation: identify the mistaken belief, explain the relevant evidence and limitations, and clarify the safer understanding or action."
+  })[articleType] ||
+    "Follow the governed article-type purpose, reader intent and section roles; use a natural explanatory sequence rather than a mandatory symptom-first template.";
   const workingTitle =
     buildWorkingTitleForH2Stage_(d);
   const prompt = `
@@ -1891,6 +1905,12 @@ ${location
   ? 'LOCATION: ' +
     location
   : ''}
+--- ARTICLE-TYPE NARRATIVE DIRECTION — HARD LOCK ---
+${typeNarrativeGuidance}
+Preserve Stage 1.5A section number, assigned H2/H3 level, approved scope, entity coverage and article intent.
+These are heading choices only: they do not authorise inventing additional stages, observations, client facts or outcomes.
+Do not force a fixed five-part story or reuse the same heading pattern on different pages.
+
 --- HEADING QUALITY TARGET — HARD LOCK ---
 Every H2 must satisfy all five of these:
 1. SEARCH INTENT & UX
@@ -1901,7 +1921,7 @@ Headings should demonstrate hands-on expertise through natural specificity witho
 3. SCANNABILITY & READER CLARITY — HARD LOCK
 H2s must be short, clear and immediately understandable to a non-technical homeowner.
 
-A heading should explain what the reader would actually notice, experience or recognise.
+A heading should make the section's actual purpose clear: what the reader might notice, needs to understand, needs to decide, or can expect from a documented process.
 
 Do NOT use vague or abstract phrases such as:
 - "lost its definition";
@@ -1925,7 +1945,7 @@ Before returning each H2, ask:
 
 If NO, rewrite the H2 in plain, visible, everyday language.
 
-Rich technical vocabulary and abstract diagnostic language belong in H3s or body text, not in the H2.
+Use plain English in H2s. A familiar technical process term is acceptable when it names the real subject of a Method Guide, Case Study stage or comparison; explain specialist mechanisms in the body.
 4. SINGLE TOPIC PER HEADING — HARD LOCK
 Each H2 must cover exactly ONE main reader-facing idea.
 
@@ -2070,24 +2090,15 @@ Stage 1.5A has created a section structure below.
 Your ONLY job is to create the reader-facing heading for each section while preserving the H2/H3 level assigned by Stage 1.5A.
 The H2 rule that applies depends on the article type — read the ARTICLE TYPE H2 RULE block carefully before generating any headings.
 ${h2RuleBlock}
-    --- SYMPTOM-FIRST RULE (applies to all article types EXCEPT Geo Service Page) ---
-
-    SYMPTOM-FIRST vs MECHANISM-FIRST:
-    ❌ WRONG (mechanism-first): "Geological Formation & Internal Structure"
-    ✅ CORRECT (symptom-first): "Some marks remain after normal cleaning"
-
-    The H2 must connect clearly to the HOMEOWNER'S PROBLEM, not lead with the technical mechanism.
-    Symptom-first does NOT require a question format or any fixed grammatical construction.
-    Vary H2 structure naturally across the article.
-CRITICAL RULE:
-Never copy the TSM Requirement name as the H2.
-ENTITY NAMES FORBIDDEN IN H2S:
-- Calcite Crystal Structure
-- Impregnating Sealer
-- Porosity
-- Micro-Scratching
-- Acid Etching
-Use plain language instead.
+    --- HEADING FOCUS BY ARTICLE TYPE ---
+    Use the ARTICLE-TYPE NARRATIVE DIRECTION above to choose the natural heading focus.
+    Diagnostic Guides typically begin with recognisable symptoms; Method Guides may lead with a practical process;
+    Buyer Guides with a decision or comparison; Educational Guides with the question or principle;
+    Case Studies with documented events; Hub Pages with useful subtopics; service pages with service relevance.
+    Explain technical mechanisms in body content unless their plain-English names are necessary to identify the section.
+    Do not force every heading to describe a symptom or use any fixed grammatical construction.
+    Never copy a TSM requirement or governance classification verbatim as a heading.
+    Avoid bare jargon such as "Calcite Crystal Structure" when a homeowner-facing description is clearer.
 --- RECOVERY BLUEPRINT ---
 ${recoveryBlueprint || 'No Recovery Blueprint available.'}
 --- SECTION STRUCTURE FROM STAGE 1.5A ---
