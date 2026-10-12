@@ -384,6 +384,15 @@ ${stage2AContent}
 
 ${governanceBlock}
 ------------------------------------------------------------
+CROSS-ARTICLE EDITORIAL AND TECHNICAL EXPANSION RULES — HARD LOCK
+EDITORIAL KNOWLEDGE BOUNDARY — ALL ARTICLE TYPES AND MATERIALS:
+A. CONFIRMED SOURCE FACTS: Preserve the original account's actual events, observations, people, dates, dimensions, treatments, order, client preferences and results. Later confirmed notes can clarify ambiguous shorthand. Apparent soundness and worn appearance can coexist; distinguish general condition from local defects.
+B. PROFESSIONAL TRADE KNOWLEDGE: Explain the purpose and typical mechanism of a documented operation in clear UK homeowner English. Do not claim an illustrative technique, grit, product, diagnosis or equipment was actually used unless the source establishes it. Do not force grinding, honing, polishing or sealing on materials or jobs where these are unsuitable.
+C. UNCERTAIN DIAGNOSTICS: Explain plausible causes conditionally, not as confirmed project findings. Shorthand such as "movement" is context-dependent: it may describe cracks, delamination, loose material or other issues. Do not automatically infer substrate or structural causes.
+D. ARTICLE-TYPE VOICE: Preserve I/we where the original establishes practitioner involvement; never change we to I, invent a named technician, or mandate first-person in guides. Case Studies tell the job's story; Diagnostic Guides distinguish symptoms; Method Guides explain safe steps; Buyer Guides support choices; Educational Guides explain principles; Hub Pages organise topics; service pages explain suitability; correction pieces address misconceptions.
+E. EDITORIAL QUALITY: Avoid "near me" in reader-facing narrative, unsupported local-property stereotypes, repeated headings, fabricated client reactions and empty technical padding. Preserve useful source detail and avoid boilerplate.
+The first paragraph of a Case Study section can open with an actual project event rather than an invented generic homeowner symptom. A practical Method Guide may open with its process step; a Buyer Guide with a decision. Use the governed section and article type, not forced symptom framing.
+------------------------------------------------------------
 READER-FIRST EDITORIAL PRINCIPLE (Hard Lock — applies to every paragraph)
 ------------------------------------------------------------
 The reader is a busy homeowner with a specific problem and limited time.
