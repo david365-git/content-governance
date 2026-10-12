@@ -8734,23 +8734,24 @@ function bc_runW5Automated() {
           .filter(Boolean);
 
 
-      if (
-        keyphrase !==
-        keyphrase.toLowerCase()
-      ) {
+      // A locked Primary Search Term is copied exactly, including its case.
+      // Lowercase is a rule for AI-generated keyphrases only.
+      var isLockedPrimaryTerm =
+        !!w5LockedKeyphrase &&
+        keyphrase === String(w5LockedKeyphrase).trim();
 
-        issues.push(
-          "Yoast Keyphrase is not lowercase."
-        );
+      if (
+        !isLockedPrimaryTerm &&
+        keyphrase !== keyphrase.toLowerCase()
+      ) {
+        issues.push("Yoast Keyphrase is not lowercase.");
       }
 
 
       // When GSC data is unavailable, preserve the governed Primary Search
       // Term verbatim, even when it is longer than the general 2–6-word
       // guidance. This avoids rejecting a locked eight-word search query.
-      var isLockedPrimaryTerm =
-        !!w5LockedKeyphrase &&
-        keyphrase.toLowerCase() === String(w5LockedKeyphrase).trim().toLowerCase();
+
 
       if (
         !isLockedPrimaryTerm &&
