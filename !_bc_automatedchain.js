@@ -4277,7 +4277,7 @@ function bc_applyVisibleTextFactCheckFixes_(fixes) {
 function bc_runFactCheckFullAutomated() {
 
   var totalCost = 0;
-  var maxFixAttempts = 1; // One correction batch, then one independent verification.
+  var maxFixAttempts = 2; // Initial correction, one verification-driven correction, then final verification.
   var attempt = 0;
   var lastFixMessage = '';
   var appliedFirstPassFixes = null;
@@ -4475,22 +4475,16 @@ function bc_runFactCheckFullAutomated() {
     // Record that outcome explicitly rather than falling out of the loop
     // and returning undefined to the Master Workflow.
     if (attempt >= maxFixAttempts) {
-      recordW2B05_('FINAL', 'UNRESOLVED', 'Verification finding remains; continuing without approval', checkResult.text);
+      recordW2B05_('FINAL', 'FAIL', 'Material issue remains after second correction and verification', checkResult.text);
       bc_appendGovernancePipelineException(
         'W2B.05 — Fact Check',
         'Final verification still FAIL after ' + maxFixAttempts +
-        ' correction attempt. ' + (parsed.summary || '') +
-        '\n\nFACT-CHECK RESPONSE:\n' + checkResult.text
+        ' correction batches. ' + (parsed.summary || '') +
+        '\\n\\nFACT-CHECK RESPONSE:\\n' + checkResult.text
       );
-      // Verification found a residual issue after a safe correction batch.
-      // Keep the unresolved factual warning visible, preserve GE, and allow
-      // downstream stages to proceed. This is NOT an approval or a PASS.
       return {
-        success: true,
-        warning: true,
-        factCheckPassed: false,
-        unresolved: true,
-        message: 'W2B.05 UNRESOLVED (not PASS) — residual fact-check finding recorded in GJ; GE preserved; continuing to W2B.1/W2B.2.',
+        success: false,
+        message: 'Fact-check still FAIL after verification-driven correction — findings recorded in GJ.',
         text: checkResult.text,
         cost: totalCost
       };
@@ -4527,7 +4521,7 @@ function bc_runFactCheckFullAutomated() {
     appliedFirstPassFixes = parsed.fixes;
     attempt++;
 
-    // Loop now performs only a fresh fact-check of the corrected GE.
+    // Verify only the corrections applied in the immediately preceding batch.
     // There is no separate AI fix-generation call.
   }
 
