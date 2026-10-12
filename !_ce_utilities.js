@@ -761,7 +761,7 @@ function getTechnicalMatrix(material) {
   for (let i = 0; i < techData.length; i++) {
     const materialList  = String(techData[i][0]).trim();
     const matrixContent = techData[i][1];
-    if (materialList.toLowerCase().includes(material.trim().toLowerCase())) {
+    if (materialList.toLowerCase() === String(material || "").trim().toLowerCase()) {
       return matrixContent;
     }
   }
