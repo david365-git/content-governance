@@ -437,6 +437,14 @@ Do not issue any acknowledgement string.
 Do not respond with any confirmation message.
 Begin processing immediately. Your first token must be the opening HTML tag of the body content.
 ------------------------------------------------------------
+MANDATORY APPROVED INTERNAL LINKS — NON-NEGOTIABLE HARD LOCK:
+For EVERY numbered SECTION in the FINAL Stage 1.5D plan, read its "Internal link:" field.
+When the field supplies a URL (rather than "None"), include that exact URL in a valid HTML <a href="..."> link inside the SAME numbered section.
+Use natural, context-specific anchor text appropriate to that section; do not paste a naked URL or fabricate a link.
+Do not omit, shorten, reformat, redirect, or relocate any approved URL. If multiple URLs are specified, include each one.
+Before returning HTML, check each planned section individually against its Internal link field and repair any absent link in your own draft.
+In particular, a maintenance-handover section must retain its approved internal link even when the guidance is concise.
+------------------------------------------------------------
 HEADING AND SECTION COMPLETENESS — NON-NEGOTIABLE HARD LOCK:
 Use the FINAL Stage 1.5D approved section plan, including its 1.5C enrichments, as an exact ordered checklist.
 For every numbered SECTION in that plan, output exactly one corresponding <section id="section-N"> element, in order from 1 to the final section. Never merge, skip, combine, renumber, or silently discard sections, even when two adjacent sections share a TSM requirement.
