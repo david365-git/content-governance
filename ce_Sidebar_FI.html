@@ -9,7 +9,7 @@
     <div id="fi-status" class="status-bar pending">Load data to generate image prompt</div>
 
     <div style="margin-top:8px;">
-      <label class="section-label">Middle Title (editable before generating)</label>
+      <label class="section-label">Middle Title — prefilled from SEO Meta Title (editable)</label>
       <input type="text" id="fi-middle-title" placeholder="Generated automatically — edit if needed..." style="width:100%;font-size:11px;padding:4px;box-sizing:border-box;" />
       <div style="font-family:JetBrains Mono,monospace;font-size:10px;color:#546e7a;margin-top:3px;line-height:1.5;">
         Optional: click Suggest Title Prompt to get a prompt to paste into ChatGPT, then paste the result here.
@@ -72,4 +72,36 @@
 
     </div>
   </div>
+  <script>
+  (function () {
+    var pane = document.getElementById('window-fi');
+    var input = document.getElementById('fi-middle-title');
+    if (!pane || !input) return;
+    var wasVisible = false;
+    var generation = 0;
+
+    function refreshFromSeoTitle() {
+      var request = ++generation;
+      google.script.run
+        .withSuccessHandler(function (title) {
+          if (request !== generation) return;
+          if (typeof title === 'string' && title.trim()) {
+            input.value = title.trim();
+          }
+        })
+        .withFailureHandler(function (error) {
+          console.warn('FI SEO title prefill unavailable:', error);
+        })
+        .ce_fiGetSeoMetaTitle();
+    }
+
+    var observer = new MutationObserver(function () {
+      var visible = pane.style.display !== 'none';
+      if (visible && !wasVisible) refreshFromSeoTitle();
+      wasVisible = visible;
+    });
+    observer.observe(pane, { attributes: true, attributeFilter: ['style'] });
+    if (pane.style.display !== 'none') refreshFromSeoTitle();
+  })();
+  </script>
 </div>
