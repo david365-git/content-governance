@@ -248,6 +248,12 @@ function buildStage15CPrompt() {
   }
   let prompt = `
 STAGE 1.5C — SECTION ENRICHMENT
+EDITORIAL PLANNING BOUNDARY — ALL ARTICLE TYPES:
+For each governed section, preserve documented original observations, measurements, actions, decisions and outcomes; distinguish apparent overall floor soundness from wear and local defects. Translate professional shorthand into homeowner terms only where context supports it.
+Enrich the plan with concise WHY/HOW explanations using established trade knowledge appropriate to the actual material and treatment, without claiming an undocumented specific action happened on this job.
+When a cause is uncertain, frame it as a possibility rather than a confirmed diagnosis. Do not automatically interpret movement as substrate failure or delamination; do not insert grinding/honing/polishing where the source or material does not support it.
+Preserve I/we source perspective for project sections; other article types follow their own voice and purpose. Avoid forcing each section into the same symptom-first opening or a textbook formula.
+Keep the approved numbered sections, heading levels, section purposes, images, internal-link slots, required coverage and output schema unchanged.
 ROLE:
 SEO Content Strategist
 MATERIAL:
