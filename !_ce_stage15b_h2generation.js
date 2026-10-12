@@ -435,9 +435,12 @@ FAIL only when the heading clearly:
 - is substantially narrower or broader than the section;
 - or introduces a different topic.
 Do NOT fail because another heading could sound slightly better.
-TEST 2 — READER CLARITY:
-The heading must be understandable to a homeowner.
-FAIL only when the wording is genuinely confusing, highly technical, awkward enough to obscure the meaning, or uses terminology a homeowner is unlikely to understand.
+TEST 2 — READER CLARITY AND CONCISION:
+The heading must express ONE clear idea in natural language for a non-technical UK homeowner.
+FAIL when it is a compressed work schedule, chains three or more technical steps, relies on unexplained jargon, or is so long that the dominant point is obscured.
+As a practical guide, aim for 5–12 words; longer headings may pass if necessary and genuinely clear.
+For example, "A Controlled Diamond Sequence Prepared the Floor for Planetary Grinding, Honing and Polishing" must FAIL: diamond grinding is part of planetary grinding, not a prior preparation stage.
+A concise heading such as "Grinding and Honing Prepared the Floor for Polishing" communicates the main process.
 Do NOT fail for:
 - minor wording preferences;
 - stylistic improvements;
@@ -451,8 +454,11 @@ Similar subject matter is acceptable where the section roles are different.
     Do NOT treat shared subject matter alone as duplicate intent.
     Repeated grammatical or rhetorical heading structures are assessed separately under Test 5 — Repetitive Structural Framing.
     Repetition of the material name is acceptable only where it genuinely aids clarity and does not create a mechanical heading pattern.
-TEST 4 — SCOPE, MATERIAL AND SECTION ROLE:
-The heading must remain within the existing article scope, use the correct governed MATERIAL, and preserve the section's structural role.
+TEST 4 — SCOPE, MATERIAL, SECTION ROLE AND CHRONOLOGY:
+The heading must remain within the existing article scope, use the correct governed MATERIAL, preserve the section's structural role, and not invert the recorded work sequence.
+FAIL a heading that implies a stage occurred before the operation it is part of, or turns a preparation/process section into an unrecorded result.
+For example, diamond tooling is used during grinding: do not say diamond preparation occurred before planetary grinding unless the source explicitly records a separate preparation operation.
+Where the section includes several operations, name the dominant purpose and leave specific grit sequences and equipment details to the body.
 
 MATERIAL LOCK:
 The governed MATERIAL for this article is:
@@ -492,7 +498,11 @@ FAIL only when it clearly:
 - changes a process section into an outcome section;
 - changes a maintenance section into a different subject;
 - or otherwise changes the purpose established for that section.
-TEST 5 — CLAIM SUPPORT:
+TEST 5 — REPETITIVE STRUCTURAL FRAMING AND CLAIM SUPPORT:
+Check the full heading set for repeated rhetorical patterns and each heading for unsupported claims.
+FAIL consecutive headings with substantially repeated grammatical framing, repetitive question openings, or clearly unsubstantiated outcomes.
+FAIL generic governance jargon such as "Tailored Project Handover" when the section can be identified more clearly by its documented practical purpose.
+FAIL a heading that combines the visible result and a separate sealing/maintenance procedure into one long promise when the section's principal role is the result.
 
 The H2 must not make a factual, credential, quality, vetting or authority claim that the governed section brief does not substantiate.
 
@@ -1948,6 +1958,11 @@ If NO, rewrite the H2 in plain, visible, everyday language.
 Use plain English in H2s. A familiar technical process term is acceptable when it names the real subject of a Method Guide, Case Study stage or comparison; explain specialist mechanisms in the body.
 4. SINGLE TOPIC PER HEADING — HARD LOCK
 Each H2 must cover exactly ONE main reader-facing idea.
+Prefer 5–12 words where possible; never compress multiple treatment stages into an H2 merely to prove coverage.
+Make headings truthful about the order of operations: diamond tooling is used in grinding, not automatically a step before planetary grinding.
+Use the dominant subject for the H2 and describe grit progressions, equipment and supporting processes in the section body.
+A results section should lead with the visible outcome rather than appending the separate sealing process.
+For a maintenance/handover section, use plain wording about the actual cleaning advice given, not abstract phrases such as "Tailored Project Handover".
 
 Do not combine two different purposes, decisions, stages or outcomes in one H2.
 
