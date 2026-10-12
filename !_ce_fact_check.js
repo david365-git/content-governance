@@ -190,6 +190,7 @@ COMPLETE FIRST-PASS REVIEW — HARD LOCK:
 Before returning the first response, inspect the ENTIRE rewritten article from the opening to the final paragraph, including introduction, each section, captions, conclusions and aftercare.
 Cross-check every material project-specific assertion against the original source and the 14 criteria above. In particular, review who performed actions, client reactions or expectations, room and locality, terrazzo binder or substrate type, equipment actually used, sealer classification and documented outcomes.
 Make a second complete internal sweep for material errors you may have overlooked. Consolidate ALL demonstrable material errors into the FIRST FAIL response; do not stop after finding the first few.
+For each discovered factual error, search the entire rewritten HTML for the same claim in H1/H2/H3 headings, captions, body text, callouts and conclusion. Supply a separate exact-text fix for each occurrence where needed; never correct only the paragraph if its heading still makes the same false claim.
 Do not ration findings, invent issues to fill a quota, or broaden the materiality threshold. Supplementary technical education remains permitted.
 Each fix must address a distinct material error, and must be independently justified by precise evidence. Only after completing both sweeps return the JSON.
 On verification, apply exactly the same materiality threshold; do not introduce stricter editorial standards or reclassify harmless background explanations as project facts.
