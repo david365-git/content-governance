@@ -25,6 +25,11 @@ function onOpen(e) {
     .addItem('🔬 Format Cell Text for better reading (Selection Only)', 'formatAbbeySelection')
     .addToUi();
 
+  // TECHNICAL SPECIFICATIONS — read-only exports from the active row
+  ui.createMenu('Technical Export')
+    .addItem('Download C, L and M', 'technicalExportOpen')
+    .addToUi();
+
   // 1. UTILITIES
   ui.createMenu('Utilities')
     .addItem('🚀Transpose Active Row to *posts-active-row* sheet', 'updateActiveRowSheet')
