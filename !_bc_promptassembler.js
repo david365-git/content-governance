@@ -2220,29 +2220,29 @@ if (pairs["Secondary Intent Decisions"]) {
 function bc_repairMissingW2BInternalLinks_(html, approvedPlan) {
   var output = String(html || '');
   var plan = String(approvedPlan || '');
-  var blocks = plan.split(/(?=^SECTION\\s+\\d+\\s*:\\s*Heading\\s+H[23]\\s*:)/gmi);
+  var blocks = plan.split(/(?=^SECTION\s+\d+\s*:\s*Heading\s+H[23]\s*:)/gmi);
   var inserted = [];
 
   blocks.forEach(function(block) {
-    var numberMatch = block.match(/^SECTION\\s+(\\d+)\\s*:/im);
+    var numberMatch = block.match(/^SECTION\s+(\d+)\s*:/im);
     if (!numberMatch) return;
     var sectionNumber = Number(numberMatch[1]);
-    var lineMatch = block.match(/^Internal link:\\s*(.+)$/im);
+    var lineMatch = block.match(/^Internal link:\s*(.+)$/im);
     if (!lineMatch) return;
-    var urls = String(lineMatch[1]).match(/https?:\\/\\/[^\\s,;<>]+/g) || [];
+    var urls = String(lineMatch[1]).match(/https?:\/\/[^\s,;<>]+/g) || [];
     urls.forEach(function(rawUrl) {
       var url = rawUrl.replace(/[.)]+$/, '');
       if (output.indexOf(url) !== -1 || output.indexOf(url.replace(/&/g, '&amp;')) !== -1) return;
-      var openTag = new RegExp('<section\\\\b[^>]*\\\\bid\\\\s*=\\\\s*["\\\\\']section-' + sectionNumber + '["\\\\\'][^>]*>', 'i');
+      var openTag = new RegExp('<section\\b[^>]*\\bid\\s*=\\s*["\\x27]section-' + sectionNumber + '["\\x27][^>]*>', 'i');
       var found = openTag.exec(output);
-      if (!found) return; // Let existing structural validation report missing section.
+      if (!found) return;
       var sectionStart = found.index + found[0].length;
       var closeIndex = output.indexOf('</section>', sectionStart);
       if (closeIndex < 0) return;
       var slug = url.split('/').filter(Boolean).pop() || 'related guidance';
-      var text = slug.replace(/[-_]+/g, ' ').replace(/\\s+/g, ' ').trim();
+      var text = slug.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
       var anchor = '<p>For related information, see <a href="' + url.replace(/&/g, '&amp;') + '">' +
-        text.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</a>.</p>\\n';
+        text.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</a>.</p>\n';
       output = output.slice(0, closeIndex) + anchor + output.slice(closeIndex);
       inserted.push('section-' + sectionNumber + ': ' + url);
     });
