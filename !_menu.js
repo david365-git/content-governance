@@ -27,7 +27,7 @@ function onOpen(e) {
 
   // TECHNICAL SPECIFICATIONS — read-only exports from the active row
   ui.createMenu('Technical Export')
-    .addItem('Download C, L and M', 'technicalExportOpen')
+    .addItem('Download C and N–S as one file', 'technicalExportOpen')
     .addToUi();
 
   // 1. UTILITIES
