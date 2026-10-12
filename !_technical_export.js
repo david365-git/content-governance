@@ -1,92 +1,96 @@
 /**
- * TECHNICAL MATRIX — THREE TEXT-FILE EXPORTS
- * Read-only: active material row on the "technical" tab.
- * Exports C (original), L (master) and M (AI knowledge).
+ * TECHNICAL MATRIX — SINGLE GEMINI AUDIT EXPORT
+ * Read-only. On the active row of "technical", combines original C
+ * and six section columns N:S into one labelled UTF-8 text file.
  */
 function technicalExportOpen() {
   const ui = SpreadsheetApp.getUi();
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   if (sheet.getName() !== 'technical') {
-    ui.alert('Open the technical tab and select the material row first.');
+    ui.alert('Open the technical tab and select a material row first.');
     return;
   }
 
-  const range = sheet.getActiveRange();
-  if (!range || range.getRow() < 2) {
+  const active = sheet.getActiveRange();
+  if (!active || active.getRow() < 2) {
     ui.alert('Select a material row below row 1.');
     return;
   }
 
-  const row = range.getRow();
+  const row = active.getRow();
   const material = String(sheet.getRange(row, 2).getDisplayValue() || '').trim();
   if (!material) {
-    ui.alert('Column B has no material name on the selected row.');
+    ui.alert('Column B has no material name on this row.');
     return;
   }
 
-  const safeName = material.replace(/[^a-zA-Z0-9_-]/g, '_');
-  const columns = [
-    {column: 3, suffix: 'C_Original', label: 'Download C — Original'},
-    {column: 12, suffix: 'L_Master', label: 'Download L — Master'},
-    {column: 13, suffix: 'M_AI', label: 'Download M — AI knowledge'}
+  const original = String(sheet.getRange(row, 3).getValue() || '');
+  const headings = sheet.getRange(1, 14, 1, 6).getDisplayValues()[0];
+  const sections = sheet.getRange(row, 14, 1, 6).getValues()[0];
+
+  const parts = [
+    'TECHNICAL MATRIX — INDEPENDENT AUDIT PACK',
+    'Material: ' + material,
+    'Source row: ' + row,
+    'Contents: Column C original reference and Columns N–S structured sections.',
+    'Note: Original reference may contain unverified claims. Audit all content independently.',
+    '',
+    '================================================================',
+    'COLUMN C — ORIGINAL TECHNICAL SPECIFICATION',
+    '================================================================',
+    original || '[EMPTY]'
   ];
 
-  const files = columns.map(function(item) {
-    return {
-      name: safeName + '_' + item.suffix + '.txt',
-      label: item.label,
-      content: String(sheet.getRange(row, item.column).getValue() || '')
-    };
-  });
+  for (let index = 0; index < 6; index++) {
+    const column = String.fromCharCode(78 + index); // N through S
+    parts.push(
+      '',
+      '================================================================',
+      'COLUMN ' + column + ' — ' + (headings[index] || 'SECTION ' + (index + 1)),
+      '================================================================',
+      String(sections[index] || '').trim() || '[EMPTY — NOT POPULATED]'
+    );
+  }
 
-  const payload = JSON.stringify({material: material, files: files})
+  const file = {
+    name: material.replace(/[^a-zA-Z0-9_-]/g, '_') + '_Technical_Audit_C_N-S.txt',
+    content: parts.join('\n')
+  };
+
+  // Escape JSON for safe inclusion in the HTML script element.
+  const payload = JSON.stringify(file)
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e')
     .replace(/&/g, '\\u0026');
 
   const html = `<!doctype html>
-<html>
-<head>
-<base target="_top">
-<style>
+<html><head><base target="_top"><style>
 body{font-family:Arial,sans-serif;padding:18px;color:#202124}
-button{display:block;width:100%;margin:10px 0;padding:12px;border:0;border-radius:5px;background:#176b45;color:white;cursor:pointer;text-align:left}
-button:disabled{background:#bbb;cursor:not-allowed}
-small{display:block;color:#666;margin-top:4px}
-</style>
-</head>
+button{display:block;width:100%;padding:12px;border:0;border-radius:5px;background:#176b45;color:white;cursor:pointer}
+</style></head>
 <body>
-<h3>Technical data export</h3>
+<h3>Gemini Technical Audit Export</h3>
 <p id="material"></p>
-<p>Download these three text files and upload them to Gemini.</p>
-<div id="downloads"></div>
+<p>One text file: original specification (C) and all six labelled sections (N–S).</p>
+<button id="download">Download audit text file</button>
 <script>
-const data = ${payload};
-document.getElementById('material').textContent = 'Material: ' + data.material;
-data.files.forEach(function(file) {
-  const button = document.createElement('button');
-  button.textContent = file.label;
-  button.disabled = !file.content;
-  if (!file.content) button.textContent += ' (empty)';
-  button.addEventListener('click', function() {
-    const blob = new Blob([file.content], {type:'text/plain;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = file.name;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(function() { URL.revokeObjectURL(url); }, 2000);
-  });
-  document.getElementById('downloads').appendChild(button);
+const file = ${payload};
+document.getElementById('material').textContent = 'Material: ' + ${JSON.stringify(material)};
+document.getElementById('download').addEventListener('click', function() {
+  const blob = new Blob([file.content], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = file.name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(function(){URL.revokeObjectURL(url);}, 2000);
 });
-</script>
-</body>
-</html>`;
+</script></body></html>`;
 
   ui.showModalDialog(
-    HtmlService.createHtmlOutput(html).setWidth(440).setHeight(370),
-    'Technical Export — ' + material
+    HtmlService.createHtmlOutput(html).setWidth(460).setHeight(300),
+    'Technical Audit Export — ' + material
   );
 }
