@@ -8449,7 +8449,7 @@ function bc_runW5Automated() {
   // Primary Search Term is the authoritative Yoast keyphrase for every row,
   // regardless of GSC availability. Never replace it with an AI suggestion.
   var w5LockedKeyphrase =
-    String(w5RowData["Primary Search Term"] || "").trim();
+    String(w5RowData["Primary Search Term"] || "").trim().toLowerCase();
 
 
 
@@ -8734,8 +8734,8 @@ function bc_runW5Automated() {
           .filter(Boolean);
 
 
-      // A locked Primary Search Term is copied exactly, including its case.
-      // Lowercase is a rule for AI-generated keyphrases only.
+      // The locked Primary Search Term is normalised to lowercase for Yoast.
+      // Its original spreadsheet cell remains unchanged.
       var isLockedPrimaryTerm =
         !!w5LockedKeyphrase &&
         keyphrase === String(w5LockedKeyphrase).trim();
