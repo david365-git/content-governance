@@ -8446,10 +8446,10 @@ function bc_runW5Automated() {
     : String(w5RowData["Montr Queries"] || "").trim();
 
 
+  // Primary Search Term is the authoritative Yoast keyphrase for every row,
+  // regardless of GSC availability. Never replace it with an AI suggestion.
   var w5LockedKeyphrase =
-    w5MonitorQueries.length <= 10
-      ? String(w5RowData["Primary Search Term"] || "").trim()
-      : "";
+    String(w5RowData["Primary Search Term"] || "").trim();
 
 
 
