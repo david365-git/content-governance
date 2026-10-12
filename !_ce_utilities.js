@@ -768,6 +768,37 @@ function getTechnicalMatrix(material) {
   return "No specific technical matrix found for " + material + ". Use general stone care principles.";
 }
 
+
+// Return a live, bounded excerpt of the current material's Technical Matrix.
+// This avoids copying the full specification into each AI request.
+function bc_getRelevantTechnicalMatrixExcerpt_(material, context, maxChars) {
+  const source = String(getTechnicalMatrix(String(material || "")) || "");
+  if (!source || /^No (specific )?technical matrix/i.test(source)) return "";
+  const limit = Math.max(800, Math.min(Number(maxChars) || 2600, 4500));
+  const contextWords = String(context || "").toLowerCase().match(/[a-z]{4,}/g) || [];
+  const stop = new Set(["this","that","with","from","into","floor","floors","terrazzo","marble","stone","tile","tiles","cleaning","restoration","article","section","heading","original","homeowner","work","after","before","were","have","when","where","their","there","which","about","would","should","needed","using","used","more","also","good"]);
+  const words = Array.from(new Set(contextWords.filter(w => !stop.has(w))));
+  const paragraphs = source.split(/\n\s*\n/).map(x => x.trim()).filter(x => x.length >= 60);
+  const ranked = paragraphs.map((paragraph, index) => {
+    const lower = paragraph.toLowerCase();
+    let score = 0;
+    words.forEach(w => { if (lower.includes(w)) score += 1; });
+    if (words.some(w => /gripper|carpet|doorway|edge|crack|nail/.test(w)) && /gripper|doorway|nail/.test(lower)) score += 8;
+    return {paragraph,index,score};
+  }).filter(x => x.score >= 2).sort((a,b) => b.score-a.score || a.index-b.index);
+  let picked = [], length = 0;
+  for (const item of ranked) {
+    if (length + item.paragraph.length > limit) continue;
+    picked.push(item);
+    length += item.paragraph.length + 2;
+  }
+  if (!picked.length) return "";
+  picked.sort((a,b) => a.index-b.index);
+  return "LIVE MATERIAL REFERENCE — explanatory knowledge only, not evidence of project events:\n" +
+    picked.map(x => x.paragraph).join("\n\n") +
+    "\nEND LIVE MATERIAL REFERENCE";
+}
+
 /* ============================================================
    UTILITIES: REHYDRATION & PUSHING
 ============================================================ */
