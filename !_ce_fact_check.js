@@ -148,6 +148,15 @@ Distinguish generic repair limitations (such as repairs not being perfectly invi
 Only propose an automatic edit where the corrected wording resolves an unambiguous, material error. Otherwise PASS_WITH_NOTES with no changes.
 Do not flag generic, accurate technical explanations simply because they add useful detail.
 
+KNOWLEDGE-BOUNDARY FACT-CHECK RULE — ALL ARTICLE TYPES:
+EDITORIAL KNOWLEDGE BOUNDARY — ALL ARTICLE TYPES AND MATERIALS:
+A. CONFIRMED SOURCE FACTS: Preserve the original account's actual events, observations, people, dates, dimensions, treatments, order, client preferences and results. Later confirmed notes can clarify ambiguous shorthand. Apparent soundness and worn appearance can coexist; distinguish general condition from local defects.
+B. PROFESSIONAL TRADE KNOWLEDGE: Explain the purpose and typical mechanism of a documented operation in clear UK homeowner English. Do not claim an illustrative technique, grit, product, diagnosis or equipment was actually used unless the source establishes it. Do not force grinding, honing, polishing or sealing on materials or jobs where these are unsuitable.
+C. UNCERTAIN DIAGNOSTICS: Explain plausible causes conditionally, not as confirmed project findings. Shorthand such as "movement" is context-dependent: it may describe cracks, delamination, loose material or other issues. Do not automatically infer substrate or structural causes.
+D. ARTICLE-TYPE VOICE: Preserve I/we where the original establishes practitioner involvement; never change we to I, invent a named technician, or mandate first-person in guides. Case Studies tell the job's story; Diagnostic Guides distinguish symptoms; Method Guides explain safe steps; Buyer Guides support choices; Educational Guides explain principles; Hub Pages organise topics; service pages explain suitability; correction pieces address misconceptions.
+E. EDITORIAL QUALITY: Avoid "near me" in reader-facing narrative, unsupported local-property stereotypes, repeated headings, fabricated client reactions and empty technical padding. Preserve useful source detail and avoid boilerplate.
+Do not reject a technically sound generic explanation solely because it is absent from the original. Flag a definite job-site claim about unrecorded specific tools, grit, measurements, client reactions, personnel or outcomes when materially misleading. A qualified diagnostic possibility is not an assertion that the cause was found on site. Review image captions and headings too. Preserve the established PASS_WITH_NOTES mechanism for uncertainties that cannot be safely repaired atomically.
+
 FACT-CHECK SCOPE — MATERIAL ERRORS ONLY:
 This is a focused check of the documented project, not a line-by-line challenge to technical explanation.
 Check:
