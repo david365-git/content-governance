@@ -771,8 +771,58 @@ function getTechnicalMatrix(material) {
 
 // Return a live, bounded excerpt of the current material's Technical Matrix.
 // This avoids copying the full specification into each AI request.
-function bc_getRelevantTechnicalMatrixExcerpt_(material, context, maxChars) {
-  const source = String(getTechnicalMatrix(String(material || "")) || "");
+function bc_getRelevantTechnicalMatrixExcerpt_(material, context, maxChars, articleType) {
+  const materialName = String(material || "").trim();
+  // Pilot scope: existing Column C paragraph retrieval remains unchanged for all
+  // materials other than Terrazzo, until the pilot article comparison is approved.
+  if (materialName.toLowerCase() === "terrazzo") {
+    const techSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("technical");
+    if (!techSheet) return "";
+    const lastRow = Math.min(techSheet.getLastRow(), 100);
+    const materialNames = techSheet.getRange(2, 2, Math.max(1, lastRow - 1), 1).getValues();
+    const ix = materialNames.findIndex(r => String(r[0] || "").trim().toLowerCase() === "terrazzo");
+    if (ix < 0) return "";
+    const sections = techSheet.getRange(ix + 2, 14, 1, 6).getValues()[0].map(v => String(v || "").trim());
+    // Fail closed: never silently fall back to old C when a pilot section is blank.
+    if (sections.some(x => !x)) throw new Error("Terrazzo pilot N:S has an empty section; check technical sheet.");
+    const safe = sections[5]; // Column S is always supplied in full.
+    const budget = Math.max(800, Math.min(Number(maxChars) || 2600, 4500));
+    const terms = Array.from(new Set((String(context || "").toLowerCase().match(/[a-z]{5,}/g) || [])
+      .filter(w => !/^(about|after|before|could|floor|floors|their|there|these|which|would|should|article|section|terrazzo|stone|original|heading|homeowner|restoration|cleaning)$/.test(w))));
+    const type = String(articleType || "").toLowerCase();
+    const preferred = /diagnostic/.test(type) ? [1,0] :
+      /method/.test(type) ? [2,3] :
+      /buyer/.test(type) ? [4,2] :
+      /educational/.test(type) ? [0,1] :
+      /case study/.test(type) ? [1,3] :
+      /service/.test(type) ? [1,3] :
+      /hub/.test(type) ? [0,1] : [];
+    const parts = [];
+    for (let i = 0; i < 5; i++) {
+      sections[i].split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length >= 45).forEach((paragraph,j) => {
+        const lower = paragraph.toLowerCase();
+        const overlap = terms.reduce((sum,w) => sum + (lower.includes(w) ? 1 : 0), 0);
+        const boost = preferred.includes(i) ? 3 : 0;
+        parts.push({column:"NOPQR"[i],paragraph,score:overlap + boost,index:j});
+      });
+    }
+    parts.sort((a,b) => b.score-a.score || a.column.localeCompare(b.column) || a.index-b.index);
+    const chosen = [];
+    let length = 0;
+    for (const part of parts) {
+      if (part.score < 2 && chosen.length) continue;
+      if (length + part.paragraph.length + 2 > budget) continue;
+      chosen.push(part);
+      length += part.paragraph.length + 2;
+    }
+    chosen.sort((a,b) => a.column.localeCompare(b.column) || a.index-b.index);
+    return "LIVE TERRAZZO TECHNICAL REFERENCE — general knowledge only; never evidence that a specific job used a treatment:\n" +
+      chosen.map(p => "[" + p.column + "] " + p.paragraph).join("\n\n") +
+      "\n\n[S — REQUIRED TECHNICAL SAFEGUARDS]\n" + safe +
+      "\nEND LIVE TERRAZZO TECHNICAL REFERENCE";
+  }
+
+  const source = String(getTechnicalMatrix(materialName) || "");
   if (!source || /^No (specific )?technical matrix/i.test(source)) return "";
   const limit = Math.max(800, Math.min(Number(maxChars) || 2600, 4500));
   const contextWords = String(context || "").toLowerCase().match(/[a-z]{4,}/g) || [];
