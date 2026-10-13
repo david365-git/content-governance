@@ -3635,13 +3635,13 @@ function saveW2BHtmlToSheet(html) {
 
     if (articleTypeForGate === "case study") {
       const visibleText = cleanedHtml
-        .replace(/<(script|style|figure)\\b[^>]*>[\\s\\S]*?<\\/\\1>/gi, " ")
+        .replace(/<(script|style|figure)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
         .replace(/<[^>]+>/g, " ")
         .replace(/&nbsp;|&#160;/gi, " ")
-        .replace(/\\s+/g, " ");
+        .replace(/\s+/g, " ");
 
-      const sentences = visibleText.split(/(?<=[.!?])\\s+|\\n+/);
-      const performedSlipCheck = /\\b(?:i|we|our team|the technician|the contractor)\\s+(?:(?:also|then|carefully|regularly|continuously)\\s+)?(?:checked|tested|measured|verified|monitored|assessed|confirmed)\\b[^.!?]{0,130}\\b(?:slip(?:[-\\s]?resistan\\w*)?|traction|coefficient of friction)\\b|\\b(?:slip(?:[-\\s]?resistan\\w*)?|coefficient of friction)\\b[^.!?]{0,90}\\b(?:was|were|had been)\\s+(?:checked|tested|measured|verified|monitored|assessed|confirmed)\\b|\\b(?:slip(?:[-\\s]?resistan\\w*)?|traction)\\s+(?:test(?:ing|s)?|measurements?)\\s+(?:showed|confirmed|proved|established)\\b/i;
+      const sentences = visibleText.split(/(?<=[.!?])\s+|\n+/);
+      const performedSlipCheck = /\b(?:i|we|our team|the technician|the contractor)\s+(?:(?:also|then|carefully|regularly|continuously)\s+)?(?:checked|tested|measured|verified|monitored|assessed|confirmed)\b[^.!?]{0,130}\b(?:slip(?:[-\s]?resistan\w*)?|traction|coefficient of friction)\b|\b(?:slip(?:[-\s]?resistan\w*)?|coefficient of friction)\b[^.!?]{0,90}\b(?:was|were|had been)\s+(?:checked|tested|measured|verified|monitored|assessed|confirmed)\b|\b(?:slip(?:[-\s]?resistan\w*)?|traction)\s+(?:test(?:ing|s)?|measurements?)\s+(?:showed|confirmed|proved|established)\b/i;
 
       if (sentences.some(function(sentence) {
         return performedSlipCheck.test(sentence);
