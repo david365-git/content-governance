@@ -6,6 +6,7 @@ function onOpen(e) {
   // 2. ENTITY GOVERNANCE & STRATEGIC PROTECTION
   ui.createMenu("🚀 Row Analysis")
     .addItem('📋 Content Intelligence', 'openGovernancePromptAssembler')
+    .addItem('🔎 Extract Case Study Evidence (selected row)', 'bc_caseEvidenceActiveRow')
     .addItem('✂️ Restore lost NewHtml etc', 'restoreActiveRowFromSiteExport')
     .addItem('📋 Batch Build Authority Briefs', 'bc_batchBuildAuthorityBriefs')
     .addSeparator()
