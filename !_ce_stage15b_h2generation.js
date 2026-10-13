@@ -2175,7 +2175,7 @@ If no HUB-INTRO is present, start with SECTION 1.
 Last line must be:
 Stage 1.5B MAIN GENERATOR complete. Waiting for Stage 1.5C.
 `.trim();
-  return prompt;
+  return (String(articleType).trim() === 'Case Study' ? bc_caseEvidencePromptBlock_(row) : '') + prompt;
 }
 function buildWorkingTitleForH2Stage_(d) {
   var primaryEntity =
