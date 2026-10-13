@@ -106,3 +106,44 @@ function bc_caseEvidenceExtract_(row) {
 function bc_caseEvidenceActiveRow() {
   return bc_caseEvidenceExtract_(SpreadsheetApp.getActiveSpreadsheet().getActiveRange().getRow());
 }
+
+/**
+ * Shared read-only evidence block for W1.5 and W2B.
+ * Do not trust a prior extraction unless its original HTML fingerprint matches.
+ */
+function bc_caseEvidencePromptBlock_(row) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName('posts');
+  row = Number(row);
+  var headers = sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
+  function c(name) { var idx=headers.indexOf(name); if(idx<0) throw new Error('Evidence column missing: '+name); return idx+1; }
+  if (String(sh.getRange(row,c('Article Type')).getValue()).trim() !== 'Case Study') return '';
+  var id=String(sh.getRange(row,c('Post ID')).getDisplayValue()).trim();
+  var ex=ss.getSheetByName('site-export');
+  var ids=ex.getRange(2,1,Math.max(ex.getLastRow()-1,1),1).getDisplayValues();
+  var match=-1;
+  ids.forEach(function(v,i){if(String(v[0]).trim()===id){if(match>=0)throw new Error('Duplicate site-export Post ID '+id);match=i+2;}});
+  if(match<0)throw new Error('No site-export source for Post ID '+id);
+  var original=String(ex.getRange(match,15).getValue()||'');
+  if(!original.trim())throw new Error('Original case study HTML is empty in site-export O');
+  var status=String(sh.getRange(row,c('Evidence Status')).getValue()||'');
+  if(status!=='SOURCE-QUOTED | sha256:'+bc_caseEvidenceDigest_(original)){
+    throw new Error('Case Study Evidence is missing or out of date. Run Extract Case Study Evidence in Content Intelligence first.');
+  }
+  var labels=['Project Location & Property','Observed Conditions','Client Requirements','Materials & Construction',
+    'Inspection & Tests','Restoration Methods','Products & Equipment','Technical Findings','Project Results','Maintenance Handover'];
+  var lines=[];
+  labels.forEach(function(label){
+    var raw=String(sh.getRange(row,c(label)).getValue()||'[]');
+    var items=JSON.parse(raw);
+    if(!Array.isArray(items))throw new Error('Invalid case-study evidence in '+label);
+    var entries=items.map(function(x){
+      if(!x||!x.fact||!x.quote)throw new Error('Incomplete case-study evidence in '+label);
+      return '- '+String(x.fact)+' [SOURCE: '+String(x.quote)+']';
+    });
+    lines.push(label+':\n'+(entries.length?entries.join('\n'):'(Not documented)'));
+  });
+  return '\nCASE STUDY PROJECT EVIDENCE (source-quoted, not independently fact-checked):\n'
+    +'All project-specific claims must stay within the evidence below and confirmed owner corrections. Do not turn general technical notes into observations or performed tests. An empty category does not prove an activity never happened. Governed headings and SEO cannot add project facts.\n'
+    +lines.join('\n')+'\nEND CASE STUDY EVIDENCE\n';
+}
