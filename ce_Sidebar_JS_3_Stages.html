@@ -5475,8 +5475,18 @@ function masterRunCaseEvidence() {
   google.script.run
     .withSuccessHandler(function(res) {
       if (btn) btn.disabled = false;
-      if (status) status.textContent = (res && res.success ? '✔ ' : '❌ ') + (res && res.message ? res.message : 'No result') +
-        (res && res.cost ? ' — Cost: 
+      if (status) status.textContent = (res && res.success ? '✔ ' : '❌ ') +
+        (res && res.message ? res.message : 'No result') +
+        (res && res.cost ? ' — Cost: $' + Number(res.cost).toFixed(4) : '');
+    })
+    .withFailureHandler(function(err) {
+      if (btn) btn.disabled = false;
+      if (status) status.textContent = '❌ ' + (err && err.message ? err.message : err);
+    })
+    .bc_caseEvidenceActiveRow();
+}
+
+function masterRunCIStoneTypeBatch() {
   if (_masterCIBatchRunning) return;
 
   var select = document.getElementById('masterCIStoneType');
