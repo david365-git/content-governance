@@ -253,6 +253,8 @@ For each governed section, preserve documented original observations, measuremen
 Enrich the plan with concise WHY/HOW explanations using established trade knowledge appropriate to the actual material and treatment, without claiming an undocumented specific action happened on this job.
 When a cause is uncertain, frame it as a possibility rather than a confirmed diagnosis. Do not automatically interpret movement as substrate failure or delamination; do not insert grinding/honing/polishing where the source or material does not support it.
 Preserve I/we source perspective for project sections; other article types follow their own voice and purpose. Avoid forcing each section into the same symptom-first opening or a textbook formula.
+CASE STUDY CLIENT-DECISION FIDELITY — HARD LOCK:
+Read the original project HTML for client requests, preferred finish or appearance, relevant décor or use requirements, the contractor's actual advice or warnings, agreed decisions, and client responses. Where documented, preserve those details explicitly in the relevant Content Brief, including how a requested result influenced treatment or aftercare. A generic maintenance summary does not replace the original client conversation. Do not invent dialogue, client expectations, agreement or advice; paraphrase accurately and preserve I/we voice where recorded. Fit these facts within the existing section word budgets and headings by reducing generic explanations, not by increasing the budget.
 Keep the approved numbered sections, heading levels, section purposes, images, internal-link slots, required coverage and output schema unchanged.
 ROLE:
 SEO Content Strategist
