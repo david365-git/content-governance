@@ -1267,6 +1267,30 @@ if (!preflight.success) {
 
 
   // =========================================================
+  // 6. CASE STUDY EVIDENCE — source: site-export Column O
+  // =========================================================
+  try {
+    var evidenceResult = bc_caseEvidenceExtract_(activeRow);
+    totalCost += Number(evidenceResult.cost || 0);
+    log.push('Evidence: ' + evidenceResult.message);
+    if (!evidenceResult.success) {
+      return {
+        success: false,
+        message: 'STOPPED at Case Study Evidence — ' + evidenceResult.message,
+        log: log.join(' | '),
+        cost: totalCost
+      };
+    }
+  } catch (e) {
+    return {
+      success: false,
+      message: 'STOPPED at Case Study Evidence — ' + e.message,
+      log: log.join(' | '),
+      cost: totalCost
+    };
+  }
+
+  // =========================================================
   // 17. SAVE COST + TIME
   // =========================================================
 
