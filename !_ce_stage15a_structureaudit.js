@@ -316,7 +316,7 @@ When one TSM Order is represented by more than one SECTION, SPLIT that Order's g
 The combined minimums of all sections carrying that Order must equal the governed minimum for that Order.
 The combined maximums of all sections carrying that Order must equal the governed maximum for that Order.
 Do NOT give each repeated section a fresh independent allowance.
-Example: if Order 2 is governed at 700–840 words and appears across five sections, those five section ranges together must total exactly 700–840 words.
+Example: if an Order is governed at 350–420 words and appears across five sections, those five section ranges together must total exactly 350–420 words. Always use the CURRENT TSM REQUIREMENTS above, never example figures.
 
 Do not duplicate an Order merely to increase section count. Repeat an Order only where the article genuinely needs separate sections for distinct parts of that coverage area.
 
@@ -359,4 +359,58 @@ Last line: "Stage 1.5A complete. Waiting for Stage 1.5B."
 `.trim();
 
   return prompt;
+}
+
+/**
+ * Numerically check Stage 1.5A section budgets against the CURRENT TSM.
+ * Prevents an AI's self-reported PASS from approving stale figures.
+ */
+function bc_validateStage15ASectionBudgets_(output) {
+  var d = getActiveRowDataMap();
+  var material = String(d["Stone Type"] || "").trim();
+  var articleType = String(d["Article Type"] || "").trim();
+  var tierMap = {
+    "hub page":"Tier 1","educational guide":"Tier 1",
+    "method guide":"Tier 2","service page":"Tier 2","geo service page":"Tier 2",
+    "diagnostic guide":"Tier 3","buyer guide":"Tier 3","faq spoke":"Tier 3",
+    "case study":"Tier 4"
+  };
+  var tier = tierMap[articleType.toLowerCase()];
+  if (!tier) return {success:false,message:"Unknown article type for budget validation: "+articleType};
+  var requirements = getTierStructuralRequirements(material,tier,articleType) || [];
+  var secondary = String(d["Secondary Intent Decisions"] || "");
+  requirements = requirements.filter(function(req) {
+    return !secondary.includes("N — " + req.name);
+  });
+  if (!requirements.length) return {success:false,message:"No TSM budgets to validate"};
+  var expected = requirements.map(function(req) {
+    var min = Number(req.wordCount);
+    return {name:req.name,min:min,max:Math.round(min*1.2)};
+  });
+  var actual = expected.map(function(){return {min:0,max:0,count:0};});
+  var text = String(output || "");
+  var sections = text.split(/\r?\n/).filter(function(line){return /^SECTION\s+\d+\s*:/i.test(line.trim());});
+  if (!sections.length) return {success:false,message:"No numbered SECTION lines found in Stage 1.5A output"};
+  var errors = [];
+  sections.forEach(function(line){
+    var m=line.match(/^SECTION\s+\d+\s*:\s*Order\s+(\d+)\s+[^\n]*?\s+[—-]\s*(\d+)\s*[–-]\s*(\d+)\s+words\b/i);
+    if(!m){errors.push("Unparseable SECTION word range: "+line.slice(0,130));return;}
+    var order=Number(m[1]), min=Number(m[2]), max=Number(m[3]);
+    if(order<1||order>expected.length){errors.push("Unexpected TSM Order "+order);return;}
+    actual[order-1].min+=min;actual[order-1].max+=max;actual[order-1].count++;
+    if(min>max)errors.push("Reversed word range for Order "+order);
+  });
+  expected.forEach(function(e,i){
+    if(actual[i].min!==e.min||actual[i].max!==e.max)
+      errors.push("Order "+(i+1)+" ("+e.name+") requires "+e.min+"–"+e.max+
+        " words across all sections, but output totals "+actual[i].min+"–"+actual[i].max);
+  });
+  var minTotal=expected.reduce(function(n,e){return n+e.min},0);
+  var maxTotal=expected.reduce(function(n,e){return n+e.max},0);
+  var actualMin=actual.reduce(function(n,e){return n+e.min},0);
+  var actualMax=actual.reduce(function(n,e){return n+e.max},0);
+  if(actualMin!==minTotal||actualMax!==maxTotal)
+    errors.push("Total must be "+minTotal+"–"+maxTotal+" words, got "+actualMin+"–"+actualMax);
+  return errors.length?{success:false,message:"Stage 1.5A budget validation FAILED: "+errors.join("; ")}
+                      :{success:true,message:"Stage 1.5A numeric budget validation PASS"};
 }
