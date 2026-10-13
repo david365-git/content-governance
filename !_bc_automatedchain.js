@@ -2192,6 +2192,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
 
   var totalCost = 0;
   var log = [];
+  var hadGovernanceFailure = false;
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('posts');
@@ -2248,7 +2249,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
 
     while (
       r2.passed === false &&
-      coverageAttempt < 3
+      coverageAttempt < 1
     ) {
 
       coverageAttempt++;
@@ -2313,6 +2314,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
     }
 
     if (r2.passed === false) {
+      hadGovernanceFailure = true;
 
       bc_appendGovernancePipelineException(
         'W1.5B — Entity Coverage',
@@ -2352,6 +2354,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
 
     totalCost += r3.cost;
 
+    if (r3.success === false) hadGovernanceFailure = true;
     log.push(
       'Compliance Check: ' +
       r3.message
@@ -2393,6 +2396,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
 
     totalCost += r4.cost;
 
+    if (r4.success === false) hadGovernanceFailure = true;
     log.push(
       'H2 Governance: ' +
       r4.message
@@ -2438,6 +2442,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
 
     totalCost += rTech.cost;
 
+    if (rTech.success === false) hadGovernanceFailure = true;
     log.push(
       'H2 Technical Safety: ' +
       rTech.message
@@ -2552,7 +2557,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
 
       while (
         postCoverage.passed === false &&
-        postCoverageAttempt < 3
+        postCoverageAttempt < 1
       ) {
 
         postCoverageAttempt++;
@@ -2621,6 +2626,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
       if (
         postCoverage.passed === false
       ) {
+        hadGovernanceFailure = true;
 
         bc_appendGovernancePipelineException(
           'W1.5B — Post-Heading-Fix Entity Coverage',
@@ -2668,6 +2674,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
       totalCost +=
         postBrief.cost;
 
+      if (postBrief.success === false) hadGovernanceFailure = true;
       log.push(
         'Post-Heading-Fix Rewrite Brief Compliance: ' +
         postBrief.message
@@ -2795,6 +2802,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
           finalRule17Confirmation.cost;
 
         if (!finalRule17Confirmation.passed) {
+          hadGovernanceFailure = true;
 
           bc_appendGovernancePipelineException(
             'W1.5B — Final Rule 17 Recheck',
@@ -2849,12 +2857,11 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
 
   return {
 
-    success: true,
+    success: !hadGovernanceFailure,
 
-    message:
-      '✔ W1.5B sequence complete. ' +
-      'Any unresolved governance failures have been recorded in GJ. ' +
-      recheckMessage,
+    message: hadGovernanceFailure
+      ? '❌ W1.5B completed with unresolved governance failures — see GJ. ' + recheckMessage
+      : '✔ W1.5B sequence passed. ' + recheckMessage,
 
     log:
       log.join(' | '),
