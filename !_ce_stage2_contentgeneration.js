@@ -372,7 +372,7 @@ ${govRow[7]}
   const stage2AContent = getStage2AData();
 
   return {
-    part1: `STAGE 2B — EXECUTE — READ ALL CONTEXT BELOW BEFORE OUTPUTTING
+    part1: `${String(d['Article Type'] || '').trim() === 'Case Study' ? bc_caseEvidencePromptBlock_(row) : ''}\nSTAGE 2B — EXECUTE — READ ALL CONTEXT BELOW BEFORE OUTPUTTING
 NOTE: This is a single complete prompt. Read everything before writing your first token.
 Your first output token must be <header>.
 OUTPUT: HTML body content only.
