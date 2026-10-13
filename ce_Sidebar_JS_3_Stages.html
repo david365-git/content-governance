@@ -6814,7 +6814,7 @@ function masterRunRecoveryToW8E() {
   logBox.textContent =
     'Recovery start: ' +
     startStage +
-    '\nTarget: W8E';
+    '\nTarget: ' + endStage;
 
   var timer = setInterval(function() {
     var elapsed = Math.floor((Date.now() - startTime) / 1000);
