@@ -4245,6 +4245,27 @@ function bc_runRewriteBriefComplianceW2BAutomated() {
     var applyResult =
   applyRewriteBriefFixW2B(fixResult.text);
 
+    // A malformed/empty fix batch is not proof the article is compliant.
+    // Retry the correction once with the unchanged GG and an explicit
+    // instruction to return actionable exact-text replacements.
+    var initialFixMessage = String(applyResult.message || '');
+    if (!applyResult.success &&
+        /No fixes found in JSON response/i.test(initialFixMessage)) {
+      var retryPrompt = fixPrompt +
+        '\\n\\nCORRECTION RETRY — REQUIRED ACTIONABLE OUTPUT:\\n' +
+        'The previous correction returned no usable fixes although the compliance check failed. ' +
+        'Return at least one concrete OLD/NEW exact-text replacement in the SAME JSON schema requested above. ' +
+        'OLD must be copied verbatim from the current GG HTML, NEW must fix a genuine issue without adding facts. ' +
+        'Do not return explanatory prose, an empty fixes array, or a PASS verdict. ' +
+        'If no accurate replacement is possible, explicitly explain why rather than fabricating one.';
+      var retryResult = bc_sendPromptViaOpenAI(retryPrompt, 6000, MODEL_CHEAP);
+      if (!retryResult.success) {
+        throw new Error('W2B.2 correction retry failed — ' + retryResult.message);
+      }
+      totalCost += retryResult.cost;
+      applyResult = applyRewriteBriefFixW2B(retryResult.text);
+    }
+
     if (!applyResult.success) {
 
       bc_addToApiCostAndTime(
