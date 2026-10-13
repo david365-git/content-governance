@@ -361,7 +361,7 @@ For Hub Page articles, include the HUB-INTRO mapping line before SECTION 1.
 Last line: "Stage 1.5A complete. Waiting for Stage 1.5B."
 `.trim();
 
-  return prompt;
+  return (articleTypeKey === 'case study' ? bc_caseEvidencePromptBlock_(row) : '') + prompt;
 }
 
 /**
