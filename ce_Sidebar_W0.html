@@ -5,6 +5,8 @@
       <span class="tag" style="background:red;color:yellow">Run Prompt Splitter</span><span class="tag" style="background:var(--purple)">Forensic Analysis</span>
     </div>
     <div class="window-body">
+      <button class="btn-generate btn-full" id="manualCaseEvidenceBtn" onclick="masterRunCaseEvidenceManual()" style="background:#455a64;margin-bottom:6px">Extract Case Study Evidence (GL–GV)</button>
+      <div id="manualCaseEvidenceStatus" class="status-bar pending">Case studies only · source: site-export Column O</div>
       <div id="status0" class="status-bar pending">Pending — click Generate to run GSC check</div>
       <textarea id="part0"></textarea>
       <div class="btn-row">
