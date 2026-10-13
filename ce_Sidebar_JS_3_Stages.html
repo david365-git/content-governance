@@ -6784,6 +6784,13 @@ function masterRunRecoveryToW8E() {
   var logBox = document.getElementById('masterLogRecovery');
 
   var startStage = select ? select.value : '';
+  var endSelect = document.getElementById('masterRecoveryEnd');
+  var endStage = endSelect ? endSelect.value : 'W8E';
+  if (select && endSelect && endSelect.selectedIndex < select.selectedIndex) {
+    status.textContent = '❌ Ending stage must be the same as or later than the starting stage.';
+    status.style.color = '#c62828';
+    return;
+  }
 
   if (!startStage) {
     status.textContent = '❌ Select a recovery start stage.';
@@ -6800,7 +6807,7 @@ function masterRunRecoveryToW8E() {
   status.textContent =
     '⏳ Starting recovery ' +
     startStage +
-    ' → W8E… 0s';
+    ' → ' + endStage + '… 0s';
 
   status.style.color = '#555';
 
@@ -6814,7 +6821,7 @@ function masterRunRecoveryToW8E() {
     status.textContent =
       '⏳ Recovery ' +
       startStage +
-      ' → W8E running… ' +
+      ' → ' + endStage + ' running… ' +
       elapsed +
       's';
   }, 1000);
@@ -6825,7 +6832,7 @@ function masterRunRecoveryToW8E() {
       if (!startRes || !startRes.success) {
         clearInterval(timer);
         btn.disabled = false;
-        btn.innerText = '▶ Run Selected Stage → W8E';
+        btn.innerText = '▶ Run Selected Stage Range';
         status.textContent =
           '❌ ' +
           (startRes && startRes.message
@@ -6859,13 +6866,13 @@ function masterRunRecoveryToW8E() {
             ((Date.now() - startTime) / 1000).toFixed(1);
 
           btn.disabled = false;
-          btn.innerText = '▶ Run Selected Stage → W8E';
+          btn.innerText = '▶ Run Selected Stage Range';
 
           if (res && res.success) {
             status.textContent =
               '✔ Recovery ' +
               startStage +
-              ' → W8E complete — ' +
+              ' → ' + endStage + ' complete — ' +
               elapsed +
               's';
             status.style.color = '#2e7d32';
@@ -6894,20 +6901,21 @@ function masterRunRecoveryToW8E() {
           clearInterval(timer);
           clearInterval(logPoller);
           btn.disabled = false;
-          btn.innerText = '▶ Run Selected Stage → W8E';
+          btn.innerText = '▶ Run Selected Stage Range';
           status.textContent = '❌ ' + err.message;
           status.style.color = '#c62828';
           pipelineRow = null;
         })
         .pipelineResumeToW8E(
           pipelineRow,
-          startStage
+          startStage,
+          endStage
         );
     })
     .withFailureHandler(function(err) {
       clearInterval(timer);
       btn.disabled = false;
-      btn.innerText = '▶ Run Selected Stage → W8E';
+      btn.innerText = '▶ Run Selected Stage Range';
       status.textContent =
         '❌ Could not start recovery pipeline: ' +
         err.message;
