@@ -2222,6 +2222,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
       'Execution error — ' + e.message
     );
 
+    hadGovernanceFailure = true;
     log.push(
       'H2 Generation: ERROR recorded in GJ — ' +
       e.message
@@ -2336,6 +2337,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
       e.message
     );
 
+    hadGovernanceFailure = true;
     log.push(
       'Entity Coverage: ERROR recorded in GJ — ' +
       e.message
@@ -2368,6 +2370,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
       e.message
     );
 
+    hadGovernanceFailure = true;
     log.push(
       'Rewrite Brief Compliance: ERROR recorded in GJ — ' +
       e.message
@@ -2410,6 +2413,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
       e.message
     );
 
+    hadGovernanceFailure = true;
     log.push(
       'H2 Governance / Rule 17: ERROR recorded in GJ — ' +
       e.message
@@ -2456,6 +2460,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
       e.message
     );
 
+    hadGovernanceFailure = true;
     log.push(
       'H2 Technical & Scope Safety: ERROR recorded in GJ — ' +
       e.message
@@ -2485,55 +2490,7 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
   if (headingFixChangedH2s) {
 
 
-    // --------------------------------------------------
-    // 6A. RULE 17 CHECK AFTER TECHNICAL SAFETY
-    // --------------------------------------------------
-
-    if (technicalSafetyChangedH2s) {
-
-      try {
-
-        var postTechRule17 =
-          bc_runH2GovernanceCheckOnlyW15B();
-
-        totalCost +=
-          postTechRule17.cost;
-
-        if (!postTechRule17.passed) {
-
-          bc_appendGovernancePipelineException(
-            'W1.5B — Post-Technical-Safety Rule 17',
-            postTechRule17.rawResult ||
-            'Technical Safety changed the H2s and the revised set no longer passes Rule 17.'
-          );
-
-          log.push(
-            'Post-Technical-Safety Rule 17: FAIL recorded in GJ.'
-          );
-
-        } else {
-
-          log.push(
-            'Post-Technical-Safety Rule 17: ' +
-            postTechRule17.message
-          );
-        }
-
-      } catch (e) {
-
-        bc_appendGovernancePipelineException(
-          'W1.5B — Post-Technical-Safety Rule 17',
-          'Execution error — ' +
-          e.message
-        );
-
-        log.push(
-          'Post-Technical-Safety Rule 17: ERROR recorded in GJ — ' +
-          e.message
-        );
-      }
-    }
-
+    // Rule 17 is checked on the final headings in step 6D; do not duplicate it here.
 
     // --------------------------------------------------
     // 6B. ENTITY COVERAGE
@@ -2654,7 +2611,8 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
         e.message
       );
 
-      log.push(
+      hadGovernanceFailure = true;
+    log.push(
         'Post-Heading-Fix Entity Coverage: ERROR recorded in GJ — ' +
         e.message
       );
@@ -2703,7 +2661,8 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
         e.message
       );
 
-      log.push(
+      hadGovernanceFailure = true;
+    log.push(
         'Post-Heading-Fix Rewrite Brief Compliance: ERROR recorded in GJ — ' +
         e.message
       );
@@ -2837,7 +2796,8 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
         e.message
       );
 
-      log.push(
+      hadGovernanceFailure = true;
+    log.push(
         'Final Rule 17 Recheck: ERROR recorded in GJ — ' +
         e.message
       );
