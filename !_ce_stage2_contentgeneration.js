@@ -395,6 +395,7 @@ READER-FACING LANGUAGE GATE — ALL ARTICLE TYPES:
 Treat observed search queries, keyword clusters, SEO labels, and "near me" as planning metadata, not prose to reproduce. Never write "near me" in the header, headings, paragraphs, captions, bio or footer unless quoting it is an essential, documented subject of the article. Do not write "this case study proves", "became a documented requirement", or similarly artificial meta-commentary. Begin with the actual subject, project event, condition, or reader decision in natural UK English. Keep accurate town names where appropriate; do not splice keyword strings into sentences.
 DOCUMENTED-ACTION VS GENERAL-KNOWLEDGE GATE — ALL ARTICLE TYPES:
 The original source and any separately confirmed project notes establish what happened on a specific job. Material references and general professional knowledge can explain mechanisms, risks and common practice, but must NEVER be converted into assertions that I/we inspected, measured, distinguished, diagnosed, selected, tested, checked, extracted, advised or decided something on that job unless the source records it. Reasonable trade judgement is permitted: briefly explain why a documented material, filler colour or process would ordinarily suit its application, where the explanation is technically sound and does not imply an additional unrecorded test, conversation or decision. For example, colour-compatible filler is a sensible reason for using documented red and black fillers; do not invent a precise colour-match test or claim the client requested those colours. Distinguish ordinary professional rationale from unsupported project-specific events. Where a mechanism is useful but unrecorded, write it as general material behaviour, clearly separate from the narrated project events.
+CASE STUDY PRECEDENCE: Project facts must come from original HTML or confirmed notes. Next follow governed structure, then general material explanation, then writing clarity, and only then SEO, locality, authority and vocabulary. Lower-priority rules never authorize invented site-specific tests, causes, actions, property details or professional reasoning.
 FINAL SOURCE-FAITHFULNESS AND NATURALNESS CHECK:
 Before returning the article, compare every first-person claim and every claimed job-specific cause, assessment, intention and product-selection reason against ORIGINAL HTML or confirmed notes. Remove or reframe invented events, diagnoses or results without losing verified steps. Do not unnecessarily delete harmless, accurate trade-knowledge explanations or reasonable professional rationale for documented work. Check the complete HTML for literal "near me" in reader-facing text and replace artificial SEO phrasing with natural UK homeowner language. Prioritise documented experience over generic explanations within the existing word budget; do not add sections or expand the budget.
 The first paragraph of a Case Study section can open with an actual project event rather than an invented generic homeowner symptom. A practical Method Guide may open with its process step; a Buyer Guide with a decision. Use the governed section and article type, not forced symptom framing.
@@ -454,7 +455,7 @@ PARAGRAPH STRUCTURE LAW:
     Do not rewrite the rest of the paragraph.
 
 BOTH REGISTERS SIMULTANEOUSLY:
-  Do not choose between authoritative and accessible. Deliver both in sequence within every paragraph:
+  Be authoritative and accessible. Case Studies are exempt from mandatory cause-and-mechanism patterns; preserve documented chronology. Other article types may use this sequence where relevant:
     1. Problem recognition — what the reader is seeing or experiencing — one sentence
     2. Plain-language cause — why it is happening without technical terminology — one sentence
     3. Mechanism named — technical term introduced after the reader already understands the concept
@@ -510,8 +511,8 @@ For Case Studies, treat the range as an editorial target: preserve distinctive, 
 ${buildTotalWordCountTargetBlock(articleType)}
 AUTHORITY SIGNALS (Hard Lock — apply to every article):
 1. SPECIFICITY: In Case Studies, name only grit numbers documented in ORIGINAL HTML; do not impose a standard grit sequence. For other article types, include useful grit examples only when relevant, correctly qualified and within the governed word budget.
-2. UK CONTEXT: Reference UK-relevant conditions — hard water, period property types, typical installation rooms — where relevant to material behaviour for this stone type.
-3. MECHANISM DEPTH: Every named defect must name the physical mechanism — not just the symptom. Use the Process Chemistry Note from the Stone-Specific Prompt Rules block below to anchor the mechanism explanation for this stone type.
+2. UK CONTEXT: In Case Studies, include only documented property and locality details. For other articles, include relevant UK context without asserting invented project-specific details.
+3. MECHANISM DEPTH: For Case Studies explain a cause only if documented in the original. Otherwise describe observations, and keep any useful material science explicitly general. Technical reference notes are not evidence of this job.
 4. OUTCOME PRECISION: State specific outcomes in measurable terms — satin finish, consistent reflective plane, uniform matte appearance — not vague claims.
 5. SCOPE BOUNDARIES: Name what honing cannot do as precisely as what it can do. This signals expertise and builds trust.
 ------------------------------------------------------------
@@ -562,7 +563,7 @@ Professional restoration outcomes must be stated accurately — not defensively.
   Do NOT apply limitation statements as general disclaimers on every outcome.
 ------------------------------------------------------------
 UNIVERSAL BENEFIT STATEMENTS (Hard Lock — every article regardless of type):
-Every article must contain ALL THREE of the following benefit statements,
+Use these benefits only where supported by source evidence and relevant to the article; do not force all three into case studies,
 placed at the most relevant point in the content — not gathered at the end:
   1. APPEARANCE: The floor will look significantly better — and in many cases better than when first installed.
      Where grinding, honing, and polishing are the primary intervention for this material and article type, reference them as the mechanism. Where they are not applicable or are prohibited for this material — omit them and state the appearance benefit in terms of the correct intervention instead.
@@ -573,18 +574,14 @@ placed at the most relevant point in the content — not gathered at the end:
      This must be stated in the article and a contextual internal link to the maintenance article included.
 ------------------------------------------------------------
 MAINTENANCE EDUCATION ELEMENT (Hard Lock — every article regardless of type):
-Every article must include at minimum:
+For Case Studies, restrict aftercare to source-supported guidance and the governed handover section. For other articles, include when relevant:
   — One sentence on what correct ongoing maintenance achieves for this specific stone type
   — One sentence naming one specific thing to avoid and why
   — A contextual internal link to the maintenance or cleaning tips article at the point where this appears
 This is not a standalone maintenance section — it is integrated into the most relevant existing section.
 ------------------------------------------------------------
 PROFESSIONAL DECISION REASONING (Hard Lock — every article regardless of type):
-Whenever the article states that a specific material, product, method, technique,
-or sealer type was chosen or used for this job — rather than an available
-alternative — it must state the reason for that choice, grounded in the floor's
-actual condition, the finish type, or the environment. A choice reported as a
-bare fact, with no stated reason, has failed this rule.
+For Case Studies, explain a product or method decision only if the original project evidence supplies the reason. A documented choice without an evidenced reason is valid. Do not invent a rationale merely to satisfy authority rules. For other article types, general professional selection criteria may be discussed without claiming a specific decision was made.
   WRONG: "A surface sealer was used for this floor."
   CORRECT: "A surface sealer was chosen for this floor because the repairs
   needed a film that would bind the new filler to the surrounding stone,
@@ -867,7 +864,7 @@ function buildStage2BPart3A(d) {
         "Place it as the opening sentence of the provider selection section. Do not omit it.\n" +
         "------------------------------------------------------------\n";
     })() +
-    ([" Service Page","Geo Service Page","Case Study"].indexOf(d["Article Type"]) > -1 && String(d["Location Context"] || "").trim() ?
+    ([" Service Page","Geo Service Page"].indexOf(d["Article Type"]) > -1 && String(d["Location Context"] || "").trim() ?
       "LOCATION CONTEXT (Hard Lock — " + d["Article Type"] + "):\n" +
       "The background below describes the general property types and housing stock found in this locality.\n" +
       "It was generated before this specific project's defects and mechanism were known — treat it as raw\n" +
