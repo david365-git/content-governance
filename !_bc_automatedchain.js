@@ -2241,8 +2241,40 @@ function bc_runRewriteBriefComplianceW15BAutomated() {
     var result = saveH2GovernanceCheckResultW15B(confirmed.text);
     if (!result.success) throw new Error(result.message);
     if (!result.passed) {
-      bc_appendGovernancePipelineException('W1.5B — Combined Final Governance', confirmed.text);
-      return {success:false,message:'❌ W1.5B final heading check failed — details in GJ.',cost:cost};
+      // The final review can find one residual wording issue after the
+      // initial correction. Repair ONLY the newly failed headings, keeping
+      // all previously passing headings and their H2/H3 levels untouched.
+      var finalFixPrompt = buildH2GovernanceFixPromptW15B();
+      if (typeof finalFixPrompt !== 'string' ||
+          finalFixPrompt.indexOf('ERROR') === 0) {
+        throw new Error('Cannot build final targeted heading correction: ' + finalFixPrompt);
+      }
+      finalFixPrompt += '\n\nFINAL FAILED-HEADING REPAIR: Return the complete SECTION-numbered heading set. Change ONLY headings marked FAIL in the most recent final governance report. Prefer the report\'s first evidence-supported suggested alternative where suitable. Copy every passing heading exactly, preserve all SECTION numbers, H2/H3 levels and section order; add no FAQ section. For a finish described as a practical high polish rather than mirror-like, do not exaggerate the gloss.';
+      var finalFix = bc_sendPromptViaOpenAI(finalFixPrompt, null, MODEL_CHEAP);
+      if (!finalFix.success) throw new Error(finalFix.message);
+      cost += Number(finalFix.cost || 0);
+      var beforeFinalRepair = String(cv.getValue() || '').trim();
+      var finalSaved = saveStage15BH2s(finalFix.text);
+      if (!finalSaved.success) throw new Error('Final heading correction rejected: ' + finalSaved.message);
+      if (String(cv.getValue() || '').trim() === beforeFinalRepair)
+        throw new Error('Final heading correction made no change.');
+
+      var lastPrompt = buildH2GovernanceCheckPromptW15B();
+      if (typeof lastPrompt !== 'string' || lastPrompt.indexOf('ERROR') === 0)
+        throw new Error(String(lastPrompt));
+      lastPrompt += '\n\nFINAL RECHECK: Check the complete heading set for only substantive source, scope, clarity and framing errors. Keep W1.5A section count and H2/H3 levels; do not demand extra FAQ content.';
+      var lastReview = bc_sendPromptViaOpenAI(lastPrompt, null, MODEL_CHEAP);
+      if (!lastReview.success) throw new Error(lastReview.message);
+      cost += Number(lastReview.cost || 0);
+      var lastResult = saveH2GovernanceCheckResultW15B(lastReview.text);
+      if (!lastResult.success) throw new Error(lastResult.message);
+      if (!lastResult.passed) {
+        bc_appendGovernancePipelineException('W1.5B — Combined Final Governance', lastReview.text);
+        bc_addToApiCostAndTime(cost, (Date.now() - started) / 1000);
+        return {success:false,message:'❌ W1.5B final heading repair still failed — details in GJ.',cost:cost};
+      }
+      bc_addToApiCostAndTime(cost, (Date.now() - started) / 1000);
+      return {success:true,message:'✔ W1.5B headings passed after a final targeted correction.',cost:cost};
     }
     bc_addToApiCostAndTime(cost, (Date.now() - started) / 1000);
     return {success:true,message:'✔ W1.5B headings passed after one targeted 1.5B.1 correction.',cost:cost};
