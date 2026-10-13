@@ -1923,7 +1923,7 @@ ${location
   ? 'LOCATION: ' +
     location
   : ''}
-${bc_getRelevantTechnicalMatrixExcerpt_(material, originalHtml + '\n' + rewriteBriefForH2 + '\n' + structure15A, 2600)}\n--- SOURCE INTERPRETATION FOR HEADINGS — HARD LOCK ---
+${bc_getRelevantTechnicalMatrixExcerpt_(material, originalHtml + '\n' + rewriteBriefForH2 + '\n' + structure15A, 2600, articleType)}\n--- SOURCE INTERPRETATION FOR HEADINGS — HARD LOCK ---
 EDITORIAL KNOWLEDGE BOUNDARY — ALL ARTICLE TYPES AND MATERIALS:
 A. CONFIRMED SOURCE FACTS: Preserve the original account's actual events, observations, people, dates, dimensions, treatments, order, client preferences and results. Later confirmed notes can clarify ambiguous shorthand. Apparent soundness and worn appearance can coexist; distinguish general condition from local defects.
 B. PROFESSIONAL TRADE KNOWLEDGE: Explain the purpose and typical mechanism of a documented operation in clear UK homeowner English. Do not claim an illustrative technique, grit, product, diagnosis or equipment was actually used unless the source establishes it. Do not force grinding, honing, polishing or sealing on materials or jobs where these are unsuitable.
