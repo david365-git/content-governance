@@ -22,11 +22,24 @@ function bc_caseEvidenceExtract_(row) {
   function col(name) { var i = headers.indexOf(name); if (i < 0) throw new Error('Missing heading: ' + name); return i + 1; }
   var type = String(sh.getRange(row, col('Article Type')).getValue() || '').trim();
   if (type !== 'Case Study') return { success:true, skipped:true, message:'Not a Case Study', cost:0 };
-  var source = String(sh.getRange(row, col('W2B Original HTML')).getValue() || '');
-  // The source column is EW; use its verified column address directly if the visible header changes.
+  var postId = String(sh.getRange(row, col('Post ID')).getDisplayValue() || '').trim();
+  if (!postId) throw new Error('Post ID missing in posts row ' + row);
+  var exportSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('site-export');
+  if (!exportSheet) throw new Error('site-export sheet missing');
+  var exportLastRow = exportSheet.getLastRow();
+  var ids = exportLastRow > 1 ? exportSheet.getRange(2, 1, exportLastRow - 1, 1).getDisplayValues() : [];
+  var matchedRow = -1;
+  for (var k = 0; k < ids.length; k++) {
+    if (String(ids[k][0] || '').trim() === postId) {
+      if (matchedRow !== -1) throw new Error('Duplicate Post ID ' + postId + ' in site-export');
+      matchedRow = k + 2;
+    }
+  }
+  if (matchedRow === -1) throw new Error('Post ID ' + postId + ' not found in site-export');
+  var source = String(exportSheet.getRange(matchedRow, 15).getValue() || ''); // site-export column O: Full Post HTML
   if (!source.trim()) {
-    sh.getRange(row, col('Evidence Status')).setValue('SOURCE REQUIRED — EW is empty');
-    return {success:false, cost:0, message:'SOURCE REQUIRED — original EW HTML missing'};
+    sh.getRange(row, col('Evidence Status')).setValue('SOURCE REQUIRED — site-export O is empty');
+    return {success:false, cost:0, message:'SOURCE REQUIRED — site-export Full Post HTML missing'};
   }
   var digest = bc_caseEvidenceDigest_(source);
   var statusCell = sh.getRange(row, col('Evidence Status'));
