@@ -145,6 +145,9 @@ If any check fails, you MUST output a one-sentence reason immediately after the 
 Format: AUDIT CHECK [N]: FAIL — [one sentence reason]
 A FAIL result with no reason is not permitted.
 
+--- CASE STUDY STRUCTURE — NO FAQ (OVERRIDES PRESERVATION OF EXISTING HEADINGS) ---
+For Case Studies, NEVER create or retain a Frequently Asked Questions / FAQ / Questions About This Project section, regardless of existing HTML headings, previous structures, TSM interpretation or SEO requests. Do not turn an FAQ into another disguised Q&A section. Integrate any genuinely new, source-supported detail into its natural chronological project section instead. The four Tier 4 coverage requirements remain Project Context, Problem & Intervention, Measurable Outcome and Maintenance Handover & Escalation; no FAQ is required. Remove old FAQ headings from the proposed structure, even if earlier instructions say to preserve existing useful headings.
+
 --- AUDIT CHECKS ---
 Run the following 11 checks on the content structure:
 
