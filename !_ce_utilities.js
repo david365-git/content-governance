@@ -3623,6 +3623,37 @@ function saveW2BHtmlToSheet(html) {
     );
 
     // --------------------------------------------
+    // CASE-STUDY FACTUAL SAFETY GATE
+    // --------------------------------------------
+    // Deterministic only for explicit performed slip-testing claims.
+    // Do not ban general technical discussion or legitimate descriptions
+    // of slip risk. Other project-specific diagnoses need source-aware
+    // W2B.05 checking rather than broad keyword prohibitions.
+    const articleTypeForGate = String(
+      sheet.getRange(row, 8).getValue() || ""
+    ).trim().toLowerCase();
+
+    if (articleTypeForGate === "case study") {
+      const visibleText = cleanedHtml
+        .replace(/<(script|style|figure)\\b[^>]*>[\\s\\S]*?<\\/\\1>/gi, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;|&#160;/gi, " ")
+        .replace(/\\s+/g, " ");
+
+      const sentences = visibleText.split(/(?<=[.!?])\\s+|\\n+/);
+      const performedSlipCheck = /\\b(?:i|we|our team|the technician|the contractor)\\s+(?:(?:also|then|carefully|regularly|continuously)\\s+)?(?:checked|tested|measured|verified|monitored|assessed|confirmed)\\b[^.!?]{0,130}\\b(?:slip(?:[-\\s]?resistan\\w*)?|traction|coefficient of friction)\\b|\\b(?:slip(?:[-\\s]?resistan\\w*)?|coefficient of friction)\\b[^.!?]{0,90}\\b(?:was|were|had been)\\s+(?:checked|tested|measured|verified|monitored|assessed|confirmed)\\b|\\b(?:slip(?:[-\\s]?resistan\\w*)?|traction)\\s+(?:test(?:ing|s)?|measurements?)\\s+(?:showed|confirmed|proved|established)\\b/i;
+
+      if (sentences.some(function(sentence) {
+        return performedSlipCheck.test(sentence);
+      })) {
+        errors.push(
+          "Unsupported performed slip-resistance testing or verification claim detected. " +
+          "Remove the claimed check/test; describe only the documented polishing method and intended finish."
+        );
+      }
+    }
+
+    // --------------------------------------------
     // REJECT BEFORE WRITING EU
     // --------------------------------------------
 
