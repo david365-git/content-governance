@@ -481,6 +481,8 @@ Examples:
 
 When this fails, make the smallest wording correction necessary by replacing the incorrect material reference with the governed material. Do not otherwise rewrite the heading.
 
+CASE STUDY FINISH-WORDING LOCK:
+A documented high polish or bright sheen does not justify upgrading the result to "high-gloss", "mirror finish" or "slip-safe". If the original says the client deliberately avoided a mirror-like finish, use "bright", "even" or "practical sheen" in result headings; do not use "high-gloss". When correcting a heading, replace only the unsupported finish adjective and keep its section number, level and remaining intent.
 CASE STUDY EVIDENCE LOCK:
 For Case Studies, the ORIGINAL ARTICLE EVIDENCE below is the factual authority for what actually happened.
 
