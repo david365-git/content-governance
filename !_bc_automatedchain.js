@@ -1914,8 +1914,11 @@ function bc_runStage15AAutomated() {
     totalCost += apiResult.cost;
     lastOutput = apiResult.text;
 
-    var saveResult =
-      saveStage15AStructure(lastOutput);
+    // Reject stale or inflated section allocations even when the AI reports PASS.
+    var budgetCheck = bc_validateStage15ASectionBudgets_(lastOutput);
+    var saveResult = budgetCheck.success
+      ? saveStage15AStructure(lastOutput)
+      : {success:false,message:budgetCheck.message};
 
     // PASS — only a clean structure is saved to CU.
     if (saveResult.success) {
