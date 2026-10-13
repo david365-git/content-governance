@@ -248,6 +248,21 @@ function buildStage15CPrompt() {
   }
   let prompt = `
 STAGE 1.5C — SECTION ENRICHMENT
+CASE STUDY SOURCE-FIRST EVIDENCE PASS — PERFORM BEFORE ANY ENRICHMENT:
+ARTICLE TYPE: ${String(d['Article Type'] || '')}
+ORIGINAL ARTICLE HTML — ONLY SOURCE OF PROJECT-SPECIFIC ACTIONS AND OBSERVATIONS:
+${originalHtml || "No original article HTML available."}
+END ORIGINAL ARTICLE HTML.
+
+EVIDENCE EXTRACTION — SILENT FIRST PASS (DO NOT OUTPUT THE LEDGER):
+1. Read the original HTML first. Identify only explicit project-specific observations, client requests and motivations, contractor actions/tests, treatments, results and advice.
+2. Create internally two separate groups: VERIFIED PROJECT FACTS supported by the original HTML, and GENERAL TECHNICAL KNOWLEDGE. Nothing may be promoted from the second group into the first.
+3. For EACH Stage 1.5A/1.5B section, identify which verified facts actually support its title. A section title, structural plan, technical matrix, entity, or common trade practice is NOT evidence.
+4. If a heading implies an inspection but the original records only a general condition assessment, describe that condition and the decision to proceed. Do not name any inspection methods or defects not explicitly recorded.
+5. Never write "documented inspection of X", "checked for X", "confirmed absence of X", or equivalent unless the source explicitly describes that specific inspection/check. If source evidence is missing, write a brief based on the observed condition and cautious treatment, not on imaginary tests.
+6. Only AFTER this classification, consult the general technical reference for explanations of materials and potential mechanisms. Keep such explanations conditional and separate from actions on this job.
+7. Before finishing, re-read every Content Brief and remove any asserted project action or observation absent from VERIFIED PROJECT FACTS. Keep the approved headings unchanged as required at this stage.
+
 GENERAL TECHNICAL REFERENCE — NOT EVIDENCE OF PROJECT ACTIONS OR TESTS:\n${bc_getRelevantTechnicalMatrixExcerpt_(material, originalHtml + '\n' + structure15A + '\n' + h2s15B, 3000, String(d['Article Type'] || ''))}\nEND GENERAL TECHNICAL REFERENCE. Do not turn its possible inspection methods, conditions, or causes into claims about this case study.\nEDITORIAL PLANNING BOUNDARY — ALL ARTICLE TYPES:
 For each governed section, preserve documented original observations, measurements, actions, decisions and outcomes; distinguish apparent overall floor soundness from wear and local defects. Translate professional shorthand into homeowner terms only where context supports it.
 Enrich the plan with concise WHY/HOW explanations using established trade knowledge appropriate to the actual material and treatment, without claiming an undocumented specific action happened on this job.
@@ -377,9 +392,7 @@ A Case Study entity may be used only when it is supported by:
 - the original article evidence below; or
 - the governed Stage 1.5A / Stage 1.5B structure.
 
-ORIGINAL ARTICLE HTML:
-
-${originalHtml || "No original article HTML available."}
+ORIGINAL ARTICLE HTML: Already provided at the very start of this prompt. Use that original source, not the technical reference or a section heading, to establish project-specific events.
 
 --- ENTITY SELECTION ---
 
