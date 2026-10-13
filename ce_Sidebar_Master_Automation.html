@@ -619,8 +619,8 @@ Stage: —
         <button
           id="masterBtnRecovery"
           style="background:#d81b60;color:#fff"
-          onclick="masterRunRecoveryToW8E()">
-          ▶ Run Selected Stage Range
+          onclick="document.getElementById('masterStatusRecovery').textContent = 'Starting selected stages…'; try { masterRunRecoveryToW8E(); } catch (e) { document.getElementById('masterStatusRecovery').textContent = '❌ Unable to start: ' + e.message; }">
+          ▶ Run Stages — Start to End
         </button>
       </div>
 
