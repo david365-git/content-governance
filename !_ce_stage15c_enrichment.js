@@ -248,7 +248,7 @@ function buildStage15CPrompt() {
   }
   let prompt = `
 STAGE 1.5C — SECTION ENRICHMENT
-${bc_getRelevantTechnicalMatrixExcerpt_(material, originalHtml + '\n' + structure15A + '\n' + h2s15B, 3000)}\nEDITORIAL PLANNING BOUNDARY — ALL ARTICLE TYPES:
+${bc_getRelevantTechnicalMatrixExcerpt_(material, originalHtml + '\n' + structure15A + '\n' + h2s15B, 3000, String(d['Article Type'] || ''))}\nEDITORIAL PLANNING BOUNDARY — ALL ARTICLE TYPES:
 For each governed section, preserve documented original observations, measurements, actions, decisions and outcomes; distinguish apparent overall floor soundness from wear and local defects. Translate professional shorthand into homeowner terms only where context supports it.
 Enrich the plan with concise WHY/HOW explanations using established trade knowledge appropriate to the actual material and treatment, without claiming an undocumented specific action happened on this job.
 When a cause is uncertain, frame it as a possibility rather than a confirmed diagnosis. Do not automatically interpret movement as substrate failure or delamination; do not insert grinding/honing/polishing where the source or material does not support it.
