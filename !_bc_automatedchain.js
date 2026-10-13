@@ -7183,7 +7183,8 @@ function pipelineRunW1AToW2B3(row) {
   };
 }
 
-function pipelineResumeToW8E(row, startStage) {
+function pipelineResumeToW8E(row, startStage, endStage) {
+  endStage = endStage || 'W8E';
 
   var totalCost = 0;
 
@@ -7391,9 +7392,13 @@ function pipelineResumeToW8E(row, startStage) {
   }
 
 
+  var endIndex = stages.map(function(stage) { return stage.name; }).indexOf(endStage);
+  if (endIndex < 0) return {success:false,cost:0,message:'Unknown ending stage: '+endStage};
+  if (endIndex < startIndex) return {success:false,cost:0,message:'Ending stage must be the same as or after starting stage.'};
+
   for (
     var stageIndex = startIndex;
-    stageIndex < stages.length;
+    stageIndex <= endIndex;
     stageIndex++
   ) {
 
@@ -7507,7 +7512,7 @@ function pipelineResumeToW8E(row, startStage) {
     row,
     "✓ Recovery " +
     startStage +
-    " → W8E complete — $" +
+    " → " + endStage + " complete — $" +
     totalCost.toFixed(4)
   );
 
@@ -7517,7 +7522,7 @@ function pipelineResumeToW8E(row, startStage) {
     cost: totalCost,
     message:
       startStage +
-      " → W8E complete."
+      " → " + endStage + " complete."
   };
 }
   function runStage(stageName, runner) {
