@@ -44,8 +44,8 @@ function bc_caseEvidenceExtract_(row) {
   var digest = bc_caseEvidenceDigest_(source);
   var statusCell = sh.getRange(row, col('Evidence Status'));
   var oldStatus = String(statusCell.getValue() || '');
-  if (oldStatus === 'VERIFIED | sha256:' + digest) {
-    return {success:true, skipped:true, cost:0, message:'Verified evidence unchanged'};
+  if (oldStatus === 'SOURCE-QUOTED | sha256:' + digest) {
+    return {success:true, skipped:true, cost:0, message:'Source-quoted evidence unchanged'};
   }
   var labels = ['Project Location & Property','Observed Conditions','Client Requirements',
     'Materials & Construction','Inspection & Tests','Restoration Methods',
@@ -60,33 +60,48 @@ function bc_caseEvidenceExtract_(row) {
     'Treat statements of general advice as advice, not work performed.',
     'ORIGINAL ARTICLE:\n' + bc_caseEvidenceText_(source)
   ].join('\n');
-  var result = bc_sendPromptViaOpenAI(prompt, 5000, MODEL_CHEAP);
-  if (!result || !result.success) throw new Error('Evidence extraction API failed: ' + (result && result.message || 'unknown error'));
-  var raw = String(result.text || '').trim().replace(/^\x60\x60\x60(?:json)?\s*/i,'').replace(/\s*\x60\x60\x60$/,'');
-  var parsed;
-  try { parsed = JSON.parse(raw); } catch(e) { throw new Error('Evidence JSON invalid: ' + e.message); }
   var normalizedSource = bc_caseEvidenceText_(source).replace(/[’‘]/g,"'").replace(/[“”]/g,'"');
-  var output = [];
-  labels.forEach(function(label) {
-    var items = parsed[label];
-    if (!Array.isArray(items)) throw new Error('Missing evidence array: ' + label);
-    var checked = [];
-    items.forEach(function(item) {
-      var fact = String(item && item.fact || '').trim();
-      var quote = String(item && item.quote || '').replace(/\s+/g,' ').trim();
-      var normalizedQuote = quote.replace(/[’‘]/g,"'").replace(/[“”]/g,'"');
-      if (!fact || !quote || normalizedSource.indexOf(normalizedQuote) < 0) {
-        throw new Error('Unverifiable quote in ' + label + ': ' + quote.slice(0,90));
-      }
-      checked.push({fact:fact,quote:quote});
-    });
-    output.push(JSON.stringify(checked));
-  });
+  var output = null;
+  var totalCost = 0;
+  var lastError = '';
+  for (var attempt = 0; attempt < 2; attempt++) {
+    var retryPrompt = attempt === 0 ? prompt : prompt + '\nVALIDATION CORRECTION: Your previous response contained this quotation which is not an exact substring of ORIGINAL ARTICLE: ' + lastError + '\nRegenerate the complete JSON. Copy quotations character-for-character from ORIGINAL ARTICLE. Do not paraphrase, omit words, or change punctuation inside quotes.';
+    var result = bc_sendPromptViaOpenAI(retryPrompt, 5000, MODEL_CHEAP);
+    if (!result || !result.success) throw new Error('Evidence extraction API failed: ' + (result && result.message || 'unknown error'));
+    totalCost += Number(result.cost || 0);
+    var raw = String(result.text || '').trim().replace(/^\x60\x60\x60(?:json)?\s*/i,'').replace(/\s*\x60\x60\x60$/,'');
+    var parsed;
+    try { parsed = JSON.parse(raw); } catch(e) {
+      lastError = 'Invalid JSON: ' + e.message;
+      continue;
+    }
+    try {
+      var proposed = [];
+      labels.forEach(function(label) {
+        var items = parsed[label];
+        if (!Array.isArray(items)) throw new Error('Missing evidence array: ' + label);
+        var checked = [];
+        items.forEach(function(item) {
+          var fact = String(item && item.fact || '').trim();
+          var quote = String(item && item.quote || '').replace(/\s+/g,' ').trim();
+          var normalizedQuote = quote.replace(/[’‘]/g,"'").replace(/[“”]/g,'"');
+          if (!fact || !quote || normalizedSource.indexOf(normalizedQuote) < 0) {
+            throw new Error('Unverifiable quote in ' + label + ': ' + quote.slice(0,120));
+          }
+          checked.push({fact:fact,quote:quote});
+        });
+        proposed.push(JSON.stringify(checked));
+      });
+      output = proposed;
+      break;
+    } catch(e) { lastError = e.message; }
+  }
+  if (!output) throw new Error('Evidence extraction failed after 2 attempts: ' + lastError);
   // Fail closed: no partial evidence is written on model error or quote mismatch.
   for (var j=0;j<labels.length;j++) col(labels[j]);
   sh.getRange(row, col(labels[0]), 1, labels.length).setValues([output]);
-  statusCell.setValue('VERIFIED | sha256:' + digest);
-  return {success:true, skipped:false, cost:Number(result.cost || 0), message:'Source-quoted case-study evidence verified'};
+  statusCell.setValue('SOURCE-QUOTED | sha256:' + digest);
+  return {success:true, skipped:false, cost:totalCost, message:'Evidence quotations matched to source (not independently fact-checked)'};
 }
 function bc_caseEvidenceActiveRow() {
   return bc_caseEvidenceExtract_(SpreadsheetApp.getActiveSpreadsheet().getActiveRange().getRow());
