@@ -1,6 +1,6 @@
 /**
  * Content Intelligence: source-quoted case-study evidence, GL:GV.
- * No facts are saved unless the source quotation is found in original EW HTML.
+ * Evidence quotes must match original HTML in site-export Column O, by Post ID.
  */
 function bc_caseEvidenceDigest_(source) {
   var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, source, Utilities.Charset.UTF_8);
