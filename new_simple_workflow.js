@@ -83,7 +83,7 @@ function new_runWorkflowForRow_(row) {
       'PASS when the article is publishable and has no MATERIAL issue, even if minor detail, paraphrase, equipment-list wording or nonessential alt text could be polished.',
       'FAIL ONLY for a significant problem: misleading or invented core project facts or work; major technical error or unsafe advice; incorrect core outcome; major loss of original relevant photos or links; serious search-intent mismatch, thin/generic content, keyword stuffing or unusable structure.',
       'Do NOT do forensic word-by-word comparisons or fail over minor chronology omissions, harmless phrasing, subjective descriptions, nonessential captions/alt wording, or listed-versus-used equipment when meaning and credibility are not materially affected.',
-      'Preserve the author\\'s professional assessment of deterioration causes when grounded in the source; do not demand laboratory evidence or reframe it as independent testing.',
+      'Preserve source-supported professional assessments of deterioration causes; do not demand laboratory evidence or reframe them as independent testing.',
       'Check that the homeowner problem, what was actually done, relevant constraints and results are prominent; evaluate headings, readability, helpfulness and natural use of relevant location/material terms.',
       'Consider source-quoted evidence and original article as ground truth for substantive case facts. Correct major process-sequencing errors such as presenting sealing before honing when that is only a writing mistake; do not invent operations.',
       'Images and relevant internal links matter. Flag missing original URLs as a material issue; do not fail merely for small alt-text differences.',
