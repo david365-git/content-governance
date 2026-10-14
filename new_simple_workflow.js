@@ -53,8 +53,8 @@ function new_runWorkflowForSelectedRow() {
       'The original article provides context, but generic technical benefits must never become claimed observed results.',
       'Outcome requirements must reflect documented visual results.',
       'Respect exact floor location (kitchen versus hallway), construction era, repairs, machinery, finish level, sealer, and handover.',
-      'Keep source images with original src URLs and meaningful captions ONLY when image content can be supported. Do not reuse images as documentation of another procedure.',
-      'Keep useful original internal link URLs; do not invent links.',
+      'Preserve all original article images (exact src, in original order) unless clearly unrelated; do not invent photo descriptions or use an image as proof of a different operation.',
+      'Preserve existing relevant internal links with exact href addresses; do not invent links. If original has no images or links, do not invent any.',
       'Avoid generic tutorials, fabricated lighting comparisons, assumed tests, additional work, promises and repetitive headings.',
       'Use an introduction, varied H2 sections and a conclusion. WordPress provides the H1, so do not include an H1.',
       'Write British English. Return only raw HTML (no Markdown fences).',
@@ -65,7 +65,7 @@ function new_runWorkflowForSelectedRow() {
     var rewritten=bc_sendPromptViaOpenAI(rewritePrompt,8500,model);
     cost+=Number(rewritten&&rewritten.cost||0);
     if(!rewritten||!rewritten.success||!String(rewritten.text||'').trim())throw new Error('Rewrite failed: '+(rewritten&&rewritten.message||'empty result'));
-    var html=String(rewritten.text).trim().replace(/^`(x)`/,''); // placeholder
+    var html=String(rewritten.text).trim();
     if(!/<(?:header|section|p)\b/i.test(html))throw new Error('Model did not produce article HTML.');
     if(html.length>49000)throw new Error('HTML exceeds a Sheets cell limit.');
     resultSheet.getRange(outRow,7).setValue(html);
@@ -90,6 +90,34 @@ function new_runWorkflowForSelectedRow() {
     if(!audit||!audit.success||!String(audit.text||'').trim())throw new Error('Audit failed: '+(audit&&audit.message||'empty result'));
     var report=String(audit.text).trim();
     var status=/^VERDICT:\s*PASS\b/i.test(report)?'PASS':/^VERDICT:\s*FAIL\b/i.test(report)?'FAIL':'REVIEW';
+    if(status==='FAIL') {
+      var firstAudit=report;
+      var correctionPrompt=[
+        'ROLE: Conservative HTML copy editor. Correct ONLY the factual issues explicitly identified below.',
+        'Keep all other paragraphs, layout, links, images, headings and documented facts unchanged.',
+        'Do not add new observations, tests, measurements, processes or outcomes.',
+        'Return ONLY complete corrected HTML. Do not include commentary or code fences.',
+        '=== FIRST AUDIT ===',firstAudit,
+        '=== EXISTING HTML ===',html
+      ].join('\n\n');
+      var correction=bc_sendPromptViaOpenAI(correctionPrompt,8500,model);
+      cost+=Number(correction&&correction.cost||0);
+      if(!correction||!correction.success||!String(correction.text||'').trim())throw new Error('Targeted correction failed: '+(correction&&correction.message||'empty result'));
+      var candidate=String(correction.text).trim();
+      if(!/<(?:header|section|p)\b/i.test(candidate)||candidate.length>49000)throw new Error('Targeted correction returned invalid HTML.');
+      // Never silently lose original URLs, including images and links, in a correction.
+      function urls(text){return [...String(text).matchAll(/<(?:img|a)\b[^>]*\b(?:src|href)=["']([^"']+)["']/gi)].map(function(m){return m[1];});}
+      var beforeUrls=urls(html),afterUrls=urls(candidate);
+      if(beforeUrls.some(function(u){return afterUrls.indexOf(u)<0;}))throw new Error('Targeted correction removed an existing image or link; manual review required.');
+      var followUp=auditPrompt.replace('=== REWRITE ===\n\n'+html,'=== REWRITE ===\n\n'+candidate);
+      var recheck=bc_sendPromptViaOpenAI(followUp,4200,model);
+      cost+=Number(recheck&&recheck.cost||0);
+      if(!recheck||!recheck.success||!String(recheck.text||'').trim())throw new Error('Correction verification failed: '+(recheck&&recheck.message||'empty result'));
+      html=candidate;
+      report='INITIAL AUDIT:\n'+firstAudit+'\n\nPOST-CORRECTION INDEPENDENT AUDIT:\n'+String(recheck.text).trim();
+      status=/^VERDICT:\s*PASS\b/i.test(String(recheck.text).trim())?'PASS':/^VERDICT:\s*FAIL\b/i.test(String(recheck.text).trim())?'FAIL':'REVIEW';
+    }
+    resultSheet.getRange(outRow,7).setValue(html);
     if(report.length>49000)throw new Error('Audit exceeds Sheets cell limit.');
     resultSheet.getRange(outRow,8).setValue(report);
     resultSheet.getRange(outRow,9).setValue(status);
