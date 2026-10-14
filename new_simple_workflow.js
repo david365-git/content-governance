@@ -50,7 +50,7 @@ function new_runWorkflowForRow_(row) {
   try{
     var rewritePrompt=[
       'ROLE: UK floor-restoration case-study editor.',
-      'TASK: Rewrite one real project into useful, concise, accurate HTML for nontechnical UK homeowners.',
+      'TASK: Write an outstanding search-focused real-project case study for UK homeowners: lead with the problem and result, answer likely search intent, give original first-hand experience and useful decisions, and use clear, engaging, concise British English. Never keyword-stuff.',
       'Case Studies use first-person I for the author; do not invent attendance, activities, measurements or customer reactions.',
       'Documented source-quoted evidence controls all specific claims about the project.',
       'Preserve the original author\'s professional diagnostic judgements, including assessments of likely or principal deterioration causes made from inspection and experience. Do not require laboratory or independent testing unless the article expressly claims such testing occurred.',
@@ -78,22 +78,21 @@ function new_runWorkflowForRow_(row) {
     resultSheet.getRange(outRow,10).setValue(cost);
     SpreadsheetApp.flush();
     var auditPrompt=[
-      'ROLE: Independent senior UK floor restoration technical and factual auditor.',
-      'Audit the rewrite; do NOT rewrite it.',
-      'Check every project-specific observation, step, product, comparison, outcome, client statement and alleged test against quoted evidence and original HTML.',
-      'Treat original as possibly imperfect: flag technically doubtful claims separately from source-faithfulness.',
-      'An experienced restoration specialist\'s stated assessment of a cause is admissible source evidence of professional judgement, not an invented fact. Do NOT fail solely because there is no independent chemical test or laboratory confirmation. Flag only a cause newly invented by the rewrite, an unsupported claim of testing, or a technical contradiction; where necessary distinguish assessment from confirmed test findings.',
-      'Where the original source attributes deterioration chiefly to unsuitable cleaning chemicals on the basis of the author\'s experience, preserve that assessment as professional judgement rather than requiring independent tests. Do not apply that cause to any project whose source does not support it.',
-      'Audit the order of documented stages: where honing/refinement and sealing both occurred, sealing before honing is a sequencing error. Require mechanical honing and polishing before final sealing; correct narrative order without inventing any additional operation.',
-      'Never insist on numerical results; outcome requirements must reflect documented visual results.',
-      'First-person I is the preferred house style; do not fail it simply because the original used we.',
-      'Check accuracy of finish level, tools, crack repairs, treatment chronology, aftercare, images/alt/captions, and links.',
+      'ROLE: Senior UK stone-restoration editor reviewing publication quality, SEO usefulness and material accuracy.',
+      'Judge the article as a whole. The goal is a helpful, distinctive, trustworthy case study that satisfies the homeowner search intent. Google rankings are not guaranteed.',
+      'PASS when the article is publishable and has no MATERIAL issue, even if minor detail, paraphrase, equipment-list wording or nonessential alt text could be polished.',
+      'FAIL ONLY for a significant problem: misleading or invented core project facts or work; major technical error or unsafe advice; incorrect core outcome; major loss of original relevant photos or links; serious search-intent mismatch, thin/generic content, keyword stuffing or unusable structure.',
+      'Do NOT do forensic word-by-word comparisons or fail over minor chronology omissions, harmless phrasing, subjective descriptions, nonessential captions/alt wording, or listed-versus-used equipment when meaning and credibility are not materially affected.',
+      'Preserve the author\\'s professional assessment of deterioration causes when grounded in the source; do not demand laboratory evidence or reframe it as independent testing.',
+      'Check that the homeowner problem, what was actually done, relevant constraints and results are prominent; evaluate headings, readability, helpfulness and natural use of relevant location/material terms.',
+      'Consider source-quoted evidence and original article as ground truth for substantive case facts. Correct major process-sequencing errors such as presenting sealing before honing when that is only a writing mistake; do not invent operations.',
+      'Images and relevant internal links matter. Flag missing original URLs as a material issue; do not fail merely for small alt-text differences.',
       'First line must be exactly VERDICT: PASS or VERDICT: FAIL.',
-      'Then include each material concern with exact quote, reason, and recommended correction, or NO MATERIAL ISSUES.',
+      'If FAIL, state at most three material blockers with a concise exact quote and focused fix. If PASS, write NO MATERIAL ISSUES and optionally one short nonblocking improvement suggestion.',
       '=== VERIFIED PROJECT EVIDENCE ===',evidence,
       '=== ORIGINAL ARTICLE ===',original,
       '=== REWRITE ===',html
-    ].join('\n\n');
+    ].join('\\n\\n');
     var audit=bc_sendPromptViaOpenAI(auditPrompt,4200,model);
     cost+=Number(audit&&audit.cost||0);
     if(!audit||!audit.success||!String(audit.text||'').trim())throw new Error('Audit failed: '+(audit&&audit.message||'empty result'));
@@ -102,8 +101,8 @@ function new_runWorkflowForRow_(row) {
     if(status==='FAIL') {
       var firstAudit=report;
       var correctionPrompt=[
-        'ROLE: Conservative HTML copy editor. Correct ONLY the factual issues explicitly identified below.',
-        'Keep all other paragraphs, layout, links, images, headings and documented facts unchanged.',
+        'ROLE: Publication-quality HTML editor. Correct ONLY the material blockers explicitly identified by the audit. Prioritise reader clarity and search intent; do not chase trivial discrepancies.',
+        'Preserve source-grounded project facts and professional judgement. Retain all image and link URLs and their order. Make minimal coherent edits to resolve material blockers without flattening the article.',
         'Do not add new observations, tests, measurements, processes or outcomes.',
         'Preserve any source-supported professional assessment that unsuitable cleaning chemicals were the principal cause of deterioration; do not delete it solely because independent testing was not done. Do not insert this cause where the source does not support it, and never present it as a laboratory result.',
         'When the audit identifies sealing before honing, reorder only the documented stages so honing/refinement and polishing precede final sealing. Do not remove the sealer or add new work.',
