@@ -1,1 +1,40 @@
-<div style="font:13px Arial;padding:16px"><h3>NEW — Simplified Workflow</h3><p>Select a Case Study row in the <b>posts</b> sheet. Two paid AI calls: one rewrite, one independent audit. Results go ONLY to <b>NEW Workflow Test</b>.</p><button id="go" onclick="run()" style="padding:11px;background:#174b73;color:white;border:0;border-radius:5px">Run Selected Row</button><p id="status">No run started.</p><script>function run(){var b=document.getElementById('go'),s=document.getElementById('status');b.disabled=true;s.textContent='Running rewrite and independent audit…';google.script.run.withSuccessHandler(function(r){b.disabled=false;s.textContent=r.message+' | Cost $'+Number(r.cost||0).toFixed(4);}).withFailureHandler(function(e){b.disabled=false;s.textContent='Error: '+(e.message||e);}).new_runWorkflowForSelectedRow();}</script></div>
+<div style="font:13px Arial;padding:16px">
+<h3>NEW — Simplified Workflow</h3>
+<p>Use the <b>posts</b> sheet. Results go to <b>NEW Workflow Test</b>; no WordPress publishing.</p>
+<button id="go" onclick="run()" style="padding:10px;background:#174b73;color:white;border:0;border-radius:5px">Run Selected Row</button>
+<button id="batch" onclick="batch()" style="padding:10px;margin-top:8px;background:#276b48;color:white;border:0;border-radius:5px">Run Visible Filtered Case Studies</button>
+<p id="status">No run started.</p>
+<pre id="log" style="font:12px Arial;white-space:pre-wrap;max-height:300px;overflow:auto"></pre>
+<script>
+var busy=false,queue=[],at=0,done=0,failed=0,totalCost=0;
+function state(b){busy=b;document.getElementById('go').disabled=b;document.getElementById('batch').disabled=b;}
+function say(t){document.getElementById('status').textContent=t;}
+function log(t){var el=document.getElementById('log');el.textContent+=t+'\n';el.scrollTop=el.scrollHeight;}
+function run(){
+ if(busy)return;state(true);say('Running selected row…');
+ google.script.run.withSuccessHandler(function(r){state(false);say(r.message+' | Cost $'+Number(r.cost||0).toFixed(4));})
+ .withFailureHandler(function(e){state(false);say('Error: '+(e.message||e));}).new_runWorkflowForSelectedRow();
+}
+function batch(){
+ if(busy)return;state(true);document.getElementById('log').textContent='';
+ say('Reading visible filtered rows…');
+ google.script.run.withSuccessHandler(function(rows){
+   queue=rows;at=0;done=0;failed=0;totalCost=0;
+   if(!queue.length){say('No visible Case Study rows found.');state(false);return;}
+   log('Found '+queue.length+' visible Case Studies.');next();
+ }).withFailureHandler(function(e){state(false);say('Error: '+(e.message||e));}).new_getFilteredCaseStudyRows();
+}
+function next(){
+ if(at>=queue.length){
+   say('Finished: '+done+' complete, '+failed+' errors | Total API cost $'+totalCost.toFixed(4));
+   state(false);return;
+ }
+ var row=queue[at++];say('Processing '+at+' of '+queue.length+' — posts row '+row);
+ google.script.run.withSuccessHandler(function(r){
+   if(r.skipped){log('Row '+row+': skipped (hidden).');}
+   else {done++;totalCost+=Number(r.cost||0);log('Row '+row+': '+r.status+(r.evidenceExtracted?' | evidence extracted':' | existing evidence')+' | $'+Number(r.cost||0).toFixed(4));}
+   next();
+ }).withFailureHandler(function(e){failed++;log('Row '+row+': ERROR — '+(e.message||e));next();})
+ .new_runFilteredCaseStudyRow(row);
+}
+</script></div>
