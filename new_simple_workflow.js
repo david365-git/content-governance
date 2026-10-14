@@ -27,6 +27,36 @@ function new_addAuthorFooter_(html,material) {
   }
   return html;
 }
+
+/**
+ * Build a small, governed set of published/internal link candidates for one case study.
+ * Use actual posts URLs only; do not trust Feeds Hub if it points to a non-hub page.
+ */
+function new_caseStudyLinks_(sh,row,title,material,ownUrl){
+  var h=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(function(x){return String(x).trim();});
+  function c(n){return h.indexOf(n);}
+  var fields=['Title','URL','Stone Type','Article Type','Feeds Hub'];
+  if(fields.some(function(n){return c(n)<0;}))throw new Error('Missing governed linking columns');
+  var data=sh.getRange(2,1,Math.max(sh.getLastRow()-1,1),Math.max.apply(null,fields.map(function(n){return c(n)+1;}))).getValues();
+  function canonical(v){return String(v||'').trim().replace(/^http:/i,'https:').replace(/^https:\/\/www\./i,'https://').replace(/\/+$/,'').toLowerCase();}
+  var own=canonical(ownUrl),mat=String(material||'').trim().toLowerCase();
+  var stop={the:1,and:1,for:1,with:1,from:1,need:1,floor:1,floors:1,terrazzo:1,restoration:1,restoring:1,polishing:1,cleaning:1};
+  function words(v){return String(v||'').toLowerCase().split(/[^a-z0-9]+/).filter(function(x){return x.length>3&&!stop[x];});}
+  var targets=words(title);
+  var list=data.map(function(v,i){return {row:i+2,title:String(v[c('Title')]||''),url:String(v[c('URL')]||'').trim(),material:String(v[c('Stone Type')]||'').trim().toLowerCase(),type:String(v[c('Article Type')]||'').trim()};})
+    .filter(function(v){return v.url&&/^https:\/\/(www\.)?abbeyfloorcare\.co\.uk\//i.test(v.url)&&canonical(v.url)!==own&&v.material===mat;});
+  var ownRow=data[row-2]||[];
+  var fed=canonical(ownRow[c('Feeds Hub')]);
+  var hubs=list.filter(function(v){return v.type==='Hub Page';});
+  var hub=hubs.find(function(v){return canonical(v.url)===fed;});
+  if(!hub&&hubs.length===1)hub=hubs[0];
+  // If multiple candidate hubs exist and Feeds Hub is invalid, do not guess.
+  var other=list.filter(function(v){return v.type==='Method Guide'||v.type==='Diagnostic Guide'||v.type==='Educational Guide'||v.type==='Buyer Guide'||v.type==='Service Page'||v.type==='Case Study';})
+    .map(function(v){var w=words(v.title);v.score=w.filter(function(x){return targets.indexOf(x)>=0;}).length+(v.type==='Case Study'?0:1);return v;})
+    .sort(function(a,b){return b.score-a.score||a.row-b.row;}).slice(0,12);
+  return {hub:hub||null,related:other,invalidHub:fed&&!hub?String(ownRow[c('Feeds Hub')]||''):''};
+}
+
 function new_runWorkflowForSelectedRow() {
   var ss=SpreadsheetApp.getActiveSpreadsheet();
   if(!ss.getSheetByName('posts') || ss.getActiveSheet().getName()!=='posts') throw new Error('Select a row in the posts tab.');
@@ -51,6 +81,8 @@ function new_runWorkflowForRow_(row) {
   ids.forEach(function(v,i){if(String(v[0]).trim()===postId)sourceRows.push(i+2);});
   if(sourceRows.length!==1)throw new Error('Expected one original article for Post ID '+postId+', found '+sourceRows.length);
   var original=String(exportSheet.getRange(sourceRows[0],15).getValue()||'');
+  var linkPlan=new_caseStudyLinks_(sheet,row,title,material,String(get('URL').getValue()||''));
+  var approvedLinks=(linkPlan.hub?[linkPlan.hub]:[]).concat(linkPlan.related);
   if(!original.trim())throw new Error('Original article is empty in site-export column O.');
   // This checks the existing source fingerprint before making any paid API calls.
   var evidence=bc_caseEvidencePromptBlock_(row);
@@ -83,10 +115,13 @@ function new_runWorkflowForRow_(row) {
       'Respect exact floor location (kitchen versus hallway), construction era, repairs, machinery, finish level, sealer, and handover.',
       'Preserve all original article images (exact src, in original order) unless clearly unrelated; do not invent photo descriptions or use an image as proof of a different operation.',
       'Preserve existing relevant internal links with exact href addresses; do not invent links. The standard author bio and next-step link will be appended by the application after writing: do not write your own author box or generic closing CTA.',
+      'CONTEXTUAL LINK GOVERNANCE: Link to the verified material hub when supplied, naturally within a relevant explanatory paragraph. Select up to 2 additional genuinely relevant supporting destinations from the APPROVED LINKS list; never invent destinations or change supplied URLs. Do not add links if relevance is weak. Preserve existing relevant links from the original.',
+      'Integrate links in meaningful paragraphs at the point the subject is discussed, with descriptive natural anchor text. Avoid generic "click here", standalone signposting, overlinking and repetitive exact-match anchor text.',
       'Avoid generic tutorials, fabricated lighting comparisons, assumed tests, additional work, promises and repetitive headings.',
       'Use an introduction, varied H2 sections and a conclusion. WordPress provides the H1, so do not include an H1.',
       'Write British English. Return only raw HTML (no Markdown fences).',
       'TITLE: '+title,'MATERIAL: '+material,
+      '=== APPROVED GOVERNED LINKS ===',JSON.stringify({verifiedHub:linkPlan.hub,related:linkPlan.related}),
       '=== PROJECT EVIDENCE ===',evidence,
       '=== ORIGINAL HTML ===',original
     ].join('\n\n');
@@ -94,6 +129,14 @@ function new_runWorkflowForRow_(row) {
     cost+=Number(rewritten&&rewritten.cost||0);
     if(!rewritten||!rewritten.success||!String(rewritten.text||'').trim())throw new Error('Rewrite failed: '+(rewritten&&rewritten.message||'empty result'));
     var html=new_addAuthorFooter_(String(rewritten.text).trim(),material);
+    // Reject invented destinations in a rewrite, while allowing old source links and our footer.
+    function htmlLinks(v){return [...String(v).matchAll(/<a\b[^>]*\bhref=["']([^"']+)["']/gi)].map(function(m){return m[1];});}
+    var accepted=htmlLinks(original).concat(approvedLinks.map(function(v){return v.url;}));
+    accepted.push('https://www.abbeyfloorcare.co.uk/');
+    function normLink(v){return String(v||'').replace(/^http:/i,'https:').replace(/^https:\/\/www\./i,'https://').replace(/\/+$/,'').toLowerCase();}
+    var allowedSet=accepted.map(normLink);
+    var unknown=htmlLinks(html).filter(function(u){return allowedSet.indexOf(normLink(u))<0;});
+    if(unknown.length)throw new Error('Rewrite introduced unapproved internal links: '+unknown.slice(0,3).join(', '));
     if(!/<(?:header|section|p)\b/i.test(html))throw new Error('Model did not produce article HTML.');
     if(html.length>49000)throw new Error('HTML exceeds a Sheets cell limit.');
     resultSheet.getRange(outRow,7).setValue(html);
@@ -113,9 +156,11 @@ function new_runWorkflowForRow_(row) {
       'Check that the homeowner problem, what was actually done, relevant constraints and results are prominent; evaluate headings, readability, helpfulness and natural use of relevant location/material terms.',
       'Consider source-quoted evidence and original article as ground truth for substantive case facts. Correct major process-sequencing errors such as presenting sealing before honing when that is only a writing mistake; do not invent operations.',
       'Images and relevant internal links matter. Flag missing original URLs as a material issue; do not fail merely for small alt-text differences.',
+      'Evaluate contextual links against APPROVED GOVERNED LINKS. The verified material hub should appear naturally in the body when available. Up to two relevant related links are useful, not a quota; never reward irrelevant links.',
       'Confirm the standard David Allen author box with portrait and useful closing contact link are present. Treat absence as a material omission, but do not otherwise micromanage their wording.',
       'First line must be exactly VERDICT: PASS or VERDICT: FAIL.',
       'If FAIL, state at most three material blockers with a concise exact quote and focused fix. If PASS, write NO MATERIAL ISSUES and optionally one short nonblocking improvement suggestion.',
+      '=== APPROVED GOVERNED LINKS ===',JSON.stringify({verifiedHub:linkPlan.hub,related:linkPlan.related}),
       '=== VERIFIED PROJECT EVIDENCE ===',evidence,
       '=== ORIGINAL ARTICLE ===',original,
       '=== REWRITE ===',html
