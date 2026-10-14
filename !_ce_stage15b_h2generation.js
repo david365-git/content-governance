@@ -570,6 +570,13 @@ When TEST 5 fails, make the smallest wording adjustment necessary while preservi
     Two consecutive question-format H2s must FAIL this check.
 
     Do NOT perform final-copy humanisation here.
+PLAIN-TEXT OUTPUT LOCK:
+Return clean plain text only. No HTML, HTML entities (including &nbsp;), Markdown, code fences, tabs, non-breaking spaces or decorative leading characters such as ~, bullets or asterisks.
+Start each heading result with exactly "H2: " at the beginning of a new line.
+Put each TEST and REASON on its own line with no indentation.
+Separate heading results with one blank line.
+Keep the existing five tests, their decisions, and the final CHECK marker unchanged.
+Do not insert PASS, FAIL or any symbol before "H2:".
 OUTPUT FORMAT:
 H2: [heading text]
     TEST 1 (Section Match): PASS / FAIL
