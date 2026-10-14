@@ -137,6 +137,8 @@ function buildRewriteBriefComplianceCheckPromptW2B() {
 
       A CTA should be classified as FAIL — DEVELOPED only when it materially turns the article into a service-sales page, for example by adding service packages, pricing, booking instructions, promotional benefits, repeated sales messaging or substantial service-description content.
 
+    Outcome requirements must reflect documented visual results.
+
     --- TASK ---
     The Rewrite Brief above names specific entities/topics the article must re-anchor around with real coverage, and specific drift-prone language, framing, or topics that must be removed or minimised. Judge the full article body against both, applying the Classification Rule and the Commercial Product Table Exemption above.
 
