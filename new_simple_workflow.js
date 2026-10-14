@@ -10,9 +10,12 @@ function new_openWorkflowSidebar() {
 }
 function new_runWorkflowForSelectedRow() {
   var ss=SpreadsheetApp.getActiveSpreadsheet();
+  if(!ss.getSheetByName('posts') || ss.getActiveSheet().getName()!=='posts') throw new Error('Select a row in the posts tab.');
+  return new_runWorkflowForRow_(ss.getActiveRange().getRow());
+}
+function new_runWorkflowForRow_(row) {
+  var ss=SpreadsheetApp.getActiveSpreadsheet();
   var sheet=ss.getSheetByName('posts');
-  if(!sheet || ss.getActiveSheet().getName()!=='posts') throw new Error('Select a row in the posts tab.');
-  var row=sheet.getActiveRange().getRow();
   if(row<2)throw new Error('Select a data row.');
   var headers=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0].map(function(x){return String(x).trim();});
   function get(name) {var i=headers.indexOf(name);if(i<0)throw new Error('Missing column '+name);return sheet.getRange(row,i+1);}
@@ -139,4 +142,70 @@ function new_runWorkflowForSelectedRow() {
     resultSheet.getRange(outRow,10).setValue(cost);
     throw err;
   }
+}
+/**
+ * A fresh filtered-row snapshot. Only currently visible Case Study rows.
+ * Keep execution per-row to avoid one Apps Script timeout for a large batch.
+ */
+function new_getFilteredCaseStudyRows() {
+  var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
+  if(!sh)throw new Error('posts sheet missing');
+  var last=sh.getLastRow();
+  var headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(function(x){return String(x).trim();});
+  var typeCol=headers.indexOf('Article Type')+1;
+  if(!typeCol)throw new Error('Article Type heading missing');
+  var types=last>1?sh.getRange(2,typeCol,last-1,1).getValues():[];
+  var rows=[];
+  for(var i=0;i<types.length;i++){
+    var r=i+2;
+    if(String(types[i][0]).trim()==='Case Study' && !sh.isRowHiddenByFilter(r) && !sh.isRowHiddenByUser(r))rows.push(r);
+  }
+  return rows;
+}
+/**
+ * Called once per visible Case Study by sidebar; evidence extraction is conditional.
+ * Only mark column D when BOTH the evidence check and the NEW workflow completed.
+ */
+function new_runFilteredCaseStudyRow(row) {
+  row=Number(row);
+  var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
+  if(!sh||!Number.isInteger(row)||row<2||row>sh.getLastRow())throw new Error('Invalid posts row');
+  var headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(function(x){return String(x).trim();});
+  function col(name){var c=headers.indexOf(name)+1;if(!c)throw new Error('Missing heading '+name);return c;}
+  if(String(sh.getRange(row,col('Article Type')).getValue()).trim()!=='Case Study')throw new Error('Row '+row+' is not a Case Study');
+  if(sh.isRowHiddenByFilter(row)||sh.isRowHiddenByUser(row))return {success:true,skipped:true,message:'Row hidden from filter',row:row,cost:0};
+  // The fingerprint plus JSON evidence validity determines whether re-extraction is needed.
+  var fresh=true;
+  var evidenceLabels=['Project Location & Property','Observed Conditions','Client Requirements','Materials & Construction','Inspection & Tests','Restoration Methods','Products & Equipment','Technical Findings','Project Results','Maintenance Handover'];
+  try{
+    bc_caseEvidencePromptBlock_(row);
+    for(var i=0;i<evidenceLabels.length;i++){
+      var val=String(sh.getRange(row,col(evidenceLabels[i])).getValue()||'').trim();
+      if(!val||!Array.isArray(JSON.parse(val))){fresh=false;break;}
+    }
+  }catch(e){fresh=false;}
+  var extractionCost=0,extractionRan=false;
+  if(!fresh){
+    // If a fingerprint exists but an evidence cell is blank, force the extractor
+    // to rebuild rather than return its "unchanged" shortcut.
+    var statusCell=sh.getRange(row,col('Evidence Status'));
+    var savedStatus=String(statusCell.getValue()||'');
+    if(savedStatus.indexOf('SOURCE-QUOTED | sha256:')===0){
+      statusCell.clearContent();
+    }
+    var ext=bc_caseEvidenceExtract_(row);
+    extractionCost=Number(ext&&ext.cost||0);
+    extractionRan=!ext.skipped;
+    if(!ext||!ext.success)throw new Error('Evidence extraction failed on row '+row+': '+(ext&&ext.message||'unknown error'));
+    bc_caseEvidencePromptBlock_(row);
+  }
+  var result=new_runWorkflowForRow_(row);
+  // Status PASS or FAIL means workflow finished, whereas exceptions remain unmarked.
+  sh.getRange(row,4).setBackground('#fff2cc').setFontColor('#0000ff');
+  SpreadsheetApp.flush();
+  result.row=row;
+  result.evidenceExtracted=extractionRan;
+  result.extractionCost=extractionCost;
+  result.cost=Number(result.cost||0)+extractionCost;
+  return result;
 }
