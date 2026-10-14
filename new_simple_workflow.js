@@ -92,7 +92,7 @@ function new_runWorkflowForRow_(row) {
       '=== VERIFIED PROJECT EVIDENCE ===',evidence,
       '=== ORIGINAL ARTICLE ===',original,
       '=== REWRITE ===',html
-    ].join('\\n\\n');
+    ].join('\n\n');
     var audit=bc_sendPromptViaOpenAI(auditPrompt,4200,model);
     cost+=Number(audit&&audit.cost||0);
     if(!audit||!audit.success||!String(audit.text||'').trim())throw new Error('Audit failed: '+(audit&&audit.message||'empty result'));
