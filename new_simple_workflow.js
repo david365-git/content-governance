@@ -8,6 +8,25 @@ function new_openWorkflowSidebar() {
     HtmlService.createHtmlOutputFromFile('new_workflow_sidebar').setTitle('NEW — Simplified Workflow')
   );
 }
+/**
+ * Standard author credibility panel and honest next-step link for Case Studies.
+ * Add in code (not the AI rewrite) so the panel cannot be silently omitted.
+ */
+function new_addAuthorFooter_(html,material) {
+  html=String(html||'');
+  var escaped=String(material||'stone').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  var authorImage='https://www.abbeyfloorcare.co.uk/wp-content/uploads/David_Allen.jpg';
+  if(!/David Allen\s*(?:—|&mdash;|-)\s*Abbey Floor Care/i.test(html)){
+    html+='\n<section class="new-author-bio" aria-label="About the author" style="display:flex;gap:20px;align-items:flex-start;padding:20px;border:1px solid #e7d7a9;border-radius:10px;background:#fff6d9;margin:28px 0;">'
+      +'<img src="'+authorImage+'" alt="David Allen, stone floor restoration specialist" width="100" height="105" style="width:100px;height:105px;object-fit:cover;border-radius:7px;">'
+      +'<div><p><strong>David Allen — <a href="https://www.abbeyfloorcare.co.uk/">Abbey Floor Care</a></strong></p>'
+      +'<p>David Allen has more than 30 years of experience restoring terrazzo and other hard floors through Abbey Floor Care. He shares first-hand knowledge of floor assessment, restoration methods and practical maintenance.</p></div></section>';
+  }
+  if(!/contact (?:us|abbey floor care) to (?:arrange|discuss)|no-obligation .*floor assessment/i.test(html)){
+    html+='\n<p class="new-case-study-cta">For advice about a '+escaped+' floor, <a href="https://www.abbeyfloorcare.co.uk/">contact Abbey Floor Care to discuss your floor and available options</a>.</p>';
+  }
+  return html;
+}
 function new_runWorkflowForSelectedRow() {
   var ss=SpreadsheetApp.getActiveSpreadsheet();
   if(!ss.getSheetByName('posts') || ss.getActiveSheet().getName()!=='posts') throw new Error('Select a row in the posts tab.');
@@ -63,7 +82,7 @@ function new_runWorkflowForRow_(row) {
       'Outcome requirements must reflect documented visual results.',
       'Respect exact floor location (kitchen versus hallway), construction era, repairs, machinery, finish level, sealer, and handover.',
       'Preserve all original article images (exact src, in original order) unless clearly unrelated; do not invent photo descriptions or use an image as proof of a different operation.',
-      'Preserve existing relevant internal links with exact href addresses; do not invent links. If original has no images or links, do not invent any.',
+      'Preserve existing relevant internal links with exact href addresses; do not invent links. The standard author bio and next-step link will be appended by the application after writing: do not write your own author box or generic closing CTA.',
       'Avoid generic tutorials, fabricated lighting comparisons, assumed tests, additional work, promises and repetitive headings.',
       'Use an introduction, varied H2 sections and a conclusion. WordPress provides the H1, so do not include an H1.',
       'Write British English. Return only raw HTML (no Markdown fences).',
@@ -74,7 +93,7 @@ function new_runWorkflowForRow_(row) {
     var rewritten=bc_sendPromptViaOpenAI(rewritePrompt,8500,model);
     cost+=Number(rewritten&&rewritten.cost||0);
     if(!rewritten||!rewritten.success||!String(rewritten.text||'').trim())throw new Error('Rewrite failed: '+(rewritten&&rewritten.message||'empty result'));
-    var html=String(rewritten.text).trim();
+    var html=new_addAuthorFooter_(String(rewritten.text).trim(),material);
     if(!/<(?:header|section|p)\b/i.test(html))throw new Error('Model did not produce article HTML.');
     if(html.length>49000)throw new Error('HTML exceeds a Sheets cell limit.');
     resultSheet.getRange(outRow,7).setValue(html);
@@ -94,6 +113,7 @@ function new_runWorkflowForRow_(row) {
       'Check that the homeowner problem, what was actually done, relevant constraints and results are prominent; evaluate headings, readability, helpfulness and natural use of relevant location/material terms.',
       'Consider source-quoted evidence and original article as ground truth for substantive case facts. Correct major process-sequencing errors such as presenting sealing before honing when that is only a writing mistake; do not invent operations.',
       'Images and relevant internal links matter. Flag missing original URLs as a material issue; do not fail merely for small alt-text differences.',
+      'Confirm the standard David Allen author box with portrait and useful closing contact link are present. Treat absence as a material omission, but do not otherwise micromanage their wording.',
       'First line must be exactly VERDICT: PASS or VERDICT: FAIL.',
       'If FAIL, state at most three material blockers with a concise exact quote and focused fix. If PASS, write NO MATERIAL ISSUES and optionally one short nonblocking improvement suggestion.',
       '=== VERIFIED PROJECT EVIDENCE ===',evidence,
@@ -122,7 +142,7 @@ function new_runWorkflowForRow_(row) {
       var correction=bc_sendPromptViaOpenAI(correctionPrompt,8500,model);
       cost+=Number(correction&&correction.cost||0);
       if(!correction||!correction.success||!String(correction.text||'').trim())throw new Error('Targeted correction failed: '+(correction&&correction.message||'empty result'));
-      var candidate=String(correction.text).trim();
+      var candidate=new_addAuthorFooter_(String(correction.text).trim(),material);
       if(!/<(?:header|section|p)\b/i.test(candidate)||candidate.length>49000)throw new Error('Targeted correction returned invalid HTML.');
       // Never silently lose original URLs, including images and links, in a correction.
       function urls(text){return [...String(text).matchAll(/<(?:img|a)\b[^>]*\b(?:src|href)=["']([^"']+)["']/gi)].map(function(m){return m[1];});}
