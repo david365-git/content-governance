@@ -1130,6 +1130,7 @@ function bc_getPrompt3() {
       "entity, and entity coverage only.\n" +
       "Do NOT use Drift Status to determine editorial tone or rewrite instruction.\n" +
       "\n" +
+      "Outcome requirements must reflect documented visual results.\n" +
       "PAGE REWRITE BRIEF — MANDATORY CONTENT-GROUNDING AUDIT (HARD LOCK):\n" +
       "Before writing the Page Rewrite Brief, you MUST read the actual article HTML supplied\n" +
       "above — not just the governed entity list.\n" +
