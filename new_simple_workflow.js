@@ -121,7 +121,12 @@ function new_runWorkflowForRow_(row) {
       // Never silently lose original URLs, including images and links, in a correction.
       function urls(text){return [...String(text).matchAll(/<(?:img|a)\b[^>]*\b(?:src|href)=["']([^"']+)["']/gi)].map(function(m){return m[1];});}
       var beforeUrls=urls(html),afterUrls=urls(candidate);
-      if(beforeUrls.some(function(u){return afterUrls.indexOf(u)<0;}))throw new Error('Targeted correction removed an existing image or link; manual review required.');
+      var missingUrls=beforeUrls.filter(function(u){return afterUrls.indexOf(u)<0;});
+      if(missingUrls.length){
+        // Reject the unsafe correction while retaining the valid rewrite and audit.
+        report='INITIAL AUDIT:\\n'+firstAudit+'\\n\\nCORRECTION REJECTED: The proposed correction removed existing image/link URLs. Original rewrite retained.\\nMissing URLs:\\n'+missingUrls.join('\\n');
+        status='FAIL';
+      } else {
       var followUp=auditPrompt.replace('=== REWRITE ===\n\n'+html,'=== REWRITE ===\n\n'+candidate);
       var recheck=bc_sendPromptViaOpenAI(followUp,4200,model);
       cost+=Number(recheck&&recheck.cost||0);
@@ -129,6 +134,7 @@ function new_runWorkflowForRow_(row) {
       html=candidate;
       report='INITIAL AUDIT:\n'+firstAudit+'\n\nPOST-CORRECTION INDEPENDENT AUDIT:\n'+String(recheck.text).trim();
       status=/^VERDICT:\s*PASS\b/i.test(String(recheck.text).trim())?'PASS':/^VERDICT:\s*FAIL\b/i.test(String(recheck.text).trim())?'FAIL':'REVIEW';
+      } // End accepted correction.
     }
     resultSheet.getRange(outRow,7).setValue(html);
     if(report.length>49000)throw new Error('Audit exceeds Sheets cell limit.');
