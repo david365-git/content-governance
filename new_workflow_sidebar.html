@@ -8,13 +8,119 @@
 <p style="margin:7px 0">Paste Post IDs, one per line (or separated by commas). These run even when hidden by a filter.</p>
 <textarea id="postIds" rows="6" style="width:100%;box-sizing:border-box" placeholder="7914&#10;7915&#10;7916"></textarea>
 <button id="ids" onclick="runIds()" style="padding:10px;margin-top:8px;background:#174b73;color:#fff;border:0;border-radius:5px">Run These Post IDs</button>
-</div><p id="status">No run started.</p>
+</div>
+<div style="margin-top:14px;padding:12px;border:1px solid #ddd;border-radius:6px">
+<strong>Technical Matrix — prepare Claude audit</strong>
+<p style="margin:7px 0">Fill missing N–R sections from each original specification in Column C. Existing entries and Terrazzo are protected.</p>
+<button id="tech" onclick="runTech()" style="padding:10px;background:#6a4c86;color:white;border:0;border-radius:5px">Fill Missing Technical Sections</button>
+</div>
+<p id="status">No run started.</p>
 <pre id="log" style="font:12px Arial;white-space:pre-wrap;max-height:300px;overflow:auto"></pre>
 <script>
-var busy=false,queue=[],at=0,done=0,failed=0,totalCost=0,idMode=false;
-function state(b){busy=b;document.getElementById('go').disabled=b;document.getElementById('batch').disabled=b;document.getElementById('ids').disabled=b;}
+var busy=false,queue=[],at=0,done=0,failed=0,totalCost=0,idMode=false,techQueue=[],techIndex=0;
+function state(b){busy=b;document.getElementById('go').disabled=b;document.getElementById('batch').disabled=b;document.getElementById('ids').disabled=b;document.getElementById('tech').disabled=b;}
 function say(t){document.getElementById('status').textContent=t;}
 function log(t){var el=document.getElementById('log');el.textContent+=t+'\n';el.scrollTop=el.scrollHeight;}
+function runTech(){
+ if(busy)return;state(true);document.getElementById('log').textContent='';say('Finding missing technical sections…');
+ google.script.run.withSuccessHandler(function(items){
+   techQueue=items;techIndex=0;done=0;failed=0;totalCost=0;
+   log('Found '+items.length+' materials needing sections N–R.');
+   if(!items.length){say('All sections already filled.');state(false);return;}
+   nextTech();
+ }).withFailureHandler(function(e){state(false);say('Error: '+(e.message||e));}).new_technicalPendingRows();
+}
+function nextTech(){
+ if(techIndex>=techQueue.length){
+   say('Technical drafts complete: '+done+' materials, '+failed+' errors | API cost 
+ if(busy)return;state(true);say('Running selected row…');
+ google.script.run.withSuccessHandler(function(r){state(false);say(r.message+' | Cost $'+Number(r.cost||0).toFixed(4));})
+ .withFailureHandler(function(e){state(false);say('Error: '+(e.message||e));}).new_runWorkflowForSelectedRow();
+}
+function runIds(){
+ if(busy)return;
+ var raw=document.getElementById('postIds').value.trim();
+ if(!raw){say('Enter Post IDs first.');return;}
+ state(true);idMode=true;document.getElementById('log').textContent='';say('Finding Post IDs…');
+ google.script.run.withSuccessHandler(function(items){
+  queue=items;at=0;done=0;failed=0;totalCost=0;
+  log('Found '+items.length+' valid Case Study Post IDs.');next();
+ }).withFailureHandler(function(e){state(false);say('Error: '+(e.message||e));}).new_getCaseStudyRowsForPostIds(raw);
+}
+function batch(){
+ if(busy)return;state(true);idMode=false;document.getElementById('log').textContent='';
+ say('Reading visible filtered rows…');
+ google.script.run.withSuccessHandler(function(rows){
+   queue=rows;at=0;done=0;failed=0;totalCost=0;
+   if(!queue.length){say('No visible Case Study rows found.');state(false);return;}
+   log('Found '+queue.length+' visible Case Studies.');next();
+ }).withFailureHandler(function(e){state(false);say('Error: '+(e.message||e));}).new_getFilteredCaseStudyRows();
+}
+function next(){
+ if(at>=queue.length){
+   say('Finished: '+done+' complete, '+failed+' errors | Total API cost $'+totalCost.toFixed(4));
+   state(false);return;
+ }
+ var entry=queue[at++],row=idMode?entry.row:entry;var label=idMode?'Post ID '+entry.postId+' (row '+row+')':'Row '+row;
+ say('Processing '+at+' of '+queue.length+' — '+label);
+ google.script.run.withSuccessHandler(function(r){
+   if(r.skipped){log(label+': skipped (hidden).');}
+   else {done++;totalCost+=Number(r.cost||0);log(label+': '+r.status+(r.evidenceExtracted?' | evidence extracted':' | existing evidence')+' | $'+Number(r.cost||0).toFixed(4));}
+   next();
+ }).withFailureHandler(function(e){failed++;log(label+': ERROR — '+(e.message||e));next();})
+ .new_runFilteredCaseStudyRow(row,idMode);
+}
+</script></div>+totalCost.toFixed(4)+'. Send N–R to Claude for audit.');
+   state(false);return;
+ }
+ var item=techQueue[techIndex++];
+ say('Technical draft '+techIndex+' of '+techQueue.length+': '+item.material);
+ google.script.run.withSuccessHandler(function(r){
+    done++;totalCost+=Number(r.cost||0);
+    log(item.material+' (row '+item.row+'): '+r.status+' | '+(r.sections||0)+' sections | 
+ if(busy)return;state(true);say('Running selected row…');
+ google.script.run.withSuccessHandler(function(r){state(false);say(r.message+' | Cost $'+Number(r.cost||0).toFixed(4));})
+ .withFailureHandler(function(e){state(false);say('Error: '+(e.message||e));}).new_runWorkflowForSelectedRow();
+}
+function runIds(){
+ if(busy)return;
+ var raw=document.getElementById('postIds').value.trim();
+ if(!raw){say('Enter Post IDs first.');return;}
+ state(true);idMode=true;document.getElementById('log').textContent='';say('Finding Post IDs…');
+ google.script.run.withSuccessHandler(function(items){
+  queue=items;at=0;done=0;failed=0;totalCost=0;
+  log('Found '+items.length+' valid Case Study Post IDs.');next();
+ }).withFailureHandler(function(e){state(false);say('Error: '+(e.message||e));}).new_getCaseStudyRowsForPostIds(raw);
+}
+function batch(){
+ if(busy)return;state(true);idMode=false;document.getElementById('log').textContent='';
+ say('Reading visible filtered rows…');
+ google.script.run.withSuccessHandler(function(rows){
+   queue=rows;at=0;done=0;failed=0;totalCost=0;
+   if(!queue.length){say('No visible Case Study rows found.');state(false);return;}
+   log('Found '+queue.length+' visible Case Studies.');next();
+ }).withFailureHandler(function(e){state(false);say('Error: '+(e.message||e));}).new_getFilteredCaseStudyRows();
+}
+function next(){
+ if(at>=queue.length){
+   say('Finished: '+done+' complete, '+failed+' errors | Total API cost $'+totalCost.toFixed(4));
+   state(false);return;
+ }
+ var entry=queue[at++],row=idMode?entry.row:entry;var label=idMode?'Post ID '+entry.postId+' (row '+row+')':'Row '+row;
+ say('Processing '+at+' of '+queue.length+' — '+label);
+ google.script.run.withSuccessHandler(function(r){
+   if(r.skipped){log(label+': skipped (hidden).');}
+   else {done++;totalCost+=Number(r.cost||0);log(label+': '+r.status+(r.evidenceExtracted?' | evidence extracted':' | existing evidence')+' | $'+Number(r.cost||0).toFixed(4));}
+   next();
+ }).withFailureHandler(function(e){failed++;log(label+': ERROR — '+(e.message||e));next();})
+ .new_runFilteredCaseStudyRow(row,idMode);
+}
+</script></div>+Number(r.cost||0).toFixed(4));
+    nextTech();
+ }).withFailureHandler(function(e){
+    failed++;log(item.material+' (row '+item.row+'): ERROR — '+(e.message||e));nextTech();
+ }).new_technicalFillRow(item.row);
+}
 function run(){
  if(busy)return;state(true);say('Running selected row…');
  google.script.run.withSuccessHandler(function(r){state(false);say(r.message+' | Cost $'+Number(r.cost||0).toFixed(4));})
