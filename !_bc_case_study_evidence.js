@@ -13,6 +13,25 @@ function bc_caseEvidenceText_(html) {
     .replace(/&amp;/gi, '&').replace(/&quot;/gi, '"')
     .replace(/&apos;|&#39;/gi, "'").replace(/\s+/g, ' ').trim();
 }
+/**
+ * Recover a quotation only when the source contains the same contiguous words.
+ * Accept harmless case differences and an extra leading "the/a/an"; never
+ * fabricate missing words or use a semantic/fuzzy match as source evidence.
+ */
+function bc_caseEvidenceRepairQuote_(quote, sourceText) {
+  var clean=function(v){return String(v||'').replace(/[’‘]/g,"'").replace(/[“”]/g,'"').replace(/\s+/g,' ').trim();};
+  var src=clean(sourceText), q=clean(quote);
+  var candidates=[q];
+  var withoutArticle=q.replace(/^(?:the|a|an)\s+/i,'');
+  if(withoutArticle!==q && withoutArticle.split(/\s+/).length>=3)candidates.push(withoutArticle);
+  for(var i=0;i<candidates.length;i++){
+    var part=candidates[i];
+    if(part.length<12)continue;
+    var at=src.toLowerCase().indexOf(part.toLowerCase());
+    if(at>=0)return src.slice(at,at+part.length);
+  }
+  return null;
+}
 function bc_caseEvidenceExtract_(row) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
   if (!sh) throw new Error('posts sheet missing');
@@ -85,8 +104,15 @@ function bc_caseEvidenceExtract_(row) {
           var fact = String(item && item.fact || '').trim();
           var quote = String(item && item.quote || '').replace(/\s+/g,' ').trim();
           var normalizedQuote = quote.replace(/[’‘]/g,"'").replace(/[“”]/g,'"');
-          if (!fact || !quote || normalizedSource.indexOf(normalizedQuote) < 0) {
-            throw new Error('Unverifiable quote in ' + label + ': ' + quote.slice(0,120));
+          if (!fact || !quote) {
+            throw new Error('Incomplete evidence in ' + label);
+          }
+          // Preserve exact matches; only repair case or an extra leading article
+          // by copying the real contiguous phrase back from the source.
+          if (normalizedSource.indexOf(normalizedQuote) < 0) {
+            var repaired=bc_caseEvidenceRepairQuote_(quote,normalizedSource);
+            if (!repaired)throw new Error('Unverifiable quote in ' + label + ': ' + quote.slice(0,120));
+            quote=repaired;
           }
           checked.push({fact:fact,quote:quote});
         });
