@@ -16,11 +16,15 @@ function new_addAuthorFooter_(html,material) {
   html=String(html||'');
   var escaped=String(material||'stone').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   var authorImage='https://www.abbeyfloorcare.co.uk/wp-content/uploads/David_Allen.jpg';
+  var topic=escaped.toLowerCase();
+  var topicLabel=/tile|terracotta|quarry|porcelain|ceramic|victorian|minton/i.test(topic)
+    ? escaped+' floors' : escaped+' floors';
+  var bio='David Allen has more than 30 years of experience in hard-floor cleaning and restoration through Abbey Floor Care. In this case study, he shares first-hand experience of assessing and restoring '+topicLabel+', including the methods used and practical maintenance considerations.';
   if(!/David Allen\s*(?:—|&mdash;|-)\s*Abbey Floor Care/i.test(html)){
     html+='\n<section class="new-author-bio" aria-label="About the author" style="display:flex;gap:20px;align-items:flex-start;padding:20px;border:1px solid #e7d7a9;border-radius:10px;background:#fff6d9;margin:28px 0;">'
       +'<img src="'+authorImage+'" alt="David Allen, stone floor restoration specialist" width="100" height="105" style="width:100px;height:105px;object-fit:cover;border-radius:7px;">'
       +'<div><p><strong>David Allen — <a href="https://www.abbeyfloorcare.co.uk/">Abbey Floor Care</a></strong></p>'
-      +'<p>David Allen has more than 30 years of experience restoring terrazzo and other hard floors through Abbey Floor Care. He shares first-hand knowledge of floor assessment, restoration methods and practical maintenance.</p></div></section>';
+      +'<p>'+bio+'</p></div></section>';
   }
   if(!/contact (?:us|abbey floor care) to (?:arrange|discuss)|no-obligation .*floor assessment/i.test(html)){
     html+='\n<p class="new-case-study-cta">For advice about a '+escaped+' floor, <a href="https://www.abbeyfloorcare.co.uk/">contact Abbey Floor Care to discuss your floor and available options</a>.</p>';
