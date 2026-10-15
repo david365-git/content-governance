@@ -3,11 +3,16 @@
 <p>Use the <b>posts</b> sheet. Results go to <b>NEW Workflow Test</b>; no WordPress publishing.</p>
 <button id="go" onclick="run()" style="padding:10px;background:#174b73;color:white;border:0;border-radius:5px">Run Selected Row</button>
 <button id="batch" onclick="batch()" style="padding:10px;margin-top:8px;background:#276b48;color:white;border:0;border-radius:5px">Run Visible Filtered Case Studies</button>
-<p id="status">No run started.</p>
+<div style="margin-top:15px;padding:12px;border:1px solid #ddd;border-radius:6px">
+<strong>Run specific Post IDs</strong>
+<p style="margin:7px 0">Paste Post IDs, one per line (or separated by commas). These run even when hidden by a filter.</p>
+<textarea id="postIds" rows="6" style="width:100%;box-sizing:border-box" placeholder="7914&#10;7915&#10;7916"></textarea>
+<button id="ids" onclick="runIds()" style="padding:10px;margin-top:8px;background:#174b73;color:#fff;border:0;border-radius:5px">Run These Post IDs</button>
+</div><p id="status">No run started.</p>
 <pre id="log" style="font:12px Arial;white-space:pre-wrap;max-height:300px;overflow:auto"></pre>
 <script>
-var busy=false,queue=[],at=0,done=0,failed=0,totalCost=0;
-function state(b){busy=b;document.getElementById('go').disabled=b;document.getElementById('batch').disabled=b;}
+var busy=false,queue=[],at=0,done=0,failed=0,totalCost=0,idMode=false;
+function state(b){busy=b;document.getElementById('go').disabled=b;document.getElementById('batch').disabled=b;document.getElementById('ids').disabled=b;}
 function say(t){document.getElementById('status').textContent=t;}
 function log(t){var el=document.getElementById('log');el.textContent+=t+'\n';el.scrollTop=el.scrollHeight;}
 function run(){
@@ -15,8 +20,18 @@ function run(){
  google.script.run.withSuccessHandler(function(r){state(false);say(r.message+' | Cost $'+Number(r.cost||0).toFixed(4));})
  .withFailureHandler(function(e){state(false);say('Error: '+(e.message||e));}).new_runWorkflowForSelectedRow();
 }
+function runIds(){
+ if(busy)return;
+ var raw=document.getElementById('postIds').value.trim();
+ if(!raw){say('Enter Post IDs first.');return;}
+ state(true);idMode=true;document.getElementById('log').textContent='';say('Finding Post IDs…');
+ google.script.run.withSuccessHandler(function(items){
+  queue=items;at=0;done=0;failed=0;totalCost=0;
+  log('Found '+items.length+' valid Case Study Post IDs.');next();
+ }).withFailureHandler(function(e){state(false);say('Error: '+(e.message||e));}).new_getCaseStudyRowsForPostIds(raw);
+}
 function batch(){
- if(busy)return;state(true);document.getElementById('log').textContent='';
+ if(busy)return;state(true);idMode=false;document.getElementById('log').textContent='';
  say('Reading visible filtered rows…');
  google.script.run.withSuccessHandler(function(rows){
    queue=rows;at=0;done=0;failed=0;totalCost=0;
@@ -29,12 +44,13 @@ function next(){
    say('Finished: '+done+' complete, '+failed+' errors | Total API cost $'+totalCost.toFixed(4));
    state(false);return;
  }
- var row=queue[at++];say('Processing '+at+' of '+queue.length+' — posts row '+row);
+ var entry=queue[at++],row=idMode?entry.row:entry;var label=idMode?'Post ID '+entry.postId+' (row '+row+')':'Row '+row;
+ say('Processing '+at+' of '+queue.length+' — '+label);
  google.script.run.withSuccessHandler(function(r){
-   if(r.skipped){log('Row '+row+': skipped (hidden).');}
-   else {done++;totalCost+=Number(r.cost||0);log('Row '+row+': '+r.status+(r.evidenceExtracted?' | evidence extracted':' | existing evidence')+' | $'+Number(r.cost||0).toFixed(4));}
+   if(r.skipped){log(label+': skipped (hidden).');}
+   else {done++;totalCost+=Number(r.cost||0);log(label+': '+r.status+(r.evidenceExtracted?' | evidence extracted':' | existing evidence')+' | $'+Number(r.cost||0).toFixed(4));}
    next();
- }).withFailureHandler(function(e){failed++;log('Row '+row+': ERROR — '+(e.message||e));next();})
- .new_runFilteredCaseStudyRow(row);
+ }).withFailureHandler(function(e){failed++;log(label+': ERROR — '+(e.message||e));next();})
+ .new_runFilteredCaseStudyRow(row,idMode);
 }
 </script></div>
