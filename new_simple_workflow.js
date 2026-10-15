@@ -243,14 +243,14 @@ function new_getFilteredCaseStudyRows() {
  * Called once per visible Case Study by sidebar; evidence extraction is conditional.
  * Only mark column D when BOTH the evidence check and the NEW workflow completed.
  */
-function new_runFilteredCaseStudyRow(row) {
+function new_runFilteredCaseStudyRow(row, includeHidden) {
   row=Number(row);
   var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
   if(!sh||!Number.isInteger(row)||row<2||row>sh.getLastRow())throw new Error('Invalid posts row');
   var headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0].map(function(x){return String(x).trim();});
   function col(name){var c=headers.indexOf(name)+1;if(!c)throw new Error('Missing heading '+name);return c;}
   if(String(sh.getRange(row,col('Article Type')).getValue()).trim()!=='Case Study')throw new Error('Row '+row+' is not a Case Study');
-  if(sh.isRowHiddenByFilter(row)||sh.isRowHiddenByUser(row))return {success:true,skipped:true,message:'Row hidden from filter',row:row,cost:0};
+  if(!includeHidden && (sh.isRowHiddenByFilter(row)||sh.isRowHiddenByUser(row)))return {success:true,skipped:true,message:'Row hidden from filter',row:row,cost:0};
   // The fingerprint plus JSON evidence validity determines whether re-extraction is needed.
   var fresh=true;
   var evidenceLabels=['Project Location & Property','Observed Conditions','Client Requirements','Materials & Construction','Inspection & Tests','Restoration Methods','Products & Equipment','Technical Findings','Project Results','Maintenance Handover'];
@@ -285,4 +285,37 @@ function new_runFilteredCaseStudyRow(row) {
   result.extractionCost=extractionCost;
   result.cost=Number(result.cost||0)+extractionCost;
   return result;
+}
+
+/**
+ * Convert pasted Post IDs to their exact rows on posts.
+ * Explicit ID requests run regardless of the current sheet filter.
+ * Reject unknown IDs, duplicates in the sheet, and non-Case Study entries.
+ */
+function new_getCaseStudyRowsForPostIds(postIdsText) {
+  var ids=String(postIdsText||'').split(/[\\s,;]+/).map(function(x){return x.trim();}).filter(Boolean);
+  if(!ids.length)throw new Error('Enter at least one Post ID.');
+  if(ids.length>250)throw new Error('Maximum 250 Post IDs per batch.');
+  var seen={},requested=[];
+  ids.forEach(function(id){if(!seen[id]){seen[id]=true;requested.push(id);}});
+  var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
+  if(!sh)throw new Error('posts sheet missing');
+  var h=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0].map(function(x){return String(x).trim();});
+  var idCol=h.indexOf('Post ID')+1,typeCol=h.indexOf('Article Type')+1;
+  if(!idCol||!typeCol)throw new Error('Post ID or Article Type heading missing.');
+  var n=sh.getLastRow()-1;
+  var idValues=n>0?sh.getRange(2,idCol,n,1).getDisplayValues():[];
+  var types=n>0?sh.getRange(2,typeCol,n,1).getDisplayValues():[];
+  var byId={};
+  idValues.forEach(function(v,i){var id=String(v[0]).trim();if(!id)return;(byId[id]||(byId[id]=[])).push({row:i+2,type:String(types[i][0]).trim()});});
+  var errors=[],rows=[];
+  requested.forEach(function(id){
+    var matches=byId[id]||[];
+    if(!matches.length)errors.push('Post ID '+id+' not found');
+    else if(matches.length!==1)errors.push('Post ID '+id+' appears in multiple posts rows');
+    else if(matches[0].type!=='Case Study')errors.push('Post ID '+id+' is not a Case Study');
+    else rows.push({postId:id,row:matches[0].row});
+  });
+  if(errors.length)throw new Error(errors.join('; '));
+  return rows;
 }
