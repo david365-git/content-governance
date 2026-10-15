@@ -293,7 +293,7 @@ function new_runFilteredCaseStudyRow(row, includeHidden) {
  * Reject unknown IDs, duplicates in the sheet, and non-Case Study entries.
  */
 function new_getCaseStudyRowsForPostIds(postIdsText) {
-  var ids=String(postIdsText||'').split(/[\\s,;]+/).map(function(x){return x.trim();}).filter(Boolean);
+  var ids=String(postIdsText||'').split(/[\s,;]+/).map(function(x){return x.trim();}).filter(Boolean);
   if(!ids.length)throw new Error('Enter at least one Post ID.');
   if(ids.length>250)throw new Error('Maximum 250 Post IDs per batch.');
   var seen={},requested=[];
