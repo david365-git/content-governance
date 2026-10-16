@@ -62,7 +62,7 @@ function technicalExportOpen() {
     'On PASS, explicitly confirm Columns M–S are fit for use as this material reference for the AI article-generation workflow.',
     '',
     '========== BEGIN REFERENCE MATERIAL TO AUDIT =========='
-  ].join('\\n');
+  ].join('\n');
 
   const parts = [
     auditPrompt,
