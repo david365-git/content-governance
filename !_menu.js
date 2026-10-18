@@ -30,6 +30,7 @@ function onOpen(e) {
   // TECHNICAL SPECIFICATIONS — read-only exports from the active row
   ui.createMenu('Technical Export')
     .addItem('Download C and N–S as one file', 'technicalExportOpen')
+    .addItem('Download Cross-Material Audit (Active Column)', 'technicalExportCrossMaterialActiveColumn')
     .addToUi();
 
   // 1. UTILITIES
