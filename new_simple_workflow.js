@@ -95,10 +95,11 @@ function new_runWorkflowForRow_(row) {
   var approvedTechnicalReference=bc_getRelevantTechnicalMatrixExcerpt_(material,original,3200,articleType);
   if(!approvedTechnicalReference)throw new Error('Approved Technical Matrix M:S reference is empty for '+material);
   var model=MODEL_LOW;
+  // Column H: publication/technical PASS gate. Column M: separate original-vs-rewrite assessment.
   var resultSheet=ss.getSheetByName('NEW Workflow Test');
   if(!resultSheet){
     resultSheet=ss.insertSheet('NEW Workflow Test');
-    resultSheet.appendRow(['Date','Posts Row','Post ID','Title','Material','Source Fingerprint','NEW Rewrite HTML','NEW Independent Audit','Status','API Cost USD','Model']);
+    resultSheet.appendRow(['Date','Posts Row','Post ID','Title','Material','Source Fingerprint','NEW Rewrite HTML','Publication & Technical Quality Audit','Status','API Cost USD','Model']);
     resultSheet.setFrozenRows(1);
   }
   var outRow=resultSheet.getLastRow()+1;
@@ -226,6 +227,39 @@ function new_runWorkflowForRow_(row) {
     resultSheet.getRange(outRow,9).setValue(status);
     resultSheet.getRange(outRow,10).setValue(cost);
     resultSheet.getRange(outRow,11).setValue(model);
+    // Keep this comparison completely independent of the established
+    // ce_compareOriginalToCtById() stage and the Rewrite Comparison Audit sheet.
+    if(status==='PASS'){
+      resultSheet.getRange(outRow,12).setValue(original); // L: source HTML
+      try {
+        var comparisonPrompt=[
+          'You are independently auditing a UK stone/tile floor restoration webpage rewrite.',
+          'Compare full ORIGINAL HTML with REVISED HTML. ORIGINAL is evidence for documented project events.',
+          'Do not treat absence of general technical education from the original as a factual error; flag invented project-specific facts.',
+          'Assess: Helpful Content, E-E-A-T/first-hand experience, factual fidelity, readability for nontechnical UK homeowners, intent alignment, technical relevance, and likely search usefulness (not ranking predictions).',
+          'For Case Studies, the author deliberately prefers first-person singular I, including when original editorial copy says we. Do NOT score or flag we-to-I changes as a regression by themselves. Flag only concrete unsupported claims about who attended, performed or supervised particular work; retain I as the default unless the project explicitly documents a team effort.',
+          'Distinguish documented completed outcomes from generic intended benefits; flag unsupported site observations, lighting comparisons, measurements, customer reactions, and unverified performance as factual regressions.',
+          'Detect diluted client details, invented outcomes, SEO keyword stuffing, templated phrasing, image changes, heading changes and useful improvements.',
+          'For each important observation provide short concrete quotations or clear examples from both versions.',
+          'Return only plain text with these EXACT headings: VERDICT; SCORES (original/revised for Helpful, Experience, Factual, Readability, Intent, Technical, Search); IMPROVEMENTS; REGRESSIONS; DOCUMENTED PROJECT FACTS AT RISK; RECURRING SCRIPT-RULE CANDIDATES; SPECIFIC W2B RULE RECOMMENDATIONS.',
+          'Never assume longer is better. Label unverified concerns as needing verification.',
+          'POST ID: '+postId,'TITLE: '+title,'ARTICLE TYPE: '+articleType,
+          '=== ORIGINAL HTML ('+postId+') ===',original,
+          '=== REVISED HTML ('+postId+') ===',html
+        ].join('\\n\\n');
+        var comparison=bc_sendPromptViaOpenAI(comparisonPrompt,5500,MODEL_LOW);
+        cost+=Number(comparison&&comparison.cost||0);
+        if(!comparison||!comparison.success||!String(comparison.text||'').trim())
+          throw new Error('AI comparison failed: '+(comparison&&comparison.message||'no response'));
+        var comparisonText=String(comparison.text).trim();
+        if(comparisonText.length>49000)throw new Error('Comparison report exceeds Sheets cell limit.');
+        resultSheet.getRange(outRow,13).setValue(comparisonText); // M: analysis
+      }catch(comparisonError){
+        // A comparison failure never turns a passed publication audit into FAIL.
+        resultSheet.getRange(outRow,13).setValue('COMPARISON ERROR: '+String(comparisonError.message||comparisonError).slice(0,450));
+      }
+      resultSheet.getRange(outRow,10).setValue(cost);
+    }
     return {success:true,status:status,postId:postId,resultRow:outRow,cost:cost,message:'NEW Workflow Test row '+outRow+' — '+status};
   }catch(err){
     resultSheet.getRange(outRow,9).setValue('ERROR: '+String(err.message||err).slice(0,250));
