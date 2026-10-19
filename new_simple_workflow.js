@@ -99,7 +99,7 @@ function new_runWorkflowForRow_(row) {
   var resultSheet=ss.getSheetByName('NEW Workflow Test');
   if(!resultSheet){
     resultSheet=ss.insertSheet('NEW Workflow Test');
-    resultSheet.appendRow(['Date','Posts Row','Post ID','Title','Material','Source Fingerprint','NEW Rewrite HTML','Publication & Technical Quality Audit','Status','API Cost USD','Model']);
+    resultSheet.appendRow(['Date','Posts Row','Post ID','Title','Material','Source Fingerprint','NEW Rewrite HTML','Publication & Technical Quality Audit','Status','API Cost USD','Model','Original html','Original vs Rewrite — AI Comparison Report']);
     resultSheet.setFrozenRows(1);
   }
   var outRow=resultSheet.getLastRow()+1;
