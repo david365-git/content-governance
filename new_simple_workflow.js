@@ -27,7 +27,7 @@ function new_addAuthorFooter_(html,material) {
       +'<p>'+bio+'</p></div></section>';
   }
   if(!/contact (?:us|abbey floor care) to (?:arrange|discuss)|no-obligation .*floor assessment/i.test(html)){
-    html+='\n<p class="new-case-study-cta">For advice about a '+escaped+' floor, <a href="https://www.abbeyfloorcare.co.uk/">contact Abbey Floor Care to discuss your floor and available options</a>.</p>';
+    html+='\n<p class="new-case-study-cta">For advice about a '+escaped+' floor, <a href="https://www.abbeyfloorcare.co.uk/">visit Abbey Floor Care to explore our floor restoration advice and services</a>.</p>';
   }
   return html;
 }
@@ -167,8 +167,8 @@ function new_runWorkflowForRow_(row) {
       'Check that the homeowner problem, what was actually done, relevant constraints and results are prominent; evaluate headings, readability, helpfulness and natural use of relevant location/material terms.',
       'Consider source-quoted evidence and original article as ground truth for substantive case facts. Correct major process-sequencing errors such as presenting sealing before honing when that is only a writing mistake; do not invent operations.',
       'Images and relevant internal links matter. Flag missing original URLs as a material issue; do not fail merely for small alt-text differences.',
-      'Evaluate contextual links against APPROVED GOVERNED LINKS. The verified material hub should appear naturally in the body when available. Up to two relevant related links are useful, not a quota; never reward irrelevant links.',
-      'Confirm the standard David Allen author box with portrait and useful closing contact link are present. Treat absence as a material omission, but do not otherwise micromanage their wording.',
+      'Evaluate newly inserted contextual links against APPROVED GOVERNED LINKS. Preserve existing original article links even when their published URLs differ from current governed URL data. Do not flag an original link as broken or demand replacement merely because the path differs; require actual evidence of a broken URL. The verified material hub should appear naturally in the body when available. Up to two relevant related links are useful, not a quota; never reward irrelevant links.',
+      'Confirm the standard David Allen author box with portrait and a useful closing next-step link are present. A homepage link is acceptable when clearly described as a website link rather than a direct contact form. Treat absence as a material omission, but do not otherwise micromanage their wording.',
       'First line must be exactly VERDICT: PASS or VERDICT: FAIL.',
       'If FAIL, state at most three material blockers with a concise exact quote and focused fix. If PASS, write NO MATERIAL ISSUES and optionally one short nonblocking improvement suggestion.',
       '=== APPROVED GOVERNED LINKS ===',JSON.stringify({verifiedHub:linkPlan.hub,related:linkPlan.related}),
@@ -187,7 +187,7 @@ function new_runWorkflowForRow_(row) {
       var firstAudit=report;
       var correctionPrompt=[
         'ROLE: Publication-quality HTML editor. Correct ONLY the material blockers explicitly identified by the audit. Prioritise reader clarity and search intent; do not chase trivial discrepancies.',
-        'Preserve source-grounded project facts and professional judgement. Retain all image and link URLs and their order. Make minimal coherent edits to resolve material blockers without flattening the article.',
+        'Preserve source-grounded project facts and professional judgement. Retain all images and valid original source links. A link URL may be corrected only where its replacement is explicitly documented in APPROVED GOVERNED LINKS or verified as a working destination; do not invent or guess link destinations. Make minimal coherent edits to resolve material blockers without flattening the article.',
         'Do not add new observations, tests, measurements, processes or outcomes.',
         'Preserve any source-supported professional assessment that unsuitable cleaning chemicals were the principal cause of deterioration; do not delete it solely because independent testing was not done. Do not insert this cause where the source does not support it, and never present it as a laboratory result.',
         'When the audit identifies sealing before honing, reorder only the documented stages so honing/refinement and polishing precede final sealing. Do not remove the sealer or add new work.',
