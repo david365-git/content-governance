@@ -94,7 +94,7 @@ function new_runWorkflowForRow_(row) {
   // The relevant M:R excerpt is bounded, and column S safeguards are always included.
   var approvedTechnicalReference=bc_getRelevantTechnicalMatrixExcerpt_(material,original,3200,articleType);
   if(!approvedTechnicalReference)throw new Error('Approved Technical Matrix M:S reference is empty for '+material);
-  var model=MODEL_LOW;
+  var model=MODEL_CHEAP;
   // Column H: publication/technical PASS gate. Column M: separate original-vs-rewrite assessment.
   var resultSheet=ss.getSheetByName('NEW Workflow Test');
   if(!resultSheet){
@@ -247,7 +247,7 @@ function new_runWorkflowForRow_(row) {
           '=== ORIGINAL HTML ('+postId+') ===',original,
           '=== REVISED HTML ('+postId+') ===',html
         ].join('\\n\\n');
-        var comparison=bc_sendPromptViaOpenAI(comparisonPrompt,5500,MODEL_LOW);
+        var comparison=bc_sendPromptViaOpenAI(comparisonPrompt,5500,MODEL_CHEAP);
         cost+=Number(comparison&&comparison.cost||0);
         if(!comparison||!comparison.success||!String(comparison.text||'').trim())
           throw new Error('AI comparison failed: '+(comparison&&comparison.message||'no response'));
