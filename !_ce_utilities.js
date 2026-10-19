@@ -754,99 +754,72 @@ function bc_getCompetitorWordCount() {
 }
 
 function getTechnicalMatrix(material) {
-  const ss        = SpreadsheetApp.getActiveSpreadsheet();
-  const techSheet = ss.getSheetByName("technical");
-  if (!techSheet) return "No Technical Matrix Available.";
-  const techData  = techSheet.getRange("B2:C100").getValues();
-  for (let i = 0; i < techData.length; i++) {
-    const materialList  = String(techData[i][0]).trim();
-    const matrixContent = techData[i][1];
-    if (materialList.toLowerCase() === String(material || "").trim().toLowerCase()) {
-      return matrixContent;
-    }
-  }
-  return "No specific technical matrix found for " + material + ". Use general stone care principles.";
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sh = ss.getSheetByName("technical");
+  if (!sh) throw new Error("Technical Matrix sheet not found.");
+  const values = sh.getRange(2, 2, Math.max(1, sh.getLastRow() - 1), 18).getValues(); // B:S
+  const needle = String(material || "").trim().toLowerCase();
+  const match = values.find(r => String(r[0] || "").trim().toLowerCase() === needle);
+  if (!match) throw new Error("Technical Matrix material not found: " + material);
+  const columns = ["M","N","O","P","Q","R","S"];
+  const titles = ["AI Technical Knowledge — Concise","Material Characteristics & Behaviour",
+    "Problems, Defects & Diagnosis","Cleaning & Surface Preparation",
+    "Restoration, Repairs & Interventions","Protection, Sealing & Aftercare",
+    "Technical Restrictions & Safeguards"];
+  const content = columns.map((letter,i) => {
+    const value = String(match[11+i] || "").trim(); // B index 11 = M
+    if (!value) throw new Error("Technical Matrix " + letter + " is blank for " + material);
+    return "[" + letter + " — " + titles[i] + "]\n" + value;
+  });
+  return "APPROVED TECHNICAL REFERENCE — M:S (not evidence of work on a specific job):\n\n" +
+    content.join("\n\n");
 }
 
-
-// Return a live, bounded excerpt of the current material's Technical Matrix.
-// This avoids copying the full specification into each AI request.
+// Select article-relevant guidance from approved M:R and always supply safeguards from S.
+// Works for every material, not just the former Terrazzo pilot. Never falls back to C or L.
 function bc_getRelevantTechnicalMatrixExcerpt_(material, context, maxChars, articleType) {
-  const materialName = String(material || "").trim();
-  // Pilot scope: existing Column C paragraph retrieval remains unchanged for all
-  // materials other than Terrazzo, until the pilot article comparison is approved.
-  if (materialName.toLowerCase() === "terrazzo") {
-    const techSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("technical");
-    if (!techSheet) return "";
-    const lastRow = Math.min(techSheet.getLastRow(), 100);
-    const materialNames = techSheet.getRange(2, 2, Math.max(1, lastRow - 1), 1).getValues();
-    const ix = materialNames.findIndex(r => String(r[0] || "").trim().toLowerCase() === "terrazzo");
-    if (ix < 0) return "";
-    const sections = techSheet.getRange(ix + 2, 14, 1, 6).getValues()[0].map(v => String(v || "").trim());
-    // Fail closed: never silently fall back to old C when a pilot section is blank.
-    if (sections.some(x => !x)) throw new Error("Terrazzo pilot N:S has an empty section; check technical sheet.");
-    const safe = sections[5]; // Column S is always supplied in full.
-    const budget = Math.max(800, Math.min(Number(maxChars) || 2600, 4500));
-    const terms = Array.from(new Set((String(context || "").toLowerCase().match(/[a-z]{5,}/g) || [])
-      .filter(w => !/^(about|after|before|could|floor|floors|their|there|these|which|would|should|article|section|terrazzo|stone|original|heading|homeowner|restoration|cleaning)$/.test(w))));
-    const type = String(articleType || "").toLowerCase();
-    const preferred = /diagnostic/.test(type) ? [1,0] :
-      /method/.test(type) ? [2,3] :
-      /buyer/.test(type) ? [4,2] :
-      /educational/.test(type) ? [0,1] :
-      /case study/.test(type) ? [1,3] :
-      /service/.test(type) ? [1,3] :
-      /hub/.test(type) ? [0,1] : [];
-    const parts = [];
-    for (let i = 0; i < 5; i++) {
-      sections[i].split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length >= 45).forEach((paragraph,j) => {
-        const lower = paragraph.toLowerCase();
-        const overlap = terms.reduce((sum,w) => sum + (lower.includes(w) ? 1 : 0), 0);
-        const boost = preferred.includes(i) ? 3 : 0;
-        parts.push({column:"NOPQR"[i],paragraph,score:overlap + boost,index:j});
-      });
-    }
-    parts.sort((a,b) => b.score-a.score || a.column.localeCompare(b.column) || a.index-b.index);
-    const chosen = [];
-    let length = 0;
-    for (const part of parts) {
-      if (part.score < 2 && chosen.length) continue;
-      if (length + part.paragraph.length + 2 > budget) continue;
-      chosen.push(part);
-      length += part.paragraph.length + 2;
-    }
-    chosen.sort((a,b) => a.column.localeCompare(b.column) || a.index-b.index);
-    return "LIVE TERRAZZO TECHNICAL REFERENCE — general knowledge only; never evidence that a specific job used a treatment:\n" +
-      chosen.map(p => "[" + p.column + "] " + p.paragraph).join("\n\n") +
-      "\n\n[S — REQUIRED TECHNICAL SAFEGUARDS]\n" + safe +
-      "\nEND LIVE TERRAZZO TECHNICAL REFERENCE";
+  const name = String(material || "").trim();
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("technical");
+  if (!sh) throw new Error("Technical Matrix sheet not found.");
+  const rows = sh.getRange(2, 2, Math.max(1, sh.getLastRow() - 1), 18).getValues(); // B:S
+  const match = rows.find(r => String(r[0] || "").trim().toLowerCase() === name.toLowerCase());
+  if (!match) throw new Error("Technical Matrix material not found: " + material);
+  const sections = Array.from({length:7},(_,i) => String(match[11+i] || "").trim()); // M:S
+  if (sections.some(x => !x)) throw new Error("Technical Matrix M:S has a blank section for " + material);
+  const safeguards = sections[6]; // S
+  const budget = Math.max(800, Math.min(Number(maxChars) || 2600, 4500));
+  const terms = Array.from(new Set((String(context || "").toLowerCase().match(/[a-z]{5,}/g) || [])
+    .filter(w => !/^(about|after|before|could|floor|floors|their|there|these|which|would|should|article|section|stone|original|heading|homeowner|restoration|cleaning)$/.test(w))));
+  const type = String(articleType || "").toLowerCase();
+  const preferred = /diagnostic/.test(type) ? [2,1] :
+    /method/.test(type) ? [3,4] :
+    /buyer/.test(type) ? [5,3] :
+    /educational/.test(type) ? [1,2] :
+    /case study/.test(type) ? [2,4] :
+    /service/.test(type) ? [2,4] :
+    /hub/.test(type) ? [1,2] : [];
+  const parts = [];
+  for (let i = 0; i < 6; i++) { // M:R; S supplied separately
+    sections[i].split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length >= 45).forEach((paragraph,j) => {
+      const lower = paragraph.toLowerCase();
+      const overlap = terms.reduce((sum,w) => sum + (lower.includes(w) ? 1 : 0), 0);
+      parts.push({column:"MNOPQR"[i],paragraph,score:overlap + (preferred.includes(i) ? 3 : 0),index:j});
+    });
   }
-
-  const source = String(getTechnicalMatrix(materialName) || "");
-  if (!source || /^No (specific )?technical matrix/i.test(source)) return "";
-  const limit = Math.max(800, Math.min(Number(maxChars) || 2600, 4500));
-  const contextWords = String(context || "").toLowerCase().match(/[a-z]{4,}/g) || [];
-  const stop = new Set(["this","that","with","from","into","floor","floors","terrazzo","marble","stone","tile","tiles","cleaning","restoration","article","section","heading","original","homeowner","work","after","before","were","have","when","where","their","there","which","about","would","should","needed","using","used","more","also","good"]);
-  const words = Array.from(new Set(contextWords.filter(w => !stop.has(w))));
-  const paragraphs = source.split(/\n\s*\n/).map(x => x.trim()).filter(x => x.length >= 60);
-  const ranked = paragraphs.map((paragraph, index) => {
-    const lower = paragraph.toLowerCase();
-    let score = 0;
-    words.forEach(w => { if (lower.includes(w)) score += 1; });
-    if (words.some(w => /gripper|carpet|doorway|edge|crack|nail/.test(w)) && /gripper|doorway|nail/.test(lower)) score += 8;
-    return {paragraph,index,score};
-  }).filter(x => x.score >= 2).sort((a,b) => b.score-a.score || a.index-b.index);
-  let picked = [], length = 0;
-  for (const item of ranked) {
-    if (length + item.paragraph.length > limit) continue;
-    picked.push(item);
-    length += item.paragraph.length + 2;
+  parts.sort((a,b) => b.score-a.score || a.column.localeCompare(b.column) || a.index-b.index);
+  const chosen = [];
+  let length = 0;
+  for (const part of parts) {
+    if (part.score < 2 && chosen.length) continue;
+    if (length + part.paragraph.length + 2 > budget) continue;
+    chosen.push(part);
+    length += part.paragraph.length + 2;
   }
-  if (!picked.length) return "";
-  picked.sort((a,b) => a.index-b.index);
-  return "LIVE MATERIAL REFERENCE — explanatory knowledge only, not evidence of project events:\n" +
-    picked.map(x => x.paragraph).join("\n\n") +
-    "\nEND LIVE MATERIAL REFERENCE";
+  chosen.sort((a,b) => a.column.localeCompare(b.column) || a.index-b.index);
+  return "LIVE APPROVED TECHNICAL REFERENCE — general knowledge only, never evidence of project actions:\n" +
+    chosen.map(p => "[" + p.column + "] " + p.paragraph).join("\n\n") +
+    "\n\n[S — REQUIRED TECHNICAL SAFEGUARDS]\n" + safeguards +
+    "\nEND LIVE APPROVED TECHNICAL REFERENCE";
 }
 
 /* ============================================================
