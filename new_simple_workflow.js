@@ -22,14 +22,14 @@ function new_addAuthorFooter_(html,material) {
     : 'David Allen has more than 30 years of experience in hard-floor cleaning and restoration through Abbey Floor Care. In this case study, he shares first-hand experience of assessing and restoring '+escaped+' floors, including the methods used and practical maintenance considerations.';
   // Idempotent: model corrections may return existing standard footer.
   // Remove all copies before rebuilding exactly one author panel and one CTA.
-  html=html.replace(/<section\\b[^>]*class=["'][^"']*\\bnew-author-bio\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/section>/gi,'');
-  html=html.replace(/<p\\b[^>]*class=["'][^"']*\\bnew-case-study-cta\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/p>/gi,'');
+  html=html.replace(/<section\b[^>]*class=["'][^"']*\bnew-author-bio\b[^"']*["'][^>]*>[\s\S]*?<\/section>/gi,'');
+  html=html.replace(/<p\b[^>]*class=["'][^"']*\bnew-case-study-cta\b[^"']*["'][^>]*>[\s\S]*?<\/p>/gi,'');
   html=html.trim();
-  html+='\\n<section class="new-author-bio" aria-label="About the author" style="display:flex;gap:20px;align-items:flex-start;padding:20px;border:1px solid #e7d7a9;border-radius:10px;background:#fff6d9;margin:28px 0;">'
+  html+='\n<section class="new-author-bio" aria-label="About the author" style="display:flex;gap:20px;align-items:flex-start;padding:20px;border:1px solid #e7d7a9;border-radius:10px;background:#fff6d9;margin:28px 0;">'
     +'<img src="'+authorImage+'" alt="David Allen, stone floor restoration specialist" width="100" height="105" style="width:100px;height:105px;object-fit:cover;border-radius:7px;">'
     +'<div><p><strong>David Allen — <a href="https://www.abbeyfloorcare.co.uk/">Abbey Floor Care</a></strong></p>'
     +'<p>'+bio+'</p></div></section>';
-  html+='\\n<p class="new-case-study-cta">For advice about a '+escaped+' floor, <a href="https://www.abbeyfloorcare.co.uk/">visit Abbey Floor Care to explore our floor restoration advice and services</a>.</p>';
+  html+='\n<p class="new-case-study-cta">For advice about a '+escaped+' floor, <a href="https://www.abbeyfloorcare.co.uk/">visit Abbey Floor Care to explore our floor restoration advice and services</a>.</p>';
   return html;
 }
 
