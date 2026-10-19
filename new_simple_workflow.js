@@ -90,6 +90,10 @@ function new_runWorkflowForRow_(row) {
   if(!original.trim())throw new Error('Original article is empty in site-export column O.');
   // This checks the existing source fingerprint before making any paid API calls.
   var evidence=bc_caseEvidencePromptBlock_(row);
+  // Use the approved live M:S reference; never use historic technical columns C or L.
+  // The relevant M:R excerpt is bounded, and column S safeguards are always included.
+  var approvedTechnicalReference=bc_getRelevantTechnicalMatrixExcerpt_(material,original,3200,articleType);
+  if(!approvedTechnicalReference)throw new Error('Approved Technical Matrix M:S reference is empty for '+material);
   var model=MODEL_LOW;
   var resultSheet=ss.getSheetByName('NEW Workflow Test');
   if(!resultSheet){
@@ -126,6 +130,8 @@ function new_runWorkflowForRow_(row) {
       'Write British English. Return only raw HTML (no Markdown fences).',
       'TITLE: '+title,'MATERIAL: '+material,
       '=== APPROVED GOVERNED LINKS ===',JSON.stringify({verifiedHub:linkPlan.hub,related:linkPlan.related}),
+      '=== APPROVED MATERIAL TECHNICAL REFERENCE (M:S) ===',approvedTechnicalReference,
+      'Use this reference for general material-specific technical guidance, but NEVER treat it as evidence of work performed on this project.',
       '=== PROJECT EVIDENCE ===',evidence,
       '=== ORIGINAL HTML ===',original
     ].join('\n\n');
@@ -165,6 +171,8 @@ function new_runWorkflowForRow_(row) {
       'First line must be exactly VERDICT: PASS or VERDICT: FAIL.',
       'If FAIL, state at most three material blockers with a concise exact quote and focused fix. If PASS, write NO MATERIAL ISSUES and optionally one short nonblocking improvement suggestion.',
       '=== APPROVED GOVERNED LINKS ===',JSON.stringify({verifiedHub:linkPlan.hub,related:linkPlan.related}),
+      '=== APPROVED MATERIAL TECHNICAL REFERENCE (M:S) ===',approvedTechnicalReference,
+      'Check material-specific technical claims against this reference. Project-specific facts must still be supported by the original article or verified evidence.',
       '=== VERIFIED PROJECT EVIDENCE ===',evidence,
       '=== ORIGINAL ARTICLE ===',original,
       '=== REWRITE ===',html
@@ -182,6 +190,7 @@ function new_runWorkflowForRow_(row) {
         'Do not add new observations, tests, measurements, processes or outcomes.',
         'Preserve any source-supported professional assessment that unsuitable cleaning chemicals were the principal cause of deterioration; do not delete it solely because independent testing was not done. Do not insert this cause where the source does not support it, and never present it as a laboratory result.',
         'When the audit identifies sealing before honing, reorder only the documented stages so honing/refinement and polishing precede final sealing. Do not remove the sealer or add new work.',
+        '=== APPROVED MATERIAL TECHNICAL REFERENCE (M:S) ===',approvedTechnicalReference,
         '=== VERIFIED PROJECT EVIDENCE ===',evidence,
         '=== ORIGINAL ARTICLE ===',original,
         'Return ONLY complete corrected HTML. Do not include commentary or code fences.',
