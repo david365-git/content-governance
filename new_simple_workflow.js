@@ -16,19 +16,20 @@ function new_addAuthorFooter_(html,material) {
   html=String(html||'');
   var escaped=String(material||'stone').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   var authorImage='https://www.abbeyfloorcare.co.uk/wp-content/uploads/David_Allen.jpg';
-  var topic=escaped.toLowerCase();
-  var topicLabel=/tile|terracotta|quarry|porcelain|ceramic|victorian|minton/i.test(topic)
-    ? escaped+' floors' : escaped+' floors';
-  var bio='David Allen has more than 30 years of experience in hard-floor cleaning and restoration through Abbey Floor Care. In this case study, he shares first-hand experience of assessing and restoring '+topicLabel+', including the methods used and practical maintenance considerations.';
-  if(!/David Allen\s*(?:—|&mdash;|-)\s*Abbey Floor Care/i.test(html)){
-    html+='\n<section class="new-author-bio" aria-label="About the author" style="display:flex;gap:20px;align-items:flex-start;padding:20px;border:1px solid #e7d7a9;border-radius:10px;background:#fff6d9;margin:28px 0;">'
-      +'<img src="'+authorImage+'" alt="David Allen, stone floor restoration specialist" width="100" height="105" style="width:100px;height:105px;object-fit:cover;border-radius:7px;">'
-      +'<div><p><strong>David Allen — <a href="https://www.abbeyfloorcare.co.uk/">Abbey Floor Care</a></strong></p>'
-      +'<p>'+bio+'</p></div></section>';
-  }
-  if(!/contact (?:us|abbey floor care) to (?:arrange|discuss)|no-obligation .*floor assessment/i.test(html)){
-    html+='\n<p class="new-case-study-cta">For advice about a '+escaped+' floor, <a href="https://www.abbeyfloorcare.co.uk/">visit Abbey Floor Care to explore our floor restoration advice and services</a>.</p>';
-  }
+  var isVictorian=/victorian|minton|encaustic/i.test(escaped);
+  var bio=isVictorian
+    ? 'David Allen has more than 30 years of hands-on experience restoring Victorian and encaustic tile floors through Abbey Floor Care. This case study documents his first-hand assessment, restoration work and practical decisions on this floor.'
+    : 'David Allen has more than 30 years of experience in hard-floor cleaning and restoration through Abbey Floor Care. In this case study, he shares first-hand experience of assessing and restoring '+escaped+' floors, including the methods used and practical maintenance considerations.';
+  // Idempotent: model corrections may return existing standard footer.
+  // Remove all copies before rebuilding exactly one author panel and one CTA.
+  html=html.replace(/<section\\b[^>]*class=["'][^"']*\\bnew-author-bio\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/section>/gi,'');
+  html=html.replace(/<p\\b[^>]*class=["'][^"']*\\bnew-case-study-cta\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/p>/gi,'');
+  html=html.trim();
+  html+='\\n<section class="new-author-bio" aria-label="About the author" style="display:flex;gap:20px;align-items:flex-start;padding:20px;border:1px solid #e7d7a9;border-radius:10px;background:#fff6d9;margin:28px 0;">'
+    +'<img src="'+authorImage+'" alt="David Allen, stone floor restoration specialist" width="100" height="105" style="width:100px;height:105px;object-fit:cover;border-radius:7px;">'
+    +'<div><p><strong>David Allen — <a href="https://www.abbeyfloorcare.co.uk/">Abbey Floor Care</a></strong></p>'
+    +'<p>'+bio+'</p></div></section>';
+  html+='\\n<p class="new-case-study-cta">For advice about a '+escaped+' floor, <a href="https://www.abbeyfloorcare.co.uk/">visit Abbey Floor Care to explore our floor restoration advice and services</a>.</p>';
   return html;
 }
 
@@ -123,7 +124,7 @@ function new_runWorkflowForRow_(row) {
       'Outcome requirements must reflect documented visual results.',
       'Respect exact floor location (kitchen versus hallway), construction era, repairs, machinery, finish level, sealer, and handover.',
       'Preserve all original article images (exact src, in original order) unless clearly unrelated; do not invent photo descriptions or use an image as proof of a different operation.',
-      'Preserve existing relevant internal links with exact href addresses; do not invent links. The standard author bio and next-step link will be appended by the application after writing: do not write your own author box or generic closing CTA.',
+      'Retain every relevant existing original internal link with its exact href (including links to comparable restoration case studies and diagnostic guides), incorporating it naturally where its subject is discussed. Do not drop original links to meet the limit on NEW links. Do not invent links. The application adds the one standard author bio and one CTA: do not include either in your output.',
       'CONTEXTUAL LINK GOVERNANCE: Link to the verified material hub when supplied, naturally within a relevant explanatory paragraph. Select up to 2 additional genuinely relevant supporting destinations from the APPROVED LINKS list; never invent destinations or change supplied URLs. Do not add links if relevance is weak. Preserve existing relevant links from the original.',
       'Integrate links in meaningful paragraphs at the point the subject is discussed, with descriptive natural anchor text. Avoid generic "click here", standalone signposting, overlinking and repetitive exact-match anchor text.',
       'Avoid generic tutorials, fabricated lighting comparisons, assumed tests, additional work, promises and repetitive headings.',
@@ -189,6 +190,8 @@ function new_runWorkflowForRow_(row) {
         'ROLE: Publication-quality HTML editor. Correct ONLY the material blockers explicitly identified by the audit. Prioritise reader clarity and search intent; do not chase trivial discrepancies.',
         'Preserve source-grounded project facts and professional judgement. Retain all images and valid original source links. A link URL may be corrected only where its replacement is explicitly documented in APPROVED GOVERNED LINKS or verified as a working destination; do not invent or guess link destinations. Make minimal coherent edits to resolve material blockers without flattening the article.',
         'Do not add new observations, tests, measurements, processes or outcomes.',
+        'Do not generate an author box, author portrait, or closing CTA. The application will add exactly one of each after correction.',
+        'Restore relevant original internal links missing from the rewrite, keeping the original hrefs; do not remove other valid links.',
         'Preserve any source-supported professional assessment that unsuitable cleaning chemicals were the principal cause of deterioration; do not delete it solely because independent testing was not done. Do not insert this cause where the source does not support it, and never present it as a laboratory result.',
         'When the audit identifies sealing before honing, reorder only the documented stages so honing/refinement and polishing precede final sealing. Do not remove the sealer or add new work.',
         '=== APPROVED MATERIAL TECHNICAL REFERENCE (M:S) ===',approvedTechnicalReference,
