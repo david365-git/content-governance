@@ -90,7 +90,7 @@ function new_runWorkflowForRow_(row) {
   if(!original.trim())throw new Error('Original article is empty in site-export column O.');
   // This checks the existing source fingerprint before making any paid API calls.
   var evidence=bc_caseEvidencePromptBlock_(row);
-  var model=MODEL_MID;
+  var model=MODEL_LOW;
   var resultSheet=ss.getSheetByName('NEW Workflow Test');
   if(!resultSheet){
     resultSheet=ss.insertSheet('NEW Workflow Test');
