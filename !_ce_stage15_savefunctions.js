@@ -376,7 +376,7 @@ function saveStage15CEnrichedPlan(plan) {
 
     // Canonicalise governed fields from W1.5A before validation.
     // W1.5C may enrich a section, but it must never redefine
-    // the TSM Requirement or Word Budget inherited from CU.
+    // the TSM Requirement or Depth inherited from CU.
     governed.expectedSections.forEach(
       function(number) {
         const blockRegex =
@@ -397,8 +397,8 @@ function saveStage15CEnrichedPlan(plan) {
               const governedTsm =
                 governed.expectedTsmRequirements[number];
 
-              const governedBudget =
-                governed.expectedWordBudgets[number];
+              const governedDepth =
+                governed.expectedDepths[number];
 
               if (
                 /^TSM Requirement:/mi.test(
@@ -437,15 +437,15 @@ function saveStage15CEnrichedPlan(plan) {
               }
 
               if (
-                /^Word Budget:/mi.test(
+                /^Depth:/mi.test(
                   canonicalBlock
                 )
               ) {
                 canonicalBlock =
                   canonicalBlock.replace(
-                    /^Word Budget:.*$/mi,
-                    'Word Budget: ' +
-                    governedBudget
+                    /^Depth:.*$/mi,
+                    'Depth: ' +
+                    governedDepth
                   );
               } else {
                 const tsmLineRegex =
@@ -457,8 +457,8 @@ function saveStage15CEnrichedPlan(plan) {
                     function(tsmLine) {
                       return (
                         tsmLine +
-                        '\nWord Budget: ' +
-                        governedBudget
+                        '\nDepth: ' +
+                        governedDepth
                       );
                     }
                   );
@@ -596,7 +596,7 @@ function saveStage15CEnrichedPlan(plan) {
         blockMatch[0];
       const requiredFields = [
         'TSM Requirement:',
-        'Word Budget:',
+        'Depth:',
         'Content Brief:',
         'Visual Pattern:',
         'List eligible:',
@@ -659,9 +659,9 @@ function saveStage15CEnrichedPlan(plan) {
             /^TSM Requirement:\s*(.+)$/mi
           );
 
-        const budgetMatch =
+        const depthMatch =
           block.match(
-            /^Word Budget:\s*(.+)$/mi
+            /^Depth:\s*(.+)$/mi
           );
 
         if (
@@ -677,14 +677,14 @@ function saveStage15CEnrichedPlan(plan) {
         }
 
         if (
-          budgetMatch &&
-          budgetMatch[1].trim() !==
-          governed.expectedWordBudgets[number]
+          depthMatch &&
+          depthMatch[1].trim() !==
+          governed.expectedDepths[number]
         ) {
           errors.push(
             'SECTION ' +
             number +
-            ' Word Budget does not exactly match W1.5A.'
+            ' Depth does not exactly match W1.5A.'
           );
         }
       }
