@@ -1797,11 +1797,10 @@ if (postId) {
  * becomes:
  * SECTION 7: 100–120 words
  */
-const structure15AForH2 =
-  structure15A.replace(
-    /^(SECTION\s+\d+:)\s*Order\s+\d+\s+—\s+.*?\s+—\s+(\d+[–-]\d+\s+words.*)$/gmi,
-    '$1 $2'
-  );
+const structure15AForH2 = structure15A.replace(
+   /^(SECTION\s+\d+:)\s*Order\s+\d+\s+[—-]\s*.*?\s+[—-]\s*(?:Required|Conditional)\s+[—-]\s*(?:Light|Standard|Deep)[^\n]*/gmi,
+   '$1 [Governed coverage role — choose a natural homeowner-facing heading]'
+ );
   const recoveryBlueprint =
     String(
       d["Recovery Blueprint"] ||
