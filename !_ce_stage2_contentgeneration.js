@@ -292,6 +292,37 @@ ${govRow[7]}
     // Extraction failed — proceed without list
   }
 
+  // Explicit source link inventory: the prose-level instruction alone has proved insufficient.
+  // List original editorial links for the AI rather than relying on them being rediscovered in long HTML.
+  var originalLinkBlock = "";
+  try {
+    if (String(d['Article Type'] || '').trim() === 'Case Study' && rawHtml2b) {
+      var linksFound = [];
+      var anchorRe = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
+      var anchorMatch;
+      while ((anchorMatch = anchorRe.exec(rawHtml2b)) !== null) {
+        var hrefMatch = anchorMatch[1].match(/\bhref\s*=\s*(["'])(.*?)\1/i);
+        if (!hrefMatch) continue;
+        var href = String(hrefMatch[2] || '').trim();
+        var label = String(anchorMatch[2] || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!href || /^(#|mailto:|tel:|javascript:)/i.test(href)) continue;
+        if (/maps\.app\.goo\.gl|google\.com\/maps/i.test(href)) continue;
+        if (/\/contact\/?(?:[?#].*)?$/i.test(href)) continue;
+        if (linksFound.some(function(item) { return item.href === href; })) continue;
+        linksFound.push({ href: href, label: label });
+      }
+      if (linksFound.length) {
+        originalLinkBlock = '\nORIGINAL CASE-STUDY EDITORIAL LINKS — SOURCE INVENTORY (EXPLICIT):\n' +
+          linksFound.map(function(item, idx) {
+            return (idx + 1) + '. ' + item.href + (item.label ? ' — original anchor: ' + item.label : '');
+          }).join('\n') +
+          '\nThese links existed in the original account. Keep relevant distinct comparison/project links with their exact existing URLs in suitable paragraphs. Do not silently replace them all with generic guides or contact links. Only omit a specific link if it is irrelevant, duplicative or inappropriate to the revised narrative. Do not invent new link destinations.\n';
+      }
+    }
+  } catch (linkErr) {
+    Logger.log('W2B: original editorial link inventory unavailable: ' + linkErr.message);
+  }
+
   // Build figBlock from extracted URLs
   var figBlock = "";
   var suggestionBlock = "";
@@ -339,7 +370,7 @@ OUTPUT: HTML body content only.
 Do not output a tab-delimited row. Do not output column data. Do not number columns.
 Your entire output must be the revised HTML body — nothing before it, nothing after it.
 
-${w1aOutput ? '--- STAGE 1A CORE ---\n' + w1aOutput + '\n\n' : ''}${w1aAuthBrief ? w1aAuthBrief + '\n\n' : ''}${w1aGovFields ? w1aGovFields + '\n\n' : ''}${w1aMatBehav ? w1aMatBehav + '\n\n' : ''}${w1aTsm ? w1aTsm + '\n\n' : ''}${w1aSemantic ? w1aSemantic + '\n\n' : ''}${w1aSiloMap ? w1aSiloMap + '\n\n' : ''}${w1aHtml ? '--- ORIGINAL HTML ---\n' + w1aHtml + '\n\n' : ''}${w1bOutput ? '--- STAGE 1B STRUCTURAL RULES ---\n' + w1bOutput + '\n\n' : ''}${w1cOutput ? '--- STAGE 1C PARAGRAPH RULES ---\n' + w1cOutput + '\n\n' : ''}${w1dOutput ? '--- STAGE 1D OUTPUT QUALITY RULES ---\n' + w1dOutput + '\n\n' : ''}--- STAGE 2A PRE-WRITE RULES ---
+${w1aOutput ? '--- STAGE 1A CORE ---\n' + w1aOutput + '\n\n' : ''}${w1aAuthBrief ? w1aAuthBrief + '\n\n' : ''}${w1aGovFields ? w1aGovFields + '\n\n' : ''}${w1aMatBehav ? w1aMatBehav + '\n\n' : ''}${w1aTsm ? w1aTsm + '\n\n' : ''}${w1aSemantic ? w1aSemantic + '\n\n' : ''}${w1aSiloMap ? w1aSiloMap + '\n\n' : ''}${w1aHtml ? '--- ORIGINAL HTML ---\n' + w1aHtml + '\n\n' : ''}${originalLinkBlock}${w1bOutput ? '--- STAGE 1B STRUCTURAL RULES ---\n' + w1bOutput + '\n\n' : ''}${w1cOutput ? '--- STAGE 1C PARAGRAPH RULES ---\n' + w1cOutput + '\n\n' : ''}${w1dOutput ? '--- STAGE 1D OUTPUT QUALITY RULES ---\n' + w1dOutput + '\n\n' : ''}--- STAGE 2A PRE-WRITE RULES ---
 ${stage2AContent}
 
 ${governanceBlock}
