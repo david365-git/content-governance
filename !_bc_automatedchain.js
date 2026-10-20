@@ -4822,10 +4822,10 @@ function bc_runCoherenceFullAutomated() {
     'unique documented project evidence. Do not propose another rewrite. ' +
     'Reply with JSON only: {"status":"PASS","issues":[]} or ' +
     '{"status":"FAIL","issues":[{"section_number":1,"reason":"brief specific reason"}]}. ' +
-    'An issue must materially impair clarity or evidence, not merely be stylistic.\\n' +
+    'An issue must materially impair clarity or evidence, not merely be stylistic.\n' +
     'ORIGINAL FINDINGS: ' + JSON.stringify(checkJson) +
-    '\\nBEFORE REPAIR HTML:\\n' + currentGG +
-    '\\nAFTER REPAIR HTML:\\n' + verifyHtml;
+    '\nBEFORE REPAIR HTML:\n' + currentGG +
+    '\nAFTER REPAIR HTML:\n' + verifyHtml;
 
   var verificationResult = bc_sendPromptViaOpenAI(
     verificationPrompt, 3500, MODEL_CHEAP
@@ -4838,9 +4838,9 @@ function bc_runCoherenceFullAutomated() {
   }
   totalCost += Number(verificationResult.cost || 0);
   var verifyText = String(verificationResult.text || '').trim()
-    .replace(/^\x60\x60\x60json\\s*/i, '')
-    .replace(/^\x60\x60\x60\\s*/i, '')
-    .replace(/\\s*\x60\x60\x60$/i, '').trim();
+    .replace(/^\x60\x60\x60json\s*/i, '')
+    .replace(/^\x60\x60\x60\s*/i, '')
+    .replace(/\s*\x60\x60\x60$/i, '').trim();
   var verifyResult;
   try {
     verifyResult = JSON.parse(verifyText);
