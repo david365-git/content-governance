@@ -404,7 +404,7 @@ Keep useful material/process detail, authentic client decisions and realistic li
 CASE STUDY OPENING AND MATERIAL-SPECIFICITY CHECK — HARD LOCK:
 In a Case Study, open the <header> with the actual documented discovery, client request or visible starting condition. Describe the real project immediately; do not start with "A [town] homeowner seeking...", "This case study...", a service-keyword phrase or general claims about what restoration can achieve. Keep the location natural and secondary to the event.
 When describing the composition of a floor in a Case Study, use the known or governed material type relevant to THAT project, not a catalogue of unrelated binders or aggregates. For a historic UK cementitious terrazzo floor with no alternative composition documented, describe marble chips in a Portland cement matrix; if original evidence specifies shells, glass, another aggregate or binder, use that instead. Do not add general material definitions that introduce alternative chip types or binder systems unrelated to the documented floor. Do not imply that the binder was laboratory-tested or independently verified.
-Before returning HTML, check that the header describes a documented event, and remove irrelevant broad material-type lists from the case study. Apply these requirements within existing approved headings and word budgets.
+Before returning HTML, check that the header describes a documented event, and remove irrelevant broad material-type lists from the case study. Apply these requirements within approved headings, without numeric word budgets.
 CASE STUDY SOURCE-FIDELITY OVERRIDE — HIGHER PRIORITY THAN GENERIC PARAGRAPH FORMULAS:
 For Case Studies, compare ORIGINAL HTML against the final planned sections before drafting. Preserve documented client requests (including desired finish, décor or use), actual contractor discussions and cautions, agreed treatment decisions, relevant work chronology and client responses. Integrate them naturally into the appropriate sections in the original speaker's I/we perspective; never fabricate quotes or conversations. If the section brief omits a documented client decision, recover it from ORIGINAL HTML without changing the approved headings, section count or budgets. Prefer original project-specific evidence over generic material explanation when space is tight. Before returning HTML, recheck ORIGINAL HTML for consequential client requests, contractor advice and decisions and restore any omitted items within the governed word budget.
 For Case Studies, this override supersedes any later requirement that every section or paragraph must open with a symptom, use a fixed problem/cause/mechanism/implication sequence, or contain a set number of explanatory paragraphs. Project chronology, client decisions and first-hand work may lead a paragraph. All other article types retain their existing paragraph rules.
@@ -476,7 +476,7 @@ For every numbered SECTION in that plan, output exactly one corresponding <secti
 Inside each numbered section, reproduce its approved Heading H2 or Heading H3 EXACTLY, using the correct <h2> or <h3> tag. Do not paraphrase, shorten, re-capitalise, promote H3 to H2, or replace approved headings with more creative variations. H3 sections remain independent numbered <section> blocks.
 A heading listed in the plan as H3 is not permission to absorb it into the preceding H2 section. Content briefs belong to their own numbered section; no numerical word budgets apply.
 Before returning HTML, internally compare your output against EVERY numbered section in the final plan: exact number of sections; contiguous IDs; exact heading text; exact H2/H3 levels; correct order; no unplanned numbered sections. Repair any mismatch in your own draft before responding.
-If output length is constrained, preserve complete section structure and heading accuracy rather than dropping later sections. Never return a partial article as if complete.
+Preserve complete section structure, heading accuracy and documented facts; never omit later sections to save words. Never return a partial article as if complete.
 ------------------------------------------------------------
 THE APPROVED STAGE 1.5B SECTION PLAN IS THE STRUCTURAL AUTHORITY.
 The NEW matrix has no section word-count floor or ceiling. Cover the approved section's task to the depth needed while preserving every relevant source-supported fact and avoiding repetition.
@@ -487,12 +487,14 @@ DEPTH RULE: Light means concise, Standard means practical context, Deep means su
 ------------------------------------------------------------
 ${buildTotalWordCountTargetBlock(articleType)}
 AUTHORITY SIGNALS (Hard Lock — apply to every article):
-1. SPECIFICITY: In Case Studies, name only grit numbers documented in ORIGINAL HTML; do not impose a standard grit sequence. For other article types, include useful grit examples only when relevant, correctly qualified and within the governed word budget.
+1. SPECIFICITY: In Case Studies, name only grit numbers documented in ORIGINAL HTML; do not impose a standard grit sequence. For other article types, include useful grit examples only when relevant, correctly qualified and consistent with the evidence.
 2. UK CONTEXT: In Case Studies, include only documented property and locality details. For other articles, include relevant UK context without asserting invented project-specific details.
 3. MECHANISM DEPTH: For Case Studies explain a cause only if documented in the original. Otherwise describe observations, and keep any useful material science explicitly general. Technical reference notes are not evidence of this job.
 4. OUTCOME PRECISION: State specific outcomes in measurable terms — satin finish, consistent reflective plane, uniform matte appearance — not vague claims.
 5. SCOPE BOUNDARIES: Name what honing cannot do as precisely as what it can do. This signals expertise and builds trust.
 ------------------------------------------------------------
+MATERIAL SAFETY BACKSTOP — apply even if the Technical Matrix lookup is absent:
+Distinguish glazed ceramic and dense porcelain faces from potentially porous cementitious grout. Do not recommend stone-style grinding or honing for glazed ceramic or factory-finished porcelain. Never assume sealing is needed on a non-porous tile face; assess the actual absorbent material, joints, previous treatment and finish. Do not recommend acidic cleaners without establishing the deposit, surface, grout and treatment compatibility. Choose material-compatible agitation, rinsing, extraction and moisture control. If material-specific safety data is absent, do not invent a treatment specification; flag the gap for review.
 ${buildStonePromptRulesBlock(d["Stone Type"] || "stone")}
 ${buildSemanticFingerprintBlock(d["Stone Type"] || "stone")}
 ${buildRecoveryBlueprintInjectionBlock(bc_getRecoveryBlueprintEntities())}
@@ -1021,7 +1023,7 @@ function buildStage2BPart3B(d) {
       
       sections.forEach(function(s, i) {
         var tsmReq = String(s.tsmRequirement || "").toLowerCase();
-        var wordBudgetNum = parseInt(s.budget) || 0;
+        // Legacy numerical section budgets are intentionally ignored.
         var processTerms = /honing|polishing|sealing|stripping|re-grouting|recolouring|burnishing/;
         var isProcess = processTerms.test(tsmReq);
         
