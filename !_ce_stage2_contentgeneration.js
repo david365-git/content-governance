@@ -85,30 +85,8 @@ RULE 2 — DEFECT COMPLETION:
 Name no defect without all three elements present before the next paragraph:
 (1) What it is. (2) What the homeowner sees. (3) What is done about it.
 
-RULE 3 — PROCESS SECTION DEPTH:
-This rule applies ONLY to sections explicitly covering a process intervention in 
-Educational Guides, Method Guides, and Diagnostic Guides — NOT Case Studies.
-
-Process sections require three body paragraphs minimum before any figure or link.
-Para 1: homeowner symptom. Para 2: mechanism and correction. Para 3: outcome.
-Surface finish section must use the distinction framing specified in the Stone-Specific Prompt Rules block below.
-
-EXEMPT FROM RULE 3 — do NOT apply the three-paragraph minimum to:
-— Case Studies (governed by H3 narrative structure rules from Content Governance instead)
-— Hub routing sections (sections whose purpose is directing readers to other pages)
-— Comparison sections (sections contrasting two conditions or finish types)
-— Diagnostic threshold sections (sections giving the reader a self-check)
-— No section has a numerical word budget — the three-paragraph minimum 
-   cannot be satisfied within this budget alongside figures and links
-   
-For exempt sections: write the minimum prose needed to serve the reader's purpose
-without inventing unsupported details. Do not pad to satisfy a paragraph count.
-
-FOR CASE STUDIES SPECIFICALLY: Use H3 subheadings to structure narrative sections 
-longer than 300 words as specified in Content Governance H3 Usage Rules.
-H3s are structural markers, not paragraph replacements — they organize the narrative 
-into digestible phases (Initial Condition → Process → Outcome) without counting 
-toward paragraph minimums.
+RULE 3 — PURPOSEFUL PROCESS SECTION DEPTH:
+For Method, Educational and Diagnostic Guides, explain the observed problem, relevant mechanism, suitable action and realistic outcome only to the extent appropriate to the NEW matrix. Do not impose paragraph counts or numeric length minima. For Case Studies, preserve each documented project stage and use H3 only for genuine subordinate parts of the approved section structure. Never add filler to meet a quota.
 
 RULE 4 — HUB-INTRO (hub pages only):
 One orienting sentence maximum before the navigation list.
@@ -386,6 +364,9 @@ Let the documented job evidence, the NEW Tier Structural Coverage Matrix and hom
 For cement-matrix Terrazzo Case Studies, describe the floor as marble chips in a Portland cement matrix unless the original article specifies other aggregate or binder. The material-specific construction rule applies in EVERY section, including inserted boilerplate, polishing explanations, captions and linked-service descriptions. Never add a generic survey of alternative aggregates or synthetic versus cement-based binders in this specific case study. Do not add alternate terrazzo types just to appear comprehensive.
 CASE STUDY NO-FAQ RULE — OVERRIDES OUTDATED SECTION PLANS:
 Never create a dedicated FAQ, Frequently Asked Questions, Questions About This Project, or disguised Q&A section for a Case Study. Such sections repeat the project methods, results or aftercare and are not part of the desired case-study format. Where a supplied 1.5A–1.5E plan still contains a final FAQ section, omit that section and do not substitute another summary/Q&A section; preserve its genuinely unique documented facts, if any, in the appropriate earlier project section. Do not fabricate extra content to replace the removed FAQ.
+CASE STUDY NON-REPETITION AND PROJECT DETAIL GATE:
+Every governed section must make a distinct contribution: an observed condition, customer objective, professional decision, treatment step or actual outcome. Do not repeat the same general explanation of fired-clay properties, acid risk, moisture or residue in several sections unless the later mention explains a genuinely different project-stage decision. Revisit real floor conditions when needed for the job chronology. Preserve distinctive original observations, repair steps, pattern/border details, verified local setting and useful original links where they help the reader; never pad history or add link quotas. Do not assert inferred damp-proof conditions as inspected facts. Do not invent homeowner reactions or undocumented tests. Do not remove author-confirmed experience merely because older prose omitted it; require explicit confirmation for new job-specific claims.
+
 CASE STUDY SOURCE-EVIDENCE GATE — MANDATORY BEFORE WRITING OR SAVING:
 Use ORIGINAL HTML and explicitly supplied project notes as the only evidence of what happened on this job. Before drafting, privately classify each planned statement as (A) documented project fact, (B) general technical explanation that does not claim it occurred or was measured on this job, or (C) unsupported project assumption. Write A and relevant, clearly general B; discard C. Do not print the classifications or a ledger in the HTML.
 LOCATION FACTS: Mention the supplied town and actual documented room only. Do not infer the property's age, period style, housing mix, layout, hallway traffic pattern, household activity or mechanism of wear from the locality. An observed worn surface is not proof of a specific cause.
@@ -503,32 +484,13 @@ ${buildSerpValidationChecklistBlock(bc_getSerpValidationEntities())}
 ${buildTfidfVocabularyBlock(bc_getTfidfTerms())}
 ${buildRecallGapBlock(bc_getRecallGapTerms())}
 ${buildCompetitorVocabBlock(bc_getCompetitorVocabGap(), bc_getCompetitorWordCount())}
-DIAGNOSTIC IMAGE CAPTIONS (Hard Lock):
-Every image caption must function as a diagnostic tool — not a description of what is shown.
-The reader is scanning to identify whether the image matches their problem.
-A caption that only names or describes the image fails. A caption that connects the image to the reader's situation passes.
+PROJECT MEDIA EVIDENCE — ALT TEXT, FIGCAPTIONS AND VIDEO CAPTIONS:
+Describe what the actual image or video visibly shows, or what a verified source caption explicitly identifies. Name the material, visible condition and restoration stage when supported.
+For guides, brief diagnostic meaning may be added ONLY when the visible symptom supports it, phrased conditionally when causes are uncertain.
+Do not turn a photograph into evidence of unseen tests, recovered slurry, moisture control, sealer chemistry, protection performance, client satisfaction or later outcomes.
+Do not change an existing project's video overview caption into an unrelated technical claim. Keep image URLs, iframe URLs, media identity and relevant accessibility text. Never invent what a media asset shows when its appearance is unknown.
+A clear descriptive caption is valid; do not force every caption into a diagnostic claim or fixed pattern. Avoid repeated generic captions.
 
-DIAGNOSTIC CAPTION PATTERNS (use any of these — vary across the article):
-  - Reader recognition: "[Visible condition] may indicate [reader-relevant meaning]"
-  - Named condition: "This is [condition] — [one sentence on what it means for the reader]"
-  - Direct observation: "[Visible feature] is consistent with [condition or cause]"
-  - Practical interpretation: "[What the image shows] helps distinguish [condition A] from [condition B]"
-  - Observation led: "Dark patches like these indicate..."
-  - Stage based: "Floors at this stage need..."
-  - Pattern recognition: "Hallways showing this pattern have..."
-
-WRONG — purely descriptive (fails):
-  "Acid etching leaves dull patches where the marble surface has been chemically damaged."
-  "Old sealers and adhesives being removed from an original tile floor."
-  "Coating removal in progress on the Minton tile floor."
-
-CORRECT — diagnostic (passes):
-  "A dull pale mark that remains after cleaning may indicate etching rather than dirt."
-  "This is coating removal — softened residue must be extracted, not spread around."
-  "Floors at this stage need controlled extraction before sealing can begin."
-
-VARIATION RULE: No two captions in the same article may open with the same pattern.
-Vary the diagnostic approach across the four or five images — do not repeat the same opener.
 ------------------------------------------------------------
 OUTCOME STATEMENTS (Hard Lock — honest full range):
 Professional restoration outcomes must be stated accurately — not defensively.
