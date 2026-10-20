@@ -365,7 +365,7 @@ function bc_validateStage15ASectionBudgets_(output) {
     return {success:false,message:"No NEW matrix coverage for "+articleType};
   }
   var text = String(output || "");
-  var mapped = Array.from(text.matchAll(/SECTION\\s+\\d+\\s*:\\s*Order\\s+(\\d+)/gi))
+  var mapped = Array.from(text.matchAll(/SECTION\s+\d+\s*:\s*Order\s+(\d+)/gi))
     .map(m => Number(m[1]));
   if (!mapped.length) return {success:false,message:"No mapped SECTION orders found"};
   var missing = requirements.filter(req =>
