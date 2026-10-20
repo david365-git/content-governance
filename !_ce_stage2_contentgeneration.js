@@ -98,7 +98,7 @@ EXEMPT FROM RULE 3 — do NOT apply the three-paragraph minimum to:
 — Hub routing sections (sections whose purpose is directing readers to other pages)
 — Comparison sections (sections contrasting two conditions or finish types)
 — Diagnostic threshold sections (sections giving the reader a self-check)
-— Any section with a word budget of 120-180 words — the three-paragraph minimum 
+— No section has a numerical word budget — the three-paragraph minimum 
    cannot be satisfied within this budget alongside figures and links
    
 For exempt sections: write the minimum prose needed to serve the reader's purpose
