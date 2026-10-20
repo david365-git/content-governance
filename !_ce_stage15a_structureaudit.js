@@ -327,6 +327,9 @@ Do NOT use H3 for:
 - maintenance handover;
 - any section that should stand independently for the reader.
 
+For Case Studies, use an H2 for each independent chapter of the actual job: discovery, homeowner objective where substantial, condition/diagnosis, overall treatment, result and aftercare where sufficiently distinct. Use H3 only for a clearly subordinate step within that chapter, such as extraction beneath cleaning; do not assign an H3 merely to vary heading levels or satisfy a structure quota.
+Where a proposed H3 cannot be named together with its parent H2 without changing subject, make it an H2 or incorporate its genuine detail into the appropriate existing stage. Do not invent extra headings, sections or facts to make the outline symmetrical.
+
 Never begin the article structure with H3.
 Never place an H3 after another H3 unless both clearly belong to the same most recent H2 parent.
 Preserve an existing H3 where it still functions as a genuine sub-process.
