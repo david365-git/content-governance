@@ -168,28 +168,10 @@ ROUTING SECTION EXEMPTION: For sections whose sole purpose is routing the reader
 ============================================================ */
 
 function buildTotalWordCountTargetBlock(articleType) {
-  try {
-    var ceiling = getTierWordCountCeiling(articleType);
-    if (!ceiling) return "";
-
-    var total = ceiling.total;
-    var minTarget = ceiling.minTarget;
-    var maxTarget = ceiling.maxTarget;
-
-    return "------------------------------------------------------------\n" +
-      "TOTAL ARTICLE LENGTH TARGET (Hard Lock — this is a CEILING, not a floor)\n" +
-      "------------------------------------------------------------\n" +
-      "Article Type: " + articleType + "\n" +
-      "The governed section word budgets from the Tier Structural Coverage Matrix sum to " + total + " words for this article type.\n" +
-      "TARGET TOTAL LENGTH: " + minTarget + "-" + maxTarget + " words.\n" +
-      "Writing beyond " + maxTarget + " words is a failure of this rule.\n" +
-      "BEFORE YOU FINALISE OUTPUT: count your draft's approximate total length. If it exceeds " + maxTarget + " words, do not simply stop or cut the final section short. Instead, revisit every section and identify content that can be tightened — a warning or condition restated in more than one section, an elaboration that repeats an earlier point, a paragraph that could state the same fact more directly. Shorten those areas, then re-total before producing your final output.\n" +
-      "Do not add extra explanatory paragraphs, restate a warning or condition already covered elsewhere in the article, or expand a section beyond its governed word budget to create a feeling of thoroughness.\n" +
-      "If competitor pages for this search term average far fewer words than this target, that is not licence to go below the Tier Matrix per-section floors — it is a signal that this niche rewards concision, so do not treat the total target above as something to fill.\n" +
-      "------------------------------------------------------------";
-  } catch(e) {
-    return "";
-  }
+  return "NEW TIER MATRIX LENGTH RULE: No fixed article or section word-count ceilings or floors. " +
+    "Preserve all verified project details, client concerns, discoveries, decisions and results. " +
+    "Cover Required functions and applicable Conditional functions; remove repetition only, " +
+    "never omit meaningful evidence to hit an arbitrary length.";
 }
 
 function getStage2BData() {
@@ -2333,8 +2315,8 @@ function buildCompetitorVocabBlock(vocabTerms, wordCount) {
   if (wordCount) {
     block += "COMPETITOR AVERAGE WORD COUNT: " + wordCount + " words\n";
     block += "Competitor average: " + wordCount + " words.\n";
-    block += "RULE: The Tier Structural Coverage Matrix word budgets per section are the minimum floor — never go below them.\n";
-    block += "The competitor average is a ceiling guide only — write toward it where content depth justifies it.\n";
+    block += "Competitor word counts are context only, never a floor, target or ceiling.\n";
+    block += "Preserve relevant original evidence and answer the homeowner's question fully without padding.\n";
     block += "Do NOT pad sections to reach this number. Do NOT cut governed content to stay below it.\n\n";
   }
 
