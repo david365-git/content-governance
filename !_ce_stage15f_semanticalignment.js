@@ -475,7 +475,7 @@ function buildSemanticAlignmentFixPrompt() {
   var totalCeilingLine = '';
 
   // Count how many flagged sub-units share the same parent H2 — when an H2's
-  // word budget is split across multiple H3 sub-sections, each flagged H3
+  // the same coverage function may support multiple genuine H3 sub-sections
   // must only claim its fair share, not the full H2 budget repeated on each.
   var parentCounts = {};
   fixTargets.forEach(function(t) {
@@ -533,7 +533,7 @@ function buildSemanticAlignmentFixPrompt() {
     '- Use this authority order whenever instructions in this prompt appear to conflict: (1) ORIGINAL SOURCE ARTICLE, (2) original section HTML, (3) NO NEW FACTS OR CLAIMS rule, (4) structural and output rules, (5) SECTION JOB, (6) target-query and semantic-alignment instructions, (7) examples and suggested wording.\n' +
     '- Lower-ranked instructions must never add, strengthen, or imply a fact that is not supported by a higher-ranked source.\n' +
     '- The SECTION JOB describes the editorial purpose of the section. It is not factual evidence. The target query describes the language and reader intent to address. It is not factual evidence.\n' +
-    '- If the SECTION JOB, target query, heading, or word budget appears to require a fact or mechanism more specific than the ORIGINAL SOURCE ARTICLE supports, do not try to satisfy that part of the instruction — use the closest factually supported wording instead. Do not mention this conflict in the output.\n' +
+    '- If the SECTION JOB, target query, heading, or section guidance appears to require a fact or mechanism more specific than the ORIGINAL SOURCE ARTICLE supports, do not try to satisfy that part of the instruction — use the closest factually supported wording instead. Do not mention this conflict in the output.\n' +
     '- CLAIM-SPECIFICITY TEST before including any factual clause: (a) Is this exact fact explicitly stated or directly paraphrasable from the ORIGINAL SOURCE ARTICLE? (b) Have I made the outcome more specific than the source? (c) Have I added a cause, mechanism, measurement, comparison, or absolute result the source does not state? (d) Have I converted an editorial instruction (like SECTION JOB wording) into a project fact? If (a) is no, or any of (b)/(c)/(d) is yes, remove or generalise the clause.\n' +
     '  Example — SUPPORTED: "The floor became far easier to maintain." NOT SUPPORTED: "Dirty mop water no longer collected in the repaired pits" (this invents a mechanism the source never states).\n' +
     '- This claim test applies to ALL editable text, not just paragraph prose — headings, list items, figure captions, link text, summaries, and conclusions are equally subject to it. An unsupported claim is still unsupported if it migrates into a heading or caption instead of a paragraph.\n' +
@@ -712,7 +712,7 @@ function buildSemanticAlignmentFixPromptForFT() {
       'FACTUAL AUTHORITY ORDER — ABSOLUTE HARD LOCK:\n' +
       '- Use this authority order whenever instructions in this prompt appear to conflict: (1) ORIGINAL SOURCE ARTICLE, (2) original section HTML, (3) NO NEW FACTS OR CLAIMS rule, (4) structural and output rules, (5) SECTION JOB, (6) target-query and semantic-alignment instructions, (7) examples and suggested wording.\n' +
       '- Lower-ranked instructions must never add, strengthen, or imply a fact that is not supported by a higher-ranked source. The SECTION JOB and target query describe editorial purpose and intent — neither is factual evidence.\n' +
-      '- If the SECTION JOB, target query, heading, or word budget appears to require a fact or mechanism more specific than the ORIGINAL SOURCE ARTICLE supports, do not try to satisfy that part of the instruction — use the closest factually supported wording instead. Do not mention this conflict in the output.\n' +
+      '- If the SECTION JOB, target query, heading, or section guidance appears to require a fact or mechanism more specific than the ORIGINAL SOURCE ARTICLE supports, do not try to satisfy that part of the instruction — use the closest factually supported wording instead. Do not mention this conflict in the output.\n' +
       '- CLAIM-SPECIFICITY TEST before including any factual clause: (a) Is this exact fact explicitly stated or directly paraphrasable from the ORIGINAL SOURCE ARTICLE? (b) Have I made the outcome more specific than the source? (c) Have I added a cause, mechanism, measurement, comparison, or absolute result the source does not state? (d) Have I converted an editorial instruction into a project fact? If (a) is no, or any of (b)/(c)/(d) is yes, remove or generalise the clause.\n' +
       '  Example — SUPPORTED: "The floor became far easier to maintain." NOT SUPPORTED: "Dirty mop water no longer collected in the repaired pits" (this invents a mechanism the source never states).\n' +
       '- This claim test applies to ALL editable text, not just paragraph prose — headings, list items, figure captions, link text, summaries, and conclusions are equally subject to it. An unsupported claim is still unsupported if it migrates into a heading or caption instead of a paragraph.\n' +
