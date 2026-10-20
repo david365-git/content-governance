@@ -275,6 +275,14 @@ function buildCoherenceCheckPrompt() {
 
     Different wording does NOT make repeated meaning unique.
 
+    Compare neighbouring sections AND non-adjacent sections. Similar subjects are
+    not automatically duplicates: a condition observed at discovery may properly
+    reappear when explaining a treatment choice or reporting the completed result.
+    Flag only repeated claims that do not add a DISTINCT observation, diagnosis,
+    method, safety consideration, decision or outcome. Protect genuine project
+    evidence and clear homeowner-friendly explanations. Do not compress material
+    solely for brevity.
+
     For each REDUNDANCY issue:
 
     - identify the section that should change;
