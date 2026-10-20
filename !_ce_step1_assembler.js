@@ -38,17 +38,17 @@ var STEP1_PROMPT_TEMPLATE =
 "Verify the article type from the Authority Brief matches the structural expectations for that type.\n" +
 "AUDIT CHECK 1: PASS / FAIL\n" +
 "\n" +
-"AUDIT CHECK 2 — TIER WORD BUDGET RANGE\n" +
-"Minimum word budget for Tier 1 is 2600 words.\n" +
+"AUDIT CHECK 2 — EVIDENCE PRESERVATION\n" +
+"Preserve documented project facts; no word budget applies.\n" +
 "AUDIT CHECK 2: PASS / FAIL\n" +
 "\n" +
 "AUDIT CHECK 3 — TSM REQUIREMENT COUNT\n" +
 "Count the number of TSM sections available for this material and article type.\n" +
 "Do NOT count the header block. Do NOT count HUB-INTRO if present.\n" +
-"AUDIT CHECK 3: [N] sections required\n" +
+"AUDIT CHECK 3: PASS / FAIL\n" +
 "\n" +
-"AUDIT CHECK 4 — WORD BUDGET DISTRIBUTION\n" +
-"Each section must have a governed word range from the TSM.\n" +
+"AUDIT CHECK 4 — CONDITIONAL COVERAGE\n" +
+"Cover Required functions and only relevant Conditional functions.\n" +
 "AUDIT CHECK 4: PASS / FAIL\n" +
 "\n" +
 "AUDIT CHECK 5 — COMM FLAG VALIDATION\n" +
@@ -72,12 +72,12 @@ var STEP1_PROMPT_TEMPLATE =
 "AUDIT CHECK 9: PASS / FAIL\n" +
 "\n" +
 "AUDIT CHECK 10 — SECTION COUNT MATCH\n" +
-"Confirm section count matches TSM requirement count from Audit Check 3.\n" +
+"Required functions may share sections; the number of sections need not equal requirement count.\n" +
 "Do NOT count the header block. Do NOT count HUB-INTRO if present.\n" +
 "AUDIT CHECK 10: PASS / FAIL\n" +
 "\n" +
-"AUDIT CHECK 11 — WORD BUDGET TOTAL\n" +
-"Total word budget must fall within the Tier minimum and 1.5x that minimum.\n" +
+"AUDIT CHECK 11 — FACTUAL AND TECHNICAL SAFEGUARDS\n" +
+"Check documented evidence and material compatibility, not length.\n" +
 "AUDIT CHECK 11: PASS / FAIL\n" +
 "\n" +
 "AUDIT CHECK 12 — ORIGINAL IMAGE COUNT\n" +
@@ -93,7 +93,7 @@ var STEP1_PROMPT_TEMPLATE =
 "Educational Guide: Deep-dive definitions, conceptual explanations, and material behaviour coverage.\n" +
 "Method Guide: Numbered steps, required tools, total time, and safety warnings for a specific process.\n" +
 "Diagnostic Guide: Defect definition, cause categories, visual indicators, risk evaluation, correction pathway.\n" +
-"Case Study: Project location, before and after evidence, specific metrics, job narrative.\n" +
+"Case Study: Actual project location, original condition, documented interventions and verified results; never invent metrics.\n" +
 "Service Page: What we do description, trust signals, service availability.\n" +
 "Geo Service Page: Localised keywords, service area statement, conversion pathway.\n" +
 "\n" +
@@ -108,7 +108,7 @@ var STEP1_PROMPT_TEMPLATE =
 "HUB-INTRO: id=\"hub-intro\" | H2=\"None\" | CONTENT=\"One orienting sentence and a quick-links navigation list only\"\n" +
 "\n" +
 "Then output each section using this format:\n" +
-"SECTION [N]: Order [N] — [TSM Requirement Name] — [min]–[max] words\n" +
+"SECTION [N]: Order [N] — [Requirement Name] — [Required/Conditional] — [Depth]\n" +
 "\n" +
 "--- OUTPUT INSTRUCTION ---\n" +
 "Output ONLY:\n" +
