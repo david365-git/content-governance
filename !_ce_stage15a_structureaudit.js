@@ -354,51 +354,24 @@ Last line: "Stage 1.5A complete. Waiting for Stage 1.5B."
  * Prevents an AI's self-reported PASS from approving stale figures.
  */
 function bc_validateStage15ASectionBudgets_(output) {
+  // Retained function name for existing callers; NEW matrix validates
+  // required coverage instead of obsolete numeric word-count budgets.
   var d = getActiveRowDataMap();
-  var material = String(d["Stone Type"] || "").trim();
   var articleType = String(d["Article Type"] || "").trim();
-  var tierMap = {
-    "hub page":"Tier 1","educational guide":"Tier 1",
-    "method guide":"Tier 2","service page":"Tier 2","geo service page":"Tier 2",
-    "diagnostic guide":"Tier 3","buyer guide":"Tier 3","faq spoke":"Tier 3",
-    "case study":"Tier 4"
-  };
-  var tier = tierMap[articleType.toLowerCase()];
-  if (!tier) return {success:false,message:"Unknown article type for budget validation: "+articleType};
-  var requirements = getTierStructuralRequirements(material,tier,articleType) || [];
-  var secondary = String(d["Secondary Intent Decisions"] || "");
-  requirements = requirements.filter(function(req) {
-    return !secondary.includes("N — " + req.name);
-  });
-  if (!requirements.length) return {success:false,message:"No TSM budgets to validate"};
-  var expected = requirements.map(function(req) {
-    var min = Number(req.wordCount);
-    return {name:req.name,min:min,max:Math.round(min*1.2)};
-  });
-  var actual = expected.map(function(){return {min:0,max:0,count:0};});
+  var requirements = getTierStructuralRequirements(
+    String(d["Stone Type"] || ""), "", articleType
+  );
+  if (!requirements.length) {
+    return {success:false,message:"No NEW matrix coverage for "+articleType};
+  }
   var text = String(output || "");
-  var sections = text.split(/\r?\n/).filter(function(line){return /^SECTION\s+\d+\s*:/i.test(line.trim());});
-  if (!sections.length) return {success:false,message:"No numbered SECTION lines found in Stage 1.5A output"};
-  var errors = [];
-  sections.forEach(function(line){
-    var m=line.match(/^SECTION\s+\d+\s*:\s*Order\s+(\d+)\s+[^\n]*?\s+[—-]\s*(\d+)\s*[–-]\s*(\d+)\s+words\b/i);
-    if(!m){errors.push("Unparseable SECTION word range: "+line.slice(0,130));return;}
-    var order=Number(m[1]), min=Number(m[2]), max=Number(m[3]);
-    if(order<1||order>expected.length){errors.push("Unexpected TSM Order "+order);return;}
-    actual[order-1].min+=min;actual[order-1].max+=max;actual[order-1].count++;
-    if(min>max)errors.push("Reversed word range for Order "+order);
-  });
-  expected.forEach(function(e,i){
-    if(actual[i].min!==e.min||actual[i].max!==e.max)
-      errors.push("Order "+(i+1)+" ("+e.name+") requires "+e.min+"–"+e.max+
-        " words across all sections, but output totals "+actual[i].min+"–"+actual[i].max);
-  });
-  var minTotal=expected.reduce(function(n,e){return n+e.min},0);
-  var maxTotal=expected.reduce(function(n,e){return n+e.max},0);
-  var actualMin=actual.reduce(function(n,e){return n+e.min},0);
-  var actualMax=actual.reduce(function(n,e){return n+e.max},0);
-  if(actualMin!==minTotal||actualMax!==maxTotal)
-    errors.push("Total must be "+minTotal+"–"+maxTotal+" words, got "+actualMin+"–"+actualMax);
-  return errors.length?{success:false,message:"Stage 1.5A budget validation FAILED: "+errors.join("; ")}
-                      :{success:true,message:"Stage 1.5A numeric budget validation PASS"};
+  var mapped = Array.from(text.matchAll(/SECTION\\s+\\d+\\s*:\\s*Order\\s+(\\d+)/gi))
+    .map(m => Number(m[1]));
+  if (!mapped.length) return {success:false,message:"No mapped SECTION orders found"};
+  var missing = requirements.filter(req =>
+    req.priority.toLowerCase() === "required" && mapped.indexOf(req.order) < 0
+  );
+  return missing.length
+    ? {success:false,message:"Required NEW matrix functions missing: "+missing.map(x=>x.name).join(", ")}
+    : {success:true,message:"NEW matrix required function coverage PASS"};
 }
