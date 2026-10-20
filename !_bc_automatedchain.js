@@ -4799,12 +4799,11 @@ function bc_runCoherenceFullAutomated() {
 
   // Keep the original GH audit JSON unchanged; store the outcome separately.
   // No subjective second AI call: the atomic repair validator is the hard gate.
-  bc_appendGovernancePipelineException(
-    'W2B.3 — Repair Outcome',
-    'REPAIRED: ' + issues.length + ' original finding(s) across ' +
+  bc_appendPipelineRunLog(
+    row,
+    'W2B.3 REPAIRED — ' + issues.length + ' original finding(s) across ' +
     Array.from(new Set(issues.map(function(x) { return Number(x.section_number); }))).length +
-    ' section(s). All requested section replacements passed atomic structural validation. ' +
-    'Original audit remains in GH; no second semantic audit was performed.'
+    ' section(s); atomic structural checks passed. GH preserves original audit.'
   );
 
   /*
