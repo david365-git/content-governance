@@ -283,6 +283,16 @@ function buildCoherenceCheckPrompt() {
     evidence and clear homeowner-friendly explanations. Do not compress material
     solely for brevity.
 
+    CASE STUDY EVIDENCE LOCK:
+    Never remove a real project observation, practitioner decision, completed
+    method, client requirement, local context or observed outcome merely because
+    a related condition is also mentioned in another stage.
+    Original project evidence takes precedence over brevity. If you cannot
+    identify a specific harmful duplicate without sacrificing unique evidence,
+    do not flag it. General professional guidance and documented events are
+    not interchangeable. A legitimate discovery -> diagnosis -> method -> result
+    sequence may revisit the same floor condition for a different reader purpose.
+
     For each REDUNDANCY issue:
 
     - identify the section that should change;
