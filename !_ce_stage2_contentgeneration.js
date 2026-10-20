@@ -102,7 +102,7 @@ EXEMPT FROM RULE 3 — do NOT apply the three-paragraph minimum to:
    cannot be satisfied within this budget alongside figures and links
    
 For exempt sections: write the minimum prose needed to serve the reader's purpose
-within the governed word budget. Do not pad to satisfy a paragraph count.
+without inventing unsupported details. Do not pad to satisfy a paragraph count.
 
 FOR CASE STUDIES SPECIFICALLY: Use H3 subheadings to structure narrative sections 
 longer than 300 words as specified in Content Governance H3 Usage Rules.
@@ -382,7 +382,7 @@ FINAL SOURCE-FAITHFULNESS AND NATURALNESS CHECK:
 Before returning the article, compare every first-person claim and every claimed job-specific cause, assessment, intention and product-selection reason against ORIGINAL HTML or confirmed notes. Remove or reframe invented events, diagnoses or results without losing verified steps. Do not unnecessarily delete harmless, accurate trade-knowledge explanations or reasonable professional rationale for documented work. Check the complete HTML for literal "near me" in reader-facing text and replace artificial SEO phrasing with natural UK homeowner language. Prioritise documented experience over generic explanations within the existing word budget; do not add sections or expand the budget.
 The first paragraph of a Case Study section can open with an actual project event rather than an invented generic homeowner symptom. A practical Method Guide may open with its process step; a Buyer Guide with a decision. Use the governed section and article type, not forced symptom framing.
 CASE STUDY DRAFT LENGTH AND MATERIAL DISCIPLINE — OVERRIDES GENERIC DEPTH, SEO AND PARAGRAPH RULES:
-For every Case Study, use the approved section Word Budgets as editorial targets, not arbitrary hard ceilings. Exceed a section target only when needed to retain distinct, documented project evidence or useful specific technical reasoning; never exceed it merely to add repetition, filler, generic SEO commentary or boilerplate. First allocate the essential original-project facts, chronology, client requests and outcomes; only then add the shortest useful material explanation if space remains. Do not add extra paragraphs, generic comparisons, repeated finish descriptions, keyword variants or general advice merely to satisfy an authority, entity, mechanism-depth, suggested-image or paragraph-count instruction. Where rules compete, the approved per-section budget and original evidence win. For Tier 4 Case Studies the present planning target is 720–864 words; a longer article is acceptable where substantive original evidence genuinely requires it. Keep header, captions and footer concise. Before outputting HTML, assess each section for duplicated points and remove padding; do not delete important documented facts simply to hit a number.
+For every Case Study, use documented project evidence and homeowner relevance to determine natural length. Exceed a section target only when needed to retain distinct, documented project evidence or useful specific technical reasoning; never exceed it merely to add repetition, filler, generic SEO commentary or boilerplate. First allocate the essential original-project facts, chronology, client requests and outcomes; only then add the shortest useful material explanation if space remains. Do not add extra paragraphs, generic comparisons, repeated finish descriptions, keyword variants or general advice merely to satisfy an authority, entity, mechanism-depth, suggested-image or paragraph-count instruction. Where rules compete, the approved per-section budget and original evidence win. For Tier 4 Case Studies the present planning target is 720–864 words; a longer article is acceptable where substantive original evidence genuinely requires it. Keep header, captions and footer concise. Before outputting HTML, assess each section for duplicated points and remove padding; do not delete important documented facts simply to hit a number.
 For cement-matrix Terrazzo Case Studies, describe the floor as marble chips in a Portland cement matrix unless the original article specifies other aggregate or binder. The material-specific construction rule applies in EVERY section, including inserted boilerplate, polishing explanations, captions and linked-service descriptions. Never add a generic survey of alternative aggregates or synthetic versus cement-based binders in this specific case study. Do not add alternate terrazzo types just to appear comprehensive.
 CASE STUDY NO-FAQ RULE — OVERRIDES OUTDATED SECTION PLANS:
 Never create a dedicated FAQ, Frequently Asked Questions, Questions About This Project, or disguised Q&A section for a Case Study. Such sections repeat the project methods, results or aftercare and are not part of the desired case-study format. Where a supplied 1.5A–1.5E plan still contains a final FAQ section, omit that section and do not substitute another summary/Q&A section; preserve its genuinely unique documented facts, if any, in the appropriate earlier project section. Do not fabricate extra content to replace the removed FAQ.
@@ -474,21 +474,16 @@ HEADING AND SECTION COMPLETENESS — NON-NEGOTIABLE HARD LOCK:
 Use the FINAL Stage 1.5D approved section plan, including its 1.5C enrichments, as an exact ordered checklist.
 For every numbered SECTION in that plan, output exactly one corresponding <section id="section-N"> element, in order from 1 to the final section. Never merge, skip, combine, renumber, or silently discard sections, even when two adjacent sections share a TSM requirement.
 Inside each numbered section, reproduce its approved Heading H2 or Heading H3 EXACTLY, using the correct <h2> or <h3> tag. Do not paraphrase, shorten, re-capitalise, promote H3 to H2, or replace approved headings with more creative variations. H3 sections remain independent numbered <section> blocks.
-A heading listed in the plan as H3 is not permission to absorb it into the preceding H2 section. Content briefs and word budgets belong to their own numbered section only.
+A heading listed in the plan as H3 is not permission to absorb it into the preceding H2 section. Content briefs belong to their own numbered section; no numerical word budgets apply.
 Before returning HTML, internally compare your output against EVERY numbered section in the final plan: exact number of sections; contiguous IDs; exact heading text; exact H2/H3 levels; correct order; no unplanned numbered sections. Repair any mismatch in your own draft before responding.
 If output length is constrained, preserve complete section structure and heading accuracy rather than dropping later sections. Never return a partial article as if complete.
 ------------------------------------------------------------
 THE APPROVED STAGE 1.5B SECTION PLAN IS THE STRUCTURAL AUTHORITY.
-Each section has a governed word range: a minimum floor and a maximum ceiling (1.2x the minimum).
-Write to the depth the content requires — but stay within the range.
-Do not pad to hit the minimum. Do not exceed the maximum.
-Do not carry overflow into the next section.
+The NEW matrix has no section word-count floor or ceiling. Cover the approved section's task to the depth needed while preserving every relevant source-supported fact and avoiding repetition.
 ------------------------------------------------------------
 ${figBlock}
 ${suggestionBlock}
-WORD BUDGET (Governed Range):
-Each section has a minimum and maximum word count from the Stage 1.5B approved plan.
-For Case Studies, treat the range as an editorial target: preserve distinctive, documented facts and cut repetition before considering extra length. For other article types, follow the governed range.
+DEPTH RULE: Light means concise, Standard means practical context, Deep means supported explanation where needed. These are not word or paragraph quotas.
 ------------------------------------------------------------
 ${buildTotalWordCountTargetBlock(articleType)}
 AUTHORITY SIGNALS (Hard Lock — apply to every article):
@@ -1028,18 +1023,14 @@ function buildStage2BPart3B(d) {
         var tsmReq = String(s.tsmRequirement || "").toLowerCase();
         var wordBudgetNum = parseInt(s.budget) || 0;
         var processTerms = /honing|polishing|sealing|stripping|re-grouting|recolouring|burnishing/;
-        var isProcess = processTerms.test(tsmReq) && wordBudgetNum > 180;
+        var isProcess = processTerms.test(tsmReq);
         
         sectionBlock += "SECTION " + (i + 1) + ":\n";
         sectionBlock += "  HEADING TAG: <" + (s.headingLevel || "h2").toLowerCase() + "> (use this exact tag level — not h3, not h1)\n";
         sectionBlock += "  H2 (COPY EXACTLY — DO NOT CHANGE): " + s.title + "\n";
         sectionBlock += "  id: \"" + (s.id || "section-" + (i+1)) + "\"\n";
         
-        if (s.budget) {
-          const minBudget = s.budget;
-          const maxBudget = Math.round(s.budget * 1.5);
-          sectionBlock += "  WORD BUDGET: " + minBudget + "–" + maxBudget + " words. Stay within range.\n";
-        }
+        sectionBlock += "  DEPTH RULE: No fixed word count; preserve source-supported content.\n";
         
         if (s.brief) {
           sectionBlock += "  CONTENT BRIEF: " + s.brief + "\n";
@@ -1054,7 +1045,7 @@ function buildStage2BPart3B(d) {
                           "  Technical mechanism explanation belongs in Section 2.\n" +
                           "  Professional judgement and process rationale belongs in Section 3.\n" +
                           "  A Section 1 that front-loads all technical authority is a governance failure.\n" +
-                          "  Write Section 1 to the word budget only — do not expand beyond it.\n";
+                          "  Write Section 1 to the depth needed for its documented purpose; preserve relevant evidence.\n";
         }
         
         if (s.visualPattern && s.visualPattern !== "None") {
