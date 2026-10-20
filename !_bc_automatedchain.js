@@ -4562,9 +4562,9 @@ function bc_runCoherenceFullAutomated() {
     );
 
     return {
-      success: true,
+      success: false,
       message:
-        'W2B.3 completed with advisory exception — audit JSON was unusable, so W2B.2 HTML was retained unchanged in GI.',
+        'W2B.3 STOPPED: audit JSON unusable; GI retains original W2B.2 HTML.',
       cost: totalCost
     };
   }
@@ -4626,11 +4626,20 @@ function bc_runCoherenceFullAutomated() {
     );
 
     return {
-      success: true,
+      success: false,
       message:
-        'W2B.3 completed with advisory exception — unexpected audit structure, so W2B.2 HTML was retained unchanged in GI.',
+        'W2B.3 STOPPED: invalid audit JSON structure; GI retains original W2B.2 HTML.',
       cost: totalCost
     };
+  }
+
+  if ((status === 'PASS' && issues.length !== 0) ||
+      (status === 'FAIL' && issues.length === 0)) {
+    bc_appendGovernancePipelineException(
+      'W2B.3 — Coherence', 'Contradictory audit status and issues; pipeline stopped.'
+    );
+    return {success:false,cost:totalCost,
+      message:'W2B.3 STOPPED: contradictory audit status and issue count.'};
   }
 
   /*
@@ -4712,9 +4721,9 @@ function bc_runCoherenceFullAutomated() {
     );
 
     return {
-      success: true,
+      success: false,
       message:
-        'W2B.3 audit completed, but the repair prompt could not be built — article retained unchanged in GI.',
+        'W2B.3 STOPPED: repair prompt unavailable; GI retains original W2B.2 HTML.',
       cost: totalCost
     };
   }
@@ -4755,7 +4764,8 @@ function bc_runCoherenceFullAutomated() {
 
   var applyResult =
     applyCoherenceFix(
-      repairResult.text
+      repairResult.text,
+      issues.map(function(issue) { return Number(issue.section_number); })
     );
 
   if (
@@ -4780,9 +4790,9 @@ function bc_runCoherenceFullAutomated() {
     );
 
     return {
-      success: true,
+      success: false,
       message:
-        'W2B.3 audit completed, but its repairs could not be applied safely — original W2B.2 HTML retained in GI.',
+        'W2B.3 STOPPED: unsafe or incomplete repairs; GI retains original W2B.2 HTML.',
       cost: totalCost
     };
   }
@@ -4808,7 +4818,7 @@ function bc_runCoherenceFullAutomated() {
   return {
     success: true,
     message:
-      'W2B.3 single-pass coherence completed — ' +
+      'W2B.3 FAIL findings repaired (no second audit) — ' +
       issues.length +
       ' issue(s) identified and repair pass completed. ' +
       applyResult.message,
