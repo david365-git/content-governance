@@ -7275,13 +7275,13 @@ function masterRunW3ToW8E() {
           failed++;
           status.textContent = '⚠ Row ' + row + ': ' + (err && err.message || err) + '; continuing…';
           next();
-        }).bc_caseEvidenceExtract_(row);
+        }).bc_caseEvidenceRunRowBatch(row);
       }
       next();
     }).withFailureHandler(function(err) {
       btn.disabled = false;
       status.textContent = '❌ ' + (err && err.message || err);
-    }).bc_caseEvidenceFilteredRows_();
+    }).bc_caseEvidenceFilteredRows();
   }
 
   function runStage0() {
