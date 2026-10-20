@@ -38,7 +38,8 @@ function buildHumanisationPrompt(w2bHtml) {
       return { success: false, message: 'ERROR: No humanisation prompt found in prompts sheet D42.' };
     }
 
-    const combined = humanisePrompt + '\n\n---\n\n' + w2bHtml.trim();
+    const mediaRule = '\n\nHARD MEDIA EXCLUSION: Humanise article prose only. Do not rewrite or reorder <figure> blocks, <figcaption>, <img> alt attributes, <iframe> or video captions. Preserve complete media blocks verbatim and in their original positions. Do not add or remove images or videos. The saving step will restore all original media blocks and reject a mismatched inventory.\n';
+    const combined = humanisePrompt + mediaRule + '\n\n---\n\n' + w2bHtml.trim();
 
     return {
       success: true,
@@ -68,6 +69,42 @@ function getHumanisationRulesOnly() {
   }
 }
 
+/**
+ * Restore media unchanged from GI after the language model has humanised prose.
+ * Full figures include their captions, image alts and embedded video data.
+ * Refuse incomplete/reordered inventories before writing CZ.
+ */
+function ce_restoreHumanisationMedia_(source, candidate) {
+  var pattern = /<figure\b[^>]*>[\s\S]*?<\/figure>|<iframe\b[^>]*>[\s\S]*?<\/iframe>|<img\b[^>]*>/gi;
+  function inventory(s) {
+    var items=[], m;
+    var re=new RegExp(pattern.source,'gi');
+    while((m=re.exec(s))!==null) {
+      var kind=/^<figure\b/i.test(m[0])?'figure':/^<iframe\b/i.test(m[0])?'iframe':'img';
+      var asset=(m[0].match(/(?:src|data-src)\s*=\s*["']([^"']+)["']/i)||[])[1]||'';
+      items.push({kind:kind,html:m[0],asset:asset});
+    }
+    return items;
+  }
+  var originals=inventory(source), revised=inventory(candidate);
+  if(originals.length!==revised.length) {
+    throw new Error('Humanisation changed media count ('+originals.length+' to '+revised.length+'). CZ was not saved.');
+  }
+  for(var i=0;i<originals.length;i++) {
+    if(originals[i].kind!==revised[i].kind) {
+      throw new Error('Humanisation changed media order at item '+(i+1)+'. CZ was not saved.');
+    }
+    // Check an available asset identity; otherwise preserve position/kind.
+    if(originals[i].asset && revised[i].asset &&
+       originals[i].asset!==revised[i].asset) {
+      throw new Error('Humanisation changed media source at item '+(i+1)+'. CZ was not saved.');
+    }
+  }
+  var index=0;
+  var restored=candidate.replace(pattern,function(){return originals[index++].html;});
+  return restored;
+}
+
 function saveHumanisedHtml(html) {
   try {
     if (!html || html.trim() === '') {
@@ -86,6 +123,11 @@ function saveHumanisedHtml(html) {
     const sheet = ss.getSheetByName('posts');
     const row = sheet.getActiveRange().getRow();
     if (row < 2) return { success: false, message: 'Select a data row first.' };
+
+    // Media is outside humanisation scope: take its unchanged markup from GI.
+    var originalGi=String(sheet.getRange(row,191).getValue()||'').trim();
+    if(!originalGi) return {success:false,message:'GI source HTML missing; CZ was not saved.'};
+    html=ce_restoreHumanisationMedia_(originalGi,html);
 
     // Save to Column CZ (104) — humanised HTML audit copy
     const cell = sheet.getRange(row, 104);
