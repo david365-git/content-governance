@@ -933,6 +933,9 @@ function buildStage2BPart3B(d) {
     Logger.log('W2B: Could not read optimization JSON from Column CY: ' + optErr.message);
     // Continue without optimization data
   }
+  if (!String(sectionPlan || '').trim()) {
+    throw new Error('W2B blocked: approved W1.5D section plan in CX is missing.');
+  }
   if (sectionPlan) {
     var lines = sectionPlan.split(/\n/);
     var sections = [];
@@ -942,6 +945,7 @@ function buildStage2BPart3B(d) {
       if (secMatch) {
         if (current) sections.push(current);
         current = {
+          number: Number(secMatch[1]),
           title: secMatch[3].trim(),
           headingLevel: secMatch[2] ? secMatch[2].toUpperCase() : "H2",
           id: "",
@@ -990,6 +994,8 @@ function buildStage2BPart3B(d) {
     sections.forEach(function(sec, idx) {
       var expectedId = "section-" + (idx + 1);
       var id = String(sec.id || expectedId).trim();
+      if (sec.number !== idx + 1) handoffProblems.push("section numbering gap or duplicate at " + sec.number);
+      if (id !== expectedId) handoffProblems.push("incorrect section id " + id + ", expected " + expectedId);
       if (seenSectionIds[id]) handoffProblems.push("duplicate section id " + id);
       seenSectionIds[id] = true;
       if (!sec.title || !/^H[23]$/i.test(sec.headingLevel)) {
@@ -1051,7 +1057,11 @@ function buildStage2BPart3B(d) {
         sectionBlock += "  H2 (COPY EXACTLY — DO NOT CHANGE): " + s.title + "\n";
         sectionBlock += "  id: \"" + (s.id || "section-" + (i+1)) + "\"\n";
         
-        sectionBlock += "  DEPTH RULE: No fixed word count; preserve source-supported content.\n";
+        sectionBlock += "  GOVERNED DEPTH: " + s.depth + ". " +
+          (s.depth.toLowerCase() === 'light' ? 'Explain concisely.' :
+           s.depth.toLowerCase() === 'deep' ? 'Provide full evidence-supported explanation where relevant.' :
+           'Give practical explanation with sufficient supporting detail.') +
+          " No numerical word limits; protect original project evidence.\n";
         
         if (s.brief) {
           sectionBlock += "  CONTENT BRIEF: " + s.brief + "\n";
@@ -1143,7 +1153,7 @@ function buildStage2BPart3B(d) {
         }
         
         if (isProcess) {
-          sectionBlock += "  PROCESS SECTION: Minimum 3 paragraphs before any <figure>. Para 1: symptom. Para 2: mechanism. Para 3: outcome.\n";
+          sectionBlock += "  PROCESS SECTION: Follow the approved content brief and documented work sequence. Explain why steps matter where relevant; do not invent steps or impose paragraph quotas.\n";
         }
         
         sectionBlock += "\n";
