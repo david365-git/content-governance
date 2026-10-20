@@ -2027,7 +2027,7 @@ function bc_runStage15AAutomated() {
     2. Do not redesign parts of the structure that already passed.
     3. Preserve every passing audit decision unless changing it is strictly necessary to resolve a failed check.
     4. Preserve the article type, tier, material, primary entity and required structural intent.
-    5. Preserve valid section roles and word budgets wherever possible.
+    5. Preserve required coverage, applicable conditional sections, original project evidence and depth guidance without word quotas.
     6. Do not introduce new sections merely for stylistic variety.
     7. Every AUDIT CHECK must be internally re-evaluated before returning the corrected structure.
     8. Do not return any AUDIT CHECK as PASS unless the corrected structure actually satisfies it.
