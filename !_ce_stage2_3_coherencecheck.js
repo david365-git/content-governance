@@ -499,7 +499,7 @@ function buildCoherenceCheckPrompt() {
 
 
 
-function applyCoherenceFix(rawJson) {
+function applyCoherenceFix(rawJson, expectedSectionNumbers) {
 
   const ss =
     SpreadsheetApp.getActiveSpreadsheet();
@@ -876,6 +876,24 @@ function applyCoherenceFix(rawJson) {
       replacementHtml:
         replacementHtml
     });
+  }
+
+  // Automated runs must repair every distinct section identified by the audit.
+  // Do not allow a valid but incomplete JSON response to advance the pipeline.
+  if (Array.isArray(expectedSectionNumbers)) {
+    const expected = Array.from(new Set(expectedSectionNumbers.map(Number)));
+    const missing = expected.filter(function(n) { return !seenSections[n]; });
+    const unexpected = Object.keys(seenSections).map(Number).filter(function(n) {
+      return expected.indexOf(n) === -1;
+    });
+    if (missing.length || unexpected.length) {
+      return {
+        success: false,
+        message: 'Coherence repair coverage incomplete. Missing sections: ' +
+          (missing.join(', ') || 'none') + '; unexpected sections: ' +
+          (unexpected.join(', ') || 'none') + '. GI was not changed.'
+      };
+    }
   }
 
   /*
