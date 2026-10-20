@@ -957,8 +957,8 @@ function buildStage2BPart3B(d) {
         var idMatch = line.match(/id="?([^"\s]+)"?/i) || line.match(/id:\s*([^\s]+)/i);
         if (idMatch) current.id = idMatch[1].trim();
         
-        var budgetMatch = line.match(/Word Budget:\s*(\d+)/i) || line.match(/(\d+)\s*words?/i);
-        if (budgetMatch) current.budget = budgetMatch[1];
+        var depthMatch = line.match(/^Depth:\s*(Light|Standard|Deep)/i);
+        if (depthMatch) current.depth = depthMatch[1];
         
         var briefMatch = line.match(/Content Brief:\s*(.+)/i);
         if (briefMatch) current.brief = briefMatch[1].trim();
