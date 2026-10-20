@@ -112,19 +112,15 @@ const existingStructure = String(d["Current Headings"] || "").trim();
     onPageExpectations = "(No on-page expectations defined for this article type.)";
   }
 
-  const tierWordCount =
-    tsmData.reduce(function(total, req) {
-      return total + Number(req.wordCount || 0);
-    }, 0);
-
-  // Build TSM block using the NEW FILTERED DATA
+  const tierWordCount = null; // NEW matrix has no word budgets.
   let tsmBlock = '';
-  tsmData.forEach(function(req, index) {
-    const minWords = req.wordCount;
-    const maxWords = Math.round(minWords * 1.2);
-    // Note: We use index+1 to keep the numbering clean for the LLM
-    tsmBlock += 'Order ' + (index + 1) + ': ' + req.name +
-                ' (' + minWords + '–' + maxWords + ' words)\n';
+  tsmData.forEach(function(req) {
+    tsmBlock += 'Order ' + req.order + ': ' + req.name +
+      ' | ' + req.priority + ' | Depth: ' + req.depth +
+      ' | Applies: ' + req.whenApplicable + '\\n' +
+      'Guidance: ' + req.guidance + '\\n' +
+      'Protect: ' + req.evidence + '\\n' +
+      'Safety: ' + req.safeguards + '\\n';
   });
 
   const prompt = `
@@ -136,7 +132,7 @@ TIER: ${tierLabel}
 PRIMARY ENTITY: ${primaryEntity}
 LOCALITY: ${locality || "(not supplied)"}
 PARENT AREA: ${parentArea || "(not supplied)"}
-MINIMUM WORD BUDGET: ${tierWordCount} words
+DEPTH GOVERNANCE: No numeric minimums or ceilings; preserve verified evidence.
 COMM FLAG: ${commFlag}
 GEOCTA FLAG: ${geoctaFlag}
 
@@ -146,7 +142,7 @@ Format: AUDIT CHECK [N]: FAIL — [one sentence reason]
 A FAIL result with no reason is not permitted.
 
 --- CASE STUDY STRUCTURE — NO FAQ (OVERRIDES PRESERVATION OF EXISTING HEADINGS) ---
-For Case Studies, NEVER create or retain a Frequently Asked Questions / FAQ / Questions About This Project section, regardless of existing HTML headings, previous structures, TSM interpretation or SEO requests. Do not turn an FAQ into another disguised Q&A section. Integrate any genuinely new, source-supported detail into its natural chronological project section instead. The four Tier 4 coverage requirements remain Project Context, Problem & Intervention, Measurable Outcome and Maintenance Handover & Escalation; no FAQ is required. Remove old FAQ headings from the proposed structure, even if earlier instructions say to preserve existing useful headings.
+For Case Studies, NEVER create or retain a Frequently Asked Questions / FAQ / Questions About This Project section, regardless of existing HTML headings, previous structures, TSM interpretation or SEO requests. Do not turn an FAQ into another disguised Q&A section. Integrate any genuinely new, source-supported detail into its natural chronological project section instead. Use the NEW Case Study Required coverage functions; no FAQ is required. Remove old FAQ headings from the proposed structure, even if earlier instructions say to preserve existing useful headings.
 
 --- AUDIT CHECKS ---
 Run the following 11 checks on the content structure:
@@ -155,9 +151,7 @@ AUDIT CHECK 1 — ARTICLE TYPE CLASSIFICATION
 Verify the article type matches the structural expectations below.
 AUDIT CHECK 1: PASS / FAIL
 
-AUDIT CHECK 2 — TIER WORD BUDGET RANGE
-Minimum word budget for ${tierLabel} is ${tierWordCount} words. 
-AUDIT CHECK 2: PASS / FAIL
+AUDIT CHECK 2 — SOURCE EVIDENCE PRESERVATION\nPreserve verified discoveries, practical decisions, historic and local context when source-supported; no fabricated evidence.\nAUDIT CHECK 2: PASS / FAIL
 
 AUDIT CHECK 3 — TSM REQUIREMENT COVERAGE
 Count the number of TSM structural requirements listed below.
@@ -172,13 +166,11 @@ If the project problem or challenge is only described in the opening introductio
 
 Do not add this H2 if an existing H2 already clearly introduces the project problem.
 
-For all other article types, retain the existing TSM section-count interpretation unless another article-type rule explicitly states otherwise.
+For all article types, map Required coverage naturally and include Conditional coverage only where relevant.
 
-AUDIT CHECK 3: ${tsmData.length} TSM requirements must be covered
+AUDIT CHECK 3: Required NEW matrix functions must be covered; Conditional functions only when applicable
 
-AUDIT CHECK 4 — WORD BUDGET DISTRIBUTION
-Each section has a governed word range defined below.
-AUDIT CHECK 4: PASS / FAIL
+AUDIT CHECK 4 — REQUIRED VS CONDITIONAL COVERAGE\nRequired functions must be covered; Conditional functions only when supported by the brief, source or material. Do not pad.\nAUDIT CHECK 4: PASS / FAIL
 
 AUDIT CHECK 5 — COMM FLAG VALIDATION
 COMM: ${commFlag}
@@ -221,7 +213,7 @@ PASS if:
 
 FAIL only if the proposed structure omits a required TSM coverage area, contains unnecessary or duplicate sections, or leaves the project story confused or out of sequence.
 
-For all other article types, retain the existing rule that section count must match the TSM requirement count unless another article-type rule explicitly states otherwise.
+For all article types, section count need not equal the number of coverage functions. Avoid unnecessary sections.
 
 Do NOT count the header block. Do NOT count HUB-INTRO if present.
 AUDIT CHECK 10: PASS / FAIL
@@ -310,18 +302,11 @@ Use this exact format:
 HUB-INTRO: id="hub-intro" | H2="None" | CONTENT="One orienting sentence and a quick-links navigation list only"
 
 Then output the section mapping using this format:
-SECTION 1: Order [N] — [Requirement Name] — [min]–[max] words
+SECTION 1: Order [N] — [Requirement Name] — [Required/Conditional] — [Light/Standard/Deep]
 
 For Case Study, Method Guide, Diagnostic Guide and Educational Guide articles, the same Order [N] may appear on more than one SECTION where several genuine reader-facing sections collectively satisfy that TSM coverage role.
 
-WORD BUDGET SPLIT — HARD LOCK:
-When one TSM Order is represented by more than one SECTION, SPLIT that Order's governed word range across those sections.
-The combined minimums of all sections carrying that Order must equal the governed minimum for that Order.
-The combined maximums of all sections carrying that Order must equal the governed maximum for that Order.
-Do NOT give each repeated section a fresh independent allowance.
-Example: if an Order is governed at 350–420 words and appears across five sections, those five section ranges together must total exactly 350–420 words. Always use the CURRENT TSM REQUIREMENTS above, never example figures.
-
-Do not duplicate an Order merely to increase section count. Repeat an Order only where the article genuinely needs separate sections for distinct parts of that coverage area.
+NEW MATRIX LENGTH RULE: Do not assign or split numerical word-count budgets. Cover all Required functions and applicable Conditional functions.\n\nDo not duplicate an Order merely to increase section count. Repeat an Order only where the article genuinely needs separate sections for distinct parts of that coverage area.
 
 HEADING HIERARCHY — HARD LOCK:
 For every numbered SECTION, assign either H2 or H3.
