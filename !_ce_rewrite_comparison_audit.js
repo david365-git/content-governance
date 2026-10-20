@@ -10,7 +10,7 @@ function ce_saveW8EHtmlSnapshot_(postsSheet, row) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var id = String(postsSheet.getRange(row,4).getDisplayValue() || '').trim();
   var html = String(postsSheet.getRange(row,98).getValue() || '');
-  if (!/^\\d+$/.test(id) || !html.trim()) throw new Error('W8E snapshot requires a Post ID and nonempty CT HTML.');
+  if (!/^\d+$/.test(id) || !html.trim()) throw new Error('W8E snapshot requires a Post ID and nonempty CT HTML.');
   var sh = ss.getSheetByName('W8E HTML Snapshots');
   if (!sh) {
     sh = ss.insertSheet('W8E HTML Snapshots');
