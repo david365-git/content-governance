@@ -2165,6 +2165,34 @@ function getTierStructuralRequirements(material, tierLabel, articleType) {
   })).sort((x,y) => x.order - y.order);
 }
 
+/**
+ * Global NEW matrix safeguards are instructions, not numbered article sections.
+ * Keep them separate from getTierStructuralRequirements() so Order mapping
+ * continues to represent only article-type coverage.
+ */
+function ce_getNewTierGlobalGovernanceBlock_() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet()
+    .getSheetByName('Tier Structural Coverage Matrix NEW');
+  if (!sheet) throw new Error('NEW Tier Structural Coverage Matrix sheet missing');
+  var rows = sheet.getDataRange().getValues();
+  var heads = rows[0].map(function(h){return String(h || '').trim();});
+  function idx(name) { return heads.indexOf(name); }
+  var type = idx('Article Type'), label = idx('Required content function');
+  var guidance = idx('Writing guidance'), evidence = idx('Evidence to protect');
+  var safety = idx('Technical and factual safeguards');
+  if (type < 0 || label < 0) throw new Error('NEW matrix global governance columns missing');
+  var out = rows.slice(1).filter(function(r){
+    return String(r[type] || '').trim().toUpperCase() === 'GLOBAL GOVERNANCE';
+  }).map(function(r){
+    return '- '+String(r[label] || '').trim()
+      +(guidance >= 0 && r[guidance] ? ': '+r[guidance] : '')
+      +(evidence >= 0 && r[evidence] ? ' | Evidence: '+r[evidence] : '')
+      +(safety >= 0 && r[safety] ? ' | Safety: '+r[safety] : '');
+  });
+  if (!out.length) throw new Error('NEW matrix GLOBAL GOVERNANCE rules are absent');
+  return 'NEW MATRIX GLOBAL GOVERNANCE (applies to every article):\n'+out.join('\n');
+}
+
 /** Old callers receive no numeric target; absence must not be treated as 900 words. */
 function getTierWordCount(tierLabel, articleType) {
   return null;
