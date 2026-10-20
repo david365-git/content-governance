@@ -63,32 +63,66 @@ function saveCoherenceCheckResult(raw) {
 function ce_w2b3GovernanceContext_(sh, row) {
   var headings = sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
   var values = sh.getRange(row,1,1,sh.getLastColumn()).getDisplayValues()[0];
-  var fields = [
-    'Project Location & Property', 'Observed Conditions', 'Client Requirements',
-    'Materials & Construction', 'Inspection & Tests', 'Restoration Methods',
-    'Products & Equipment', 'Technical Findings', 'Project Results',
-    'Maintenance Handover', 'Evidence Status'
-  ];
-  var evidence = fields.map(function(name) {
-    var index = headings.indexOf(name);
-    return index < 0 ? '' : name + ': ' + String(values[index] || '').slice(0,4500);
-  }).filter(Boolean).join('\n');
-  var articleIndex = headings.indexOf('Article Type');
-  var materialIndex = headings.indexOf('Stone Type');
-  var articleType = articleIndex < 0 ? '' : String(values[articleIndex] || '').trim();
-  var material = materialIndex < 0 ? '' : String(values[materialIndex] || '').trim();
+  function field(name) {
+    var idx = headings.indexOf(name);
+    if (idx < 0) throw new Error('W2B.3 missing column: '+name);
+    return String(values[idx] || '').trim();
+  }
+  var articleType = field('Article Type');
+  var material = field('Stone Type');
+  var evidence = '';
+  if (articleType === 'Case Study') {
+    // Shared evidence reader verifies the source SHA-256, Post ID and all JSON arrays.
+    // Never consume stale or manually altered GL–GV values as authenticated evidence.
+    evidence = bc_caseEvidencePromptBlock_(row);
+  }
   var requirements = getTierStructuralRequirements(material, '', articleType);
-  if (!requirements.length) throw new Error('W2B.3: no NEW matrix coverage for '+articleType);
+  if (!requirements || !requirements.length) {
+    throw new Error('W2B.3: no NEW matrix coverage for '+articleType);
+  }
   var matrix = requirements.map(function(r) {
     return 'Order '+r.order+': '+r.name+' | '+r.priority+
       ' | Depth '+r.depth+' | When '+r.whenApplicable+
       ' | Guidance '+r.guidance+' | Protect '+r.evidence+
       ' | Safety '+r.safeguards;
   }).join('\n');
-  return 'RECORDED PROJECT EVIDENCE (not permission to invent new facts):\n'+
-    (evidence || 'No populated project evidence ledger fields.')+
+  return (evidence || 'No source-quoted case-study ledger required for this article type.')+
     '\nNEW MATRIX CONTENT REQUIREMENTS:\n'+matrix+'\n'+
     ce_getNewTierGlobalGovernanceBlock_();
+}
+
+// A conservative guard against deleting recognisable documented facts from
+// a repaired section. This is not a semantic fact checker: legitimate rewording
+// is allowed, and only facts clearly present beforehand are checked.
+function ce_w2b3EvidenceLoss_(sh,row,oldSection,newSection) {
+  var heads=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
+  function ix(name){return heads.indexOf(name);}
+  var typeIndex=ix('Article Type');
+  if(typeIndex<0 || String(sh.getRange(row,typeIndex+1).getValue()).trim()!=='Case Study')return [];
+  bc_caseEvidencePromptBlock_(row); // reject stale source-derived ledger
+  var labels=['Project Location & Property','Observed Conditions','Client Requirements',
+    'Materials & Construction','Inspection & Tests','Restoration Methods',
+    'Products & Equipment','Technical Findings','Project Results','Maintenance Handover'];
+  function normalise(t){return String(t||'').replace(/<[^>]*>/g,' ').replace(/&(?:nbsp|amp|quot);/gi,' ').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
+  function words(t){return Array.from(new Set(normalise(t).split(/\s+/).filter(function(x){return x.length>=4;})));}
+  var before=normalise(oldSection),after=normalise(newSection),missing=[];
+  labels.forEach(function(label){
+    var at=ix(label);
+    if(at<0)throw new Error('Missing project evidence column: '+label);
+    var data=JSON.parse(String(sh.getRange(row,at+1).getValue()||'[]'));
+    data.forEach(function(item) {
+      var tokens=words(item.fact);
+      if(tokens.length<4)return;
+      var beforeHits=tokens.filter(function(w){return before.indexOf(w)>=0;}).length;
+      if(beforeHits/tokens.length<0.8)return; // not clearly evidenced in this section
+      var afterHits=tokens.filter(function(w){return after.indexOf(w)>=0;}).length;
+      if(afterHits/tokens.length<0.5 && normalise(item.quote).length>20 &&
+         after.indexOf(normalise(item.quote))<0) {
+        missing.push(label+': '+String(item.fact).slice(0,95));
+      }
+    });
+  });
+  return missing;
 }
 
 function buildCoherenceCheckPrompt() {
@@ -924,6 +958,15 @@ function applyCoherenceFix(rawJson, expectedSectionNumbers) {
      *
      * We deliberately do NOT apply anything yet.
      */
+    var lostEvidence = ce_w2b3EvidenceLoss_(sh, row, existingSection, replacementHtml);
+    if (lostEvidence.length) {
+      return {
+        success: false,
+        message: 'Section '+sectionNumber+' may remove documented project facts: '+
+          lostEvidence.slice(0,3).join('; ')+'. GI was not changed.'
+      };
+    }
+
     validatedRepairs.push({
       sectionNumber:
         sectionNumber,
