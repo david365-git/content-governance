@@ -194,9 +194,12 @@ function getActivePostData() {
   var tierRequirements = getTierStructuralRequirements(material, tierLabel, articleType);
   var tierRequirementsText = "";
   tierRequirements.forEach(function(req, index) {
-    var minWords = req.wordCount;
-    var maxWords = Math.round(minWords * 1.5);
-    tierRequirementsText += "Order " + (index + 1) + ": " + req.name + " (" + minWords + "–" + maxWords + " words)\n";
+    tierRequirementsText += "Order " + req.order + ": " + req.name +
+      " | " + req.priority + " | Depth: " + req.depth +
+      " | Applies: " + req.whenApplicable + "\n" +
+      "Guidance: " + req.guidance + "\n" +
+      "Preserve: " + req.evidence + "\n" +
+      "Safeguards: " + req.safeguards + "\n";
   });
 
   return {
