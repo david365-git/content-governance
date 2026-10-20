@@ -87,7 +87,7 @@ function _parseEnrichedPlanEntities(enrichedPlanText) {
       entry.tsmRequirement = tsmMatch[1].split('\n')[0].trim();
     }
 
-    var wordBudgetMatch = block.match(/Word Budget:\s*(\d+)[\s\S]{0,10}?(\d+)/i);
+    var wordBudgetMatch = null;
     if (wordBudgetMatch) {
       entry.wordBudgetMin = wordBudgetMatch[1];
       entry.wordBudgetMax = wordBudgetMatch[2];
@@ -487,24 +487,7 @@ function buildSemanticAlignmentFixPrompt() {
     var plan = sectionBriefs[sectionNum];
     t.sectionBrief = plan ? plan.contentBrief : '';
     t.sectionTsm = plan ? plan.tsmRequirement : '';
-
-    var rawMin = plan ? parseInt(plan.wordBudgetMin, 10) : NaN;
-    var rawMax = plan ? parseInt(plan.wordBudgetMax, 10) : NaN;
-    var siblingCount = parentCounts[t.parentH2Index] || 1;
-
-    if (!isNaN(rawMin) && !isNaN(rawMax) && siblingCount > 1 && t.subIndex !== -1) {
-      // This section's total budget is shared across multiple flagged H3
-      // sub-units under the same H2 — divide it so the combined total for
-      // all flagged siblings does not exceed the section's actual budget.
-      t.wordBudgetMin = Math.round(rawMin / siblingCount);
-      t.wordBudgetMax = Math.round(rawMax / siblingCount);
-      t.wordBudgetShared = true;
-      t.wordBudgetSiblingCount = siblingCount;
-    } else {
-      t.wordBudgetMin = plan ? plan.wordBudgetMin : '';
-      t.wordBudgetMax = plan ? plan.wordBudgetMax : '';
-      t.wordBudgetShared = false;
-    }
+    t.wordBudgetMin = ''; t.wordBudgetMax = ''; t.wordBudgetShared = false;
 
     // Current word count of this specific flagged unit — used below to
     // distribute any required article-wide cut proportionally, so larger
@@ -691,63 +674,10 @@ function buildSemanticAlignmentFixPromptForFT() {
       var plan = sectionBriefs[sectionNum];
       t.sectionBrief = plan ? plan.contentBrief : '';
       t.sectionTsm = plan ? plan.tsmRequirement : '';
-
-      var rawMin = plan ? parseInt(plan.wordBudgetMin, 10) : NaN;
-      var rawMax = plan ? parseInt(plan.wordBudgetMax, 10) : NaN;
-      var siblingCount = parentCounts[t.parentH2Index] || 1;
-
-      if (!isNaN(rawMin) && !isNaN(rawMax) && siblingCount > 1 && t.subIndex !== -1) {
-        t.wordBudgetMin = Math.round(rawMin / siblingCount);
-        t.wordBudgetMax = Math.round(rawMax / siblingCount);
-        t.wordBudgetShared = true;
-        t.wordBudgetSiblingCount = siblingCount;
-      } else {
-        t.wordBudgetMin = plan ? plan.wordBudgetMin : '';
-        t.wordBudgetMax = plan ? plan.wordBudgetMax : '';
-        t.wordBudgetShared = false;
-      }
+    t.wordBudgetMin = ''; t.wordBudgetMax = ''; t.wordBudgetShared = false;
 
       t.currentWords = _stripTags(t.rawHtml).split(/\s+/).filter(function(w) { return w.length > 0; }).length;
     });
-
-    var articleShrinkShortfall = 0;
-    if (articleCeiling) {
-      var combinedFlaggedWords = fixTargets.reduce(function(sum, t) { return sum + t.currentWords; }, 0);
-      var articleOverage = currentTotalWords - articleCeiling.maxTarget;
-      if (combinedFlaggedWords > 0) {
-        var totalClampedReduction = 0;
-        var totalRequestedReduction = Math.max(0, articleOverage);
-
-        fixTargets.forEach(function(t) {
-          var share = t.currentWords / combinedFlaggedWords;
-          var rawDelta = Math.round(articleOverage * share);
-          var rawTarget = t.currentWords - rawDelta;
-
-          var budgetMin = parseInt(t.wordBudgetMin, 10);
-          var budgetMax = parseInt(t.wordBudgetMax, 10);
-          var hasBudget = !isNaN(budgetMin) && !isNaN(budgetMax);
-
-          var clampedTarget = rawTarget;
-          if (hasBudget) {
-            if (clampedTarget > budgetMax) clampedTarget = budgetMax;
-            if (clampedTarget < budgetMin) clampedTarget = budgetMin;
-          }
-
-          var clampedDelta = t.currentWords - clampedTarget;
-          t.shrinkTarget = clampedDelta;
-          t.shrinkTargetWasClamped = hasBudget && (clampedTarget !== rawTarget);
-
-          if (clampedDelta > 0) totalClampedReduction += clampedDelta;
-        });
-
-        articleShrinkShortfall = totalRequestedReduction - totalClampedReduction;
-      }
-    }
-
-    if (articleShrinkShortfall > 0) {
-      totalCeilingLine += 'NOTE: Each flagged section below has an individual SPECIFIC CUT TARGET, but those targets are capped to stay within each section\'s own governed word budget — cutting them all fully still leaves this article approximately ' + articleShrinkShortfall + ' words over its ceiling. This is expected: the remaining reduction must come from sections NOT flagged in this pass, or from a further editing pass once this one is complete. Do not attempt to cut beyond a section\'s own budget floor to close this remaining gap.\n';
-    }
-    totalCeilingLine += '\n';
 
     var prompt =
       totalCeilingLine +
