@@ -495,6 +495,7 @@ AUTHORITY SIGNALS (Hard Lock — apply to every article):
 ------------------------------------------------------------
 MATERIAL SAFETY BACKSTOP — apply even if the Technical Matrix lookup is absent:
 Distinguish glazed ceramic and dense porcelain faces from potentially porous cementitious grout. Do not recommend stone-style grinding or honing for glazed ceramic or factory-finished porcelain. Never assume sealing is needed on a non-porous tile face; assess the actual absorbent material, joints, previous treatment and finish. Do not recommend acidic cleaners without establishing the deposit, surface, grout and treatment compatibility. Choose material-compatible agitation, rinsing, extraction and moisture control. If material-specific safety data is absent, do not invent a treatment specification; flag the gap for review.
+${ce_getNewTierGlobalGovernanceBlock_()}
 ${buildStonePromptRulesBlock(d["Stone Type"] || "stone")}
 ${buildSemanticFingerprintBlock(d["Stone Type"] || "stone")}
 ${buildRecoveryBlueprintInjectionBlock(bc_getRecoveryBlueprintEntities())}
