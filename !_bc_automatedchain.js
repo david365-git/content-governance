@@ -4798,6 +4798,72 @@ function bc_runCoherenceFullAutomated() {
   }
 
   /*
+   * FINAL INDEPENDENT COHERENCE VERIFICATION.
+   * A successful atomic write proves structural safety, NOT editorial coherence.
+   * Check the repaired GI version before W3 is allowed to start.
+   * Do not run a second repair automatically.
+   */
+  var verifyHtml = String(sh.getRange(row, 191).getValue() || '').trim();
+  if (!verifyHtml || verifyHtml === currentGG) {
+    return {
+      success: false, cost: totalCost,
+      message: 'W2B.3 STOPPED: repaired HTML is empty or unchanged; final verification unavailable.'
+    };
+  }
+
+  var verificationPrompt =
+    'You are a UK homeowner-facing restoration article coherence verifier. ' +
+    'Review the ENTIRE repaired article for material redundancy, genuinely thin coverage, ' +
+    'or stranded internal links. Compare meaning ACROSS all sections, including adjacent sections. ' +
+    'Do NOT treat repeated reference to the same floor as redundancy when the passage adds ' +
+    'a distinct observation, diagnosis, treatment choice, safety limitation or outcome. ' +
+    'Do not demand equal lengths, arbitrary brevity or extra chemistry. ' +
+    'Check that the repaired sections resolved the original audit without removing ' +
+    'unique documented project evidence. Do not propose another rewrite. ' +
+    'Reply with JSON only: {"status":"PASS","issues":[]} or ' +
+    '{"status":"FAIL","issues":[{"section_number":1,"reason":"brief specific reason"}]}. ' +
+    'An issue must materially impair clarity or evidence, not merely be stylistic.\\n' +
+    'ORIGINAL FINDINGS: ' + JSON.stringify(checkJson) +
+    '\\nBEFORE REPAIR HTML:\\n' + currentGG +
+    '\\nAFTER REPAIR HTML:\\n' + verifyHtml;
+
+  var verificationResult = bc_sendPromptViaOpenAI(
+    verificationPrompt, 3500, MODEL_CHEAP
+  );
+  if (!verificationResult || !verificationResult.success) {
+    return {
+      success: false, cost: totalCost,
+      message: 'W2B.3 STOPPED: post-repair coherence verification API failed.'
+    };
+  }
+  totalCost += Number(verificationResult.cost || 0);
+  var verifyText = String(verificationResult.text || '').trim()
+    .replace(/^\x60\x60\x60json\\s*/i, '')
+    .replace(/^\x60\x60\x60\\s*/i, '')
+    .replace(/\\s*\x60\x60\x60$/i, '').trim();
+  var verifyResult;
+  try {
+    verifyResult = JSON.parse(verifyText);
+  } catch (verifyParseError) {
+    return {
+      success: false, cost: totalCost,
+      message: 'W2B.3 STOPPED: post-repair verification returned invalid JSON.'
+    };
+  }
+  if (!verifyResult || verifyResult.status !== 'PASS' ||
+      !Array.isArray(verifyResult.issues) || verifyResult.issues.length !== 0) {
+    bc_appendGovernancePipelineException(
+      'W2B.3 — Post-repair verification',
+      'Coherence still requires review: ' + JSON.stringify(verifyResult).slice(0,3000)
+    );
+    return {
+      success: false, cost: totalCost,
+      message: 'W2B.3 STOPPED: post-repair coherence verification did not pass. ' +
+        'Repaired HTML remains in GI for review; W3 was not started.'
+    };
+  }
+
+  /*
    * =========================================================
    * STEP 8 — FINISH
    *
@@ -4818,7 +4884,7 @@ function bc_runCoherenceFullAutomated() {
   return {
     success: true,
     message:
-      'W2B.3 FAIL findings repaired (no second audit) — ' +
+      'W2B.3 repairs independently verified PASS — ' +
       issues.length +
       ' issue(s) identified and repair pass completed. ' +
       applyResult.message,
