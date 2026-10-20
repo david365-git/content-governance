@@ -61,6 +61,12 @@ function saveW8CHtml(html) {
       progressColIdx[progressHeaders[i]] = i;
     }
 
+    var sourceHtml = String(postsSheet.getRange(activeRow, 165).getValue() || '');
+    var preservation = ce_w8CompareProtectedHtml_(sourceHtml, html);
+    if (!preservation.success) {
+      return {success:false,message:'W8C save blocked: '+preservation.message};
+    }
+
     // Save W8C_HTML to posts sheet col 166 (FJ)
     var cell = postsSheet.getRange(activeRow, 166);
     cell.setNumberFormat('@');
