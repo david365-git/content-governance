@@ -202,6 +202,9 @@ function getActivePostData() {
       "Safeguards: " + req.safeguards + "\n";
   });
 
+  tierRequirementsText += "\n" + ce_getNewTierGlobalGovernanceBlock_() +
+    "\nGlobal rules are safeguards, not numbered section requirements.\n";
+
   return {
     postId:           postId,
     title:            title,
