@@ -298,7 +298,7 @@ You must NOT change:
 - section order;
 - H2 wording;
 - TSM Requirement ownership;
-- Word Budget ownership;
+- Depth and source-evidence ownership;
 - HUB-INTRO status;
 - or the governed purpose of any section.
 Stage 1.5C enriches the approved structure. It does not redesign it.
@@ -324,7 +324,7 @@ Do not place a professional-only product image beside DIY avoidance advice in a 
 IMAGE CONTEXT RULE — HARD LOCK:
 Every image used in the eventual article must have substantive explanatory text before it.
 No two images should be planned consecutively without substantive text between them.
-If a section's word budget cannot support the assigned images, move the lowest-priority image to another genuinely relevant section.
+If images distract from the section's purpose, move the lowest-priority image to another relevant section.
 --- VIDEO PRESERVATION — HARD LOCK ---
 ORIGINAL VIDEO COUNT:
 ${videoCount}
@@ -429,21 +429,8 @@ All other numbered sections must use:
 Internal link: None
 
 Never rename a section's TSM Requirement to "Internal Link to Hub" in order to assign the link.
---- SECTION LOAD BUDGET — HARD LOCK ---
-Before assigning enrichment elements to a section, calculate the approximate load:
-- Image assigned: 40 words
-- Visual pattern assigned other than None: 30 words
-- Each entity assigned: 15 words
-- Internal link assigned: 25 words
-Subtract this load from the section's maximum Word Budget.
-If fewer than 60 words remain, the section is overloaded.
-Reduce load in this order:
-1. Remove the visual pattern first.
-2. Reduce entities beyond the single most important one.
-3. Move an image to another genuinely relevant section if necessary.
-Never assign:
-image + visual pattern + 3 entities + internal link
-to a section whose maximum word budget is below 270 words.
+--- ENRICHMENT RELEVANCE RULE ---
+Only assign images, links and visual patterns when they help the reader. Never remove documented evidence to satisfy a numerical limit.
 --- CONTENT BRIEF RULES ---
 Write 1-2 sentences describing what the section will cover.
 The brief must:
@@ -499,7 +486,7 @@ For every numbered section:
 1. Preserve the SECTION number exactly.
 2. Preserve the H2 wording exactly.
 3. Preserve the TSM Requirement assigned by Stage 1.5A.
-4. Preserve the Word Budget assigned by Stage 1.5A.
+4. Preserve the Depth guidance assigned by Stage 1.5A; do not impose a numerical word quota.
 5. Do not move one section's TSM Requirement to another section.
 6. Do not add a new numbered section.
 7. Do not remove a numbered section.
@@ -554,7 +541,7 @@ Then output EVERY numbered section.
 For each numbered section use exactly this structure:
 SECTION [N]: Heading H2/H3: [copy the Stage 1.5B section heading line verbatim, including its H2 or H3 level]
 TSM Requirement: [copy the Stage 1.5A TSM Requirement verbatim]
-Word Budget: [copy the Stage 1.5A Word Budget verbatim]
+Depth: [copy the Stage 1.5A Depth verbatim]
 Content Brief: [1-2 sentences]
 Visual Pattern: [Symptom-Anchor / Diagnostic-Sequence / Comparison-Paragraphs / Mechanism-Blockquote / H3-Subheadings / None]
 List eligible: [YES — procedural/diagnostic only / YES — named product steps preserved from original HTML / NO — prose required]
@@ -588,7 +575,7 @@ Before finalising, internally verify:
 6. Every original video is preserved.
 7. HUB-INTRO is preserved if present.
 8. The Feeds Hub link is assigned to exactly one contextually appropriate section without changing that section's Stage 1.5A TSM Requirement.
-9. No section has been overloaded beyond its available word budget.
+9. Enrichment elements are relevant and do not displace documented evidence.
 10. No enrichment choice changes the governed purpose of a section.
 Last line must be exactly:
 Stage 1.5C complete. Waiting for Stage 1.5D.
@@ -678,7 +665,7 @@ HARD RULES:
 2. Preserve all Stage 1.5A section numbers and order.
 3. Preserve every Stage 1.5B H2 character-for-character.
 4. Preserve every correct TSM Requirement.
-5. Preserve every correct Word Budget.
+5. Preserve section Depth guidance without a word quota.
 6. Do not rewrite Content Briefs merely for style or preference.
 7. Do not redistribute images, videos, entities, patterns or links unless the validation failure specifically requires it.
 8. Do not introduce new sections.
@@ -751,7 +738,7 @@ const expectedTsmRequirements = {};
 
 const expectedWordBudgets = {};
   const structureRegex =
-  /^SECTION\s+(\d+):\s*Order\s+\d+\s+—\s+(.+?)\s+—\s+(\d+[–-]\d+\s+words)/gmi;
+  /^SECTION\s+(\d+):\s*Order\s+\d+\s+—\s+(.+?)\s+—\s+(Required|Conditional)\s+—\s+(Light|Standard|Deep)\b[^\n]*/gmi;
   let structureMatch;
   while (
     (
@@ -771,10 +758,7 @@ const tsmRequirement =
     structureMatch[2] || ''
   ).trim();
 
-const wordBudget =
-  String(
-    structureMatch[3] || ''
-  ).trim();
+const wordBudget = String(structureMatch[4] || '').trim(); // NEW matrix depth
 
 if (
   expectedSections.indexOf(
