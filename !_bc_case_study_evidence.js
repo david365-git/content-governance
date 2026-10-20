@@ -217,11 +217,11 @@ function bc_caseEvidenceFilteredBatch() {
     } catch(err) { failed.push('Row '+visible[j]+': '+err.message); }
   }
   SpreadsheetApp.getUi().alert(
-    'Case Study Evidence — '+Object.keys(types)[0]+'\\n'
-    +'Newly completed: '+done+'\\nAlready completed: '+skipped
-    +'\\nFailures: '+failed.length+'\\nRemaining for next run: '+pending
-    +'\\nAPI cost: $'+cost.toFixed(4)
-    +(failed.length?'\\n'+failed.slice(0,8).join('\\n'):'')
-    +'\\nRun the same menu item again to continue; completed rows are skipped.'
+    'Case Study Evidence — '+Object.keys(types)[0]+'\n'
+    +'Newly completed: '+done+'\nAlready completed: '+skipped
+    +'\nFailures: '+failed.length+'\nRemaining for next run: '+pending
+    +'\nAPI cost: $'+cost.toFixed(4)
+    +(failed.length?'\n'+failed.slice(0,8).join('\n'):'')
+    +'\nRun the same menu item again to continue; completed rows are skipped.'
   );
 }
