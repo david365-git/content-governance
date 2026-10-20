@@ -97,6 +97,36 @@ function buildW8BPrompt(brief, articleType, html) {
     html;
 }
 
+/**
+ * W8 protected-structure guard; prevents silent loss or substitution
+ * of ordered section IDs, headings, images, links and embedded media.
+ * Factual claims require their separate source-evidence audit.
+ */
+function ce_w8CompareProtectedHtml_(beforeHtml, afterHtml) {
+  var original = String(beforeHtml || ''), revised = String(afterHtml || '');
+  if (!original.trim() || !revised.trim()) return {success:false, message:'Previous or replacement HTML is empty'};
+  function extract(html, regex) {
+    return (html.match(regex) || []).map(function(x) { return x.replace(/\s+/g,' ').trim(); });
+  }
+  var checks = [
+    ['numbered section IDs', /<section\b[^>]*\bid\s*=\s*["']section-\d+["'][^>]*>/gi],
+    ['headings', /<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]>/gi],
+    ['images', /<img\b[^>]*>/gi],
+    ['figure openings', /<figure\b[^>]*>/gi],
+    ['links', /<a\b[^>]*href\s*=\s*["'][^"']+["'][^>]*>/gi],
+    ['video embeds', /<iframe\b[^>]*>/gi],
+    ['JSON-LD schema', /<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi]
+  ];
+  for (var i=0;i<checks.length;i++) {
+    var oldParts=extract(original, checks[i][1]);
+    var newParts=extract(revised, checks[i][1]);
+    if (oldParts.join('\u001e') !== newParts.join('\u001e')) {
+      return {success:false,message:'Protected '+checks[i][0]+' changed or were lost; review before saving'};
+    }
+  }
+  return {success:true};
+}
+
 /* ============================================================
    SAVE W8B OUTPUT
 ============================================================ */
@@ -124,6 +154,12 @@ function saveW8BHtml(html) {
     var progressColIdx  = {};
     for (var i = 0; i < progressHeaders.length; i++) {
       progressColIdx[progressHeaders[i]] = i;
+    }
+
+    var previousHtml = String(postsSheet.getRange(activeRow, 98).getValue() || '');
+    var preservation = ce_w8CompareProtectedHtml_(previousHtml, html);
+    if (!preservation.success) {
+      return {success:false,message:'W8B save blocked: '+preservation.message};
     }
 
     // Save W8B_HTML to posts sheet col 165 (FI)
