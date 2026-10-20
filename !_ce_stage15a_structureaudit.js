@@ -187,10 +187,10 @@ AUDIT CHECK 8 — ARTICLE TYPE EXPECTATIONS
 Validate only against the block below.
 AUDIT CHECK 8: PASS / FAIL
 
-AUDIT CHECK 9 — TSM ORDER COVERAGE
+AUDIT CHECK 9 — REQUIRED FUNCTION COVERAGE
 
 For Case Study, Method Guide, Diagnostic Guide and Educational Guide articles:
-Verify every TSM Order from 1 to ${tsmData.length} is covered at least once across the mapped sections.
+Verify every Required function is covered at least once, with relevant Conditional functions included when supported.
 A TSM Order MAY appear on more than one section where separate reader-facing sections genuinely contribute to the same coverage role.
 Do not treat repeated use of an Order as duplication when those sections cover distinct parts of that requirement.
 
@@ -218,8 +218,8 @@ For all article types, section count need not equal the number of coverage funct
 Do NOT count the header block. Do NOT count HUB-INTRO if present.
 AUDIT CHECK 10: PASS / FAIL
 
-AUDIT CHECK 11 — WORD BUDGET TOTAL
-Total must fall within: ${tierWordCount}–${Math.round(tierWordCount * 1.2)} words.
+AUDIT CHECK 11 — FACTUAL COMPLETENESS
+Verify important source facts, practical treatment decisions and realistic outcomes are retained. No numeric limits.
 AUDIT CHECK 11: PASS / FAIL
 
 --- ARTICLE TYPE EXPECTATIONS ---
@@ -291,7 +291,7 @@ Choose the section sequence that best tells the real project story clearly and c
 
 Every required TSM coverage role must be represented, but TSM Orders do NOT need a one-to-one relationship with article sections.
 ` : `
-Map every TSM Order below to a section. Every TSM Order must appear exactly once across the mapped sections — none may be omitted or duplicated.
+Map every Required function to appropriate article coverage; include Conditional functions when relevant, and allow multiple sections to share an Order when it improves clarity.
 
 SECTION ORDER (Content-Driven — Soft Lock): You do not need to map TSM Orders sequentially (1, 2, 3...). Choose the narrative sequence that best serves the reader's understanding for THIS specific article — for example, leading with the most urgent symptom, or grouping related causes together, even if that means Order 3 appears before Order 1. Every TSM Order must still be covered exactly once; only the SEQUENCE in which they appear as sections is flexible.
 `}
@@ -335,9 +335,9 @@ Preserve an existing H3 where it still functions as a genuine sub-process.
 If an existing heading is H2 but is clearly only a subordinate sub-process of the preceding H2, it may be demoted to H3.
 
 For every mapped section, include the heading level and a concise working topic using this exact pattern:
-SECTION 1: Order [N] — [Requirement Name] — [min]–[max] words — H2: [working section topic]
+SECTION 1: Order [N] — [Requirement Name] — [Required/Conditional] — [Depth] — H2: [working section topic]
 or:
-SECTION 2: Order [N] — [Requirement Name] — [min]–[max] words — H3: [working sub-process topic]
+SECTION 2: Order [N] — [Requirement Name] — [Required/Conditional] — [Depth] — H3: [working sub-process topic]
 ...
 
 --- OUTPUT INSTRUCTION ---
