@@ -173,3 +173,43 @@ function bc_caseEvidencePromptBlock_(row) {
     +'All project-specific claims must stay within the evidence below and confirmed owner corrections. Do not turn general technical notes into observations or performed tests. An empty category does not prove an activity never happened. Governed headings and SEO cannot add project facts.\n'
     +lines.join('\n')+'\nEND CASE STUDY EVIDENCE\n';
 }
+
+
+/**
+ * W0 filtered Stone Type batch. Only visible Case Studies for one stone type
+ * are returned; completed evidence is not scheduled again.
+ * The row extraction remains source-fingerprint aware for safety.
+ */
+function bc_caseEvidenceFilteredRows() {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
+  if (!sh) return {success:false,message:'posts sheet missing'};
+  if (!sh.getFilter()) return {success:false,message:'Apply a Stone Type sheet filter before running this batch.'};
+  var last = sh.getLastRow();
+  if (last < 2) return {success:true,stoneType:'Filtered selection',rows:[],alreadyCompleted:0};
+  var headers = sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
+  function col(name) { var idx=headers.indexOf(name); if(idx<0) throw new Error('Missing heading: '+name); return idx+1; }
+  var typeCol=col('Article Type'), stoneCol=col('Stone Type'), statusCol=col('Evidence Status');
+  var types=sh.getRange(2,typeCol,last-1,1).getDisplayValues();
+  var stones=sh.getRange(2,stoneCol,last-1,1).getDisplayValues();
+  var statuses=sh.getRange(2,statusCol,last-1,1).getDisplayValues();
+  var rows=[], completed=0, stoneTypes={};
+  for (var i=0;i<last-1;i++) {
+    var row=i+2;
+    if (sh.isRowHiddenByFilter(row) || sh.isRowHiddenByUser(row)) continue;
+    var stone=String(stones[i][0]||'').trim();
+    if (stone) stoneTypes[stone]=true;
+    if (String(types[i][0]||'').trim()!=='Case Study') continue;
+    if (/^SOURCE-QUOTED \| sha256:[0-9a-f]{64}$/i.test(String(statuses[i][0]||'').trim())) {
+      completed++;
+      continue;
+    }
+    rows.push(row);
+  }
+  var names=Object.keys(stoneTypes);
+  if (names.length!==1) return {success:false,message:'Filter the posts sheet to exactly one Stone Type. Visible types: '+(names.join(', ')||'none')};
+  return {success:true,stoneType:names[0],rows:rows,alreadyCompleted:completed};
+}
+/** Public endpoint for client-side sequential batching. */
+function bc_caseEvidenceRunRowBatch(row) {
+  return bc_caseEvidenceExtract_(row);
+}
