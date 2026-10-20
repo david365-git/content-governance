@@ -945,7 +945,7 @@ function buildStage2BPart3B(d) {
           title: secMatch[3].trim(),
           headingLevel: secMatch[2] ? secMatch[2].toUpperCase() : "H2",
           id: "",
-          budget: "", 
+          depth: "", 
           brief: "", 
           visualPattern: "",
           images: "",
@@ -983,6 +983,25 @@ function buildStage2BPart3B(d) {
       }
     });
     if (current) sections.push(current);
+
+    // Fail closed if the governed W1.5C/W1.5D plan is incomplete.
+    var seenSectionIds = {};
+    var handoffProblems = [];
+    sections.forEach(function(sec, idx) {
+      var expectedId = "section-" + (idx + 1);
+      var id = String(sec.id || expectedId).trim();
+      if (seenSectionIds[id]) handoffProblems.push("duplicate section id " + id);
+      seenSectionIds[id] = true;
+      if (!sec.title || !/^H[23]$/i.test(sec.headingLevel)) {
+        handoffProblems.push("invalid heading in section " + (idx + 1));
+      }
+      if (!sec.brief) handoffProblems.push("missing content brief in section " + (idx + 1));
+      if (!sec.tsmRequirement) handoffProblems.push("missing governance role in section " + (idx + 1));
+      if (!sec.depth) handoffProblems.push("missing NEW matrix depth in section " + (idx + 1));
+    });
+    if (handoffProblems.length) {
+      throw new Error("W2B section plan handoff validation failed: " + handoffProblems.join("; "));
+    }
 
     // Merge optimization data from Column CY JSON into sections
     if (optimizationData && optimizationData.sections) {
