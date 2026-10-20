@@ -621,7 +621,7 @@ Section 1 must NOT preview, name, or rule out any intervention method, technique
 Prohibited in Section 1: any sentence stating what will NOT be done (e.g. "this was not a job for flattening, grinding or changing the surface"), any sentence naming the chosen remedy category, any sentence explaining why a technique is appropriate.
 That reasoning belongs in Section 2 (Problem & Intervention), where the technique choice and its justification are documented.
 SELF-CHECK BEFORE OUTPUT: Before finalising Section 1, scan every sentence for words describing what was or was not done to correct the floor (flatten, grind, strip, hone, seal, apply, remove, treat). Any such sentence must be deleted from Section 1 or moved to Section 2.
-WORD COUNT SELF-CHECK: Before finalising Section 1, count the total words in Section 1 including all H3 sub-blocks but excluding any commercial product table. If the count exceeds the WORD BUDGET maximum specified in the approved section plan, cut content — do not carry it forward as extra length. Prioritise cutting supporting detail over cutting the core problem description.
+SECTION 1 COMPLETENESS CHECK: Cover the documented entry condition and homeowner problem clearly. Avoid repetition, but do not remove original project evidence to meet a word limit; the NEW matrix has no numeric section budgets.
 
 --- RULE 14: NAMED DEFECT COMPLETION (Hard Lock) ---
 Every technical defect named in the article must be explained to completion.
