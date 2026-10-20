@@ -2127,143 +2127,52 @@ function openBuildContentEnginePromptFromActiveRowChatGPTSidebar() {
 /**
  * Get TSM requirements for a specific tier and article type
  */
+/**
+ * NEW matrix adapter. The editorial matrix is keyed by Article Type rather than Tier.
+ * No numeric word allocation is returned: old callers must not treat zero as a quota.
+ */
 function getTierStructuralRequirements(material, tierLabel, articleType) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const tsmSheet = ss.getSheetByName("Tier Structural Coverage Matrix");
-  if (!tsmSheet) return [];
-
-  const data = tsmSheet.getDataRange().getValues();
-  const headers = data[0];
-
-  const tierCol = headers.indexOf("Tier");
-  const labelCol = headers.indexOf("Label");
-  const reqCol = headers.indexOf("Structural Requirement");
-  const orderCol = headers.indexOf("Order");
-  const wordCountCol = headers.indexOf("Word Count");
-  const permittedCol = headers.indexOf("Permitted Article Types");
-
-  const articleTypeLower = articleType
-    ? String(articleType).trim().toLowerCase()
-    : null;
-
-  let requirements = [];
-
-  for (let i = 1; i < data.length; i++) {
-    const rowTier = String(data[i][tierCol] || "").trim();
-
-    if (rowTier !== tierLabel) continue;
-
-    if (
-      rowTier === "GLOBAL RULE" ||
-      rowTier === "GOVERNANCE RULE"
-    ) {
-      continue;
-    }
-
-    if (articleTypeLower && permittedCol > -1) {
-      const permittedRaw =
-        String(data[i][permittedCol] || "").trim();
-
-      const permittedList = permittedRaw
-        .split(",")
-        .map(function(s) {
-          return s.trim().toLowerCase();
-        });
-
-      if (
-        permittedList.indexOf(articleTypeLower) === -1
-      ) {
-        continue;
-      }
-    }
-
-    const order = data[i][orderCol];
-    const name = String(data[i][reqCol] || "").trim();
-    const wc = data[i][wordCountCol];
-
-    if (!order || isNaN(Number(order))) continue;
-
-    requirements.push({
-      order: Number(order),
-      name: name,
-      wordCount:
-        wc && !isNaN(Number(wc))
-          ? Number(wc)
-          : 120
-    });
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Tier Structural Coverage Matrix NEW");
+  if (!sheet || !articleType) return [];
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length < 2) return [];
+  const heads = rows[0].map(h => String(h).trim());
+  const col = key => heads.indexOf(key);
+  const idxType = col("Article Type"), idxOrder = col("Order");
+  const idxName = col("Required content function"), idxPriority = col("Priority");
+  const idxWhen = col("When applicable"), idxDepth = col("Depth");
+  const idxGuidance = col("Writing guidance"), idxEvidence = col("Evidence to protect");
+  const idxSafety = col("Technical and factual safeguards");
+  const idxLinks = col("Linking / navigation");
+  if ([idxType,idxOrder,idxName,idxPriority,idxWhen,idxDepth,idxGuidance].some(n => n < 0)) {
+    throw new Error("NEW Tier Matrix schema is incomplete");
   }
-
-  requirements.sort(function(a, b) {
-    return a.order - b.order;
-  });
-
-  return requirements;
+  const target = String(articleType).trim().toLowerCase();
+  return rows.slice(1).filter(row =>
+    String(row[idxType] || "").trim().toLowerCase() === target &&
+    Number.isFinite(Number(row[idxOrder])) && Number(row[idxOrder]) > 0
+  ).map(row => ({
+    order: Number(row[idxOrder]),
+    name: String(row[idxName] || "").trim(),
+    priority: String(row[idxPriority] || "").trim(),
+    whenApplicable: String(row[idxWhen] || "").trim(),
+    depth: String(row[idxDepth] || "").trim(),
+    guidance: String(row[idxGuidance] || "").trim(),
+    evidence: idxEvidence >= 0 ? String(row[idxEvidence] || "").trim() : "",
+    safeguards: idxSafety >= 0 ? String(row[idxSafety] || "").trim() : "",
+    linking: idxLinks >= 0 ? String(row[idxLinks] || "").trim() : "",
+    wordCount: 0
+  })).sort((x,y) => x.order - y.order);
 }
 
-/**
- * Get total word count for a tier by summing TSM requirement word counts
- */
+/** Old callers receive no numeric target; absence must not be treated as 900 words. */
 function getTierWordCount(tierLabel, articleType) {
-  const requirements = getTierStructuralRequirements(null, tierLabel, articleType);
-  if (requirements.length === 0) {
-    return 900;
-  }
-  let total = 0;
-  requirements.forEach(function(req) {
-    total += req.wordCount;
-  });
-  return total > 0 ? total : 900;
+  return null;
 }
 
-/**
- * SHARED SOURCE OF TRUTH — total article word count ceiling by Article Type.
- * Sums the Tier Structural Coverage Matrix's Word Count column for every
- * row whose Permitted Article Types includes this Article Type, then
- * applies the standard ±15% band.
- * Used by both W2B generation (buildTotalWordCountTargetBlock) and the
- * W1.5F semantic alignment fix prompt — keep this the ONLY place that
- * defines the ceiling calculation so the two never drift out of sync.
- * Returns null if no matching Tier Matrix rows are found.
- */
+/** NEW matrix prohibits fixed article-length ceilings. */
 function getTierWordCountCeiling(articleType) {
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var matrixSheet = ss.getSheetByName("Tier Structural Coverage Matrix");
-    if (!matrixSheet) return null;
-
-    var data = matrixSheet.getDataRange().getValues();
-    if (data.length < 2) return null;
-    var headers = data[0].map(function(h) { return String(h).trim(); });
-    var permittedIdx = headers.indexOf("Permitted Article Types");
-    var wordCountIdx = headers.indexOf("Word Count");
-    if (permittedIdx === -1 || wordCountIdx === -1) return null;
-
-    var atLower = String(articleType || "").trim().toLowerCase();
-    var total = 0;
-    var matchedRows = 0;
-
-    for (var i = 1; i < data.length; i++) {
-      var permitted = String(data[i][permittedIdx] || "");
-      var permittedList = permitted.split(",").map(function(s) { return s.trim().toLowerCase(); });
-      if (permittedList.indexOf(atLower) > -1) {
-        var wc = parseInt(data[i][wordCountIdx], 10);
-        if (!isNaN(wc)) {
-          total += wc;
-          matchedRows++;
-        }
-      }
-    }
-
-    if (total === 0 || matchedRows === 0) return null;
-
-    return {
-      total: total,
-      minTarget: Math.round(total * 0.85),
-      maxTarget: Math.round(total * 1.15)
-    };
-  } catch(e) {
-    return null;
-  }
+  return null;
 }
 
 /**
