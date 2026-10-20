@@ -294,7 +294,7 @@ ${siloMap}
 
 --- INTERNAL LINKING DATA ---
 1. Use the full URL from the Silo Map for all href values — no placeholders.
-2. Integrate 5-8 relevant links from the Silo Map naturally.
+2. Preserve relevant original Case Study links first; retain mandatory approved section-plan links. Add Silo Map links only when useful and permitted by the approved plan. Do not impose a minimum or maximum link count.
 3. Anchor text MUST match the intent of the target Role.
 
 --- UK LOCALISATION DATA ---
@@ -860,7 +860,7 @@ function saveW1AOutput() {
     "   maximum 300 words. Summarise principles and use the full URL from the Silo Map to link to the designated authority page.\n\n" +
     "--- INTERNAL LINKING DATA ---\n" +
     "1. Use the full URL from the Silo Map for all href values — no placeholders.\n" +
-    "2. Integrate 5-8 relevant links from the Silo Map naturally.\n" +
+    "2. Preserve relevant original Case Study links first; retain mandatory approved section-plan links. Add Silo Map links only when useful and permitted by the approved plan. Do not impose a minimum or maximum link count.\n" +
     "3. Anchor text MUST match the intent of the target Role.";
 
   // Column FA (157) — Authority Brief
