@@ -77,6 +77,9 @@ Assess against these sections. For every point, give a PASS/FAIL/PARTIAL and one
 - Immediate Value: core answer without excessive scrolling?
 - Actionable Takeaways: clear and specific to this material/defect?
 
+MEDIA EVIDENCE CONSTRAINT:
+Image/video captions and alt text must describe visible content or a stage explicitly documented by the original project. Do not recommend or automatically add claims that media proves unseen sealing efficacy, moisture tests, extraction performance or customer reactions. Keep project media URLs and identities stable. When media visibility is unknown, do not infer content from surrounding SEO prose.
+
 5. FINAL ACTION LIST
 Every PARTIAL or FAIL verdict from sections 1-4 above MUST have a corresponding entry here — do not leave any PARTIAL or FAIL unaddressed. List the specific text edits, link additions, or heading changes needed, each tied to which section flagged it. For any item that requires adding new content (not just editing existing text), you must also state: (a) the exact location in the article where it should be inserted (e.g. "after the second paragraph", "immediately below the H2 'Common Causes'"), and (b) example draft text the author can adapt, written in the article's own voice and specific to the material and defect discussed — not a generic placeholder.
 
@@ -120,6 +123,10 @@ function buildW8EAutoFixPrompt() {
     For each fix below, return ONLY the exact original fragment being replaced (OLD) and its exact replacement (NEW). Each OLD fragment must be copied verbatim from the article HTML below — exact characters, exact tags — so it can be located by an automated find-and-replace. Each OLD fragment must be unique within the article (include enough surrounding text to make it unique if needed).
 
     Do not touch anything not listed in the fixes below.
+
+    MEDIA SAFETY LOCK: If a listed change affects img alt, figcaption, video iframe or video caption, preserve existing src/href/iframe URLs and all media element structure. Use only visible or explicitly documented content. Never make unseen treatment, test, protection, extraction or homeowner-reaction claims. If the required replacement cannot be supported by the given article and caption evidence, do not return that fix. A descriptive caption is acceptable; diagnosis is not mandatory.
+
+    PROJECT FACTS LOCK: Do not add job-specific actions, tests, observations or client statements beyond documented article facts or explicitly supplied author confirmations. Preserve real project steps and useful existing links. Avoid duplicating cross-section material warnings just to support search intent.
 
     Return ONLY a JSON array, no markdown fences, no preamble, in this exact format:
     [
