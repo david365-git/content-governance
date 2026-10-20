@@ -662,6 +662,17 @@ function buildSemanticAlignmentFixPromptForFT() {
     var enrichedPlanText = enrichedPlanCol > -1 ? String(sheet.getRange(row, enrichedPlanCol + 1).getValue() || '') : '';
     var sectionBriefs = _parseEnrichedPlanEntities(enrichedPlanText);
 
+    var allUnits = _extractScoringUnits(html);
+    var fixTargets = lowLabels.map(function(label) {
+      for (var i = 0; i < allUnits.length; i++) {
+        if (allUnits[i].label === label) return allUnits[i];
+      }
+      return null;
+    }).filter(Boolean);
+    if (fixTargets.length !== lowLabels.length) {
+      return {success:false, message:'FT alignment LOW sections do not match FT HTML; regenerate FT score.'};
+    }
+
     var currentTotalWords = _stripTags(html).split(/\s+/).filter(function(w) { return w.length > 0; }).length;
     var totalCeilingLine = '';
     var parentCounts = {};
@@ -754,6 +765,7 @@ function buildSemanticAlignmentFixPromptForFT() {
       '7. Validate literal HTML and JSON structure before submission.\n\n' +
       'SECTIONS TO REVISE:\n\n' +
       fixTargets.map(function(s, idx) {
+        var indexLine = 'SECTION INDEX: ' + idx + '\n';
         var jobLine = s.sectionBrief
           ? 'SECTION JOB: ' + s.sectionBrief + (s.sectionTsm ? ' (' + s.sectionTsm + ')' : '') + '\n'
           : '';
