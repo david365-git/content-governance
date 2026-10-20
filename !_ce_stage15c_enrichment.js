@@ -366,7 +366,7 @@ Before assigning H3-Subheadings, count the entities planned for that section.
 If fewer than 3 distinct entities are being covered, H3-Subheadings is NOT eligible.
 Do not use H3s merely to make a short section look structured.
 Use a maximum of approximately 3-4 visual patterns across the entire article.
-Sections below roughly 200 words rarely need a visual pattern.
+Use a visual pattern only when it genuinely improves the explanation; do not use a word-count threshold.
 `;
   prompt += `
 --- ORIGINAL ARTICLE EVIDENCE — HARD LOCK ---
@@ -736,7 +736,7 @@ const expectedHeadingLevels = {};
 
 const expectedTsmRequirements = {};
 
-const expectedWordBudgets = {};
+const expectedDepths = {};
   const structureRegex =
   /^SECTION\s+(\d+):\s*Order\s+\d+\s+—\s+(.+?)\s+—\s+(Required|Conditional)\s+—\s+(Light|Standard|Deep)\b[^\n]*/gmi;
   let structureMatch;
@@ -758,7 +758,7 @@ const tsmRequirement =
     structureMatch[2] || ''
   ).trim();
 
-const wordBudget = String(structureMatch[4] || '').trim(); // NEW matrix depth
+const sectionDepth = String(structureMatch[4] || '').trim(); // NEW matrix depth
 
 if (
   expectedSections.indexOf(
@@ -773,8 +773,8 @@ if (
 expectedTsmRequirements[number] =
   tsmRequirement;
 
-expectedWordBudgets[number] =
-  wordBudget;
+expectedDepths[number] =
+  sectionDepth;
 }
 
 expectedSections.sort(
@@ -869,8 +869,8 @@ expectedSections.sort(
   expectedTsmRequirements:
     expectedTsmRequirements,
 
-  expectedWordBudgets:
-    expectedWordBudgets,
+  expectedDepths:
+    expectedDepths,
 
   expectsHubIntro:
     expectsHubIntro
