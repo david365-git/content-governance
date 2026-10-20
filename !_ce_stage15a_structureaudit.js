@@ -115,10 +115,13 @@ const existingStructure = String(d["Current Headings"] || "").trim();
       ' | Applies: ' + req.whenApplicable + '\n' +
       'Guidance: ' + req.guidance + '\n' +
       'Protect: ' + req.evidence + '\n' +
-      'Safety: ' + req.safeguards + '\\n';
+      'Safety: ' + req.safeguards + '\n';
   });
 
+  const globalGovernance = ce_getNewTierGlobalGovernanceBlock_();
   const prompt = `
+${globalGovernance}
+
 STAGE 1.5A — STRUCTURE AUDIT & MAPPING
 
 MATERIAL: ${material}
