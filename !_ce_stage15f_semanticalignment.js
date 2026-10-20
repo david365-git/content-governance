@@ -471,25 +471,8 @@ function buildSemanticAlignmentFixPrompt() {
   var enrichedPlanText = enrichedPlanCol > -1 ? String(sheet.getRange(row, enrichedPlanCol + 1).getValue() || '') : '';
   var sectionBriefs = _parseEnrichedPlanEntities(enrichedPlanText);
 
-  // Total-article ceiling check — the per-section budgets above cap each
-  // flagged section individually, but if multiple sections are flagged at
-  // once, independent per-section growth can still push the whole article
-  // past its overall ceiling. Compute current total + remaining headroom
-  // using the same Tier Matrix source of truth as W2B generation.
-  var currentTotalWords = _stripTags(html).split(/\s+/).filter(function(w) { return w.length > 0; }).length;
-  var articleCeiling = getTierWordCountCeiling(articleType);
+  var currentTotalWords = _stripTags(html).split(/\s+/).filter(Boolean).length;
   var totalCeilingLine = '';
-  if (articleCeiling) {
-    var headroom = articleCeiling.maxTarget - currentTotalWords;
-    totalCeilingLine =
-      'TOTAL ARTICLE LENGTH (Hard Lock — applies across ALL sections being revised together):\n' +
-      'This article\'s current total length is approximately ' + currentTotalWords + ' words.\n' +
-      'The governed ceiling for this article type is ' + articleCeiling.maxTarget + ' words.\n' +
-      (headroom > 0
-        ? 'That leaves approximately ' + headroom + ' words of headroom across ALL sections being rewritten in this pass combined — not per section.\n'
-        : 'The article is already at or over its ceiling — this rewrite must not add any net length; where one section needs more words to close the alignment gap, cut an equivalent amount elsewhere in the same rewritten section.\n') +
-      'If you are revising more than one section in this pass, divide the available headroom between them — do not let each section independently use its own full per-section allowance if that would push the combined total over the ceiling above.\n';
-  }
 
   // Count how many flagged sub-units share the same parent H2 — when an H2's
   // word budget is split across multiple H3 sub-sections, each flagged H3
@@ -528,55 +511,6 @@ function buildSemanticAlignmentFixPrompt() {
     // sections absorb a bigger share of the reduction than small ones.
     t.currentWords = _stripTags(t.rawHtml).split(/\s+/).filter(function(w) { return w.length > 0; }).length;
   });
-
-  // Distribute the article-wide overage (or headroom) across the flagged
-  // units proportionally to their current length, so each section gets an
-  // explicit numeric target rather than an implicit shared instruction.
-  // The resulting target word count is then CLAMPED to that section's own
-  // governed word budget range — a proportional share must never override
-  // the section's own min/max, since that produces a contradictory prompt.
-  var articleCeilingForShrink = getTierWordCountCeiling(articleType);
-  if (articleCeilingForShrink) {
-    var combinedFlaggedWords = fixTargets.reduce(function(sum, t) { return sum + t.currentWords; }, 0);
-    var articleOverage = currentTotalWords - articleCeilingForShrink.maxTarget; // positive = over ceiling
-    if (combinedFlaggedWords > 0) {
-      var totalClampedReduction = 0;
-      var totalRequestedReduction = Math.max(0, articleOverage);
-
-      fixTargets.forEach(function(t) {
-        var share = t.currentWords / combinedFlaggedWords;
-        var rawDelta = Math.round(articleOverage * share); // positive = cut this many, negative = may add this many
-        var rawTarget = t.currentWords - rawDelta;
-
-        var budgetMin = parseInt(t.wordBudgetMin, 10);
-        var budgetMax = parseInt(t.wordBudgetMax, 10);
-        var hasBudget = !isNaN(budgetMin) && !isNaN(budgetMax);
-
-        var clampedTarget = rawTarget;
-        if (hasBudget) {
-          if (clampedTarget > budgetMax) clampedTarget = budgetMax;
-          if (clampedTarget < budgetMin) clampedTarget = budgetMin;
-        }
-
-        var clampedDelta = t.currentWords - clampedTarget;
-        t.shrinkTarget = clampedDelta;
-        t.shrinkTargetWasClamped = hasBudget && (clampedTarget !== rawTarget);
-
-        if (clampedDelta > 0) totalClampedReduction += clampedDelta;
-      });
-
-      // If clamping every section to its own budget still can't reach the
-      // full required reduction, flag the shortfall honestly rather than
-      // silently under-delivering — this becomes visible in the prompt so
-      // David knows a further pass may be needed.
-      articleShrinkShortfall = totalRequestedReduction - totalClampedReduction;
-    }
-  }
-
-  if (articleShrinkShortfall > 0) {
-    totalCeilingLine += 'NOTE: Each flagged section below has an individual SPECIFIC CUT TARGET, but those targets are capped to stay within each section\'s own governed word budget — cutting them all fully still leaves this article approximately ' + articleShrinkShortfall + ' words over its ceiling. This is expected: the remaining reduction must come from sections NOT flagged in this pass, or from a further editing pass once this one is complete. Do not attempt to cut beyond a section\'s own budget floor to close this remaining gap.\n';
-  }
-  totalCeilingLine += '\n';
 
   var prompt =
     totalCeilingLine +
@@ -665,7 +599,7 @@ function buildSemanticAlignmentFixPrompt() {
     '3. Keep every editable claim at the same or lower specificity than its source.\n' +
     '4. Silently discard unsupported requirements from the SECTION JOB, target query, or examples.\n' +
     '5. Preserve the section\'s editorial job using only the nearest supported facts.\n' +
-    '6. Meet the word budget only where this can be done without repetition or new claims — accuracy overrides the minimum.\n' +
+    '6. Retain all source-supported facts and remove repetition; no word quota governs this rewrite.\n' +
     '7. Validate literal HTML and JSON structure before submission.\n\n' +
     'SECTIONS TO REVISE (raw HTML — preserve all non-paragraph elements exactly):\n\n' +
     fixTargets.map(function(s, idx) {
@@ -673,24 +607,9 @@ function buildSemanticAlignmentFixPrompt() {
       var jobLine = s.sectionBrief
         ? 'SECTION JOB: ' + s.sectionBrief + (s.sectionTsm ? ' (' + s.sectionTsm + ')' : '') + '\n'
         : '';
-      var budgetLine = s.wordBudgetMax
-        ? 'WORD BUDGET (Hard Lock): This sub-section\'s share of the governed range is ' + s.wordBudgetMin + '\u2013' + s.wordBudgetMax + ' words' +
-          (s.wordBudgetShared ? (' (the full section budget is split evenly across ' + s.wordBudgetSiblingCount + ' flagged sub-sections being revised together in this pass — this figure is already your fair share, not the whole section\'s allowance)') : '') +
-          '. Your rewrite must stay within this range — substantial rewriting means changing sentence structure and phrasing, not adding length. If the current sub-section is already near ' + s.wordBudgetMax + ' words, your rewrite must not exceed it. WORD BUDGET VS FACTS (Hard Lock): never add factual detail merely to reach the minimum word count — expand only by explaining, reorganising, or restating already-supported information. If the supported material cannot naturally reach the minimum, factual accuracy overrides the minimum word count; a shorter, fully supported section is correct and preferred over a longer one that pads with unsupported detail.\n'
-        : '';
-
-      var shrinkLine = '';
-      if (typeof s.shrinkTarget === 'number' && s.shrinkTarget !== 0) {
-        var clampNote = s.shrinkTargetWasClamped
-          ? ' (this target has been capped to stay within this sub-section\'s own word budget range stated above — do not exceed that range even though the proportional article-wide share would suggest a different number)'
-          : '';
-        if (s.shrinkTarget > 0) {
-          shrinkLine = 'SPECIFIC CUT TARGET (Hard Lock): This sub-section is currently approximately ' + s.currentWords + ' words. As part of bringing the whole article back within its ceiling, this sub-section must come out at approximately ' + Math.max(1, s.currentWords - s.shrinkTarget) + ' words — a reduction of roughly ' + s.shrinkTarget + ' words from its current length' + clampNote + '. This is your specific share of the article-wide cut, calculated from this section\'s proportion of the total length being revised in this pass.\n';
-        } else {
-          shrinkLine = 'AVAILABLE HEADROOM (informational): This sub-section is currently approximately ' + s.currentWords + ' words. Based on its share of the article\'s remaining headroom, it could grow by up to approximately ' + Math.abs(s.shrinkTarget) + ' words if needed to close the alignment gap — but only use this if genuinely necessary, and never at the expense of the word budget range stated above.\n';
-        }
-      }
-      if (s.subIndex === -1) {
+      var budgetLine = '';
+       var shrinkLine = '';
+       if (s.subIndex === -1) {
         return indexLine + jobLine + budgetLine + shrinkLine + '<h2>' + s.heading + '</h2>\n' + s.rawHtml + '\n';
       }
       return indexLine + jobLine + budgetLine + shrinkLine + s.rawHtml + '\n'; // H3 sub-units already include their <h3> tag
@@ -761,29 +680,7 @@ function buildSemanticAlignmentFixPromptForFT() {
     var sectionBriefs = _parseEnrichedPlanEntities(enrichedPlanText);
 
     var currentTotalWords = _stripTags(html).split(/\s+/).filter(function(w) { return w.length > 0; }).length;
-    var articleCeiling = getTierWordCountCeiling(articleType);
     var totalCeilingLine = '';
-    var headroom = 0;
-    if (articleCeiling) {
-      headroom = articleCeiling.maxTarget - currentTotalWords;
-      totalCeilingLine =
-        'TOTAL ARTICLE LENGTH (Hard Lock — applies across ALL sections being revised together):\n' +
-        'This article\'s current total length (FT draft) is approximately ' + currentTotalWords + ' words.\n' +
-        'The governed ceiling for this article type is ' + articleCeiling.maxTarget + ' words.\n' +
-        (headroom > 0
-          ? 'That leaves approximately ' + headroom + ' words of headroom across ALL sections being rewritten in this pass combined — not per section.\n'
-          : 'The article is already at or over its ceiling — this rewrite must not add any net length; where one section needs more words to close the alignment gap, cut an equivalent amount elsewhere in the same rewritten section.\n') +
-        'If you are revising more than one section in this pass, divide the available headroom between them — do not let each section independently use its own full per-section allowance if that would push the combined total over the ceiling above.\n';
-    }
-
-    var fixTargets = [];
-    var allUnits = _extractScoringUnits(html);
-    lowLabels.forEach(function(label) {
-      for (var j = 0; j < allUnits.length; j++) {
-        if (allUnits[j].label === label) { fixTargets.push(allUnits[j]); break; }
-      }
-    });
-
     var parentCounts = {};
     fixTargets.forEach(function(t) {
       parentCounts[t.parentH2Index] = (parentCounts[t.parentH2Index] || 0) + 1;
@@ -923,31 +820,16 @@ function buildSemanticAlignmentFixPromptForFT() {
       '3. Keep every editable claim at the same or lower specificity than its source.\n' +
       '4. Silently discard unsupported requirements from the SECTION JOB, target query, or examples.\n' +
       '5. Preserve the section\'s editorial job using only the nearest supported facts.\n' +
-      '6. Meet the word budget only where this can be done without repetition or new claims — accuracy overrides the minimum.\n' +
+      '6. Retain all source-supported facts and remove repetition; no word quota governs this rewrite.\n' +
       '7. Validate literal HTML and JSON structure before submission.\n\n' +
       'SECTIONS TO REVISE:\n\n' +
       fixTargets.map(function(s, idx) {
         var jobLine = s.sectionBrief
           ? 'SECTION JOB: ' + s.sectionBrief + (s.sectionTsm ? ' (' + s.sectionTsm + ')' : '') + '\n'
           : '';
-        var budgetLine = s.wordBudgetMax
-          ? 'WORD BUDGET (Hard Lock): This sub-section\'s share of the governed range is ' + s.wordBudgetMin + '\u2013' + s.wordBudgetMax + ' words' +
-            (s.wordBudgetShared ? (' (the full section budget is split evenly across ' + s.wordBudgetSiblingCount + ' flagged sub-sections being revised together in this pass — this figure is already your fair share, not the whole section\'s allowance)') : '') +
-            '. Your rewrite must stay within this range — substantial rewriting means changing sentence structure and phrasing, not adding length. If the current sub-section is already near ' + s.wordBudgetMax + ' words, your rewrite must not exceed it. WORD BUDGET VS FACTS (Hard Lock): never add factual detail merely to reach the minimum word count — expand only by explaining, reorganising, or restating already-supported information. If the supported material cannot naturally reach the minimum, factual accuracy overrides the minimum word count; a shorter, fully supported section is correct and preferred over a longer one that pads with unsupported detail.\n'
-          : '';
-        var shrinkLine = '';
-        if (typeof s.shrinkTarget === 'number' && s.shrinkTarget !== 0) {
-          var clampNote = s.shrinkTargetWasClamped
-            ? ' (this target has been capped to stay within this sub-section\'s own word budget range stated above — do not exceed that range even though the proportional article-wide share would suggest a different number)'
-            : '';
-          if (s.shrinkTarget > 0) {
-            shrinkLine = 'SPECIFIC CUT TARGET (Hard Lock): This sub-section is currently approximately ' + s.currentWords + ' words. As part of bringing the whole article back within its ceiling, this sub-section must come out at approximately ' + Math.max(1, s.currentWords - s.shrinkTarget) + ' words — a reduction of roughly ' + s.shrinkTarget + ' words from its current length' + clampNote + '. This is your specific share of the article-wide cut, calculated from this section\'s proportion of the total length being revised in this pass.\n';
-          } else {
-            shrinkLine = 'AVAILABLE HEADROOM (informational): This sub-section is currently approximately ' + s.currentWords + ' words. Based on its share of the article\'s remaining headroom, it could grow by up to approximately ' + Math.abs(s.shrinkTarget) + ' words if needed to close the alignment gap — but only use this if genuinely necessary, and never at the expense of the word budget range stated above.\n';
-          }
-        }
-        var indexLine = 'SECTION INDEX: ' + idx + '\n';
-        if (s.subIndex === -1) {
+        var budgetLine = '';
+       var shrinkLine = '';
+       if (s.subIndex === -1) {
           return indexLine + jobLine + budgetLine + shrinkLine + '<h2>' + s.heading + '</h2>\n' + s.rawHtml + '\n';
         }
         return indexLine + jobLine + budgetLine + shrinkLine + s.rawHtml + '\n';
