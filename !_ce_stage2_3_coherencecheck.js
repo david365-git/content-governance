@@ -55,6 +55,42 @@ function saveCoherenceCheckResult(raw) {
   };
 }
 
+
+/**
+ * W2B.3 evidence and coverage context. Read by header, not hard-coded positions.
+ * Only recorded facts are hard evidence; unverified claims remain conditional.
+ */
+function ce_w2b3GovernanceContext_(sh, row) {
+  var headings = sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
+  var values = sh.getRange(row,1,1,sh.getLastColumn()).getDisplayValues()[0];
+  var fields = [
+    'Project Location & Property', 'Observed Conditions', 'Client Requirements',
+    'Materials & Construction', 'Inspection & Tests', 'Restoration Methods',
+    'Products & Equipment', 'Technical Findings', 'Project Results',
+    'Maintenance Handover', 'Evidence Status'
+  ];
+  var evidence = fields.map(function(name) {
+    var index = headings.indexOf(name);
+    return index < 0 ? '' : name + ': ' + String(values[index] || '').slice(0,4500);
+  }).filter(Boolean).join('\n');
+  var articleIndex = headings.indexOf('Article Type');
+  var materialIndex = headings.indexOf('Stone Type');
+  var articleType = articleIndex < 0 ? '' : String(values[articleIndex] || '').trim();
+  var material = materialIndex < 0 ? '' : String(values[materialIndex] || '').trim();
+  var requirements = getTierStructuralRequirements(material, '', articleType);
+  if (!requirements.length) throw new Error('W2B.3: no NEW matrix coverage for '+articleType);
+  var matrix = requirements.map(function(r) {
+    return 'Order '+r.order+': '+r.name+' | '+r.priority+
+      ' | Depth '+r.depth+' | When '+r.whenApplicable+
+      ' | Guidance '+r.guidance+' | Protect '+r.evidence+
+      ' | Safety '+r.safeguards;
+  }).join('\n');
+  return 'RECORDED PROJECT EVIDENCE (not permission to invent new facts):\n'+
+    (evidence || 'No populated project evidence ledger fields.')+
+    '\nNEW MATRIX CONTENT REQUIREMENTS:\n'+matrix+'\n'+
+    ce_getNewTierGlobalGovernanceBlock_();
+}
+
 function buildCoherenceCheckPrompt() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName('posts');
@@ -221,8 +257,12 @@ function buildCoherenceCheckPrompt() {
     originalHtml = '';
   }
 
+  const governanceContext = ce_w2b3GovernanceContext_(sh, row);
   const prompt = `
     W2B.3 — SINGLE-PASS WHOLE-ARTICLE COHERENCE AUDIT
+    ${governanceContext}
+    Treat project evidence as protected; never replace it with plausible speculation.
+    Conditional matrix functions apply only when relevant. No fixed word targets.
 
     ROLE:
     Audit the complete ARTICLE HTML once.
@@ -1139,8 +1179,13 @@ function buildCoherenceFixPrompt(findingsText) {
     };
   }
 
+  const governanceContext = ce_w2b3GovernanceContext_(sh, row);
   const prompt = `
     W2B.3 — SINGLE-PASS COHERENCE REPAIR
+    ${governanceContext}
+    For each requested section, preserve all recorded project facts relevant to that section.
+    Make only the targeted corrections. Do not invent additional project actions.
+    Avoid arbitrary shortening. Do not strip unique observations to resolve semantic overlap.
 
     ROLE:
     Apply ALL coherence repairs listed in the locked audit below.
