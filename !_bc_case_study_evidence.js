@@ -183,7 +183,7 @@ function bc_caseEvidencePromptBlock_(row) {
 function bc_caseEvidenceFilteredRows() {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
   if (!sh) return {success:false,message:'posts sheet missing'};
-  if (!sh.getFilter()) return {success:false,message:'Apply a Stone Type sheet filter before running this batch.'};
+  // Supports both standard Sheets filters and the custom Stone Type filter that hides rows.
   var last = sh.getLastRow();
   if (last < 2) return {success:true,stoneType:'Filtered selection',rows:[],alreadyCompleted:0};
   var headers = sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
@@ -192,24 +192,46 @@ function bc_caseEvidenceFilteredRows() {
   var types=sh.getRange(2,typeCol,last-1,1).getDisplayValues();
   var stones=sh.getRange(2,stoneCol,last-1,1).getDisplayValues();
   var statuses=sh.getRange(2,statusCol,last-1,1).getDisplayValues();
-  var rows=[], completed=0, stoneTypes={};
+  var rows=[], completed=0, stoneTypes={}, hidden=0;
   for (var i=0;i<last-1;i++) {
     var row=i+2;
-    if (sh.isRowHiddenByFilter(row) || sh.isRowHiddenByUser(row)) continue;
+    if (sh.isRowHiddenByFilter(row) || sh.isRowHiddenByUser(row)) { hidden++; continue; }
     var stone=String(stones[i][0]||'').trim();
     if (stone) stoneTypes[stone]=true;
     if (String(types[i][0]||'').trim()!=='Case Study') continue;
-    if (/^SOURCE-QUOTED \| sha256:[0-9a-f]{64}$/i.test(String(statuses[i][0]||'').trim())) {
-      completed++;
-      continue;
-    }
+    // Include completed rows: extraction checks the source hash and safely skips unchanged evidence.
     rows.push(row);
   }
   var names=Object.keys(stoneTypes);
-  if (names.length!==1) return {success:false,message:'Filter the posts sheet to exactly one Stone Type. Visible types: '+(names.join(', ')||'none')};
+  if (!hidden || names.length!==1) return {success:false,message:'Filter the posts sheet to exactly one Stone Type first. Visible types: '+(names.join(', ')||'none')};
   return {success:true,stoneType:names[0],rows:rows,alreadyCompleted:completed};
 }
 /** Public endpoint for client-side sequential batching. */
 function bc_caseEvidenceRunRowBatch(row) {
   return bc_caseEvidenceExtract_(row);
+}
+
+/** Direct Row Analysis menu command: processes visible Case Studies, skipping unchanged evidence. */
+function bc_caseEvidenceFilteredBatch() {
+  var info = bc_caseEvidenceFilteredRows();
+  var ui = SpreadsheetApp.getUi();
+  if (!info.success) { ui.alert(info.message); return; }
+  var started = Date.now(), done = 0, skipped = 0, failed = [], cost = 0, remaining = 0;
+  for (var i=0; i<info.rows.length; i++) {
+    if (Date.now()-started > 240000) { remaining = info.rows.length-i; break; }
+    var row = info.rows[i];
+    try {
+      var result = bc_caseEvidenceExtract_(row);
+      cost += Number(result.cost || 0);
+      if (result.skipped) skipped++;
+      else if (result.success) done++;
+      else failed.push('Row '+row+': '+(result.message||'Unsuccessful'));
+    } catch (e) { failed.push('Row '+row+': '+(e.message||e)); }
+  }
+  ui.alert('Case Study Evidence — '+info.stoneType+'\n'
+    +'Extracted: '+done+'\nAlready complete: '+skipped
+    +'\nFailed: '+failed.length+'\nRemaining: '+remaining
+    +'\nAPI cost: $'+cost.toFixed(4)
+    +(failed.length?'\n'+failed.slice(0,5).join('\n'):'')
+    +'\nRerun to continue; unchanged evidence is skipped.');
 }
