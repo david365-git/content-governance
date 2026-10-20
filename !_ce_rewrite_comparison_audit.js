@@ -2,7 +2,9 @@
  * Original vs CT Audit v1. One Post ID per Apps Script request.
  * site-export!O vs posts!CT. Read-only sources; reports to Rewrite Comparison Audit.
  */
-function ce_compareOriginalToCtById(postId) {
+function ce_compareOriginalToCtById(postId, compareColumn) {
+  var selectedColumn = String(compareColumn || 'CT').trim().toUpperCase();
+  if (selectedColumn !== 'CT' && selectedColumn !== 'GI') throw new Error('Choose CT or GI for the comparison.');
   var id = String(postId || '').trim();
   if (!/^\d+$/.test(id)) throw new Error('Enter a numeric Post ID.');
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -17,14 +19,34 @@ function ce_compareOriginalToCtById(postId) {
   var sourceRow = getRow(source, 1), postsRow = getRow(posts, 4);
   if (!sourceRow || !postsRow) throw new Error('Post ' + id + ' missing from ' + (!sourceRow ? 'site-export' : 'posts') + '.');
   var original = String(source.getRange(sourceRow,15).getValue() || '');
-  var revised = String(posts.getRange(postsRow,98).getValue() || '');
-  if (!original.trim() || !revised.trim()) throw new Error(id + ': missing original O or revised CT.');
+  var revised = String(posts.getRange(postsRow, selectedColumn === 'GI' ? 191 : 98).getValue() || '');
+  if (!original.trim() || !revised.trim()) throw new Error(id + ': missing original O or revised '+selectedColumn+'.');
   if (original.length > 45000 || revised.length > 45000) throw new Error(id + ': HTML exceeds v1 archive cell limit.');
   var title = String(posts.getRange(postsRow,2).getDisplayValue() || '');
   var articleType = String(posts.getRange(postsRow,8).getDisplayValue() || '');
+  // Read live article-type coverage and global rules from the NEW matrix.
+  // Fail closed rather than silently applying the retired editorial framework.
+  var coverage = getTierStructuralRequirements(
+    String(posts.getRange(postsRow,7).getDisplayValue() || ''), '', articleType
+  );
+  if (!coverage || !coverage.length) throw new Error('No NEW matrix coverage for article type: '+articleType);
+  var globals = ce_getNewTierGlobalGovernanceBlock_();
+  var coverageText = coverage.map(function(r) {
+    return 'Order '+r.order+' — '+r.name+' | Priority: '+r.priority+
+      ' | When applicable: '+r.whenApplicable+' | Depth: '+r.depth+
+      '\\nGuidance: '+r.guidance+'\\nEvidence: '+r.evidence+
+      '\\nSafeguards: '+r.safeguards+'\\nLinking: '+r.linking;
+  }).join('\\n\\n');
   var prompt = [
     'You are independently auditing a UK stone/tile floor restoration webpage rewrite.',
     'Compare full ORIGINAL HTML with REVISED HTML. ORIGINAL is evidence for documented project events.',
+    'NEW MATRIX GOVERNANCE OVERRIDES OLD EDITORIAL ASSUMPTIONS. Assess the chosen rewrite against the actual Article Type requirements below. Required functions must appear; conditional functions apply only when supported. Assess depth by reader need and available evidence, NOT word counts, equal section lengths or predetermined quotas.',
+    'For UK homeowners, prefer clear practical floor restoration guidance over unnecessary scientific or chemical complexity. Do not demand detail that would not change diagnosis, treatment, safety or outcome.',
+    'Do not penalise an article for using the NEW matrix content order or headings or for retaining essential detail that might appear repetitive. Identify only meaningful, harmful repetition.',
+    'Preserve real project chronology, methods, observed conditions, client decisions, outcomes and useful media and links. Report omissions or unsupported additions as evidence regressions. Do not invent facts to satisfy coverage functions.',
+    globals,
+    'NEW MATRIX ARTICLE TYPE COVERAGE:',
+    coverageText,
     'Do not treat absence of general technical education from the original as a factual error; flag invented project-specific facts.',
     'Assess: Helpful Content, E-E-A-T/first-hand experience, factual fidelity, readability for nontechnical UK homeowners, intent alignment, technical relevance, and likely search usefulness (not ranking predictions).',
     'For Case Studies, the author deliberately prefers first-person singular I, including when original editorial copy says we. Do NOT score or flag we-to-I changes as a regression by themselves. Flag only concrete unsupported claims about who attended, performed or supervised particular work; retain I as the default unless the project explicitly documents a team effort.',
@@ -33,7 +55,7 @@ function ce_compareOriginalToCtById(postId) {
     'For each important observation provide short concrete quotations or clear examples from both versions.',
     'Return only plain text with these EXACT headings: VERDICT; SCORES (original/revised for Helpful, Experience, Factual, Readability, Intent, Technical, Search); IMPROVEMENTS; REGRESSIONS; DOCUMENTED PROJECT FACTS AT RISK; RECURRING SCRIPT-RULE CANDIDATES; SPECIFIC W2B RULE RECOMMENDATIONS.',
     'Never assume longer is better. Label unverified concerns as needing verification.',
-    'POST ID: '+id, 'TITLE: '+title, 'ARTICLE TYPE: '+articleType,
+    'POST ID: '+id, 'TITLE: '+title, 'ARTICLE TYPE: '+articleType, 'REWRITE SOURCE COLUMN: '+selectedColumn,
     '=== ORIGINAL HTML ('+id+') ===', original,
     '=== REVISED HTML ('+id+') ===', revised
   ].join('\n\n');
@@ -52,8 +74,8 @@ function ce_compareOriginalToCtById(postId) {
   var when = new Date(), cost=Number(answer.cost||0);
   target.getRange(target.getLastRow()+1,1,3,7).setValues([
     [when,id,articleType,title,id+' - Original html',original,''],
-    [when,id,articleType,title,id+' - Revised html',revised,''],
-    [when,id,articleType,title,id+' - AI Comparison Report',report,cost]
+    [when,id,articleType,title,id+' - Revised '+selectedColumn+' html',revised,''],
+    [when,id,articleType,title,id+' - AI Comparison '+selectedColumn+' Report',report,cost]
   ]);
-  return {success:true,id:id,title:title,cost:cost,report:report.slice(0,11500)};
+  return {success:true,id:id,title:title,column:selectedColumn,cost:cost,report:report.slice(0,11500)};
 }
