@@ -2,9 +2,31 @@
  * Original vs CT Audit v1. One Post ID per Apps Script request.
  * site-export!O vs posts!CT. Read-only sources; reports to Rewrite Comparison Audit.
  */
+/**
+ * Capture the content of CT immediately after W8E finishes, before later image insertion.
+ * One latest snapshot per Post ID; no mutation of posts or original export.
+ */
+function ce_saveW8EHtmlSnapshot_(postsSheet, row) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var id = String(postsSheet.getRange(row,4).getDisplayValue() || '').trim();
+  var html = String(postsSheet.getRange(row,98).getValue() || '');
+  if (!/^\\d+$/.test(id) || !html.trim()) throw new Error('W8E snapshot requires a Post ID and nonempty CT HTML.');
+  var sh = ss.getSheetByName('W8E HTML Snapshots');
+  if (!sh) {
+    sh = ss.insertSheet('W8E HTML Snapshots');
+    sh.getRange(1,1,1,3).setValues([['Post ID','W8E completed at','W8E CT HTML snapshot']]);
+    sh.setFrozenRows(1);
+  }
+  var hit = sh.getLastRow() > 1
+    ? sh.getRange(2,1,sh.getLastRow()-1,1).createTextFinder(id).matchEntireCell(true).findNext()
+    : null;
+  var targetRow = hit ? hit.getRow() : sh.getLastRow()+1;
+  sh.getRange(targetRow,1,1,3).setValues([[id,new Date(),html]]);
+}
+
 function ce_compareOriginalToCtById(postId, compareColumn) {
   var selectedColumn = String(compareColumn || 'CT').trim().toUpperCase();
-  if (selectedColumn !== 'CT' && selectedColumn !== 'GI') throw new Error('Choose CT or GI for the comparison.');
+  if (selectedColumn !== 'CT' && selectedColumn !== 'W8E') throw new Error('Choose CT or W8E snapshot for the comparison.');
   var id = String(postId || '').trim();
   if (!/^\d+$/.test(id)) throw new Error('Enter a numeric Post ID.');
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -19,7 +41,14 @@ function ce_compareOriginalToCtById(postId, compareColumn) {
   var sourceRow = getRow(source, 1), postsRow = getRow(posts, 4);
   if (!sourceRow || !postsRow) throw new Error('Post ' + id + ' missing from ' + (!sourceRow ? 'site-export' : 'posts') + '.');
   var original = String(source.getRange(sourceRow,15).getValue() || '');
-  var revised = String(posts.getRange(postsRow, selectedColumn === 'GI' ? 191 : 98).getValue() || '');
+  var revised = String(posts.getRange(postsRow,98).getValue() || '');
+  if (selectedColumn === 'W8E') {
+    var archive = ss.getSheetByName('W8E HTML Snapshots');
+    if (!archive || archive.getLastRow() < 2) throw new Error('No W8E HTML snapshot is saved yet. Run W8E with the updated script first.');
+    var match = archive.getRange(2,1,archive.getLastRow()-1,1).createTextFinder(id).matchEntireCell(true).findNext();
+    if (!match) throw new Error('Post '+id+' has no saved W8E snapshot. Run W8E with the updated script first.');
+    revised = String(archive.getRange(match.getRow(),3).getValue() || '');
+  }
   if (!original.trim() || !revised.trim()) throw new Error(id + ': missing original O or revised '+selectedColumn+'.');
   if (original.length > 45000 || revised.length > 45000) throw new Error(id + ': HTML exceeds v1 archive cell limit.');
   var title = String(posts.getRange(postsRow,2).getDisplayValue() || '');
