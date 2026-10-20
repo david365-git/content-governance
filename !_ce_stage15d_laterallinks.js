@@ -830,7 +830,7 @@ Correct ONLY the Internal link fields necessary to resolve the validation failur
 Do NOT change:
 - SECTION headings
 - TSM Requirement
-- Word Budget
+- Depth (Light / Standard / Deep), where supplied; do not introduce numerical word limits
 - Content Brief
 - Visual Pattern
 - List eligible
