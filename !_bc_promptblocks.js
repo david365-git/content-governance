@@ -353,42 +353,40 @@ function bc_getTierStructuralCoverageBlock(articleType) {
     }
 
     const headers = data[0];
-    const permittedIdx = bc_findHeaderIndex_(headers, [
-      "Permitted Article Types"
-    ]);
-    const labelIdx = bc_findHeaderIndex_(headers, ["Label"]);
-    const structuralReqIdx = bc_findHeaderIndex_(headers, ["Structural Requirement"]);
-    const orderIdx = bc_findHeaderIndex_(headers, ["Order"]);
-    const entityCatIdx = bc_findHeaderIndex_(headers, ["Entity Category"]);
-    const primaryFocusIdx = bc_findHeaderIndex_(headers, ["Primary Focus Discriminator"]);
-    const mustNotIdx = bc_findHeaderIndex_(headers, ["Must Not Contain"]);
-    const notesIdx = bc_findHeaderIndex_(headers, ["Notes"]);
-
-    const rows = data.slice(1).filter(function(row) {
-      const permitted = bc_safeCell_(row, permittedIdx);
-      return permitted && permitted.toLowerCase().indexOf(String(articleType || "").trim().toLowerCase()) > -1;
-    });
-
-    const selected = [
-      labelIdx,
-      structuralReqIdx,
-      orderIdx,
-      entityCatIdx,
-      primaryFocusIdx,
-      mustNotIdx,
-      notesIdx
-    ].filter(function(idx) { return idx > -1; });
-
+    const typeIdx = bc_findHeaderIndex_(headers, ["Article Type"]);
+    const reqIdx = bc_findHeaderIndex_(headers, ["Required content function"]);
+    const priorityIdx = bc_findHeaderIndex_(headers, ["Priority"]);
+    const whenIdx = bc_findHeaderIndex_(headers, ["When applicable"]);
+    const depthIdx = bc_findHeaderIndex_(headers, ["Depth"]);
+    const guidanceIdx = bc_findHeaderIndex_(headers, ["Writing guidance"]);
+    if ([typeIdx,reqIdx,priorityIdx,whenIdx,depthIdx,guidanceIdx].some(n => n < 0)) {
+      throw new Error("NEW matrix columns missing");
+    }
+    const at = String(articleType || "").trim().toLowerCase();
+    const rows = data.slice(1).filter(row =>
+      String(row[typeIdx] || "").trim().toLowerCase() === at
+    );
+    const globals = data.slice(1).filter(row =>
+      String(row[typeIdx] || "").trim() === "GLOBAL GOVERNANCE"
+    );
+    const selectedNames = [
+      "Order","Priority","Required content function","When applicable","Depth",
+      "Writing guidance","Evidence to protect","Technical and factual safeguards",
+      "Linking / navigation","Length policy"
+    ];
+    const selected = selectedNames.map(n => bc_findHeaderIndex_(headers,[n]))
+      .filter(i => i >= 0);
     return bc_buildGenericGovernanceBlock_(
-      "GOVERNANCE INPUT — TIER STRUCTURAL COVERAGE MATRIX",
+      "GOVERNANCE INPUT — TIER STRUCTURAL COVERAGE MATRIX NEW",
       [
-        "Use this as a page-level structural architecture validator only.",
-        "Do not use it as the primary H2 intent classifier.",
+        "Validate by Article Type and homeowner objective, not by Tier.",
+        "Required functions must be covered; Conditional functions only when relevant.",
+        "Light, Standard and Deep are relative detail, not numeric word quotas.",
+        "Global technical and evidence-preservation rules are binding.",
+        "Do not use this as the primary H2 intent classifier.",
         "Current candidate Article Type: " + articleType
       ],
-      headers,
-      rows,
-      selected
+      headers, rows.concat(globals), selected
     );
   } catch (e) {
     return [
