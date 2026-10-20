@@ -942,13 +942,16 @@ function buildStage2BPart3B(d) {
     var sections = [];
     var current = null;
     lines.forEach(function(line) {
-      var secMatch = line.match(/^SECTION\s+(\d+):\s*(?:Heading\s+(H\d):\s*)?(.+)/i);
+      var secMatch = line.match(/^SECTION\s+(\d+):\s*Heading\s+(H[23]):\s*(\S[^\r\n]*?)\s*$/i);
+        if (/^SECTION\s+\d+\s*:/i.test(line) && !secMatch) {
+          throw new Error('W2B blocked: malformed approved section heading: ' + line.slice(0, 160));
+        }
       if (secMatch) {
         if (current) sections.push(current);
         current = {
           number: Number(secMatch[1]),
           title: secMatch[3].trim(),
-          headingLevel: secMatch[2] ? secMatch[2].toUpperCase() : "H2",
+          headingLevel: secMatch[2].toUpperCase(),
           id: "",
           depth: "", 
           brief: "", 
