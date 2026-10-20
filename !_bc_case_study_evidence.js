@@ -235,3 +235,10 @@ function bc_caseEvidenceFilteredBatch() {
     +(failed.length?'\n'+failed.slice(0,5).join('\n'):'')
     +'\nRerun to continue; unchanged evidence is skipped.');
 }
+
+/** Open a live, modeless batch-progress window for the current Stone Type. */
+function bc_caseEvidenceOpenBatchProgress() {
+  var html = HtmlService.createHtmlOutputFromFile('bc_CaseEvidenceBatchProgress')
+    .setWidth(450).setHeight(340);
+  SpreadsheetApp.getUi().showModelessDialog(html, 'Case Study Evidence — Batch');
+}
