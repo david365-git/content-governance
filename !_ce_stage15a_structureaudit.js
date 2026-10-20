@@ -73,13 +73,8 @@ const existingStructure = String(d["Current Headings"] || "").trim();
 
     // If Strategy marks this section "N", remove both
     // the section and its associated word budget.
-    if (
-      secondaryIntents.includes(
-        "N — " + req.name
-      )
-    ) {
-      return false;
-    }
+    if (String(req.priority || '').toLowerCase() === 'required') return true;
+    if (secondaryIntents.includes("N — " + req.name)) return false;
 
     return true;
   });
@@ -117,9 +112,9 @@ const existingStructure = String(d["Current Headings"] || "").trim();
   tsmData.forEach(function(req) {
     tsmBlock += 'Order ' + req.order + ': ' + req.name +
       ' | ' + req.priority + ' | Depth: ' + req.depth +
-      ' | Applies: ' + req.whenApplicable + '\\n' +
-      'Guidance: ' + req.guidance + '\\n' +
-      'Protect: ' + req.evidence + '\\n' +
+      ' | Applies: ' + req.whenApplicable + '\n' +
+      'Guidance: ' + req.guidance + '\n' +
+      'Protect: ' + req.evidence + '\n' +
       'Safety: ' + req.safeguards + '\\n';
   });
 
@@ -195,7 +190,7 @@ A TSM Order MAY appear on more than one section where separate reader-facing sec
 Do not treat repeated use of an Order as duplication when those sections cover distinct parts of that requirement.
 
 For all other article types:
-Verify every TSM Order from 1 to ${tsmData.length} appears exactly once across the mapped sections — no Order missing and no Order duplicated.
+Verify every Required function is covered. Include Conditional functions when relevant; distinct article sections may support the same Order.
 
 Sections do NOT need to appear in numerical TSM Order sequence where a different narrative sequence better serves the reader.
 
