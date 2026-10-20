@@ -9574,10 +9574,6 @@ function bc_runW8EAutomated() {
         .getActiveCell()
         .getRow();
 
-    // Freeze the pre-image-insertion W8E article for independent comparisons.
-    // CT may be edited by subsequent media / publication workflows.
-    ce_saveW8EHtmlSnapshot_(w8Sheet, w8Row);
-
     // W8E complete — mark Column D pink with white text.
     w8Sheet
       .getRange(w8Row, 4)
