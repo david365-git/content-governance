@@ -821,6 +821,27 @@ expectedSections.sort(
         level;
     }
   }
+  // Validate one-to-one section identity and heading levels before enrichment.
+  const expectedSet = {};
+  expectedSections.forEach(function(n) { expectedSet[n] = true; });
+  const unknownHeadings = Object.keys(expectedH2s).map(Number).filter(function(n) {
+    return !expectedSet[n];
+  });
+  if (unknownHeadings.length) {
+    return {success:false,message:'W1.5B produced headings for unknown SECTION '+unknownHeadings.join(', ')};
+  }
+  const sourceHeadingLevels = {};
+  String(structure15A).split(/\r?\n/).forEach(function(line) {
+    var match = line.match(/^SECTION\s+(\d+):.*?\s+[—-]\s+(H[23]):\s*/i);
+    if (match) sourceHeadingLevels[Number(match[1])] = match[2].toUpperCase();
+  });
+  const incorrectLevels = expectedSections.filter(function(n) {
+    return sourceHeadingLevels[n] && expectedHeadingLevels[n] &&
+      sourceHeadingLevels[n] !== expectedHeadingLevels[n];
+  });
+  if (incorrectLevels.length) {
+    return {success:false,message:'W1.5B changed governed H2/H3 level in SECTION '+incorrectLevels.join(', ')};
+  }
   const missingH2s = [];
   expectedSections.forEach(
     function(number) {
