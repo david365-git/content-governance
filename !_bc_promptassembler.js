@@ -2453,7 +2453,8 @@ function bc_runStage2BAutomated() {
   // The original W2B HTML validator remains the final authority.
   var linkRepair = bc_repairMissingW2BInternalLinks_(
     apiResult.text,
-    currentCX
+    currentCX,
+    String(getActiveRowDataMap()['URL'] || '')
   );
 
   if (linkRepair.missing && linkRepair.missing.length)
