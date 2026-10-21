@@ -1109,7 +1109,7 @@ function passThroughCoherenceCheckToGI() {
     return { success: false, message: "ERROR: No article HTML found in column GI or GG for this row." };
   }
 
-  sh.getRange(row, 191).setValue(html); // GI
+  sh.getRange(row, 191).setValue(bc_governLinksAtStage_(html, sh, row)); // GI
   if (typeof logPipelineResume === 'function') {
     logPipelineResume("W2B.3 — Coherence Check PASS, confirmed in GI", "");
   }
@@ -1127,7 +1127,7 @@ function promoteCoherenceToEU() {
     return { success: false, message: "ERROR: Column GI (W2B.3 Final HTML) is empty for this row. Run W2B.3 first." };
   }
 
-  sh.getRange(row, 151).setValue(html); // EU
+  sh.getRange(row, 151).setValue(bc_governLinksAtStage_(html, sh, row)); // EU
   if (typeof logPipelineResume === 'function') {
     logPipelineResume("W2B.3 — Confirmed, promoted GI to EU", "");
   }
