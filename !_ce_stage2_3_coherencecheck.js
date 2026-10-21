@@ -1074,9 +1074,7 @@ function applyCoherenceFix(rawJson, expectedSectionNumbers) {
 
   sh
     .getRange(row, 191)
-    .setValue(
-      candidateHtml
-    );
+    .setValue(bc_governLinksAtStage_(candidateHtml, sh, row));
 
   if (
     typeof logPipelineResume ===
