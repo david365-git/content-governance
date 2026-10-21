@@ -457,9 +457,9 @@ Internal link: None
    - Only use a page with LOCALITY: None when no suitable same-locality page exists.
    - Never prefer a non-geographic page over an equally relevant same-locality Case Study or Geo Service Page.
 
-8. Among the location-safe candidates, choose the page whose subject is most relevant to the section.
+8. Choose links only where they help the reader with the specific section. A zero-assignment result is valid when nothing is relevant. Match Case Studies using verified conditions, methods, findings and outcomes; do not infer undocumented project work. For other article types use primary entity, headings, supporting entities, safe handoff and cannibalisation guardrails.
 
-9. Do not reproduce or rewrite any part of the section plan.
+9. Mandatory hub link in the W1.5C source plan is LOCKED and must remain in its section. The hub is not counted in the optional lateral-link limit. Do not reproduce or rewrite any part of the section plan.
 
 --- OUTPUT FORMAT ---
 
@@ -801,6 +801,9 @@ function saveW15DFallbackPlan() {
       };
     }
 
+    // A fallback must never allow an article without its required material hub.
+    const governance = getW15DData();
+    if (governance.error) return {success:false,message:governance.error};
     let fallbackPlan =
       sourcePlan.replace(
         /Stage 1\.5C complete\. Waiting for Stage 1\.5D\.\s*$/,
