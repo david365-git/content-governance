@@ -1194,6 +1194,7 @@ function buildDeferredCheckPrompt(html) {
     '------------------------------------------------------------\n' +
     'CHECK 4 — SECTION OPENING TONE (SYMPTOM FIRST)\n' +
     '------------------------------------------------------------\n' +
+    'PUBLICATION STANDARD: Fail only for an opening that materially confuses the homeowner or misstates the project. Harmless wording and stylistic preferences should PASS. Do not invent defects to fill the audit.\n' +
     'Judge each section opening against its GOVERNED TSM ROLE and CONTENT BRIEF from CX.\n' +
     'Symptom-first wording is required only where the governed role/brief is establishing the homeowner-visible problem, condition, diagnostic uncertainty or project context.\n' +
     'Do NOT fail a section merely because it opens with an assessment, decision, process, treatment, result or maintenance action when that is the governed purpose of the section.\n' +
