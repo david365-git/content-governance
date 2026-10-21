@@ -2276,7 +2276,7 @@ function bc_repairMissingW2BInternalLinks_(html, approvedPlan) {
   if(/^Contact link:\s*\/contact\/?/im.test(plan))allowed.push('/contact');
   function normaliseLink(url) {
     try {var u=new URL(url,'https://www.abbeyfloorcare.co.uk');
-      return u.hostname.toLowerCase().replace(/^www\\./,'') + (u.pathname.replace(/\/+$/,'')||'/');
+      return u.hostname.toLowerCase().replace(/^www\./,'') + (u.pathname.replace(/\/+$/,'')||'/');
     } catch(e) {return String(url).replace(/\/+$/,'');}
   }
   var approved=allowed.map(normaliseLink);
