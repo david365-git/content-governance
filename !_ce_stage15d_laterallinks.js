@@ -190,6 +190,23 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
   }
   const currentRegion=confirmedRegion(currentLocality,
     String(data[activeRow-1][titleIndex]||''),currentUrl);
+  // Original WordPress anchors are review candidates, never automatically approved.
+  const currentId = postIdIdx >= 0 ? String(data[activeRow - 1][postIdIdx] || '').trim() : '';
+  const originalCurrent = String(originalById[currentId] || '');
+  const sourceLinks = [];
+  const originalHrefRe = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']/gi;
+  let hrefMatch;
+  while ((hrefMatch = originalHrefRe.exec(originalCurrent)) !== null) {
+    const href = String(hrefMatch[1] || '').trim();
+    if (/^https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk(?:\/|$)/i.test(href) ||
+        (/^\//.test(href) && !/^\/\//.test(href))) {
+      if (sourceLinks.indexOf(href) < 0) sourceLinks.push(href);
+    }
+  }
+  function linkPath_(url) {
+    return String(url || '').replace(/^https?:\/\/[^/]+/i, '').split(/[?#]/)[0]
+      .replace(/\/+$/, '').toLowerCase() || '/';
+  }
   let siloPages = [];
 
   for (let i = 1; i < data.length; i++) {
@@ -349,6 +366,7 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
 
     siloPages.push({
       url: url,
+      originallyLinked: sourceLinks.some(function(link) { return linkPath_(link) === linkPath_(url); }),
       title: title,
       articleType: articleType,
       locality: candidateLocality,
@@ -391,6 +409,7 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
     return 0;
   });
 
+  siloPages.originalLinks = sourceLinks;
   return siloPages;
 }
 
@@ -412,6 +431,7 @@ function buildW15DPrompt() {
         'URL: ' + page.url + '\n' +
         'TITLE: ' + page.title + '\n' +
         'TYPE: ' + page.articleType + '\n' +
+        'LINK ALREADY IN ORIGINAL ARTICLE (REVIEW ONLY): ' + (page.originallyLinked ? 'YES' : 'NO') + '\n' +
         'LOCALITY: ' + (page.locality || 'None') + '\n' +
         'SAME LOCALITY AS CURRENT ARTICLE: ' +
           (page.sameLocality ? 'YES' : 'NO') + '\n' +
@@ -464,6 +484,11 @@ ${data.lateralLinksToAssign}
 --- CURRENT GOVERNED SECTION PLAN ---
 
 ${data.sectionPlan}
+
+--- ORIGINAL ARTICLE LINKS — REVIEW, DO NOT RETAIN AUTOMATICALLY ---
+${(data.siloMap.originalLinks || []).length ? data.siloMap.originalLinks.join('\\n') : 'No original internal links found.'}
+An original link survives only if explicitly selected as an AVAILABLE SILO PAGE below.
+Reject original links without relevance, geographic eligibility or a matching approved candidate.
 
 --- AVAILABLE SILO PAGES ---
 
