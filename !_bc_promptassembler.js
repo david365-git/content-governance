@@ -2229,6 +2229,7 @@ function bc_repairMissingW2BInternalLinks_(html, approvedPlan) {
     if (!numberMatch) return;
     var sectionNumber = Number(numberMatch[1]);
     var lineMatch = block.match(/^Internal link:\s*(.+)$/im);
+    var contactMatch = block.match(/^Contact link:\s*(\/contact\/?)/im);
     if (!lineMatch) return;
     var urls = String(lineMatch[1]).match(/https?:\/\/[^\s,;<>]+/g) || [];
     urls.forEach(function(rawUrl) {
@@ -2259,6 +2260,37 @@ function bc_repairMissingW2BInternalLinks_(html, approvedPlan) {
       if (output.indexOf(url) === -1 && output.indexOf(url.replace(/&/g,'&amp;')) === -1
           && remaining.indexOf(url) === -1) remaining.push(url);
     });
+  });
+  // Governed Contact placement: append in its assigned section only.
+  blocks.forEach(function(block){
+    var number=block.match(/^SECTION\s+(\d+)\s*:/im);
+    var contact=block.match(/^Contact link:\s*(\/contact\/?)/im);
+    if(!number||!contact || /href=["']\/contact\/?["']/i.test(output))return;
+    var tag=new RegExp('<section\\b[^>]*\\bid\\s*=\\s*["\\x27]section-'+number[1]+'["\\x27][^>]*>','i');
+    var found=tag.exec(output);if(!found)return;
+    var end=output.indexOf('</section>',found.index+found[0].length);if(end<0)return;
+    output=output.slice(0,end)+'<p><a href="/contact">Contact us about your floor</a>.</p>\n'+output.slice(end);
+    inserted.push('section-'+number[1]+': /contact');
+  });
+  // Automatically unwrap stray internal anchors rather than fail the pipeline.
+  // The visible text remains; editorial link destinations come only from CX.
+  var allowed=(plan.match(/^Internal link:\s*(https?:\/\/[^\s]+)/gmi)||[])
+    .map(function(line){return line.replace(/^Internal link:\s*/i,'').trim();});
+  if(/^Contact link:\s*\/contact\/?/im.test(plan))allowed.push('/contact');
+  function normaliseLink(url) {
+    try {var u=new URL(url,'https://www.abbeyfloorcare.co.uk');
+      return u.pathname.replace(/\/+$/,'')||'/';
+    } catch(e) {return String(url).replace(/\/+$/,'');}
+  }
+  var approved=allowed.map(normaliseLink);
+  output=output.replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi,function(anchor,attrs,body){
+    var m=attrs.match(/\bhref\s*=\s*(["'])(.*?)\1/i);
+    if(!m)return anchor;
+    var dest=m[2];
+    if(/^(#|mailto:|tel:)/i.test(dest))return anchor;
+    var internal=/^(?:\/|https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk(?:\/|$))/i.test(dest);
+    if(!internal)return anchor;
+    return approved.indexOf(normaliseLink(dest))>=0 ? anchor : body;
   });
   return { html: output, inserted: inserted, missing: remaining };
 }
