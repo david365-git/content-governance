@@ -7317,31 +7317,6 @@ function pipelineResumeToW8E(row, startStage, endStage) {
     {
       name: "W1.5D",
       run: function() {
-        var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
-        var cx = String(sh.getRange(row, 102).getValue() || '').trim();
-        var cw = String(sh.getRange(row, 101).getValue() || '').trim();
-        // This range runner is for continuing a pipeline, not for silently
-        // charging for an already completed W1.5D selection a second time.
-        // If W1.5C source changed after CX was saved, do not silently reuse.
-        var completed = /Stage 1\.5D complete\.\s*$/i.test(cx);
-        function sourceFingerprint(plan) {
-          return String(plan || '').split(/\r?\n/)
-            .filter(function(line) {
-              return !/^\s*Contact link:/i.test(line) &&
-                !/^\s*Stage 1\.5[CD] complete\./i.test(line);
-            })
-            .map(function(line) {
-              return /^\s*Internal link:/i.test(line)
-                ? line.replace(/Internal link:.*$/i, 'Internal link: None')
-                : line.trimEnd();
-            })
-            .join('\n').trim();
-        }
-        if (completed && cw && sourceFingerprint(cx) === sourceFingerprint(cw)) {
-          bc_appendPipelineRunLog(row,
-            '↷ W1.5D skipped — approved CX already complete. Use the separate W1.5D automated button to rerun intentionally.');
-          return {success: true, cost: 0, message: 'W1.5D already complete; skipped.', skipStageLog: true};
-        }
         return bc_runStage15DAutomated();
       }
     },
@@ -7568,7 +7543,7 @@ function pipelineResumeToW8E(row, startStage, endStage) {
     totalCost += stageCost;
 
 
-    if (!stage.selfLogged && !result.skipStageLog) {
+    if (!stage.selfLogged) {
 
       bc_recordPipelineStage(
         row,
