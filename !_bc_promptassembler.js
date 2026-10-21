@@ -2215,7 +2215,7 @@ if (pairs["Secondary Intent Decisions"]) {
  * Only inserts into the numbered section specified by CX; never relaxes
  * the existing saveW2BHtmlToSheet validation.
  */
-function bc_repairMissingW2BInternalLinks_(html, approvedPlan) {
+function bc_repairMissingW2BInternalLinks_(html, approvedPlan, currentPageUrl) {
   var output = String(html || '');
   var plan = String(approvedPlan || '');
   var blocks = plan.split(/(?=^SECTION\s+\d+\s*:\s*Heading\s+H[23]\s*:)/gmi);
@@ -2274,10 +2274,17 @@ function bc_repairMissingW2BInternalLinks_(html, approvedPlan) {
   var allowed=(plan.match(/^Internal link:\s*(https?:\/\/[^\s]+)/gmi)||[])
     .map(function(line){return line.replace(/^Internal link:\s*/i,'').trim();});
   if(/^Contact link:\s*\/contact\/?/im.test(plan))allowed.push('/contact');
+  function hostOf(url) {
+    const match = String(url || '').match(/^https?:\/\/([^\/?#]+)/i);
+    return match ? match[1].toLowerCase().replace(/^www\./, '').replace(/:\d+$/, '') : '';
+  }
+  const homeHost = hostOf(currentPageUrl) || hostOf(allowed[0]) || 'abbeyfloorcare.co.uk';
   function normaliseLink(url) {
-    try {var u=new URL(url,'https://www.abbeyfloorcare.co.uk');
-      return u.hostname.toLowerCase().replace(/^www\./,'') + (u.pathname.replace(/\/+$/,'')||'/');
-    } catch(e) {return String(url).replace(/\/+$/,'');}
+    let val = String(url || '').trim().replace(/&amp;/gi, '&');
+    if (/^\/(?!\/)/.test(val)) val = 'https://' + homeHost + val;
+    const host = hostOf(val);
+    const path = val.replace(/^https?:\/\/[^\/?#]+/i, '').split(/[?#]/)[0].replace(/\/+$/, '') || '/';
+    return (host || homeHost) + path;
   }
   var approved=allowed.map(normaliseLink);
   output=output.replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi,function(anchor,attrs,body){
@@ -2285,11 +2292,23 @@ function bc_repairMissingW2BInternalLinks_(html, approvedPlan) {
     if(!m)return anchor;
     var dest=m[2];
     if(/^(#|mailto:|tel:)/i.test(dest))return anchor;
-    var internal=/^(?:\/|https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk(?:\/|$))/i.test(dest);
+    var internal=/^\/(?!\/)/.test(dest) || hostOf(dest) === homeHost;
     if(!internal)return anchor;
     return approved.indexOf(normaliseLink(dest))>=0 ? anchor : body;
   });
   return { html: output, inserted: inserted, missing: remaining };
+}
+
+
+// Reapply CX link governance at each HTML handoff without changing the section text.
+function bc_governLinksAtStage_(html, sheet, row) {
+  if (!sheet || row < 2) return String(html || '');
+  var plan = String(sheet.getRange(row, 102).getValue() || '').trim();
+  if (!plan) return String(html || '');
+  var headings = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var urlIdx = headings.indexOf('URL');
+  var currentUrl = urlIdx >= 0 ? String(sheet.getRange(row, urlIdx + 1).getValue() || '') : '';
+  return bc_repairMissingW2BInternalLinks_(String(html || ''), plan, currentUrl).html;
 }
 
 function bc_runStage2BAutomated() {
