@@ -858,7 +858,7 @@ function buildStage2BPart3A(d) {
     "------------------------------------------------------------\n" +
     "FOOTER FORMAT (Hard Lock — use exactly this structure):\n" +
     "<footer>\n" +
-    "<p>[One sentence outcome statement.] <a href=\"/contact\">Contact us to arrange a no-obligation " + stLower + " floor assessment.</a></p>\n" +
+    "<p>[One sentence outcome statement and a plain-text invitation to contact us.]</p>\\n" +
     "</footer>\n" +
     "------------------------------------------------------------\n\n" +
     "CRITICAL: Do not begin writing until next input received.\n" +
