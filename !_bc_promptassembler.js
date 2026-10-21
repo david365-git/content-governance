@@ -1900,10 +1900,7 @@ function bc_getPromptCombined() {
       "",
       "DATE RULE (Entity Governance Date): Use " + today + " exactly. DO NOT use the page published date or updated date.",
       "",
-      "FEEDS HUB: If REQUIRED FEEDS HUB URL = none, output exactly: https://www.abbeyfloorcare.co.uk/" +
-        String(rowData.stoneType || "").toLowerCase().trim().replace(/\s+/g, "-") +
-        "/hub-page-temp/\n" +
-      "Otherwise output the EXACT URL supplied in REQUIRED FEEDS HUB URL. Do NOT infer, detect, rewrite, shorten, or reformat it. Raw URL only — no markdown, no brackets, no parentheses.\n" +
+      "FEEDS HUB: If REQUIRED FEEDS HUB URL = none, output exactly: none. NEVER invent /hub-page-temp/ or any placeholder URL. Otherwise output the EXACT URL supplied in REQUIRED FEEDS HUB URL. Raw URL only — no markdown.\n" +
       "\n" +
       "ENTITY GOVERNANCE STATUS — HARD LOCK: Must equal exactly one of: Governed, Compliant, Requires Review, Unclear. No other value is permitted (e.g. 'Allowed' is NOT valid).\n" +
       "",
@@ -2279,7 +2276,7 @@ function bc_repairMissingW2BInternalLinks_(html, approvedPlan) {
   if(/^Contact link:\s*\/contact\/?/im.test(plan))allowed.push('/contact');
   function normaliseLink(url) {
     try {var u=new URL(url,'https://www.abbeyfloorcare.co.uk');
-      return u.pathname.replace(/\/+$/,'')||'/';
+      return u.hostname.toLowerCase().replace(/^www\\./,'') + (u.pathname.replace(/\/+$/,'')||'/');
     } catch(e) {return String(url).replace(/\/+$/,'');}
   }
   var approved=allowed.map(normaliseLink);
