@@ -5368,6 +5368,7 @@ function bc_runW4Automated() {
       'ROLE: Senior UK SEO & Editorial Quality Auditor',
       '',
       'TASK:',
+      'PUBLICATION STANDARD: Only material homeowner misunderstanding, unsupported claims or real section-purpose mismatches warrant FAIL. Minor editorial preferences PASS.',
       'Assess each section opening against its heading and editorial purpose, not a universal symptom-first requirement.',
             'Problem and diagnosis sections should orient the reader to the observed condition or uncertainty.',
             'Method and treatment sections may begin with the documented action or decision.',
