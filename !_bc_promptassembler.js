@@ -2218,87 +2218,121 @@ if (pairs["Secondary Intent Decisions"]) {
 function bc_repairMissingW2BInternalLinks_(html, approvedPlan, currentPageUrl) {
   var output = String(html || '');
   var plan = String(approvedPlan || '');
-  var blocks = plan.split(/(?=^SECTION\s+\d+\s*:\s*Heading\s+H[23]\s*:)/gmi);
   var inserted = [];
+  var missing = [];
+  var blocks = plan.split(/(?=^SECTION\s+\d+\s*:\s*Heading\s+H[23]\s*:)/gmi);
 
-  blocks.forEach(function(block) {
-    var numberMatch = block.match(/^SECTION\s+(\d+)\s*:/im);
-    if (!numberMatch) return;
-    var sectionNumber = Number(numberMatch[1]);
-    var lineMatch = block.match(/^Internal link:\s*(.+)$/im);
-    var contactMatch = block.match(/^Contact link:\s*(\/contact\/?)/im);
-    if (!lineMatch) return;
-    var urls = String(lineMatch[1]).match(/https?:\/\/[^\s,;<>]+/g) || [];
-    urls.forEach(function(rawUrl) {
-      var url = rawUrl.replace(/[.)]+$/, '');
-      if (output.indexOf(url) !== -1 || output.indexOf(url.replace(/&/g, '&amp;')) !== -1) return;
-      var openTag = new RegExp('<section\\b[^>]*\\bid\\s*=\\s*["\\x27]section-' + sectionNumber + '["\\x27][^>]*>', 'i');
-      var found = openTag.exec(output);
-      if (!found) return;
-      var sectionStart = found.index + found[0].length;
-      var closeIndex = output.indexOf('</section>', sectionStart);
-      if (closeIndex < 0) return;
-      var slug = url.split('/').filter(Boolean).pop() || 'related guidance';
-      var text = slug.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
-      var anchor = '<p>For related information, see <a href="' + url.replace(/&/g, '&amp;') + '">' +
-        text.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</a>.</p>\n';
-      output = output.slice(0, closeIndex) + anchor + output.slice(closeIndex);
-      inserted.push('section-' + sectionNumber + ': ' + url);
-    });
-  });
-  // Fail closed if a governed destination is still missing, rather than
-  // silently sending W2B forward without the mandatory material hub.
-  var remaining = [];
-  blocks.forEach(function(block) {
-    var match = block.match(/^Internal link:\s*(.+)$/im);
-    if (!match) return;
-    (String(match[1]).match(/https?:\/\/[^\s,;<>]+/g)||[]).forEach(function(raw) {
-      var url = raw.replace(/[.)]+$/, '');
-      if (output.indexOf(url) === -1 && output.indexOf(url.replace(/&/g,'&amp;')) === -1
-          && remaining.indexOf(url) === -1) remaining.push(url);
-    });
-  });
-  // Governed Contact placement: append in its assigned section only.
-  blocks.forEach(function(block){
-    var number=block.match(/^SECTION\s+(\d+)\s*:/im);
-    var contact=block.match(/^Contact link:\s*(\/contact\/?)/im);
-    if(!number||!contact || /href=["']\/contact\/?["']/i.test(output))return;
-    var tag=new RegExp('<section\\b[^>]*\\bid\\s*=\\s*["\\x27]section-'+number[1]+'["\\x27][^>]*>','i');
-    var found=tag.exec(output);if(!found)return;
-    var end=output.indexOf('</section>',found.index+found[0].length);if(end<0)return;
-    output=output.slice(0,end)+'<p><a href="/contact">Contact us about your floor</a>.</p>\n'+output.slice(end);
-    inserted.push('section-'+number[1]+': /contact');
-  });
-  // Automatically unwrap stray internal anchors rather than fail the pipeline.
-  // The visible text remains; editorial link destinations come only from CX.
-  var allowed=(plan.match(/^Internal link:\s*(https?:\/\/[^\s]+)/gmi)||[])
-    .map(function(line){return line.replace(/^Internal link:\s*/i,'').trim();});
-  if(/^Contact link:\s*\/contact\/?/im.test(plan))allowed.push('/contact');
-  function hostOf(url) {
-    const match = String(url || '').match(/^https?:\/\/([^\/?#]+)/i);
+  function hostOf(raw) {
+    var match = String(raw || '').match(/^https?:\/\/([^\/?#]+)/i);
     return match ? match[1].toLowerCase().replace(/^www\./, '').replace(/:\d+$/, '') : '';
   }
-  const homeHost = hostOf(currentPageUrl) || hostOf(allowed[0]) || 'abbeyfloorcare.co.uk';
-  function normaliseLink(url) {
-    let val = String(url || '').trim().replace(/&amp;/gi, '&');
-    if (/^\/(?!\/)/.test(val)) val = 'https://' + homeHost + val;
-    const host = hostOf(val);
-    const path = val.replace(/^https?:\/\/[^\/?#]+/i, '').split(/[?#]/)[0].replace(/\/+$/, '') || '/';
-    return (host || homeHost) + path;
-  }
-  var approved=allowed.map(normaliseLink);
-  output=output.replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi,function(anchor,attrs,body){
-    var m=attrs.match(/\bhref\s*=\s*(["'])(.*?)\1/i);
-    if(!m)return anchor;
-    var dest=m[2];
-    if(/^(#|mailto:|tel:)/i.test(dest))return anchor;
-    var internal=/^\/(?!\/)/.test(dest) || hostOf(dest) === homeHost;
-    if(!internal)return anchor;
-    return approved.indexOf(normaliseLink(dest))>=0 ? anchor : body;
+  var siteHost = hostOf(currentPageUrl);
+  var assignments = {};
+  blocks.forEach(function(block) {
+    var m = block.match(/^SECTION\s+(\d+)\s*:/im);
+    if (!m) return;
+    var number = Number(m[1]);
+    var links = [];
+    var linkLine = block.match(/^Internal link:\s*(.+)$/im);
+    if (linkLine) {
+      (String(linkLine[1]).match(/https?:\/\/[^\s,;<>]+/g) || []).forEach(function(u) {
+        u = u.replace(/[.)]+$/, '');
+        if (links.indexOf(u) < 0) links.push(u);
+      });
+    }
+    if (/^Contact link:\s*\/contact\/?\s*$/im.test(block)) links.push('/contact');
+    assignments[number] = links;
+    if (!siteHost) {
+      var fromPlan = links.filter(function(u) { return !!hostOf(u); })[0];
+      if (fromPlan) siteHost = hostOf(fromPlan);
+    }
   });
-  return { html: output, inserted: inserted, missing: remaining };
-}
+  if (!siteHost) siteHost = 'abbeyfloorcare.co.uk';
 
+  function normalise(raw) {
+    var url = String(raw || '').trim().replace(/&amp;/gi, '&');
+    // Root-relative links inherit this article's domain, never a different site.
+    if (/^\/(?!\/)/.test(url)) url = 'https://' + siteHost + url;
+    var h = hostOf(url);
+    var withoutHost = url.replace(/^https?:\/\/[^\/?#]+/i, '');
+    var path = withoutHost.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
+    var query = (withoutHost.match(/\?[^#]*/) || [''])[0];
+    return (h || siteHost) + path + query;
+  }
+  function isInternal(url) {
+    return /^\/(?!\/)/.test(url) || hostOf(url) === siteHost;
+  }
+  // Locate numbered sections in the generated article; do not assume that
+  // links occurring in a header, footer or another section satisfy the plan.
+  function sectionRanges(content) {
+    var ranges = {};
+    var re = /<section\b[^>]*\bid\s*=\s*["']section-(\d+)["'][^>]*>/gi;
+    var found;
+    while ((found = re.exec(content)) !== null) {
+      var close = content.indexOf('</section>', re.lastIndex);
+      if (close >= 0) ranges[Number(found[1])] = {
+        start: re.lastIndex, end: close, open: found.index
+      };
+    }
+    return ranges;
+  }
+  var ranges = sectionRanges(output);
+  var seen = {};
+  var anchorRe = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
+  // Strip unassigned, wrong-section and duplicate internal links, leaving
+  // their visible text. External, mailto, tel and fragment anchors survive.
+  output = output.replace(anchorRe, function(anchor, attrs, body, index) {
+    var href = attrs.match(/\bhref\s*=\s*(["'])(.*?)\1/i);
+    if (!href) return anchor;
+    var url = href[2];
+    if (/^(#|mailto:|tel:)/i.test(url) || !isInternal(url)) return anchor;
+    var section = 0;
+    Object.keys(ranges).some(function(n) {
+      if (index >= ranges[n].start && index < ranges[n].end) {
+        section = Number(n);
+        return true;
+      }
+      return false;
+    });
+    var key = normalise(url);
+    var permitted = (assignments[section] || []).some(function(u) {
+      return normalise(u) === key;
+    });
+    var duplicateKey = section + ':' + key;
+    if (!permitted || seen[duplicateKey]) return body;
+    seen[duplicateKey] = true;
+    return anchor;
+  });
+
+  // Re-read offsets after the cleanup, then restore every missing governed
+  // destination only inside its assigned numbered section.
+  Object.keys(assignments).forEach(function(n) {
+    var number = Number(n);
+    var desired = assignments[number] || [];
+    desired.forEach(function(url) {
+      var key = normalise(url);
+      if (seen[number + ':' + key]) return;
+      var spans = sectionRanges(output);
+      var section = spans[number];
+      if (!section) {
+        if (missing.indexOf(url) < 0) missing.push(url);
+        return;
+      }
+      var linkText = url === '/contact' ? 'Contact us about your floor' :
+        (url.split(/[?#]/)[0].split('/').filter(Boolean).pop() || 'related guidance')
+          .replace(/[-_]+/g, ' ');
+      var paragraph = url === '/contact'
+        ? '<p><a href="/contact">' + linkText + '</a>.</p>\n'
+        : '<p>For related information, see <a href="' +
+          url.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '">' +
+          linkText.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</a>.</p>\n';
+      output = output.slice(0, section.end) + paragraph + output.slice(section.end);
+      inserted.push('section-' + number + ': ' + url);
+      seen[number + ':' + key] = true;
+    });
+  });
+  return { html: output, inserted: inserted, missing: missing };
+}
 
 // Reapply CX link governance at each HTML handoff without changing the section text.
 function bc_governLinksAtStage_(html, sheet, row) {
