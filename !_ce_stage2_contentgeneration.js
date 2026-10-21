@@ -1105,16 +1105,17 @@ function buildStage2BPart3B(d) {
         }
         
         if (s.internalLink && s.internalLink !== "None") {
+        var approvedUrls = String(s.internalLink).match(/https?:\/\/[^\s;,<>]+/g) || [];
+        sectionBlock += "  W1.5D-GOVERNED INTERNAL LINKS — HARD LOCK:\n";
+        approvedUrls.forEach(function(url) {
+          sectionBlock += "  Insert ONE contextual <a> anchor in THIS section with exact href: " + url + "\n";
+        });
         sectionBlock +=
-          "  INTERNAL LINK — HARD LOCK:\n" +
-          "  You MUST include this exact governed URL in this section:\n" +
-          "  " + s.internalLink + "\n" +
-          "  Use it as the href value of a normal contextual <a> link inside a paragraph.\n" +
-          "  Copy the URL EXACTLY — do not shorten it, alter it, replace it, or omit it.\n" +
-          "  A missing governed internal URL is a CRITICAL AUDIT FAILURE.\n";
+          "  Each URL above is a SEPARATE approved link (hub navigation may have several).\n" +
+          "  Never combine URLs into one href and never invent an extra destination.\n";
       }
-        
-        if (s.videos && s.videos !== "None") {
+
+              if (s.videos && s.videos !== "None") {
           sectionBlock += "  VIDEO (CRITICAL): You MUST embed this video in this section.\n" +
                           "  Exact iframe src: " + s.videos + "\n" +
                           "  Use this EXACT format:\n" +
