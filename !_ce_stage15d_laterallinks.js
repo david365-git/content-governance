@@ -161,6 +161,17 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
         ).trim()
       : "";
 
+  // National service-area boundaries: a Scottish service/geo-service page
+  // may only use confirmed Scottish projects, not English projects.
+  const currentArticleType = String(data[activeRow-1][articleTypeIdx]||'').trim();
+  function confirmedRegion(locality,title,url) {
+    const val=[locality,title,url].join(' ').toLowerCase();
+    if (/\b(scotland|scottish|edinburgh|glasgow|stirling|dundee|aberdeen|inverness|perth|fife|falkirk|paisley|kinross|livingston|musselburgh|dalkeith|dunfermline|east lothian|west lothian|midlothian|borders)\b/.test(val))return 'Scotland';
+    if (/\b(england|english|london|surrey|burton|stoke|staffordshire|nottingham|derby|birmingham|somerset|northampton|walsall|tutbury|penkhull|new malden|bristol|oxford|york|leicester|manchester|liverpool)\b/.test(val))return 'England';
+    return '';
+  }
+  const currentRegion=confirmedRegion(currentLocality,
+    String(data[activeRow-1][titleIndex]||''),currentUrl);
   let siloPages = [];
 
   for (let i = 1; i < data.length; i++) {
@@ -181,6 +192,14 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
 
     const articleType =
       String(data[i][articleTypeIdx] || "").trim();
+    if ((currentArticleType === 'Service Page' || currentArticleType === 'Geo Service Page')
+        && currentRegion === 'Scotland') {
+      const candidateRegion = confirmedRegion(
+        localityIdx >= 0 ? String(data[i][localityIdx]||'') : '',
+        String(data[i][titleIndex]||''),url);
+      if ((articleType === 'Case Study' || articleType === 'Geo Service Page'
+           || articleType === 'Service Page') && candidateRegion !== 'Scotland') continue;
+    }
 
     const candidateLocality =
       localityIdx > -1
