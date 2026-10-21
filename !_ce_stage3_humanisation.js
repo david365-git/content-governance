@@ -91,7 +91,7 @@ function saveHumanisedHtml(html) {
     // Save to Column CZ (104) — humanised HTML audit copy
     const cell = sheet.getRange(row, 104);
     cell.setNumberFormat('@');
-    cell.setValue(html.trim());
+    cell.setValue(bc_governLinksAtStage_(html.trim(), sheet, row));
 
     logPipelineResume("W3 — Humanised HTML", "");
     return {
