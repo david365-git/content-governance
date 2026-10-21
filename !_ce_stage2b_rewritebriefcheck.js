@@ -433,7 +433,7 @@ function applyRewriteBriefFixW2B(responseText) {
     // Save only after every replacement succeeded.
     sheet
       .getRange(row, 189)
-      .setValue(updatedHtml);
+      .setValue(bc_governLinksAtStage_(updatedHtml, sheet, row));
 
     if (typeof logPipelineResume === 'function') {
       logPipelineResume(
@@ -539,7 +539,7 @@ function saveLocationIntegrationResultW2B(responseHtml) {
 
   var cell = sheet.getRange(row, 151); // EU — W2B Raw HTML, the column Fact Check reads by default
   cell.setNumberFormat('@');
-  cell.setValue(ce_stripHtmlCodeFences_(responseHtml));
+  cell.setValue(bc_governLinksAtStage_(ce_stripHtmlCodeFences_(responseHtml), sheet, row));
 
   if (typeof logPipelineResume === 'function') {
     logPipelineResume("W2B — Location Integration Applied (EU)", "");
@@ -722,7 +722,7 @@ function passThroughRewriteBriefCheckToGG() {
     return { success: false, message: "ERROR: Column GF (W2B.1 Fixed HTML) and column GE (W2B.05 Fixed HTML) are both empty for this row." };
   }
 
-  sh.getRange(row, 189).setValue(html); // GG = column 189
+  sh.getRange(row, 189).setValue(bc_governLinksAtStage_(html, sh, row)); // GG = column 189
   if (typeof logPipelineResume === 'function') {
     logPipelineResume("W2B.2 — Rewrite Brief Check PASS, copied " + sourceLabel + " to GG", "");
   }
@@ -750,7 +750,7 @@ function promoteW2B2ToEU() {
     }
   }
 
-  sh.getRange(row, 151).setValue(html); // EU = column 151
+  sh.getRange(row, 151).setValue(bc_governLinksAtStage_(html, sh, row)); // EU = column 151
   if (typeof logPipelineResume === 'function') {
     logPipelineResume("W2B.2 — PASS confirmed, promoted GG to EU", "");
   }
