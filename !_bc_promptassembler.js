@@ -730,9 +730,7 @@ function bc_getPrompt1B(lockBlock) {
       "DO NOT use the page published date or updated date.\n" +
       "\n" +
       "COL 8 (Feeds Hub):\n" +
-        "If REQUIRED FEEDS HUB URL = none, output exactly: https://www.abbeyfloorcare.co.uk/" +
-        String(rowData.stoneType || "").toLowerCase().trim().replace(/\s+/g, "-") +
-        "/hub-page-temp/\n" +
+        "If REQUIRED FEEDS HUB URL = none, output exactly: none. Never create /hub-page-temp/ or any other placeholder.\n" +
         "Otherwise, output the EXACT URL supplied in REQUIRED FEEDS HUB URL.\n" +
         "Do NOT infer, detect, rewrite, shorten, or reformat it.\n" +
         "Use a RAW URL only.\n" +
