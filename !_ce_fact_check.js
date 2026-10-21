@@ -141,7 +141,7 @@ ${generatedHtml}
 EVIDENCE PRIORITY — HARD LOCK:
 The original article is a historical reference but may omit accurate details. Absence of a statement is NOT evidence it is false. A FAIL requires a demonstrable contradiction or an objectively significant error, not merely missing corroboration.
 Protect accurate professional background, mechanisms and ordinary technical detail. Do not use "not documented" alone as the sourceEvidence for FAIL.
-If a detail cannot be confirmed or denied, use PASS_WITH_NOTES with no fixes, rather than deleting it.
+If a detail cannot be confirmed or denied, use PASS_WITH_NOTES with no fixes, unless all five conditions of the MATERIAL UNSUPPORTED PROJECT CLAIM rule are met and a safe neutral correction exists.
 Do not assume that a colour-enhancing sealer is a surface coating merely because the original omitted "impregnating". Conversely, confirm actual product behaviour when material to classification.
 For the Northampton terrazzo example, the owner has confirmed: a cement matrix; colour-enhancing impregnating sealer and its pore-penetration/protective behaviour; the client removed all wooden boards; and the work area was a busy hallway. These known facts must not be labelled unsupported on that project. Do not transfer these Northampton facts to other projects.
 Distinguish generic repair limitations (such as repairs not being perfectly invisible) from a specific observed defect.
@@ -167,6 +167,19 @@ Perform a dedicated comparison of new project-specific statements against the OR
 6. Where a materially unsupported project-specific claim has an unambiguous safe, neutral rewrite, provide an atomic visible-text fix. Retain verified project facts and accurate professional explanations. Do not erase real restoration detail simply to achieve PASS.
 7. Do not turn stylistic issues, optional extra links, minor caption phrasing, or harmless general test-area advice into blocking errors. CX link governance and editorial audits remain separate.
 8. In sourceEvidence, quote the pertinent original wording and explain the precise unsupported project-specific implication; never write only 'not documented' as the justification.
+
+MATERIAL UNSUPPORTED PROJECT CLAIM — FIVE-CONDITION DECISION RULE:
+A new assertion qualifies for FAIL with issueType MATERIAL UNSUPPORTED PROJECT CLAIM ONLY if ALL five conditions hold:
+1. NEW: The specific job-site detail was introduced by the rewrite and is not already stated or reasonably entailed by the original project account or other confirmed project evidence actually supplied here.
+2. JOB-SPECIFIC: It positively claims an inspection, test, measurement, named tool/product, particular treatment stage, observed result, client reaction or decision criterion OCCURRED on this job; it is not conditional advice or an explanation of ordinary trade practice.
+3. UNSUPPORTED: The supplied project evidence does not substantiate that particular assertion. Check meaning and reasonable paraphrase, not exact-word matching. Do not presume the historical original is an exhaustive record.
+4. MATERIAL: Its asserted specificity could meaningfully mislead a homeowner about what was actually done, seen or decided. Do not escalate harmless descriptions, professional explanation, style or minor ambiguity.
+5. SAFELY CORRECTABLE: A short, unambiguous, atomically matchable visible-text replacement can remove only the unsupported job attribution while preserving genuine experience, useful trade explanation, grammar, section purpose and all links. If not, record uncertainty as PASS_WITH_NOTES instead of inventing a repair.
+When ALL five hold, return FAIL with exact atomic fixes, not PASS_WITH_NOTES. For new stage-specific photo or video claims, prefer the original source-grounded description rather than inferring what unseen media depicts. Do NOT mechanically change every first-person observation into generic advice: authentic source-supported experience must remain first-person.
+For example, 'Looking at the floor under consistent lighting helped...' and 'The amount of material released determined whether another pass was safer...' warrant this test if they are newly attributed to this job without project support. They are NOT automatic FAIL keywords.
+General guidance such as 'A test area can help confirm the likely appearance' is not a project claim. A statement may be true despite being absent from an old article, so use PASS_WITH_NOTES if the five conditions cannot be established confidently.
+Only use authenticated case-study evidence if it is actually included in the supplied prompt context; do not assume access to unseen ledgers.
+For sourceEvidence, quote the nearest original project evidence, explain the unsupported newly asserted attribution and why it is materially misleading; missing documentation alone does not establish a factual contradiction.
 
 FACT-CHECK SCOPE — MATERIAL ERRORS ONLY:
 This is a focused check of the documented project, not a line-by-line challenge to technical explanation.
@@ -217,8 +230,8 @@ On verification, apply exactly the same materiality threshold; do not introduce 
 
 CLASSIFICATION:
 PASS: No material errors and no noteworthy uncertainty.
-PASS_WITH_NOTES: No material errors, but minor uncertainty or editorial observation worth recording; do not propose corrections.
-FAIL: Only demonstrably false or materially contradictory statements, with unambiguous safe exact corrections. Doubt or missing documentation alone is PASS_WITH_NOTES.
+PASS_WITH_NOTES: No material errors or safely repairable material unsupported project assertions; minor genuine uncertainty or editorial observation worth recording, with no fixes.
+FAIL: Demonstrable factual contradictions, material safety errors, OR newly introduced material project-specific assertions meeting ALL five conditions above, each with unambiguous safe atomic fixes. Missing documentation alone is not FAIL.
 
 OUTPUT FORMAT — HARD LOCK:
 Return ONLY valid JSON, no fences.
@@ -245,7 +258,7 @@ For FAIL:
       "targetText": "unique exact visible-text fragment of the error",
       "contextText": "exact nearby visible text only if target repeats, otherwise empty string",
       "newText": "minimal replacement; blank only if safe to delete",
-      "sourceEvidence": "precise source contradiction or demonstrable technical incompatibility"
+      "sourceEvidence": "precise source contradiction, technical incompatibility, or for a five-condition unsupported claim: source quotation plus explanation of newly introduced material job-specific attribution"
     }
   ]
 }
