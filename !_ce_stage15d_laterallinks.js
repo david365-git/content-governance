@@ -669,7 +669,7 @@ function saveW15DUpdatedPlan(updatedPlan) {
         };
       }
 
-      if (usedSections[section]) {
+      if (data.articleType !== 'Hub Page' && usedSections[section]) {
         return {
           success: false,
           message:
@@ -757,9 +757,8 @@ function saveW15DUpdatedPlan(updatedPlan) {
       ) {
 
         if (
-          /^\s*Internal link:\s*None\s*$/i.test(
-            lines[i]
-          )
+          /^\s*Internal link:\s*None\s*$/i.test(lines[i]) ||
+          (data.articleType === 'Hub Page' && /^\s*Internal link:\s*https?:\/\//i.test(lines[i]))
         ) {
           linkLine = i;
           break;
@@ -777,10 +776,12 @@ function saveW15DUpdatedPlan(updatedPlan) {
       const indent =
         String(lines[linkLine]).match(/^\s*/)[0];
 
-      lines[linkLine] =
-        indent +
-        'Internal link: ' +
-        assignment.url;
+      if (data.articleType === 'Hub Page' && !/^\s*Internal link:\s*None\s*$/i.test(lines[linkLine])) {
+        // Multiple approved child routes are permitted within a hub section.
+        lines[linkLine] = String(lines[linkLine]).trimEnd() + '; ' + assignment.url;
+      } else {
+        lines[linkLine] = indent + 'Internal link: ' + assignment.url;
+      }
     });
 
     // Contact is a W1.5D-governed destination, not a W2B decision.
