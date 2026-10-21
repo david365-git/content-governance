@@ -246,12 +246,13 @@ function buildStage15CPrompt() {
         "\n";
     }
   }
+  const originalEvidenceHtml = String(originalHtml || '').replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1');
   let prompt = `
 STAGE 1.5C — SECTION ENRICHMENT
 CASE STUDY SOURCE-FIRST EVIDENCE PASS — PERFORM BEFORE ANY ENRICHMENT:
 ARTICLE TYPE: ${String(d['Article Type'] || '')}
 ORIGINAL ARTICLE HTML — ONLY SOURCE OF PROJECT-SPECIFIC ACTIONS AND OBSERVATIONS:
-${originalHtml || "No original article HTML available."}
+${originalEvidenceHtml || "No original article HTML available."}
 END ORIGINAL ARTICLE HTML.
 
 EVIDENCE EXTRACTION — SILENT FIRST PASS (DO NOT OUTPUT THE LEDGER):
