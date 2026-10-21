@@ -157,6 +157,17 @@ D. ARTICLE-TYPE VOICE: Preserve I/we where the original establishes practitioner
 E. EDITORIAL QUALITY: Avoid "near me" in reader-facing narrative, unsupported local-property stereotypes, repeated headings, fabricated client reactions and empty technical padding. Preserve useful source detail and avoid boilerplate.
 Do not reject a technically sound generic explanation solely because it is absent from the original. Flag a definite job-site claim about unrecorded specific tools, grit, measurements, client reactions, personnel or outcomes when materially misleading. A qualified diagnostic possibility is not an assertion that the cause was found on site. Review image captions and headings too. Preserve the established PASS_WITH_NOTES mechanism for uncertainties that cannot be safely repaired atomically.
 
+PROJECT EVIDENCE PROTECTION — TARGETED CHECKS:
+Perform a dedicated comparison of new project-specific statements against the ORIGINAL SOURCE ARTICLE, including header, body, photographs, alt text, video titles and captions.
+1. Separate (a) documented events, (b) ordinary professional explanation or conditional advice, and (c) claims that a specific inspection, test, decision criterion, tool, treatment or observation actually occurred on this job.
+2. Scrutinise new assertions such as a controlled/consistent lighting inspection, decisions based on the quantity released during each cleaning pass, a test area being performed, or a media item depicting a particular treatment stage. These are examples of categories to verify, NOT claims to flag automatically on every article.
+3. Do not silently convert generic good practice into an assertion that the team did it on this project. If the source supports only general practice, keep the useful advice conditional and remove any misleading claim that it occurred.
+4. A new, positively asserted and materially specific on-site procedure or decision criterion that lacks source support may be classified MATERIAL UNSUPPORTED PROJECT CLAIM only when it would meaningfully misrepresent what was done or observed. Absence alone does NOT prove a false claim; genuine uncertainty belongs in PASS_WITH_NOTES.
+5. For an unsupported photo/video treatment-stage identification, compare against the source's existing caption/title. Where the rewrite newly asserts a different stage without supporting evidence, use a minimal source-grounded caption/title replacement if the claim materially misrepresents the media. Do not invent a visual description from an unseen image or video; preserve src, video URL, iframe and figure structure.
+6. Where a materially unsupported project-specific claim has an unambiguous safe, neutral rewrite, provide an atomic visible-text fix. Retain verified project facts and accurate professional explanations. Do not erase real restoration detail simply to achieve PASS.
+7. Do not turn stylistic issues, optional extra links, minor caption phrasing, or harmless general test-area advice into blocking errors. CX link governance and editorial audits remain separate.
+8. In sourceEvidence, quote the pertinent original wording and explain the precise unsupported project-specific implication; never write only 'not documented' as the justification.
+
 FACT-CHECK SCOPE — MATERIAL ERRORS ONLY:
 This is a focused check of the documented project, not a line-by-line challenge to technical explanation.
 Check:
