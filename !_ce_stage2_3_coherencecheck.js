@@ -367,6 +367,12 @@ function buildCoherenceCheckPrompt() {
     not interchangeable. A legitimate discovery -> diagnosis -> method -> result
     sequence may revisit the same floor condition for a different reader purpose.
 
+    PUBLICATION STANDARD: PASS when an experienced homeowner can follow the project correctly.
+    Only report redundancy if it materially obscures a project decision, confuses the sequence,
+    or impedes homeowner understanding. Minor repetition, naturally recurring project conditions,
+    and harmless editorial preferences are NOT repairable failures. Do not generate issues
+    merely to populate the issue list. Return PASS with an empty issues array when appropriate.
+
     For each REDUNDANCY issue:
 
     - identify the section that should change;
