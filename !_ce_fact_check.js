@@ -537,7 +537,7 @@ function applyFactCheckFix(rawJson, sourceColumn) {
   });
 
   // Fact-check final/working HTML is GE.
-  sh.getRange(row, 187).setValue(updatedHtml);
+  sh.getRange(row, 187).setValue(bc_governLinksAtStage_(updatedHtml, sh, row));
 
   if (typeof logPipelineResume === 'function') {
     logPipelineResume(
@@ -568,7 +568,7 @@ function passThroughFactCheckToGE() {
     return { success: false, message: "ERROR: Column EU (W2B Raw HTML) is empty for this row." };
   }
 
-  sh.getRange(row, 187).setValue(html); // GE = column 187
+  sh.getRange(row, 187).setValue(bc_governLinksAtStage_(html, sh, row)); // GE = column 187
   if (typeof logPipelineResume === 'function') {
     logPipelineResume("W2B.05 — Fact-Check PASS, copied EU to GE", "");
   }
