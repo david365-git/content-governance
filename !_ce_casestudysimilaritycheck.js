@@ -382,7 +382,7 @@ function applySimilarityFix(rawJson, sourceColumn) {
   });
 
   // W2B.1 final working HTML
-  sh.getRange(row, 188).setValue(updatedHtml); // GF
+  sh.getRange(row, 188).setValue(bc_governLinksAtStage_(updatedHtml, sh, row)); // GF
 
   if (typeof logPipelineResume === 'function') {
     logPipelineResume(
@@ -413,7 +413,7 @@ function passThroughSimilarityCheckToGF() {
     return { success: false, message: "ERROR: Column GE (W2B.05 Fixed HTML) is empty for this row." };
   }
 
-  sh.getRange(row, 188).setValue(html); // GF = column 188
+  sh.getRange(row, 188).setValue(bc_governLinksAtStage_(html, sh, row)); // GF = column 188
   if (typeof logPipelineResume === 'function') {
     logPipelineResume("W2B.1 — Similarity Check PASS, copied GE to GF", "");
   }
