@@ -210,13 +210,15 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
 
     const articleType =
       String(data[i][articleTypeIdx] || "").trim();
-    if ((currentArticleType === 'Service Page' || currentArticleType === 'Geo Service Page')
-        && currentRegion === 'Scotland') {
+    if (currentArticleType === 'Service Page' || currentArticleType === 'Geo Service Page') {
       const candidateRegion = confirmedRegion(
         localityIdx >= 0 ? String(data[i][localityIdx]||'') : '',
         String(data[i][titleIndex]||''),url);
-      if ((articleType === 'Case Study' || articleType === 'Geo Service Page'
-           || articleType === 'Service Page') && candidateRegion !== 'Scotland') continue;
+      // Fail closed for unclassified local evidence; never cross national boundaries.
+      if (articleType === 'Case Study' || articleType === 'Geo Service Page' ||
+          articleType === 'Service Page') {
+        if (!currentRegion || !candidateRegion || currentRegion !== candidateRegion) continue;
+      }
     }
 
     const candidateLocality =
