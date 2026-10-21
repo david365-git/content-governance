@@ -338,6 +338,19 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
       }
     }
 
+    let unstructuredSourceExcerpt = '';
+    if (articleType === 'Case Study' && !caseEvidence && postIdIdx >= 0) {
+      const original = String(originalById[String(data[i][postIdIdx] || '').trim()] || '');
+      // Not a substitute for the ten verified Case Study evidence fields.
+      // Explicit source evidence is safer than drawing conclusions from the title alone.
+      unstructuredSourceExcerpt = original
+        .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&(?:nbsp|#160);/gi, ' ')
+        .replace(/\s+/g, ' ').trim().slice(0, 650);
+    }
+
     let h2Sample = "";
 
     if (headings) {
@@ -382,7 +395,8 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
       h2s: h2Sample,
       safeHandoff: safeHandoff,
       cannibalGuard: cannibalGuard,
-      caseEvidence: caseEvidence
+      caseEvidence: caseEvidence,
+      unstructuredSourceExcerpt: unstructuredSourceExcerpt
     });
   }
 
@@ -446,6 +460,9 @@ function buildW15DPrompt() {
 
       if (page.caseEvidence) {
         siloMapText += 'SOURCE-QUOTED CASE STUDY FACTS: ' + page.caseEvidence + '\n';
+      }
+      if (page.unstructuredSourceExcerpt) {
+        siloMapText += 'UNSTRUCTURED ORIGINAL ARTICLE EXCERPT (not verified ledger): ' + page.unstructuredSourceExcerpt + '\n';
       }
       if (page.safeHandoff) {
         siloMapText += 'SAFE HANDOFF: ' + page.safeHandoff + '\n';
