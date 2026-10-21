@@ -10,6 +10,29 @@
  * ================================================================================
  */
 
+
+// W1.5D owns the single material-hub assignment. It never invents a URL.
+function bc_w15dAssignHub_(plan, hubUrl, articleType) {
+  var text = String(plan || '');
+  if (articleType === 'Hub Page' || !/^https?:\/\//i.test(String(hubUrl || '')) ||
+      /hub-page-temp/i.test(hubUrl)) return text;
+  var lines = text.split('\n');
+  // Remove legacy W1.5C hub assignment if still present, avoiding duplicates.
+  lines = lines.map(function(line) {
+    return /^\s*Internal link:\s*/i.test(line) &&
+      line.indexOf(hubUrl) >= 0 ? line.replace(/Internal link:\s*.+$/i, 'Internal link: None') : line;
+  });
+  var heading = -1, chosen = -1;
+  for (var i = 0; i < lines.length; i++) {
+    if (/^SECTION\s+\d+:/i.test(lines[i])) heading = i;
+    if (heading >= 0 && /^\s*Internal link:\s*None\s*$/i.test(lines[i]) && chosen < 0) chosen = i;
+  }
+  if (chosen >= 0) {
+    lines[chosen] = lines[chosen].replace(/Internal link:\s*None/i, 'Internal link: ' + hubUrl);
+  }
+  return lines.join('\n');
+}
+
 function getW15DData() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('posts');
@@ -27,8 +50,7 @@ function getW15DData() {
   const currentUrl = String(d["URL"] || "").trim();
   const hubUrl = String(d["Feeds Hub"] || "").trim();
   const isHub = articleType === 'Hub Page';
-  if (!isHub && (!/^https?:\/\//i.test(hubUrl) || /hub-page-temp/i.test(hubUrl)))
-    return {error:'W1.5D requires a valid material hub URL in Feeds Hub.'};
+  // Missing or placeholder hubs are not emitted as links.
 
   const maxTotalLinks = getMaxLateralLinks(articleType);
 
@@ -55,13 +77,9 @@ function getW15DData() {
     '$1'
   );
 
-  const hubAlreadyAssigned =
-    !!hubUrl &&
-    sectionPlan.indexOf('Internal link: ' + hubUrl) !== -1;
-
-  if (!isHub && !hubAlreadyAssigned)
-    return {error:'Mandatory material hub link missing from W1.5C plan. Correct W1.5C first.'};
-  const assignHubLink = !isHub && !!hubUrl;
+  sectionPlan = bc_w15dAssignHub_(sectionPlan, hubUrl, articleType);
+  const hubAlreadyAssigned = !!hubUrl && sectionPlan.indexOf('Internal link: ' + hubUrl) !== -1;
+  const assignHubLink = !isHub && hubAlreadyAssigned;
 
   // The mandatory hub link does not consume the optional lateral-link allowance.
   const lateralLinksToAssign = Math.max(0, maxTotalLinks);
@@ -526,10 +544,9 @@ function saveW15DUpdatedPlan(updatedPlan) {
       };
     }
 
-    const sourcePlan =
-      String(
-        sheet.getRange(row, 101).getValue() || ''
-      ).trim();
+    const sourcePlan = bc_w15dAssignHub_(
+      String(sheet.getRange(row, 101).getValue() || '').trim(),
+      data.hubUrl, data.articleType);
 
     if (!sourcePlan) {
       return {
@@ -814,10 +831,9 @@ function saveW15DFallbackPlan() {
       };
     }
 
-    const sourcePlan =
-      String(
-        sheet.getRange(row, 101).getValue() || ''
-      ).trim();
+    const sourcePlan = bc_w15dAssignHub_(
+      String(sheet.getRange(row, 101).getValue() || '').trim(),
+      getW15DData().hubUrl, getW15DData().articleType);
 
     if (!sourcePlan) {
       return {
@@ -830,7 +846,7 @@ function saveW15DFallbackPlan() {
     // A fallback must never allow an article without its required material hub.
     const governance = getW15DData();
     if (governance.error) return {success:false,message:governance.error};
-    const fallbackSource = sourcePlan.replace(/(Stage 1\.5C complete\. Waiting for Stage 1\.5D\.)\s*$/, 'Contact link: /contact\n\n$1');
+    const fallbackSource = bc_w15dAssignHub_(sourcePlan, governance.hubUrl, governance.articleType).replace(/(Stage 1\.5C complete\. Waiting for Stage 1\.5D\.)\s*$/, 'Contact link: /contact\n\n$1');
     let fallbackPlan =
       fallbackSource.replace(
         /Stage 1\.5C complete\. Waiting for Stage 1\.5D\.\s*$/,
