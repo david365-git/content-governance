@@ -747,16 +747,7 @@ function buildStage2BPart3A(d) {
       : "Section 1 begins AFTER the header and MUST have its own <section> tag and H2 heading.\n" +
         "Structure: <header>...</header> then <section id=\"section-1\"><h2>...</h2>...</section>\n") +
     "------------------------------------------------------------\n" +
-    (String(d["Feeds Hub"] || "").trim() && 
- String(d["Feeds Hub"]).trim() !== String(d["URL"] || "").trim()
-  ? "HUB LINK (Hard Lock — mandatory):\n" +
-    "This article MUST contain at least one link to the hub page.\n" +
-    "Hub URL: " + String(d["Feeds Hub"]).trim() + "\n" +
-    "Use the full hub URL above directly in your href — do not use placeholders.\n" +
-    "Place the hub link naturally within the body content — not in the footer.\n" +
-    "A missing hub link is a Check 2 audit failure that will block push to sheet.\n" +
-    "------------------------------------------------------------\n"
-  : "") +
+    "HUB DESTINATION AND PLACEMENT: Use only the approved W1.5D (CX) section assignment. Do not introduce a hub link independently.\\n" +
     "INTERNAL LINK POSITIONING (Hard Lock — Contextual Placement):\n" +
     "Internal links must appear at the point where the reader's need for the linked content is highest.\n" +
     "This is the moment the reader has recognised their specific problem and needs to know more.\n" +
