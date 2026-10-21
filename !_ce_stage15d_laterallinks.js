@@ -26,6 +26,9 @@ function getW15DData() {
   const primaryEntity = d["Primary Entity"] || material;
   const currentUrl = String(d["URL"] || "").trim();
   const hubUrl = String(d["Feeds Hub"] || "").trim();
+  const isHub = articleType === 'Hub Page';
+  if (!isHub && (!/^https?:\/\//i.test(hubUrl) || /hub-page-temp/i.test(hubUrl)))
+    return {error:'W1.5D requires a valid material hub URL in Feeds Hub.'};
 
   const maxTotalLinks = getMaxLateralLinks(articleType);
 
@@ -56,16 +59,12 @@ function getW15DData() {
     !!hubUrl &&
     sectionPlan.indexOf('Internal link: ' + hubUrl) !== -1;
 
-  const assignHubLink =
-    maxTotalLinks > 0 &&
-    hubUrl.length > 0;
+  if (!isHub && !hubAlreadyAssigned)
+    return {error:'Mandatory material hub link missing from W1.5C plan. Correct W1.5C first.'};
+  const assignHubLink = !isHub && !!hubUrl;
 
-  const lateralLinksToAssign =
-    maxTotalLinks === 0
-      ? 0
-      : assignHubLink
-        ? Math.max(0, maxTotalLinks - 1)
-        : maxTotalLinks;
+  // The mandatory hub link does not consume the optional lateral-link allowance.
+  const lateralLinksToAssign = Math.max(0, maxTotalLinks);
 
   const siloMap =
     buildEnhancedSiloMap(
@@ -139,6 +138,21 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
   const cannibalGuardIdx = headers.indexOf("Cannibalisation Guardrail");
 
   const localityIdx = headers.indexOf("Locality");
+  const evidenceNames = ['Project Location & Property','Observed Conditions','Client Requirements',
+    'Materials & Construction','Inspection & Tests','Restoration Methods',
+    'Products & Equipment','Technical Findings','Project Results','Maintenance Handover'];
+  const statusIdx = headers.indexOf('Evidence Status');
+  const postIdIdx = headers.indexOf('Post ID');
+  const exportSheet = ss.getSheetByName('site-export');
+  const originalById = {};
+  if (exportSheet && exportSheet.getLastRow()>1) {
+    const sources=exportSheet.getRange(2,1,exportSheet.getLastRow()-1,15).getValues();
+    sources.forEach(function(src) {
+      const id=String(src[0]||'').trim();
+      if(id && !(id in originalById)) originalById[id]=String(src[14]||'');
+      else if(id) originalById[id]=null;
+    });
+  }
 
   const currentLocality =
     localityIdx > -1
@@ -255,6 +269,27 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
 
     const cannibalGuard =
       String(data[i][cannibalGuardIdx] || "").trim();
+    let caseEvidence = '';
+    if (articleType==='Case Study' && statusIdx>=0 && postIdIdx>=0 &&
+        typeof bc_caseEvidenceDigest_==='function') {
+      const original=originalById[String(data[i][postIdIdx]||'').trim()];
+      if (original && String(data[i][statusIdx]||'').trim()===
+          'SOURCE-QUOTED | sha256:'+bc_caseEvidenceDigest_(original)) {
+        const findings=[];
+        evidenceNames.forEach(function(label) {
+          const col=headers.indexOf(label);
+          if(col<0)return;
+          try {
+            const items=JSON.parse(String(data[i][col]||'[]'));
+            if(!Array.isArray(items))return;
+            const facts=items.filter(x=>x && x.fact && x.quote)
+              .slice(0,2).map(x=>String(x.fact).slice(0,140));
+            if(facts.length)findings.push(label+': '+facts.join('; '));
+          } catch(e) {}
+        });
+        caseEvidence=findings.join(' | ').slice(0,2500);
+      }
+    }
 
     let h2Sample = "";
 
@@ -298,7 +333,8 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
       metaTitle: metaTitle,
       h2s: h2Sample,
       safeHandoff: safeHandoff,
-      cannibalGuard: cannibalGuard
+      cannibalGuard: cannibalGuard,
+      caseEvidence: caseEvidence
     });
   }
 
@@ -358,6 +394,9 @@ function buildW15DPrompt() {
           '\n';
       }
 
+      if (page.caseEvidence) {
+        siloMapText += 'SOURCE-QUOTED CASE STUDY FACTS: ' + page.caseEvidence + '\n';
+      }
       if (page.h2s) {
         siloMapText +=
           'H2s: ' +
@@ -399,7 +438,7 @@ ${siloMapText}
 
 --- RULES ---
 
-1. Return exactly ${data.lateralLinksToAssign} assignment${data.lateralLinksToAssign === 1 ? '' : 's'}.
+1. Return up to ${data.lateralLinksToAssign} assignment${data.lateralLinksToAssign === 1 ? '' : 's'}.
 
 2. Only choose PAGE numbers from the AVAILABLE SILO PAGES above.
 
@@ -435,7 +474,7 @@ Return JSON only in exactly this structure:
   ]
 }
 
-Return exactly ${data.lateralLinksToAssign} assignment${data.lateralLinksToAssign === 1 ? '' : 's'} inside "assignments".
+Return up to ${data.lateralLinksToAssign} assignment${data.lateralLinksToAssign === 1 ? '' : 's'} inside "assignments".
 
 No explanation.
 No markdown fences.
@@ -518,13 +557,13 @@ function saveW15DUpdatedPlan(updatedPlan) {
     }
 
     if (
-      parsed.assignments.length !==
+      parsed.assignments.length >
       data.lateralLinksToAssign
     ) {
       return {
         success: false,
         message:
-          'Expected exactly ' +
+          'Allowed at most ' +
           data.lateralLinksToAssign +
           ' lateral link assignment(s), but received ' +
           parsed.assignments.length +
