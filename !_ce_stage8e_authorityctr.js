@@ -227,7 +227,7 @@ function applyW8EAutoFix(rawJson) {
   });
 
   Object.keys(touchedCols).forEach(function(col) {
-    sh.getRange(col + row).setValue(cache[col]);
+    sh.getRange(col + row).setValue(col === 'CT' ? bc_governLinksAtStage_(cache[col], sh, row) : cache[col]);
   });
 
   if (applied.length > 0 && typeof logPipelineResume === 'function') {
