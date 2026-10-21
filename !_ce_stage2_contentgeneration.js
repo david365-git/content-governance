@@ -757,9 +757,9 @@ function buildStage2BPart3A(d) {
     "WRONG: 'Further detail on this topic is available in [link].' — standalone signpost at section end.\n" +
     "------------------------------------------------------------\n" +
     "INTERNAL LINK GOVERNANCE (Hard Lock):\n" +
-    "For Case Studies, first retain relevant original editorial and comparison links from the source HTML; also include every internal-link destination explicitly assigned in the approved Stage 1.5D section plan, plus the governed Feeds Hub URL where required. For other article types, follow approved plan and hub destinations. Do not impose a link count.\n" +
-    "Do NOT invent or independently select extra links from the Stage 1A silo map during article generation. Preserving an existing source-article link in a Case Study is not selecting a new link and is explicitly permitted.\n" +
-    "If a section plan says 'Internal link: None', do not add newly selected Silo Map links there. For Case Studies, relevant links already present in the original article are allowed in that section when naturally pertinent; the governed hub link is also allowed.\n" +
+    "Only URLs explicitly approved and placed by W1.5D (CX) may be used. Neither the original source HTML nor the silo map gives separate permission to insert internal anchors.\n" +
+    "Do NOT independently retain source-article links, including in Case Studies. An original link must first be approved by W1.5D in CX.\n" +
+    "If CX states 'Internal link: None', do not add an internal anchor unless CX separately assigns Contact to that section.\n" +
     "When an Internal link URL is assigned to a section, it MUST appear as a real <a href=\"[exact governed URL]\">descriptive anchor text</a> link within that section.\n" +
     "Never write phrases such as 'this guide', 'this comparison', 'this diagnosis' or 'this service' as though they reference another page unless the phrase contains the governed <a href> link.\n" +
     "Do not substitute a different local, service, hub or sibling URL for the governed destination.\n" +
