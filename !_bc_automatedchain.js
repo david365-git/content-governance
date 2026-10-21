@@ -3159,6 +3159,26 @@ function bc_runStage15DAutomated() {
     throw new Error('Select a data row first.');
   }
 
+  // A short script lock makes the check-and-claim atomic across sidebars.
+  // Cache auto-expires after ten minutes if Apps Script terminates abruptly.
+  var gateKey = 'W15D_ACTIVE_' + ss.getId() + '_' + row;
+  var gateCache = CacheService.getScriptCache();
+  var gateLock = LockService.getScriptLock();
+  if (!gateLock.tryLock(10000)) {
+    return {success:false, cost:0,
+      message:'W1.5D is busy for this spreadsheet. No second API call was made.'};
+  }
+  try {
+    if (gateCache.get(gateKey)) {
+      return {success:false, cost:0,
+        message:'W1.5D is already running for row ' + row + '. Duplicate request blocked.'};
+    }
+    gateCache.put(gateKey, 'running', 600);
+  } finally {
+    gateLock.releaseLock();
+  }
+  try {
+
   // Clear stale W1.5D output before rebuilding.
   sheet.getRange(row, 102).clearContent();
 
@@ -3267,6 +3287,14 @@ function bc_runStage15DAutomated() {
     message:
       'W1.5D fallback used — governed W1.5C plan preserved and pipeline continued.'
   };
+  } finally {
+    // Release the gate on both success and failure.
+    var releaseLock = LockService.getScriptLock();
+    if (releaseLock.tryLock(10000)) {
+      try { gateCache.remove(gateKey); }
+      finally { releaseLock.releaseLock(); }
+    }
+  }
 }
 
 function bc_addToApiCostAndTime(cost, seconds) {
