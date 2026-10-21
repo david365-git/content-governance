@@ -7556,7 +7556,7 @@ function pipelineResumeToW8E(row, startStage, endStage) {
 
   bc_appendPipelineRunLog(
     row,
-    "✓ Recovery " +
+    "✓ Stage Range " +
     startStage +
     " → " + endStage + " complete — $" +
     totalCost.toFixed(4)
