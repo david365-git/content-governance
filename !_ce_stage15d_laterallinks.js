@@ -81,15 +81,14 @@ function getW15DData() {
   const hubAlreadyAssigned = !!hubUrl && sectionPlan.indexOf('Internal link: ' + hubUrl) !== -1;
   const assignHubLink = !isHub && hubAlreadyAssigned;
 
-  // The mandatory hub link does not consume the optional lateral-link allowance.
-  const lateralLinksToAssign = Math.max(0, maxTotalLinks);
-
   const siloMap =
     buildEnhancedSiloMap(
       material,
       row,
       currentUrl
     );
+  // Hub Page navigation is NOT a lateral link. Its zero lateral quota is correct.
+  const lateralLinksToAssign = isHub ? siloMap.length : Math.max(0, maxTotalLinks);
 
   return {
     material: material,
@@ -273,12 +272,13 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
      */
     if (
       articleType === "Hub Page" ||
-      articleType === "Service Page"
+      (articleType === "Service Page" && currentArticleType !== "Hub Page")
     ) {
       continue;
     }
 
     if (
+      currentArticleType !== "Hub Page" &&
       articleType === "Geo Service Page" &&
       (
         !currentLocality ||
@@ -478,7 +478,7 @@ You are NOT rewriting the section plan.
 You are NOT inserting URLs.
 You are only selecting which approved silo PAGE should be linked from which SECTION.
 
-LATERAL LINKS REQUIRED:
+${data.articleType === 'Hub Page' ? 'HUB ROUTING LINKS: Select relevant child pages. MAXIMUM:' : 'OPTIONAL LATERAL LINKS MAXIMUM:'}
 ${data.lateralLinksToAssign}
 
 --- CURRENT GOVERNED SECTION PLAN ---
@@ -500,13 +500,11 @@ ${siloMapText}
 
 2. Only choose PAGE numbers from the AVAILABLE SILO PAGES above.
 
-3. Only choose SECTION numbers that currently contain:
+3. ${data.articleType === 'Hub Page' ? 'A Hub Page may route multiple child pages from the same relevant SECTION; zero lateral links does not mean zero hub navigation.' : 'Only choose sections currently marked Internal link: None.'}
 
-Internal link: None
+4. ${data.articleType === 'Hub Page' ? 'Prefer relevant original navigation links that match verified silo candidates.' : 'Do NOT select a section that already contains an internal link.'}
 
-4. Do NOT select a section that already contains an Internal link.
-
-5. Do NOT select the same SECTION more than once.
+5. ${data.articleType === 'Hub Page' ? 'Section reuse is permitted for distinct hub routes.' : 'Do NOT select the same SECTION more than once.'}
 
 6. Do NOT select the same PAGE more than once.
 
@@ -518,7 +516,7 @@ Internal link: None
 
 8. Choose links only where they help the reader with the specific section. A zero-assignment result is valid when nothing is relevant. Match Case Studies using verified conditions, methods, findings and outcomes; do not infer undocumented project work. For other article types use primary entity, headings, supporting entities, safe handoff and cannibalisation guardrails.
 
-9. Mandatory hub link in the W1.5C source plan is LOCKED and must remain in its section. The hub is not counted in the optional lateral-link limit. Do not reproduce or rewrite any part of the section plan.
+9. W1.5D alone selects the material hub for non-Hub articles; Hub Pages must never link to themselves. Material hubs do not count towards lateral quotas. Do not rewrite any other part of the plan.
 
 --- OUTPUT FORMAT ---
 
