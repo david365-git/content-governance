@@ -235,6 +235,36 @@ function applyW8EAutoFix(rawJson) {
       return;
     }
 
+    if (fieldKey === 'html') {
+      // Keep AI-generated link substitutions within the CX-approved URL set.
+      var cxText = String(sh.getRange('CX' + row).getValue() || '');
+      var approved = (cxText.match(/^\s*(?:Internal link|Contact link):\s*\S+/gmi) || [])
+        .map(function(line) {
+          return line.replace(/^\s*(?:Internal link|Contact link):\s*/i, '').trim();
+        })
+        .filter(function(url) { return url && !/^None$/i.test(url); });
+      function localHrefs(fragment) {
+        return (String(fragment || '').match(/<a\b[^>]*href\s*=\s*["'][^"']+["']/gi) || [])
+          .map(function(tag) { return tag.match(/href\s*=\s*["']([^"']+)/i)[1]; })
+          .filter(function(url) {
+            return /^\//.test(url) || /^https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk\//i.test(url);
+          });
+      }
+      function linkKey(url) {
+        return String(url).trim().replace(/#.*$/, '').replace(/\?.*$/, '')
+          .replace(/\/+$/, '').replace(/^https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk/i, '');
+      }
+      var oldLinks = localHrefs(oldText).map(linkKey);
+      var addedLinks = localHrefs(newText).map(linkKey).filter(function(url) {
+        return oldLinks.indexOf(url) === -1;
+      });
+      var allowedLinks = approved.map(linkKey);
+      if (addedLinks.some(function(url) { return allowedLinks.indexOf(url) === -1; })) {
+        failed.push(label + ' — new internal URL is not approved in CX');
+        return;
+      }
+    }
+
     cache[col] = current.replace(oldText, newText);
     touchedCols[col] = true;
     applied.push(label + ' (' + fieldKey + ')');
