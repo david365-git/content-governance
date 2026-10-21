@@ -857,22 +857,58 @@ function saveW15DFallbackPlan() {
       };
     }
 
-    const sourcePlan = bc_w15dAssignHub_(
-      String(sheet.getRange(row, 101).getValue() || '').trim(),
-      getW15DData().hubUrl, getW15DData().articleType);
-
-    if (!sourcePlan) {
-      return {
-        success: false,
-        message:
-          'Column CW is empty — cannot create W1.5D fallback.'
-      };
-    }
-
-    // A fallback must never allow an article without its required material hub.
     const governance = getW15DData();
-    if (governance.error) return {success:false,message:governance.error};
-    const fallbackSource = bc_w15dAssignHub_(sourcePlan, governance.hubUrl, governance.articleType).replace(/(Stage 1\.5C complete\. Waiting for Stage 1\.5D\.)\s*$/, 'Contact link: /contact\n\n$1');
+    if (governance.error) return { success: false, message: governance.error };
+    const sourcePlan = String(governance.sectionPlan || '');
+    if (!sourcePlan) return { success: false, message: 'No W1.5C source plan available.' };
+
+    let fallbackSource = sourcePlan;
+    if (governance.articleType === 'Hub Page') {
+      // Retain only original navigation routes that match a known, eligible
+      // existing child page in the silo map. This is a W1.5D-only decision.
+      function routePath_(u) {
+        return String(u || '').replace(/^https?:\/\/[^/]+/i, '')
+          .split(/[?#]/)[0].replace(/\/+$/, '').toLowerCase();
+      }
+      const originalRoutes = governance.siloMap.originalLinks || [];
+      const acceptedRoutes = [];
+      originalRoutes.forEach(function(originalUrl) {
+        const match = governance.siloMap.find(function(candidate) {
+          return routePath_(candidate.url) === routePath_(originalUrl);
+        });
+        if (match && acceptedRoutes.indexOf(match.url) < 0) acceptedRoutes.push(match.url);
+      });
+      if (acceptedRoutes.length) {
+        const lines = fallbackSource.split('\n');
+        let sectionStart = -1, chosen = -1, lastSection = -1, bestSection = -1;
+        for (let i = 0; i < lines.length; i++) {
+          if (/^SECTION\s+\d+:/i.test(lines[i])) {
+            sectionStart = i;
+            lastSection = i;
+            if (/routing|navigation|related|where to|next steps|further guidance|routes/i.test(lines[i]))
+              bestSection = i;
+          }
+        }
+        const target = bestSection >= 0 ? bestSection : lastSection;
+        if (target >= 0) {
+          for (let i = target + 1; i < lines.length && !/^SECTION\s+\d+:/i.test(lines[i]); i++) {
+            if (/^\s*Internal link:\s*None\s*$/i.test(lines[i])) {
+              chosen = i;
+              break;
+            }
+          }
+          if (chosen >= 0) {
+            lines[chosen] = lines[chosen].replace(/Internal link:\s*None/i,
+              'Internal link: ' + acceptedRoutes.join('; '));
+            fallbackSource = lines.join('\n');
+          }
+        }
+      }
+    }
+    fallbackSource = fallbackSource.replace(
+      /(Stage 1\.5C complete\. Waiting for Stage 1\.5D\.)\s*$/,
+      'Contact link: /contact\n\n$1'
+    );
     let fallbackPlan =
       fallbackSource.replace(
         /Stage 1\.5C complete\. Waiting for Stage 1\.5D\.\s*$/,
