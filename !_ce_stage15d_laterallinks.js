@@ -722,6 +722,18 @@ function saveW15DUpdatedPlan(updatedPlan) {
         assignment.url;
     });
 
+    // Contact is a W1.5D-governed destination, not a W2B decision.
+    // Keep it separate from the material hub and discretionary lateral links.
+    if (!lines.some(function(line){return /^Contact link:\s*\/contact\/?\s*$/i.test(line);})) {
+      const finalSection = lines.map(function(line,i){return /^SECTION\s+\d+:/i.test(line)?i:-1;})
+        .filter(function(i){return i>=0;}).pop();
+      if (finalSection === undefined) throw new Error('Cannot place governed Contact link without a section.');
+      let end=lines.length;
+      for(let i=finalSection+1;i<lines.length;i++){
+        if (/^SECTION\s+\d+:/i.test(lines[i]) || /^Stage 1\.5C complete\./i.test(lines[i])) {end=i;break;}
+      }
+      lines.splice(end,0,'Contact link: /contact');
+    }
     let finalPlan =
       lines.join('\n');
 
@@ -799,8 +811,9 @@ function saveW15DFallbackPlan() {
     // A fallback must never allow an article without its required material hub.
     const governance = getW15DData();
     if (governance.error) return {success:false,message:governance.error};
+    const fallbackSource = sourcePlan.replace(/(Stage 1\.5C complete\. Waiting for Stage 1\.5D\.)\s*$/, 'Contact link: /contact\n\n$1');
     let fallbackPlan =
-      sourcePlan.replace(
+      fallbackSource.replace(
         /Stage 1\.5C complete\. Waiting for Stage 1\.5D\.\s*$/,
         'Stage 1.5D complete.'
       );
