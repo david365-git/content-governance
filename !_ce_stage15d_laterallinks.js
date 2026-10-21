@@ -200,6 +200,7 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
     if (
       currentLocality &&
       candidateLocality &&
+      articleType !== 'Case Study' &&
       candidateLocality.toLowerCase() !==
         currentLocality.toLowerCase()
     ) {
@@ -239,9 +240,8 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
      * fallback for a locality-specific article.
      */
     if (
-      currentLocality &&
-      articleType === "Case Study" &&
-      !candidateLocality
+      false // Case Studies from other areas may illustrate a technical point,
+            // but must never be described as local examples.
     ) {
       continue;
     }
@@ -456,6 +456,7 @@ Internal link: None
    - If one or more relevant pages have SAME LOCALITY AS CURRENT ARTICLE: YES, choose the most relevant of those first.
    - Only use a page with LOCALITY: None when no suitable same-locality page exists.
    - Never prefer a non-geographic page over an equally relevant same-locality Case Study or Geo Service Page.
+   - An out-of-area Case Study may support a technical point, but must NOT imply the project happened in the current article's locality.
 
 8. Choose links only where they help the reader with the specific section. A zero-assignment result is valid when nothing is relevant. Match Case Studies using verified conditions, methods, findings and outcomes; do not infer undocumented project work. For other article types use primary entity, headings, supporting entities, safe handoff and cannibalisation guardrails.
 
