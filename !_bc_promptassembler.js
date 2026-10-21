@@ -2248,7 +2248,19 @@ function bc_repairMissingW2BInternalLinks_(html, approvedPlan) {
       inserted.push('section-' + sectionNumber + ': ' + url);
     });
   });
-  return { html: output, inserted: inserted };
+  // Fail closed if a governed destination is still missing, rather than
+  // silently sending W2B forward without the mandatory material hub.
+  var remaining = [];
+  blocks.forEach(function(block) {
+    var match = block.match(/^Internal link:\s*(.+)$/im);
+    if (!match) return;
+    (String(match[1]).match(/https?:\/\/[^\s,;<>]+/g)||[]).forEach(function(raw) {
+      var url = raw.replace(/[.)]+$/, '');
+      if (output.indexOf(url) === -1 && output.indexOf(url.replace(/&/g,'&amp;')) === -1
+          && remaining.indexOf(url) === -1) remaining.push(url);
+    });
+  });
+  return { html: output, inserted: inserted, missing: remaining };
 }
 
 function bc_runStage2BAutomated() {
@@ -2362,6 +2374,9 @@ function bc_runStage2BAutomated() {
     currentCX
   );
 
+  if (linkRepair.missing && linkRepair.missing.length)
+    throw new Error('W2B omitted approved internal links and safe restoration was not possible: ' +
+      linkRepair.missing.join(', '));
   var saveResult =
     saveW2BHtmlToSheet(
       linkRepair.html
