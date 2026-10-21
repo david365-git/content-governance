@@ -388,6 +388,9 @@ function buildW15DPrompt() {
       if (page.caseEvidence) {
         siloMapText += 'SOURCE-QUOTED CASE STUDY FACTS: ' + page.caseEvidence + '\n';
       }
+      if (page.safeHandoff) {
+        siloMapText += 'SAFE HANDOFF: ' + page.safeHandoff + '\n';
+      }
       if (page.h2s) {
         siloMapText +=
           'H2s: ' +
