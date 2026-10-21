@@ -486,7 +486,7 @@ ${data.lateralLinksToAssign}
 ${data.sectionPlan}
 
 --- ORIGINAL ARTICLE LINKS — REVIEW, DO NOT RETAIN AUTOMATICALLY ---
-${(data.siloMap.originalLinks || []).length ? data.siloMap.originalLinks.join('\\n') : 'No original internal links found.'}
+${(data.siloMap.originalLinks || []).length ? data.siloMap.originalLinks.join('\n') : 'No original internal links found.'}
 An original link survives only if explicitly selected as an AVAILABLE SILO PAGE below.
 Reject original links without relevance, geographic eligibility or a matching approved candidate.
 
