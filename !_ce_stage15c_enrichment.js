@@ -407,28 +407,8 @@ The following entities were flagged at W0 as missing from the page's current sea
 Where relevant to the governed section topic, prefer these gap entities over generic Recovery Blueprint entities.
 Do not force a gap entity into an unrelated section.
 ${entityGapAnalysis || "No W0 Entity Gap Analysis available for this row."}
---- INTERNAL LINK TO HUB — HARD LOCK ---
-Feeds Hub URL:
-${feedsHub || "none available — omit internal link"}
-Every article should contain one contextual internal link to its Feeds Hub when a Feeds Hub URL is available.
-
-The hub link is an enrichment requirement. It does NOT alter, replace or create a TSM Requirement.
-
-Preserve every section's Stage 1.5A TSM Requirement verbatim.
-
-Assign the hub link to the single most contextually appropriate governed section.
-
-That section's:
-
-Internal link:
-
-field must contain the exact Feeds Hub URL above.
-
-All other numbered sections must use:
-
-Internal link: None
-
-Never rename a section's TSM Requirement to "Internal Link to Hub" in order to assign the link.
+--- INTERNAL LINK OWNERSHIP ---
+All internal URLs and their placement are selected exclusively by W1.5D. W1.5C must leave every section as Internal link: None; do not preassign the hub or any other internal destination.
 --- ENRICHMENT RELEVANCE RULE ---
 Only assign images, links and visual patterns when they help the reader. Never remove documented evidence to satisfy a numerical limit.
 --- CONTENT BRIEF RULES ---
