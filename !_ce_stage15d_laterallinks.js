@@ -234,17 +234,8 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
       continue;
     }
 
-    /*
-     * A Case Study with a stated locality must also match.
-     * If it has no locality, do not use it as the geographic
-     * fallback for a locality-specific article.
-     */
-    if (
-      false // Case Studies from other areas may illustrate a technical point,
-            // but must never be described as local examples.
-    ) {
-      continue;
-    }
+    // Case Studies of the same material can illustrate technically relevant
+    // work outside the current locality. The prompt forbids local claims.
 
     const title =
       String(data[i][titleIndex] || "").trim();
