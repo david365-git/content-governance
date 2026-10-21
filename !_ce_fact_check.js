@@ -72,6 +72,32 @@ function buildFactCheckPrompt(sourceColumn) {
     ""
   ).trim();
 
+  // Same-row extracted Case Study evidence (GS:HB). Blank cells are not proof
+  // an event did not occur. These entries may contain extracted claims, not
+  // independently confirmed facts; weigh each against original and verified notes.
+  const caseStudyEvidenceFields = [
+    "Project Location & Property",
+    "Observed Conditions",
+    "Client Requirements",
+    "Materials & Construction",
+    "Inspection & Tests",
+    "Restoration Methods",
+    "Products & Equipment",
+    "Technical Findings",
+    "Project Results",
+    "Maintenance Handover"
+  ];
+  const caseStudyEvidence = caseStudyEvidenceFields
+    .map(function(field) {
+      return { field: field, value: String(rowMap[field] || '').trim() };
+    })
+    .filter(function(entry) { return entry.value.length > 0; });
+  const caseStudyEvidenceBlock = caseStudyEvidence.length
+    ? caseStudyEvidence.map(function(entry) {
+        return entry.field + ": " + entry.value;
+      }).join("\n\n")
+    : "No extracted Case Study evidence entries supplied for this row.";
+
   // Automatically recheck a previously saved fix if one exists — GE holds
   // the W2B.05 Fixed HTML from an earlier fact-check fix pass. Checking GE
   // first (regardless of which source column was originally audited) means
@@ -131,6 +157,13 @@ LOCALITY: ${governedLocality || "Not supplied"}
 
 SHORT REWRITE SCOPE:
 ${rewriteBrief || "No active Rewrite Brief supplied."}
+
+CASE STUDY EVIDENCE — CURRENT POST ROW (EXTRACTED RECORD, NOT AUTOMATICALLY VERIFIED):
+${caseStudyEvidenceBlock}
+
+EVIDENCE HANDLING:
+Read the ten Case Study evidence fields alongside the source article. Treat extracted entries as supporting project context, not as independent proof of every detail: compare them with the original and any explicitly confirmed owner information. Do not promote an AI-inferred or contradictory entry into a verified project fact. An empty field means no evidence supplied, not that an action did not occur.
+Before applying the five-condition unsupported-project-claim test, check whether an assertion is supported by an actual evidence-field statement or an explicitly confirmed job fact. Preserve supported observations and methods, including first-person experience. Where evidence conflicts, do not resolve the conflict by invention; use PASS_WITH_NOTES if no safe determination is possible.
 
 ORIGINAL SOURCE ARTICLE — HISTORICAL REFERENCE, NOT AN EXHAUSTIVE TECHNICAL RECORD:
 ${originalHtml}
