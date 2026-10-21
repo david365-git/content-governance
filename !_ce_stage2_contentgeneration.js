@@ -292,33 +292,10 @@ ${govRow[7]}
     // Extraction failed — proceed without list
   }
 
-  // Explicit source link inventory: the prose-level instruction alone has proved insufficient.
-  // List original editorial links for the AI rather than relying on them being rediscovered in long HTML.
-  var originalLinkBlock = "";
+  // Original links are evidence for writing, not approved destinations.
+  // W1.5D (CX) is the only link-selection authority.
+  var originalLinkBlock = '';
   try {
-    if (String(d['Article Type'] || '').trim() === 'Case Study' && rawHtml2b) {
-      var linksFound = [];
-      var anchorRe = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
-      var anchorMatch;
-      while ((anchorMatch = anchorRe.exec(rawHtml2b)) !== null) {
-        var hrefMatch = anchorMatch[1].match(/\bhref\s*=\s*(["'])(.*?)\1/i);
-        if (!hrefMatch) continue;
-        var href = String(hrefMatch[2] || '').trim();
-        var label = String(anchorMatch[2] || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-        if (!href || /^(#|mailto:|tel:|javascript:)/i.test(href)) continue;
-        if (/maps\.app\.goo\.gl|google\.com\/maps/i.test(href)) continue;
-        if (/\/contact\/?(?:[?#].*)?$/i.test(href)) continue;
-        if (linksFound.some(function(item) { return item.href === href; })) continue;
-        linksFound.push({ href: href, label: label });
-      }
-      if (linksFound.length) {
-        originalLinkBlock = '\nORIGINAL CASE-STUDY EDITORIAL LINKS — SOURCE INVENTORY (EXPLICIT):\n' +
-          linksFound.map(function(item, idx) {
-            return (idx + 1) + '. ' + item.href + (item.label ? ' — original anchor: ' + item.label : '');
-          }).join('\n') +
-          '\nThese links existed in the original account. Keep relevant distinct comparison/project links with their exact existing URLs in suitable paragraphs. Do not silently replace them all with generic guides or contact links. Only omit a specific link if it is irrelevant, duplicative or inappropriate to the revised narrative. Do not invent new link destinations.\n';
-      }
-    }
   } catch (linkErr) {
     Logger.log('W2B: original editorial link inventory unavailable: ' + linkErr.message);
   }
@@ -399,13 +376,13 @@ CASE STUDY FIRST-DRAFT EVIDENCE RETENTION — BEFORE GENERATING HTML:
 Use the source-quoted GL–GU project ledger and ORIGINAL HTML together. Before writing, identify each DISTINCT documented observation or action and its correct narrative location; keep its essential meaning at least once. Do not discard a useful concrete detail merely to avoid repeated background explanation. Especially preserve documented homeowner-observed symptoms and their recurrence (e.g. marks returning after ordinary cleaning), actual contaminants such as old wax/coatings where recorded, repairs actually completed, extraction/rinsing/drying/sealing, observed result and relevant limitations. Distinguish a recorded possibility (possible adhesive or substrate condition) from a confirmed diagnosis.
 Preserve a material-specific safety caution when relevant to actual methods or aftercare, but never add a blanket treatment ban or claim that a particular chemical was used on this job without evidence. For acid-sensitive or vulnerable floors, explain why an unassessed acid treatment is unsafe for the installed tile, grout, sealer and finish.
 Do not turn general material knowledge (tile porosity, possible batch variation, damp-proof construction, sealer breathability) into a measured or confirmed site finding. Do not invent who saw the floor first, what the client said, who performed extra tests, or specific advice personally given without recorded or author-confirmed evidence.
-LINK RETENTION: Inventory the original article's internal comparison/case-study links before drafting. Retain each distinct, relevant example that adds a useful comparison or next step, including its original valid URL, with natural anchor text. Do not replace several meaningful original examples with only generic guides or a contact link; avoid duplicate links, broken URLs and irrelevant promotions. Do not impose a link quota. Preserve existing project video title/caption and descriptive image alt text unless the provided source clearly supports a more accurate replacement.
+LINK AUTHORITY: Use only links explicitly approved in the W1.5D final plan (CX). Original links are not automatically authorised. W2B may not independently select or add internal destinations, including Contact. Preserve existing project video title/caption and descriptive image alt text unless the provided source clearly supports a more accurate replacement.
 UNVERIFIED MATERIAL EXPLANATIONS: Keep general observations about historic tile batches, density, absorption and age explicitly general. Do not use them to explain the particular job's appearance, movement or treatment response unless the original project evidence or confirmed notes support that causal link. Describe what was visibly observed separately from possible mechanisms.
 AFTERCARE ATTRIBUTION: Distinguish ordinary sound homeowner maintenance guidance from a conversation documented on this job. Write general advice directly (for example, 'For ongoing care, remove grit before damp mopping'), without saying 'I recommended', 'I told the homeowner' or similar unless that communication is verified in the original or confirmed notes. Do not remove useful aftercare advice merely because the source does not record a conversation.
 Before final output, compare the finished draft to the original and ledger for LOST facts, UNSUPPORTED added specifics and LOST useful media/link descriptions. Correct these internally in the same generation response; do not output a checklist or make another AI call.
 
 CASE STUDY NON-REPETITION AND PROJECT DETAIL GATE:
-Every governed section must make a distinct contribution: an observed condition, customer objective, professional decision, treatment step or actual outcome. Do not repeat the same general explanation of fired-clay properties, acid risk, moisture or residue in several sections unless the later mention explains a genuinely different project-stage decision. Revisit real floor conditions when needed for the job chronology. Preserve distinctive original observations, repair steps, pattern/border details, verified local setting and useful original links where they help the reader; never pad history or add link quotas. Do not assert inferred damp-proof conditions as inspected facts. Do not invent homeowner reactions or undocumented tests. Do not remove author-confirmed experience merely because older prose omitted it; require explicit confirmation for new job-specific claims.
+Every governed section must make a distinct contribution: an observed condition, customer objective, professional decision, treatment step or actual outcome. Do not repeat the same general explanation of fired-clay properties, acid risk, moisture or residue in several sections unless the later mention explains a genuinely different project-stage decision. Revisit real floor conditions when needed for the job chronology. Preserve distinctive original observations, repair steps, pattern/border details, verified local setting and W1.5D-approved links where they help the reader; never pad history or add link quotas. Do not assert inferred damp-proof conditions as inspected facts. Do not invent homeowner reactions or undocumented tests. Do not remove author-confirmed experience merely because older prose omitted it; require explicit confirmation for new job-specific claims.
 
 CASE STUDY SOURCE-EVIDENCE GATE — MANDATORY BEFORE WRITING OR SAVING:
 Use ORIGINAL HTML and explicitly supplied project notes as the only evidence of what happened on this job. Before drafting, privately classify each planned statement as (A) documented project fact, (B) general technical explanation that does not claim it occurred or was measured on this job, or (C) unsupported project assumption. Write A and relevant, clearly general B; discard C. Do not print the classifications or a ledger in the HTML.
