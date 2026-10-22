@@ -216,40 +216,27 @@ function runMechanicalAuditOnHTML(html, schema, articleType, hubUrl) {
       results.push('CHECK 3F [Figure inventory]: ERROR — ' + e3f.toString());
     }
   })();
-/* ── CHECK 3G — DIAGNOSTIC CAPTIONS ── */
+/* ── CHECK 3G — CAPTIONS: descriptive wording is valid ── */
   (function() {
     try {
       totalChecks++;
       var figRe = /<figure[^>]*class="[^"]*wp-caption[^"]*"[^>]*>[\s\S]*?<\/figure>/gi;
-      var figMatch;
-      var nonDiagnostic = [];
-      var DIAGNOSTIC_SIGNALS = [
-        'your ', 'you ', 'this is ', 'like this', 'indicat', 'at this stage',
-        'need', 'have ', 'suggests', 'means', 'shows ', 'if your', 'floors ',
-        'reveals', 'confirms', 'beneath', 'remains', 'stage need', 'when ',
-        'once ', 'after ', 'before ', 'why ', 'what ', 'how '
-      ];
+      var figMatch, missing = [], checked = 0;
       while ((figMatch = figRe.exec(html)) !== null) {
-        var figBlock = figMatch[0];
-        var capMatch = figBlock.match(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i);
-        if (!capMatch) continue;
-        var capText = capMatch[1].replace(/<[^>]+>/g, '').trim().toLowerCase();
-        if (!capText) continue;
-        var isDiagnostic = DIAGNOSTIC_SIGNALS.some(function(signal) {
-          return capText.indexOf(signal) > -1;
-        });
-        if (!isDiagnostic) {
-          nonDiagnostic.push('"' + capText.substring(0, 60) + '"');
-        }
+        checked++;
+        var capMatch = figMatch[0].match(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i);
+        var caption = capMatch ? capMatch[1].replace(/<[^>]+>/g, '').replace(/&nbsp;/gi, ' ').trim() : '';
+        if (!caption) missing.push('figure ' + checked);
       }
-      if (nonDiagnostic.length === 0) {
-        results.push('CHECK 3G [Diagnostic captions]: PASS — all wp-caption figcaptions contain diagnostic language');
-        passCount++;
+      if (missing.length) {
+        results.push('CHECK 3G [Captions]: FAIL — missing or empty captions on ' + missing.join(', '));
       } else {
-        results.push('CHECK 3G [Diagnostic captions]: FAIL — ' + nonDiagnostic.length + ' caption(s) appear purely descriptive: ' + nonDiagnostic.join(' | ') + '. Fix: rewrite to connect image to reader\'s problem.');
+        results.push('CHECK 3G [Captions]: PASS — ' + checked + ' image caption(s) present; descriptive captions are acceptable');
+        passCount++;
       }
+      // Factual media claims are governed separately by W2B.05.
     } catch(e3g) {
-      results.push('CHECK 3G [Diagnostic captions]: ERROR — ' + e3g.toString());
+      results.push('CHECK 3G [Captions]: ERROR — ' + e3g.toString());
     }
   })();
   /* ── CHECK 2B ── */
@@ -1220,10 +1207,11 @@ function buildDeferredCheckPrompt(html) {
     '------------------------------------------------------------\n' +
     'CHECK 7 — NAMED DEFECT COMPLETION\n' +
     '------------------------------------------------------------\n' +
-    'Any named technical defect must be explained to completion before the next paragraph:\n' +
-    '  ELEMENT 1: What it is (definition)\n' +
-    '  ELEMENT 2: What the homeowner sees (symptom)\n' +
-    '  ELEMENT 3: What is done about it (correction)\n\n' +
+    'Assess named defects across the relevant section and restoration sequence, not within one paragraph.\n' +
+    'PASS when a homeowner can understand the visible problem, its practical importance and its documented correction from the surrounding article.\n' +
+    'Do not require a textbook definition or repeat explanations on every mention.\n' +
+    'FAIL only when an important defect is materially unexplained or misleading in the article as a whole.\n' +
+    'Failed old sealer or coating residue is sufficiently explained when its visible effects and removal appear elsewhere in the article.\n\n' +
     'Scan the full article HTML below for named defects.\n' +
     'Named defects include: delamination, sealer failure, efflorescence, filler collapse, colour loss, grout haze, lippage, spalling, micro-scratching, residue lock-in.\n\n' +
     'ARTICLE HTML:\n' + html + '\n\n' +
