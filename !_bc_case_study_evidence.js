@@ -156,26 +156,26 @@ function bc_caseEvidenceExtract_(row) {
     'You may move an existing fact to a better category or reword it to match its original quote,',
     'but NEVER invent quotes or facts. Preserve exact contiguous source quotations.',
     'If a category has no supported items, use [].',
-    'ORIGINAL ARTICLE:\\n' + bc_caseEvidenceText_(source),
-    'EXTRACTED JSON:\\n' + JSON.stringify(JSON.parse('{' + labels.map(function(label,i){
+    'ORIGINAL ARTICLE:\n' + bc_caseEvidenceText_(source),
+    'EXTRACTED JSON:\n' + JSON.stringify(JSON.parse('{' + labels.map(function(label,i){
       return JSON.stringify(label)+':'+output[i];
     }).join(',') + '}'))
-  ].join('\\n');
+  ].join('\n');
   var validatedOutput = null;
   var reviewError = '';
   for (var reviewAttempt = 0; reviewAttempt < 2; reviewAttempt++) {
-    var reviewApi = bc_sendPromptViaOpenAI(reviewPrompt + (reviewAttempt ? '\\nPRIOR OUTPUT INVALID: ' + reviewError + '. Return valid, source-supported JSON only.' : ''), 5000, MODEL_CHEAP);
+    var reviewApi = bc_sendPromptViaOpenAI(reviewPrompt + (reviewAttempt ? '\nPRIOR OUTPUT INVALID: ' + reviewError + '. Return valid, source-supported JSON only.' : ''), 5000, MODEL_CHEAP);
     if (!reviewApi || !reviewApi.success) throw new Error('Evidence semantic validation API failed: ' + (reviewApi && reviewApi.message || 'unknown'));
     totalCost += Number(reviewApi.cost || 0);
     try {
-      var reviewRaw=String(reviewApi.text||'').trim().replace(/^\x60\x60\x60(?:json)?\\s*/i,'').replace(/\\s*\x60\x60\x60$/,'');
+      var reviewRaw=String(reviewApi.text||'').trim().replace(/^\x60\x60\x60(?:json)?\s*/i,'').replace(/\s*\x60\x60\x60$/,'');
       var reviewParsed=JSON.parse(reviewRaw);
       var checkedReview=[];
       labels.forEach(function(label) {
         if (!Array.isArray(reviewParsed[label])) throw new Error('Invalid reviewed category: '+label);
         var items=reviewParsed[label].map(function(item) {
           var fact=String(item && item.fact || '').trim();
-          var quote=String(item && item.quote || '').replace(/\\s+/g,' ').trim();
+          var quote=String(item && item.quote || '').replace(/\s+/g,' ').trim();
           if (!fact||!quote) throw new Error('Incomplete reviewed fact in '+label);
           var nq=quote.replace(/[’‘]/g,"'").replace(/[“”]/g,'"');
           if (normalizedSource.indexOf(nq)<0) {
