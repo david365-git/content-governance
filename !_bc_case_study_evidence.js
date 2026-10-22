@@ -32,6 +32,8 @@ function bc_caseEvidenceRepairQuote_(quote, sourceText) {
   }
   return null;
 }
+var BC_CASE_EVIDENCE_VERSION_ = 'v2';
+function bc_caseEvidenceStatus_(digest) { return 'SOURCE-QUOTED-' + BC_CASE_EVIDENCE_VERSION_ + ' | sha256:' + digest; }
 function bc_caseEvidenceExtract_(row) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
   if (!sh) throw new Error('posts sheet missing');
@@ -63,7 +65,7 @@ function bc_caseEvidenceExtract_(row) {
   var digest = bc_caseEvidenceDigest_(source);
   var statusCell = sh.getRange(row, col('Evidence Status'));
   var oldStatus = String(statusCell.getValue() || '');
-  if (oldStatus === 'SOURCE-QUOTED | sha256:' + digest) {
+  if (oldStatus === bc_caseEvidenceStatus_(digest)) {
     return {success:true, skipped:true, cost:0, message:'Source-quoted evidence unchanged'};
   }
   var labels = ['Project Location & Property','Observed Conditions','Client Requirements',
@@ -77,6 +79,21 @@ function bc_caseEvidenceExtract_(row) {
     'If a category has no documented facts, return an empty array. Inspection & Tests must not infer test results from general professional practice.',
     'Distinguish original construction materials from repair products, and maintain documented chronological order for methods.',
     'Treat statements of general advice as advice, not work performed.',
+    'CLASSIFICATION AND CERTAINTY — MANDATORY:',
+    'Project Location & Property: actual property facts only; exclude generic council, postcode and regional geography that does not describe this property.',
+    'Observed Conditions: what was actually seen or recorded at this site; do not place treatment decisions here.',
+    'Client Requirements: ONLY requests or preferences explicitly attributed to the client. Do not turn an author-described restoration aim into a client request. Use [] when none is documented.',
+    'Materials & Construction: ONLY documented installed materials and construction; exclude hypothetical moisture paths, restoration systems, future sealers and generic technical principles.',
+    'Inspection & Tests: separate what was inspected or CONSIDERED from findings actually confirmed; never imply a test occurred merely because it would be normal practice.',
+    'Restoration Methods: actions actually performed, in documented order; conditional treatments must remain conditional, never imply they always occurred.',
+    'Products & Equipment: products/tools documented as used, not items merely recommended or hypothetical.',
+    'Technical Findings: actual on-site findings, meaningful negative findings and explicitly supported professional decisions; exclude unverified mechanisms and general explanations.',
+    'Project Results: ONLY documented results and limitations; distinguish observed outcome from generic benefits.',
+    'Maintenance Handover: include documented maintenance recommendations as RECOMMENDATIONS; only say a personal handover occurred when explicitly recorded.',
+    'Preserve meaningful negative results (e.g. no major adhesive field), declined or unnecessary treatment, and differences between considered possibilities and confirmed findings.',
+    'FACT–QUOTE ENTAILMENT: every fact must be directly supported by its own quote in meaning, certainty, attribution and action. An exact copied quote is NOT sufficient when the fact changes its meaning.',
+    'Do not repeat generic advice or hypothetical examples as project findings. Do not invent a fact to fill any category. Use [] for categories with no actual applicable evidence.',
+    'Each category must be accurate and concise; retain material distinct findings without keyword repetition.',
     'ORIGINAL ARTICLE:\n' + bc_caseEvidenceText_(source)
   ].join('\n');
   var normalizedSource = bc_caseEvidenceText_(source).replace(/[’‘]/g,"'").replace(/[“”]/g,'"');
@@ -123,11 +140,64 @@ function bc_caseEvidenceExtract_(row) {
     } catch(e) { lastError = e.message; }
   }
   if (!output) throw new Error('Evidence extraction failed after 2 attempts: ' + lastError);
+  // Second-pass semantic validation within extraction, not an extra pipeline stage.
+  // Exact quote matching alone cannot establish correct category or certainty.
+  var reviewPrompt = [
+    'You are an independent case-study evidence verifier. Inspect the SOURCE and the EXTRACTED JSON.',
+    'Return ONLY a JSON object with exactly these same ten category keys and arrays of {fact,quote}.',
+    'For every item, verify: (1) its quote directly entails the fact, (2) its category is appropriate,',
+    '(3) its certainty and attribution have not been strengthened, and (4) it concerns this job rather than general advice.',
+    'Drop unsupported, generic geographical padding and misleading inferred client requirements.',
+    'Keep negative findings and distinct material job details. Separate considered conditions from confirmed discoveries.',
+    'Only client-attributed requests belong in Client Requirements.',
+    'General maintenance RECOMMENDATIONS may appear in Maintenance Handover, but do not imply a personal handover.',
+    'Materials & Construction must not include theoretical moisture paths or future protective treatments.',
+    'Keep conditional methods conditional. Never infer tests, chemicals used, owner statements or outcomes.',
+    'You may move an existing fact to a better category or reword it to match its original quote,',
+    'but NEVER invent quotes or facts. Preserve exact contiguous source quotations.',
+    'If a category has no supported items, use [].',
+    'ORIGINAL ARTICLE:\\n' + bc_caseEvidenceText_(source),
+    'EXTRACTED JSON:\\n' + JSON.stringify(JSON.parse('{' + labels.map(function(label,i){
+      return JSON.stringify(label)+':'+output[i];
+    }).join(',') + '}'))
+  ].join('\\n');
+  var validatedOutput = null;
+  var reviewError = '';
+  for (var reviewAttempt = 0; reviewAttempt < 2; reviewAttempt++) {
+    var reviewApi = bc_sendPromptViaOpenAI(reviewPrompt + (reviewAttempt ? '\\nPRIOR OUTPUT INVALID: ' + reviewError + '. Return valid, source-supported JSON only.' : ''), 5000, MODEL_CHEAP);
+    if (!reviewApi || !reviewApi.success) throw new Error('Evidence semantic validation API failed: ' + (reviewApi && reviewApi.message || 'unknown'));
+    totalCost += Number(reviewApi.cost || 0);
+    try {
+      var reviewRaw=String(reviewApi.text||'').trim().replace(/^\x60\x60\x60(?:json)?\\s*/i,'').replace(/\\s*\x60\x60\x60$/,'');
+      var reviewParsed=JSON.parse(reviewRaw);
+      var checkedReview=[];
+      labels.forEach(function(label) {
+        if (!Array.isArray(reviewParsed[label])) throw new Error('Invalid reviewed category: '+label);
+        var items=reviewParsed[label].map(function(item) {
+          var fact=String(item && item.fact || '').trim();
+          var quote=String(item && item.quote || '').replace(/\\s+/g,' ').trim();
+          if (!fact||!quote) throw new Error('Incomplete reviewed fact in '+label);
+          var nq=quote.replace(/[’‘]/g,"'").replace(/[“”]/g,'"');
+          if (normalizedSource.indexOf(nq)<0) {
+            var repaired=bc_caseEvidenceRepairQuote_(quote,normalizedSource);
+            if (!repaired) throw new Error('Unsupported reviewed quote in '+label+': '+quote.slice(0,90));
+            quote=repaired;
+          }
+          return {fact:fact,quote:quote};
+        });
+        checkedReview.push(JSON.stringify(items));
+      });
+      validatedOutput=checkedReview;
+      break;
+    } catch(e) { reviewError=e.message; }
+  }
+  if (!validatedOutput) throw new Error('Evidence semantic validation failed: '+reviewError);
+  output=validatedOutput;
   // Fail closed: no partial evidence is written on model error or quote mismatch.
   for (var j=0;j<labels.length;j++) col(labels[j]);
   sh.getRange(row, col(labels[0]), 1, labels.length).setValues([output]);
-  statusCell.setValue('SOURCE-QUOTED | sha256:' + digest);
-  return {success:true, skipped:false, cost:totalCost, message:'Evidence quotations matched to source (not independently fact-checked)'};
+  statusCell.setValue(bc_caseEvidenceStatus_(digest));
+  return {success:true, skipped:false, cost:totalCost, message:'Evidence quotations checked and categories independently reviewed against source'};
 }
 function bc_caseEvidenceActiveRow() {
   return bc_caseEvidenceExtract_(SpreadsheetApp.getActiveSpreadsheet().getActiveRange().getRow());
@@ -153,7 +223,7 @@ function bc_caseEvidencePromptBlock_(row) {
   var original=String(ex.getRange(match,15).getValue()||'');
   if(!original.trim())throw new Error('Original case study HTML is empty in site-export O');
   var status=String(sh.getRange(row,c('Evidence Status')).getValue()||'');
-  if(status!=='SOURCE-QUOTED | sha256:'+bc_caseEvidenceDigest_(original)){
+  if(status!==bc_caseEvidenceStatus_(bc_caseEvidenceDigest_(original))){
     throw new Error('Case Study Evidence is missing or out of date. Run Extract Case Study Evidence in Content Intelligence first.');
   }
   var labels=['Project Location & Property','Observed Conditions','Client Requirements','Materials & Construction',
