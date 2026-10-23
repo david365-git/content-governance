@@ -156,7 +156,10 @@ function bc_caseEvidenceExtract_(row){
  var paras=html.replace(/<\/(?:p|h[1-6]|li|blockquote)>/gi,'\n').replace(/<[^>]+>/g,' ').split(/\n+/).map(function(t){return bc_caseEvidenceText_(t);}).filter(function(t){return t.length>=25;});
  var prompt=['Extract documented facts from THIS floor restoration project in ONE pass. First move through the numbered source paragraphs in order, identifying each distinct project-specific fact; only then classify each fact.',
  'Do not skip factual inspections, negative findings, construction, conditions, client requests, restoration objectives, completed methods, equipment, results or maintenance simply because a paragraph also contains general explanation.',
- 'A paragraph can have multiple distinct facts. Keep important operations separate, including stripping, repairs, cleaning, rinsing, extraction and sealing where performed.',
+ 'A paragraph can have multiple distinct facts. Extract each independently meaningful observation, inspection finding, work operation, equipment item and result as a SEPARATE record, even when several appear in one sentence.',
+ 'Do not compress a sequence of operations into a single fact: distinguish stripping, lifting or resetting, applying cleaner, agitation, rinsing, slurry extraction, sealing and buffing where actually documented.',
+ 'Do not combine different tools or products in one record: for example, a rotary machine and a wet vacuum are two separate equipment facts when both were used.',
+ 'Keep meaningful findings separate from related actions and results. Avoid trivial restatement or duplicate facts, but never omit a distinct documented action merely because it is related to another.',
  'STRICT PROJECT-EVIDENCE RULE: only retain facts clearly connected to this specific job. Exclude generic material behaviour, hypothetical homeowner symptoms, possible contaminants, other projects and conditional treatments.',
  'Never turn advice, possibilities or options into observed findings or performed work. Distinguish client requests from contractor objectives and verified observations from possible causes.',
  'Read the article in paragraph order. For each paragraph ask whether it records any actual observation, inspection, negative finding, action or outcome about this project; include all distinct documented facts without repetition.',
