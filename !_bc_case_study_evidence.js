@@ -91,7 +91,7 @@ function bc_caseEvidenceBuildPackage_(postId, source, digest, labels, output) {
     // Explicitly mark these as unverified, not necessarily absent.
     limits.push({item:label,status:'Not established by this package; do not invent'});
   });
-  return {version:'v6',postId:String(postId),sourceDigest:digest,
+  return {version:'v7',postId:String(postId),sourceDigest:digest,
     provenance:'Source-quoted project account; not independently verified',
     facts:facts,media:media,links:links,
     chronology:facts.filter(function(f){return f.category==='Restoration Methods';})
@@ -101,24 +101,39 @@ function bc_caseEvidenceBuildPackage_(postId, source, digest, labels, output) {
     coverage:{status:'Review required: source sentences are not yet exhaustively reconciled',
       extractedFactCount:facts.length,sourceQuotePositionsLocated:true}};
 }
-function bc_caseEvidenceStorePackage_(ss, packageData) {
-  var sheet=ss.getSheetByName('Case Study Evidence Package');
-  if(!sheet){
-    sheet=ss.insertSheet('Case Study Evidence Package');
-    sheet.getRange(1,1,1,3).setValues([['Post ID','Source SHA256','Evidence Package JSON']]);
-    sheet.setFrozenRows(1);
-  }
-  var last=sheet.getLastRow(),target=last+1;
-  if(last>1){
-    var ids=sheet.getRange(2,1,last-1,1).getDisplayValues();
-    for(var i=0;i<ids.length;i++)if(String(ids[i][0])===packageData.postId){target=i+2;break;}
-  }
-  var json=JSON.stringify(packageData);
-  if(json.length>49000)throw new Error('Evidence package exceeds Sheets cell capacity; originals left unchanged');
-  sheet.getRange(target,1,1,3).setValues([[packageData.postId,packageData.sourceDigest,json]]);
+function bc_caseEvidenceExtraColumns_(packageData, source) {
+  var paragraphs=String(source||'').replace(/<\/(?:p|h[1-6]|li|blockquote)>/gi,'\n')
+    .replace(/<[^>]+>/g,' ').split(/\n+/).map(function(p){return bc_caseEvidenceText_(p);})
+    .filter(function(p){return p.length>=50;});
+  var checked=paragraphs.map(function(p,i){
+    var pnorm=p.toLowerCase().replace(/\s+/g,' ');
+    var matching=packageData.facts.filter(function(f){
+      return pnorm.indexOf(String(f.quote||'').toLowerCase().replace(/\s+/g,' '))>=0;
+    }).map(function(f){return f.id;});
+    return {paragraph:i+1,preview:p.slice(0,180),factIds:matching,
+      status:matching.length?'Contains extracted quotation':'Needs manual classification'};
+  });
+  var uncovered=checked.filter(function(p){return !p.factIds.length;});
+  var coverage={state:uncovered.length?'REVIEW REQUIRED':'QUOTATION MAPPING ONLY — REVIEW REQUIRED',
+    mappedParagraphs:checked.length-uncovered.length,totalParagraphs:checked.length,
+    notes:'Quotation mapping is not semantic coverage. Unmatched passages may be generic advice, duplicates, or missing facts.',
+    ledger:checked};
+  var gap={unknowns:packageData.unknowns,
+    unresolvedSourcePassages:uncovered.map(function(p){return {paragraph:p.paragraph,preview:p.preview};}),
+    contradictions:[],status:'No independent contradiction audit performed'};
+  var relationships={status:'Not established — do not infer links from proximity',links:[]};
+  // Main package stores factual records; companion columns own the other datasets.
+  var core={version:packageData.version,postId:packageData.postId,
+    sourceDigest:packageData.sourceDigest,provenance:packageData.provenance,
+    facts:packageData.facts,chronology:packageData.chronology};
+  var media={imagesAndVideos:packageData.media,links:packageData.links,
+    note:'Source captions and alt text are claims, not independent image verification'};
+  var parts=[core,relationships,coverage,media,gap].map(function(o){return JSON.stringify(o);});
+  parts.forEach(function(v,i){if(v.length>49000)throw new Error('Evidence column '+(i+1)+' exceeds safe 49000-character limit; no evidence written');});
+  return parts;
 }
 
-var BC_CASE_EVIDENCE_VERSION_ = 'v6';
+var BC_CASE_EVIDENCE_VERSION_ = 'v7';
 function bc_caseEvidenceStatus_(digest) { return 'SOURCE-QUOTED-' + BC_CASE_EVIDENCE_VERSION_ + ' | sha256:' + digest; }
 function bc_caseEvidenceExtract_(row) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
@@ -289,9 +304,14 @@ function bc_caseEvidenceExtract_(row) {
   // Fail closed: no partial evidence is written on model error or quote mismatch.
   for (var j=0;j<labels.length;j++) col(labels[j]);
   var packageData=bc_caseEvidenceBuildPackage_(postId,source,digest,labels,output);
-  bc_caseEvidenceStorePackage_(SpreadsheetApp.getActiveSpreadsheet(),packageData);
-  sh.getRange(row, col(labels[0]), 1, labels.length).setValues([output]);
-  statusCell.setValue(bc_caseEvidenceStatus_(digest));
+  var extraLabels=['Case Study Evidence Package','Evidence Relationships','Evidence Coverage',
+    'Evidence Media & Links','Evidence Gaps & Uncertainties'];
+  extraLabels.forEach(function(label,i){
+    if(col(label)!==col('Evidence Status')+i+1) throw new Error('Evidence supporting columns must immediately follow Evidence Status: '+label);
+  });
+  var extras=bc_caseEvidenceExtraColumns_(packageData,source);
+  // One rectangular write: ten legacy fields, status and five supporting fields.
+  sh.getRange(row,col(labels[0]),1,16).setValues([output.concat([bc_caseEvidenceStatus_(digest)],extras)]);
   return {success:true, skipped:false, cost:totalCost, message:'Evidence quotations checked and categories independently reviewed against source'};
 }
 function bc_caseEvidenceActiveRow() {
