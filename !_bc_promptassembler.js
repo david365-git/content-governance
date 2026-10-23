@@ -1549,6 +1549,9 @@ var rates = PRICING[model] || PRICING[MODEL_MID];
   return {
     success: true,
     text: responseText,
+    responseId: String(data.id || ''),
+    model: String(data.model || model),
+    finishReason: finishReason,
     promptTokens: promptTokens,
     completionTokens: completionTokens,
     cost: cost,
