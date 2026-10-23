@@ -32,7 +32,7 @@ function bc_caseEvidenceRepairQuote_(quote, sourceText) {
   }
   return null;
 }
-var BC_CASE_EVIDENCE_VERSION_ = 'v3';
+var BC_CASE_EVIDENCE_VERSION_ = 'v4';
 function bc_caseEvidenceStatus_(digest) { return 'SOURCE-QUOTED-' + BC_CASE_EVIDENCE_VERSION_ + ' | sha256:' + digest; }
 function bc_caseEvidenceExtract_(row) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
@@ -82,7 +82,7 @@ function bc_caseEvidenceExtract_(row) {
     'CLASSIFICATION AND CERTAINTY — MANDATORY:',
     'Project Location & Property: actual property facts only; exclude generic council, postcode and regional geography that does not describe this property.',
     'Observed Conditions: what was actually seen or recorded at this site; do not place treatment decisions here.',
-    'Client Requirements: ONLY requests or preferences explicitly attributed to the client. Do not turn an author-described restoration aim into a client request. Use [] when none is documented.',
+    'Client Requirements: include explicitly documented client requests labelled CLIENT REQUEST:, and documented professional restoration aims labelled RESTORATION OBJECTIVE:. Never present a restoration objective as something the homeowner asked for. If neither is documented, use [].',
     'Materials & Construction: ONLY documented installed materials and construction; exclude hypothetical moisture paths, restoration systems, future sealers and generic technical principles.',
     'Inspection & Tests: separate what was inspected or CONSIDERED from findings actually confirmed; never imply a test occurred merely because it would be normal practice.',
     'Restoration Methods: actions actually performed, in documented order; conditional treatments must remain conditional, never imply they always occurred.',
@@ -153,7 +153,7 @@ function bc_caseEvidenceExtract_(row) {
     'Keep negative findings and distinct material job details. Separate considered conditions from confirmed discoveries.',
     'Do not remove unique documented completed steps while deduplicating broader method summaries: preserve old sealer stripping separately from cleaning and applying new sealer.',
     'Retain documented repair options considered (such as replacement-tile matching), clearly as considerations rather than completed repairs.',
-    'Only client-attributed requests belong in Client Requirements.',
+    'In Client Requirements, prefix each supported fact with CLIENT REQUEST: when explicitly attributed to the client, or RESTORATION OBJECTIVE: when a documented professional aim. Never infer client speech, wishes or an undocumented objective.',
     'General maintenance RECOMMENDATIONS may appear in Maintenance Handover, but do not imply a personal handover.',
     'Materials & Construction must not include theoretical moisture paths or future protective treatments.',
     'Keep conditional methods conditional. Never infer tests, chemicals used, owner statements or outcomes.',
