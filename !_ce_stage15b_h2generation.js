@@ -349,6 +349,8 @@ function buildH2GovernanceCheckPromptW15B() {
     ).trim();
 
   let originalHtml = "";
+  // The source article may be consulted for media, never as an alternative project fact source.
+
 
   if (
     articleType === "Case Study" &&
@@ -484,7 +486,7 @@ When this fails, make the smallest wording correction necessary by replacing the
 CASE STUDY FINISH-WORDING LOCK:
 A documented high polish or bright sheen does not justify upgrading the result to "high-gloss", "mirror finish" or "slip-safe". If the original says the client deliberately avoided a mirror-like finish, use "bright", "even" or "practical sheen" in result headings; do not use "high-gloss". When correcting a heading, replace only the unsupported finish adjective and keep its section number, level and remaining intent.
 CASE STUDY EVIDENCE LOCK:
-For Case Studies, the ORIGINAL ARTICLE EVIDENCE below is the factual authority for what actually happened.
+For Case Studies, the STRUCTURED CASE STUDY EVIDENCE below is the factual authority for what actually happened.
 
 A heading must not narrow or broaden the recorded treatment, problem, process or outcome.
 Restrictive wording such as "only", "solely", "just" or "exclusively" must FAIL when the original article evidence does not explicitly support that restriction.
@@ -495,7 +497,7 @@ Do NOT convert evidence of floor or tile-and-grout sealing into grout-only seali
 Do NOT infer that glazed ceramic tile cannot be sealed.
 Do NOT broaden grout-only evidence into tile-and-grout sealing.
 
-ORIGINAL ARTICLE EVIDENCE:
+STRUCTURED CASE STUDY EVIDENCE:
 ${articleType === "Case Study"
   ? (originalHtml || "No original article HTML available.")
   : "Not Applicable — this is not a Case Study."}
@@ -1763,6 +1765,8 @@ if (!structure15A) {
 // ORIGINAL ARTICLE EVIDENCE — CASE STUDY FACT LOCK
 const postId = String(d["Post ID"] || "").trim();
 let originalHtml = "";
+  // The source article may be consulted for media, never as an alternative project fact source.
+
 if (postId) {
   try {
     const exportSheet = ss.getSheetByName("site-export");
@@ -2093,7 +2097,7 @@ H2 STORY FRAMEWORK RULES:
   : ''}
 ${articleAngleBlock}
 ${isCaseStudy ? `
---- ORIGINAL ARTICLE EVIDENCE — HARD LOCK ---
+--- STRUCTURED CASE STUDY EVIDENCE — HARD LOCK ---
 For a Case Study, the original article HTML below is the factual authority for what actually happened on the project.
 Heading wording must preserve the scope of the recorded work.
 Do NOT narrow, broaden, contradict or reinterpret a treatment merely to make a heading shorter or more technically cautious.
@@ -2105,7 +2109,7 @@ A project may record sealer applied to the tile surface, the grout joints, or bo
 If the source says sealer was applied to the floor, including the grout joints, do NOT rewrite that as grout-only sealing.
 If the source says grout only was sealed, preserve grout-only.
 
-ORIGINAL ARTICLE HTML:
+STRUCTURED CASE STUDY HTML:
 ${originalHtml || "No original article HTML available."}
 --- END ORIGINAL ARTICLE EVIDENCE ---
 ` : ""}
