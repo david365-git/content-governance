@@ -7,6 +7,7 @@ function onOpen(e) {
   ui.createMenu("🚀 Row Analysis")
     .addItem('📋 Content Intelligence', 'openGovernancePromptAssembler')
     .addItem('🔎 Extract Case Study Evidence (selected row)', 'bc_caseEvidenceActiveRow')
+    .addItem('🧪 Test Mid Model Evidence (selected row)', 'bc_caseEvidenceActiveRowMidTest')
     .addItem('🔎 Batch Extract Case Study Evidence (filtered stone type)', 'bc_caseEvidenceOpenBatchProgress')
     .addItem('🧪 NEW Simplified Workflow Test', 'new_openWorkflowSidebar')
     .addItem('✂️ Restore lost NewHtml etc', 'restoreActiveRowFromSiteExport')
