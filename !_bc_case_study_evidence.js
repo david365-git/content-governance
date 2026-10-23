@@ -241,7 +241,7 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass){
      var duplicate=facts.concat(additions).some(function(f){
        if(f.sourceParagraph!==p)return false;
        var other=wordSet_(f.fact),shared=w.filter(function(x){return other.indexOf(x)!==-1;}).length;
-       return String(f.fact).toLowerCase()===fact.toLowerCase() || (w.length>0&&other.length>0&&shared/Math.min(w.length,other.length)>=0.85);
+       return String(f.fact).toLowerCase()===fact.toLowerCase() || (w.length>0&&other.length>0&&shared/Math.min(w.length,other.length)>=0.96);
      });
      if(!duplicate)additions.push({category:category,fact:fact,sourceParagraph:p,sourceOrder:p});
    });
@@ -256,7 +256,7 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass){
      JSON.stringify(pkg),JSON.stringify({links:[],status:'No inferred relationships'}),JSON.stringify(coverage),
      JSON.stringify({imagesAndVideos:base.media,links:base.links}),JSON.stringify({unknowns:base.unknowns}),bc_caseEvidenceStatus_(digest)
    ]);
-   api={model:'gpt-5.6-luna (two-pass)',responseId:String(extra.responseId||''),text:String(extra.text||''),
+   api={model:MODEL_CHEAP,responseId:String(extra.responseId||''),text:String(extra.text||''),
      promptTokens:Number(api.promptTokens||0)+Number(extra.promptTokens||0),
      completionTokens:Number(api.completionTokens||0)+Number(extra.completionTokens||0),
      finishReason:String(extra.finishReason||'unknown'),
