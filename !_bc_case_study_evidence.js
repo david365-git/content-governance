@@ -154,27 +154,37 @@ function bc_caseEvidenceExtract_(row){
  labels.concat(extras).forEach(function(n,i){if(c(n)!==first+i)throw Error('Evidence headings out of order: '+n);});
  var run=Utilities.getUuid();bc_caseEvidenceArchive_(sh,row,id,'BEFORE',run);
  var paras=html.replace(/<\/(?:p|h[1-6]|li|blockquote)>/gi,'\n').replace(/<[^>]+>/g,' ').split(/\n+/).map(function(t){return bc_caseEvidenceText_(t);}).filter(function(t){return t.length>=25;});
- var prompt=['Extract every distinct documented fact about THIS floor restoration project, in one pass.','Read every numbered paragraph, including paragraphs with several facts.','Retain property, observed conditions, client requests (only when explicit), restoration objectives, materials, actual inspections, negative findings, distinct completed methods, equipment, results and maintenance.','Separate stripping, repairing, cleaning, rinsing, extraction and sealing where documented.','Never turn advice or possible treatment into work performed. Never invent details.',
- 'STRICT PROJECT-EVIDENCE RULE: extract a fact only when the article explicitly says it happened, was observed, was found, was checked, or was used on THIS project.',
- 'Do not treat generic material behaviour, examples from other jobs, hypothetical homeowner symptoms, potential contaminants, possible causes or conditional treatment options as findings on this floor.',
- 'Sentences beginning if, where needed, can, could, may, might, often, usually or generally require special care: do not convert them into this project actuals.',
- 'A general explanation may help interpret the story but is not an observed project fact unless the article explicitly connects it to this job.',
- 'For inspection, distinguish what was actually inspected from a list of possible defects; listing glue, bitumen or paint as possible contaminants does not prove they were found.',
- 'For methods, distinguish work carried out from work merely considered. For results, retain only explicitly documented outcomes.',
- 'If a passage mixes actual project facts with general background, extract only the project-specific claims. Do not fill categories simply to make them populated.','Do not quote verbatim. Return JSON with exactly these keys: '+JSON.stringify(labels),'Each key maps to an array of {"fact":"concise factual statement","paragraph":1}.','Use the supporting original paragraph number; [] means no documented facts.',paras.map(function(t,i){return '['+(i+1)+'] '+t;}).join('\n')].join('\n');
+ var prompt=['Extract documented facts from THIS floor restoration project in ONE pass. First move through the numbered source paragraphs in order, identifying each distinct project-specific fact; only then classify each fact.',
+ 'Do not skip factual inspections, negative findings, construction, conditions, client requests, restoration objectives, completed methods, equipment, results or maintenance simply because a paragraph also contains general explanation.',
+ 'A paragraph can have multiple distinct facts. Keep important operations separate, including stripping, repairs, cleaning, rinsing, extraction and sealing where performed.',
+ 'STRICT PROJECT-EVIDENCE RULE: only retain facts clearly connected to this specific job. Exclude generic material behaviour, hypothetical homeowner symptoms, possible contaminants, other projects and conditional treatments.',
+ 'Never turn advice, possibilities or options into observed findings or performed work. Distinguish client requests from contractor objectives and verified observations from possible causes.',
+ 'Read the article in paragraph order. For each paragraph ask whether it records any actual observation, inspection, negative finding, action or outcome about this project; include all distinct documented facts without repetition.',
+ 'Return one JSON object with exactly one key "facts", containing a single array ordered by ascending paragraph number.',
+ 'Each fact must be {"paragraph":1,"category":"one exact category name","fact":"concise factual statement"}.',
+ 'Use only these ten category names: '+JSON.stringify(labels),
+ 'Do not include quotations or commentary. An empty array is valid when no project facts exist.',
+ paras.map(function(t,i){return '['+(i+1)+'] '+t;}).join('\n')].join('\n');
  var promptFingerprint=bc_caseEvidenceDigest_(prompt);
  var api=bc_sendPromptViaOpenAI(prompt,6500,MODEL_CHEAP);
  if(!api||!api.success)throw Error('Evidence extraction API failed');
+ if(api.truncated||api.finishReason==='length')throw Error('Evidence extraction response truncated; existing evidence preserved');
  var data=JSON.parse(String(api.text||'').trim()),cells=[],facts=[],n=0;
- labels.forEach(function(name){
-  if(!Array.isArray(data[name]))throw Error('Missing category '+name);
-  var arr=data[name].map(function(item){
-   var fact=String(item.fact||'').trim(),p=Number(item.paragraph);
-   if(!fact||!Number.isInteger(p)||p<1||p>paras.length)throw Error('Invalid paragraph for '+name);
+ if(!data||!Array.isArray(data.facts))throw Error('Expected a single facts array in response');
+ var byCategory={};labels.forEach(function(name){byCategory[name]=[];});
+ var previousParagraph=0;
+ data.facts.forEach(function(item){
+   var fact=String(item&&item.fact||'').trim();
+   var p=Number(item&&item.paragraph);
+   var name=String(item&&item.category||'').trim();
+   if(!fact||!Number.isInteger(p)||p<1||p>paras.length)throw Error('Invalid fact or paragraph reference');
+   if(!Object.prototype.hasOwnProperty.call(byCategory,name))throw Error('Unknown evidence category '+name);
+   if(p<previousParagraph)throw Error('AI facts not in source paragraph order');
+   previousParagraph=p;
    facts.push({id:'F'+('000'+(++n)).slice(-4),category:name,fact:fact,sourceParagraph:p,sourceOrder:p});
-   return {fact:fact,paragraph:p};
-  });cells.push(JSON.stringify(arr));
+   byCategory[name].push({fact:fact,paragraph:p});
  });
+ labels.forEach(function(name){cells.push(JSON.stringify(byCategory[name]));});
  facts.sort(function(a,b){return a.sourceParagraph-b.sourceParagraph;});
  facts.forEach(function(f,i){f.id='F'+('000'+(i+1)).slice(-4);});
  var base=bc_caseEvidenceBuildPackage_(id,html,digest,labels,labels.map(function(){return '[]';}));
