@@ -32,7 +32,7 @@ function bc_caseEvidenceRepairQuote_(quote, sourceText) {
   }
   return null;
 }
-var BC_CASE_EVIDENCE_VERSION_ = 'v2';
+var BC_CASE_EVIDENCE_VERSION_ = 'v3';
 function bc_caseEvidenceStatus_(digest) { return 'SOURCE-QUOTED-' + BC_CASE_EVIDENCE_VERSION_ + ' | sha256:' + digest; }
 function bc_caseEvidenceExtract_(row) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
@@ -91,6 +91,8 @@ function bc_caseEvidenceExtract_(row) {
     'Project Results: ONLY documented results and limitations; distinguish observed outcome from generic benefits.',
     'Maintenance Handover: include documented maintenance recommendations as RECOMMENDATIONS; only say a personal handover occurred when explicitly recorded.',
     'Preserve meaningful negative results (e.g. no major adhesive field), declined or unnecessary treatment, and differences between considered possibilities and confirmed findings.',
+    'DISTINCT METHOD RETENTION: Extract each separately documented completed restoration step, including old sealer or coating stripping, even if a broader cleaning or sealing summary is already recorded. Do not collapse stripping, cleaning, rinsing, repairs and sealing into one fact if doing so loses a distinct actual operation.',
+    'REPAIR OPTIONS CONSIDERED: Retain documented repair alternatives and assessment decisions, including replacement-tile matching considered but not performed. Label options as considered, not completed. Distinguish local resetting from replacement and preserve why a more extensive repair was unnecessary where documented.',
     'FACT–QUOTE ENTAILMENT: every fact must be directly supported by its own quote in meaning, certainty, attribution and action. An exact copied quote is NOT sufficient when the fact changes its meaning.',
     'Do not repeat generic advice or hypothetical examples as project findings. Do not invent a fact to fill any category. Use [] for categories with no actual applicable evidence.',
     'Each category must be accurate and concise; retain material distinct findings without keyword repetition.',
@@ -149,6 +151,8 @@ function bc_caseEvidenceExtract_(row) {
     '(3) its certainty and attribution have not been strengthened, and (4) it concerns this job rather than general advice.',
     'Drop unsupported, generic geographical padding and misleading inferred client requirements.',
     'Keep negative findings and distinct material job details. Separate considered conditions from confirmed discoveries.',
+    'Do not remove unique documented completed steps while deduplicating broader method summaries: preserve old sealer stripping separately from cleaning and applying new sealer.',
+    'Retain documented repair options considered (such as replacement-tile matching), clearly as considerations rather than completed repairs.',
     'Only client-attributed requests belong in Client Requirements.',
     'General maintenance RECOMMENDATIONS may appear in Maintenance Handover, but do not imply a personal handover.',
     'Materials & Construction must not include theoretical moisture paths or future protective treatments.',
