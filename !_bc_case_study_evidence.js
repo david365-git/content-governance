@@ -396,9 +396,10 @@ function bc_caseEvidenceExtract_(row) {
   var digest = bc_caseEvidenceDigest_(source);
   var statusCell = sh.getRange(row, col('Evidence Status'));
   var oldStatus = String(statusCell.getValue() || '');
-  if (oldStatus === bc_caseEvidenceStatus_(digest)) {
-    return {success:true, skipped:true, cost:0, message:'Source-quoted evidence unchanged; use bc_caseEvidenceSnapshotActiveRow to archive current results'};
-  }
+  // Test runs intentionally re-extract even when the source digest is unchanged.
+  // Preserve the current evidence BEFORE processing and overwriting it.
+  var runId=Utilities.getUuid();
+  bc_caseEvidenceArchive_(sh,row,postId,'BEFORE',runId);
   var labels = ['Project Location & Property','Observed Conditions','Client Requirements & Restoration Objectives',
     'Materials & Construction','Inspection & Tests','Restoration Methods',
     'Products & Equipment','Technical Findings','Project Results','Maintenance Handover'];
@@ -552,8 +553,6 @@ function bc_caseEvidenceExtract_(row) {
   var extras=checkedExtras.parts;
   // Archive current evidence BEFORE replacing it, then preserve the finished run.
   // A failed pre-run archive aborts without overwriting the previous evidence.
-  var runId=Utilities.getUuid();
-  bc_caseEvidenceArchive_(sh,row,postId,'BEFORE',runId);
   sh.getRange(row,col(labels[0]),1,16).setValues([output.concat(extras,[bc_caseEvidenceStatus_(digest)])]);
   bc_caseEvidenceArchive_(sh,row,postId,'AFTER',runId);
   return {success:true, skipped:false, cost:totalCost, message:'Evidence checked; BEFORE and AFTER archived under run '+runId};
