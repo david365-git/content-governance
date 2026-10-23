@@ -250,19 +250,29 @@ function bc_caseEvidenceExtraColumns_(packageData, source, labels, prior) {
   var ids={}; packageData.facts.forEach(function(f){ids[f.id]=true;});
 
   var normalizedSource=bc_caseEvidenceText_(source);
+  relationships.rejected=[];
   proposals.forEach(function(link,index){
     if(!acceptedRel[index])return;
+    var reason='';
     if(!ids[link.fromId]||!ids[link.toId]||link.fromId===link.toId)
-      throw new Error('Relationship references invalid fact IDs');
-    if(['reason_for','led_to','limited','resulted_in'].indexOf(String(link.type))<0)
-      throw new Error('Invalid relationship type');
-    var quote=bc_caseEvidenceRepairQuote_(link.sourceQuote,normalizedSource);
-    if(!quote)throw new Error('Relationship quote not found in source');
+      reason='Invalid or identical fact IDs';
+    else if(['reason_for','led_to','limited','resulted_in'].indexOf(String(link.type))<0)
+      reason='Invalid relationship type';
+    else {
+      var quote=bc_caseEvidenceRepairQuote_(link.sourceQuote,normalizedSource);
+      if(!quote)reason='Relationship quotation not found verbatim in original source';
+    }
+    if(reason){
+      relationships.rejected.push({proposalIndex:index,fromId:link.fromId,toId:link.toId,
+        reason:reason,proposedQuote:String(link.sourceQuote||'').slice(0,180)});
+      return; // Reject only this relationship, never accept unsupported evidence.
+    }
     relationships.links.push({fromId:link.fromId,toId:link.toId,type:link.type,
       sourceQuote:quote,verification:'Source quotation found; semantic connection requires independent review'});
   });
-  relationships.status=relationships.links.length?
-    'Proposed source-quoted relationships; review causal meaning':'No directly supported relationships identified';
+  relationships.status=relationships.rejected.length?
+    'REVIEW REQUIRED — '+relationships.rejected.length+' proposed relationship(s) rejected; accepted links are source-quoted':
+    (relationships.links.length?'Proposed source-quoted relationships; review causal meaning':'No directly supported relationships identified');
   checked.forEach(function(p){
     if(p.factIds.length){p.status='EXTRACTED';return;}
     var d=decisions[p.paragraph];
