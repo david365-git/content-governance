@@ -187,15 +187,14 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass){
  var data=JSON.parse(String(api.text||'').trim()),cells=[],facts=[],n=0;
  if(!data||!Array.isArray(data.facts))throw Error('Expected a single facts array in response');
  var byCategory={};labels.forEach(function(name){byCategory[name]=[];});
- var previousParagraph=0;
+
  data.facts.forEach(function(item){
    var fact=String(item&&item.fact||'').trim();
    var p=Number(item&&item.paragraph);
    var name=String(item&&item.category||'').trim();
    if(!fact||!Number.isInteger(p)||p<1||p>paras.length)throw Error('Invalid fact or paragraph reference');
    if(!Object.prototype.hasOwnProperty.call(byCategory,name))throw Error('Unknown evidence category '+name);
-   if(p<previousParagraph)throw Error('AI facts not in source paragraph order');
-   previousParagraph=p;
+
    facts.push({id:'F'+('000'+(++n)).slice(-4),category:name,fact:fact,sourceParagraph:p,sourceOrder:p});
    byCategory[name].push({fact:fact,paragraph:p});
  });
@@ -232,11 +231,10 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass){
    var extraData=JSON.parse(String(extra.text||'').trim());
    if(!extraData||!Array.isArray(extraData.facts))throw Error('Second Luna pass did not return facts array; first pass preserved');
    function wordSet_(v){return String(v).toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(function(w){return w.length>2;});}
-   var additions=[], lastParagraph=0;
+   var additions=[];
    extraData.facts.forEach(function(item){
      var p=Number(item&&item.paragraph),category=String(item&&item.category||'').trim(),fact=String(item&&item.fact||'').trim();
-     if(!Number.isInteger(p)||p<1||p>paras.length||p<lastParagraph||!fact||!Object.prototype.hasOwnProperty.call(byCategory,category))throw Error('Invalid second-pass fact');
-     lastParagraph=p;
+     if(!Number.isInteger(p)||p<1||p>paras.length||!fact||!Object.prototype.hasOwnProperty.call(byCategory,category))throw Error('Invalid second-pass fact');
      var w=wordSet_(fact);
      var duplicate=facts.concat(additions).some(function(f){
        if(f.sourceParagraph!==p)return false;
