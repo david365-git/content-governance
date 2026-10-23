@@ -307,11 +307,13 @@ function bc_caseEvidenceExtract_(row) {
   var extraLabels=['Case Study Evidence Package','Evidence Relationships','Evidence Coverage',
     'Evidence Media & Links','Evidence Gaps & Uncertainties'];
   extraLabels.forEach(function(label,i){
-    if(col(label)!==col('Evidence Status')+i+1) throw new Error('Evidence supporting columns must immediately follow Evidence Status: '+label);
+    if(col(label)!==col(labels[labels.length-1])+i+1) throw new Error('Evidence supporting columns must immediately follow Maintenance Handover: '+label);
   });
+  if(col('Evidence Status')!==col(extraLabels[extraLabels.length-1])+1)
+    throw new Error('Evidence Status must immediately follow Evidence Gaps & Uncertainties');
   var extras=bc_caseEvidenceExtraColumns_(packageData,source);
-  // One rectangular write: ten legacy fields, status and five supporting fields.
-  sh.getRange(row,col(labels[0]),1,16).setValues([output.concat([bc_caseEvidenceStatus_(digest)],extras)]);
+  // One rectangular write: ten legacy fields, five supporting fields and status (HA).
+  sh.getRange(row,col(labels[0]),1,16).setValues([output.concat(extras,[bc_caseEvidenceStatus_(digest)])]);
   return {success:true, skipped:false, cost:totalCost, message:'Evidence quotations checked and categories independently reviewed against source'};
 }
 function bc_caseEvidenceActiveRow() {
