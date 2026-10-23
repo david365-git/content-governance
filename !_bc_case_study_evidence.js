@@ -86,7 +86,7 @@ function bc_caseEvidenceBuildPackage_(postId, source, digest, labels, output) {
  * A:G identify the run and snapshot. H:W mirror posts' 16 evidence columns.
  * Never overwrite a prior history row; fail closed if the archive is unavailable.
  */
-function bc_caseEvidenceArchive_(sh,row,postId,phase,runId) {
+function bc_caseEvidenceArchive_(sh,row,postId,phase,runId,diagnostics) {
   var ss=SpreadsheetApp.getActiveSpreadsheet();
   var history=ss.getSheetByName('Case Study Evidence Package');
   if(!history)throw new Error('Case Study Evidence Package history sheet missing; source evidence not overwritten');
@@ -96,8 +96,9 @@ function bc_caseEvidenceArchive_(sh,row,postId,phase,runId) {
     'Evidence Relationships','Evidence Coverage','Evidence Media & Links','Evidence Gaps & Uncertainties',
     'Evidence Status','Post ID','Posts Row','Run ID','Snapshot Type','Snapshot Time','Evidence Version','Source Digest'];
   var historyHeadings=['Post ID','Posts Row','Run ID','Snapshot Type','Snapshot Time','Evidence Version','Source Digest'].concat(expected.slice(0,16));
-  var existing=history.getRange(1,1,1,23).getDisplayValues()[0];
-  historyHeadings.forEach(function(h,i){if(existing[i]!==h)throw new Error('Archive header mismatch at '+(i+1)+': '+h);});
+  var diagnosticHeadings=['Prompt Fingerprint','AI Model','API Response ID','Token Usage','Response Fingerprint'];
+  var existing=history.getRange(1,1,1,28).getDisplayValues()[0];
+  historyHeadings.concat(diagnosticHeadings).forEach(function(h,i){if(existing[i]!==h)throw new Error('Archive header mismatch at '+(i+1)+': '+h);});
   var heads=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
   var first=heads.indexOf(expected[0])+1;
   if(first<1||expected.slice(0,16).some(function(h,i){return heads[first-1+i]!==h;}))
@@ -106,13 +107,15 @@ function bc_caseEvidenceArchive_(sh,row,postId,phase,runId) {
   var status=cells[15], match=status.match(/SOURCE-QUOTED-(v\d+)\s*\|\s*sha256:([a-f0-9]+)/i);
   var version=match?match[1]:(status?'legacy/unknown':'none');
   var digest=match?match[2]:'';
-  var appended=[String(postId),row,String(runId),String(phase),new Date(),version,digest].concat(cells);
+  var d=diagnostics||{};
+  var diagnosticValues=[d.promptFingerprint||'',d.model||'',d.responseId||'',d.tokenUsage||'',d.responseFingerprint||''];
+  var appended=[String(postId),row,String(runId),String(phase),new Date(),version,digest].concat(cells,diagnosticValues);
   var lock=LockService.getDocumentLock()||LockService.getScriptLock();
   if(!lock.tryLock(30000))throw new Error('Could not lock evidence history for append');
   try {
     var next=Math.max(2,history.getLastRow()+1);
     if(next>history.getMaxRows())history.insertRowsAfter(history.getMaxRows(),Math.max(100,next-history.getMaxRows()));
-    history.getRange(next,1,1,23).setValues([appended]);
+    history.getRange(next,1,1,28).setValues([appended]);
     SpreadsheetApp.flush();
   } finally {lock.releaseLock();}
   return next;
@@ -159,6 +162,7 @@ function bc_caseEvidenceExtract_(row){
  'For inspection, distinguish what was actually inspected from a list of possible defects; listing glue, bitumen or paint as possible contaminants does not prove they were found.',
  'For methods, distinguish work carried out from work merely considered. For results, retain only explicitly documented outcomes.',
  'If a passage mixes actual project facts with general background, extract only the project-specific claims. Do not fill categories simply to make them populated.','Do not quote verbatim. Return JSON with exactly these keys: '+JSON.stringify(labels),'Each key maps to an array of {"fact":"concise factual statement","paragraph":1}.','Use the supporting original paragraph number; [] means no documented facts.',paras.map(function(t,i){return '['+(i+1)+'] '+t;}).join('\n')].join('\n');
+ var promptFingerprint=bc_caseEvidenceDigest_(prompt);
  var api=bc_sendPromptViaOpenAI(prompt,6500,MODEL_CHEAP);
  if(!api||!api.success)throw Error('Evidence extraction API failed');
  var data=JSON.parse(String(api.text||'').trim()),cells=[],facts=[],n=0;
@@ -180,7 +184,13 @@ function bc_caseEvidenceExtract_(row){
  cells=cells.concat([JSON.stringify(pkg),JSON.stringify({links:[],status:'No inferred relationships'}),JSON.stringify(coverage),JSON.stringify({imagesAndVideos:base.media,links:base.links}),JSON.stringify({unknowns:base.unknowns}),bc_caseEvidenceStatus_(digest)]);
  cells.forEach(function(v){if(v.length>49000)throw Error('Evidence cell too long');});
  sh.getRange(row,first,1,16).setValues([cells]);
- bc_caseEvidenceArchive_(sh,row,id,'AFTER',run);
+ bc_caseEvidenceArchive_(sh,row,id,'AFTER',run,{
+  promptFingerprint:promptFingerprint,
+  model:String(api.model||MODEL_CHEAP),
+  responseId:String(api.responseId||''),
+  tokenUsage:JSON.stringify({promptTokens:Number(api.promptTokens||0),completionTokens:Number(api.completionTokens||0),finishReason:String(api.finishReason||'unknown')}),
+  responseFingerprint:bc_caseEvidenceDigest_(String(api.text||''))
+ });
  return {success:true,skipped:false,cost:Number(api.cost||0),message:'v10 extracted and archived'};
 }
 function bc_caseEvidenceActiveRow() {
