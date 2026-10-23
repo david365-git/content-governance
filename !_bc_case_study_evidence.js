@@ -226,6 +226,10 @@ function bc_caseEvidenceActiveRow() {
  * Shared read-only evidence block for W1.5 and W2B.
  * Do not trust a prior extraction unless its original HTML fingerprint matches.
  */
+function bc_caseEvidenceActiveRowMidTest() {
+  return bc_caseEvidenceExtract_(SpreadsheetApp.getActiveSpreadsheet().getActiveRange().getRow(), MODEL_MID);
+}
+
 function bc_caseEvidencePromptBlock_(row){
  var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts'),h=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
  function c(n){var i=h.indexOf(n);if(i<0)throw Error('Missing '+n);return i+1;}
