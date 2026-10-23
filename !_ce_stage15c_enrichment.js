@@ -251,12 +251,12 @@ function buildStage15CPrompt() {
 STAGE 1.5C — SECTION ENRICHMENT
 CASE STUDY SOURCE-FIRST EVIDENCE PASS — PERFORM BEFORE ANY ENRICHMENT:
 ARTICLE TYPE: ${String(d['Article Type'] || '')}
-ORIGINAL ARTICLE HTML — ONLY SOURCE OF PROJECT-SPECIFIC ACTIONS AND OBSERVATIONS:
+STRUCTURED CASE STUDY EVIDENCE — ONLY SOURCE OF PROJECT-SPECIFIC ACTIONS AND OBSERVATIONS:
 ${originalEvidenceHtml || "No original article HTML available."}
-END ORIGINAL ARTICLE HTML.
+END EVIDENCE REFERENCE.
 
 EVIDENCE EXTRACTION — SILENT FIRST PASS (DO NOT OUTPUT THE LEDGER):
-1. Read the original HTML first. Identify only explicit project-specific observations, client requests and motivations, contractor actions/tests, treatments, results and advice.
+1. Read the structured evidence record first. Identify only explicit project-specific observations, client requests and motivations, contractor actions/tests, treatments, results and advice.
 2. Create internally two separate groups: VERIFIED PROJECT FACTS supported by the original HTML, and GENERAL TECHNICAL KNOWLEDGE. Nothing may be promoted from the second group into the first.
 3. For EACH Stage 1.5A/1.5B section, identify which verified facts actually support its title. A section title, structural plan, technical matrix, entity, or common trade practice is NOT evidence.
 4. If a heading implies an inspection but the original records only a general condition assessment, describe that condition and the decision to proceed. Do not name any inspection methods or defects not explicitly recorded.
@@ -372,7 +372,7 @@ Use a visual pattern only when it genuinely improves the explanation; do not use
   prompt += `
 --- ORIGINAL ARTICLE EVIDENCE — HARD LOCK ---
 
-For a Case Study, the original article HTML below is the factual evidence source for what actually happened on this project.
+For a Case Study, the ten extracted evidence categories are the factual source for what actually happened on this project.
 
 Do not introduce a product, defect, condition, treatment, cause or outcome merely because it appears in the Recovery Blueprint.
 
@@ -393,7 +393,7 @@ A Case Study entity may be used only when it is supported by:
 - the original article evidence below; or
 - the governed Stage 1.5A / Stage 1.5B structure.
 
-ORIGINAL ARTICLE HTML: Already provided at the very start of this prompt. Use that original source, not the technical reference or a section heading, to establish project-specific events.
+EXTRACTED PROJECT EVIDENCE: Already provided at the very start of this prompt. Use that structured evidence record, not the technical reference or a section heading, to establish project-specific events.
 
 --- ENTITY SELECTION ---
 
