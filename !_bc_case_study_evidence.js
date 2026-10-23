@@ -32,7 +32,93 @@ function bc_caseEvidenceRepairQuote_(quote, sourceText) {
   }
   return null;
 }
-var BC_CASE_EVIDENCE_VERSION_ = 'v5';
+
+/**
+ * Additive evidence package: the ten existing columns keep {fact,quote}.
+ * Project claims remain source-bound; this package is not proof beyond the article.
+ */
+function bc_caseEvidenceBuildPackage_(postId, source, digest, labels, output) {
+  var plain=bc_caseEvidenceText_(source);
+  var normalized=plain.replace(/[’‘]/g,"'").replace(/[“”]/g,'"').toLowerCase();
+  var facts=[], order=0;
+  labels.forEach(function(label, categoryIndex) {
+    JSON.parse(output[categoryIndex]).forEach(function(item) {
+      var quote=String(item.quote||'');
+      var q=quote.replace(/[’‘]/g,"'").replace(/[“”]/g,'"').toLowerCase();
+      var position=normalized.indexOf(q);
+      if(position<0) throw new Error('Cannot locate evidence quote for package: '+label);
+      var fact=String(item.fact||'');
+      var status='documented_statement';
+      if(/^CLIENT REQUEST:/i.test(fact)) status='client_requested';
+      else if(/^RESTORATION OBJECTIVE:/i.test(fact)) status='restoration_objective';
+      else if(label==='Maintenance Handover') status='recommended';
+      else if(/\b(?:not found|no major|no evidence|absent|ruled out)\b/i.test(fact)) status='negative_finding';
+      else if(/\b(?:considered|possible|might|could|option)\b/i.test(fact)) status='considered_or_possible';
+      else if(/\b(?:where needed|if needed|conditional)\b/i.test(fact)) status='conditional';
+      else if(label==='Restoration Methods'||label==='Products & Equipment') status='documented_action';
+      facts.push({id:'F'+('000'+(++order)).slice(-4),category:label,fact:fact,quote:quote,
+        sourceOrder:position,status:status,scope:'As stated in quotation',
+        certainty:'Documented in source; not independently verified',relatedFactIds:[]});
+    });
+  });
+  facts.sort(function(a,b){return a.sourceOrder-b.sourceOrder;});
+  // IDs are assigned in source order so references remain understandable.
+  facts.forEach(function(f,i){f.id='F'+('000'+(i+1)).slice(-4);});
+  var media=[], links=[];
+  var figureRe=/<figure\b[^>]*>[\s\S]*?<\/figure>/gi, match, index=0;
+  while((match=figureRe.exec(source))!==null){
+    var block=match[0],img=block.match(/<img\b[^>]*>/i),iframe=block.match(/<iframe\b[^>]*>/i);
+    var tag=img?img[0]:(iframe?iframe[0]:'');
+    var src=tag.match(/\bsrc\s*=\s*["']([^"']+)["']/i);
+    var alt=tag.match(/\balt\s*=\s*["']([^"']*)["']/i);
+    var title=tag.match(/\btitle\s*=\s*["']([^"']*)["']/i);
+    var caption=block.match(/<figcaption\b[^>]*>([\s\S]*?)<\/figcaption>/i);
+    media.push({order:++index,type:iframe?'video':(img?'image':'figure'),url:src?src[1]:'',
+      alt:alt?alt[1]:'',title:title?title[1]:'',
+      originalCaption:caption?bc_caseEvidenceText_(caption[1]):'',
+      provenance:'Original article caption/alt claim; image not independently verified'});
+  }
+  var linkRe=/<a\b([^>]*)>([\s\S]*?)<\/a>/gi, lm;
+  while((lm=linkRe.exec(source))!==null){
+    var href=lm[1].match(/\bhref\s*=\s*["']([^"']+)["']/i);
+    if(href)links.push({order:links.length+1,url:href[1],anchor:bc_caseEvidenceText_(lm[2]),
+      sourcePosition:lm.index,role:'Original link, not automatically approved for reuse'});
+  }
+  var notStated=['Area dimensions','Job duration','Number of visits','Exact product brands',
+    'Measured test results','Direct client quotation','Price'];
+  var limits=[];
+  notStated.forEach(function(label) {
+    // Explicitly mark these as unverified, not necessarily absent.
+    limits.push({item:label,status:'Not established by this package; do not invent'});
+  });
+  return {version:'v6',postId:String(postId),sourceDigest:digest,
+    provenance:'Source-quoted project account; not independently verified',
+    facts:facts,media:media,links:links,
+    chronology:facts.filter(function(f){return f.category==='Restoration Methods';})
+      .map(function(f){return {factId:f.id,sourceOrder:f.sourceOrder,status:f.status};}),
+    relationships:[], // Never infer problem/action/outcome causal links from proximity.
+    unknowns:limits,
+    coverage:{status:'Review required: source sentences are not yet exhaustively reconciled',
+      extractedFactCount:facts.length,sourceQuotePositionsLocated:true}};
+}
+function bc_caseEvidenceStorePackage_(ss, packageData) {
+  var sheet=ss.getSheetByName('Case Study Evidence Package');
+  if(!sheet){
+    sheet=ss.insertSheet('Case Study Evidence Package');
+    sheet.getRange(1,1,1,3).setValues([['Post ID','Source SHA256','Evidence Package JSON']]);
+    sheet.setFrozenRows(1);
+  }
+  var last=sheet.getLastRow(),target=last+1;
+  if(last>1){
+    var ids=sheet.getRange(2,1,last-1,1).getDisplayValues();
+    for(var i=0;i<ids.length;i++)if(String(ids[i][0])===packageData.postId){target=i+2;break;}
+  }
+  var json=JSON.stringify(packageData);
+  if(json.length>49000)throw new Error('Evidence package exceeds Sheets cell capacity; originals left unchanged');
+  sheet.getRange(target,1,1,3).setValues([[packageData.postId,packageData.sourceDigest,json]]);
+}
+
+var BC_CASE_EVIDENCE_VERSION_ = 'v6';
 function bc_caseEvidenceStatus_(digest) { return 'SOURCE-QUOTED-' + BC_CASE_EVIDENCE_VERSION_ + ' | sha256:' + digest; }
 function bc_caseEvidenceExtract_(row) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
@@ -152,6 +238,7 @@ function bc_caseEvidenceExtract_(row) {
     '(3) its certainty and attribution have not been strengthened, and (4) it concerns this job rather than general advice.',
     'Drop unsupported, generic geographical padding and misleading inferred client requirements.',
     'Keep negative findings and distinct material job details. Separate considered conditions from confirmed discoveries.',
+    'COVERAGE REVIEW: Compare every material passage in the source against the candidate evidence. Restore any omitted distinct project observation, negative finding, decision, completed operation, limitation or result with an exact quote; remove only duplicate statements, generic advice or SEO filler. Do not invent connective facts.',
     'Do not remove unique documented completed steps while deduplicating broader method summaries: preserve old sealer stripping separately from cleaning and applying new sealer.',
     'Retain documented repair options considered (such as replacement-tile matching), clearly as considerations rather than completed repairs.',
     'In Client Requirements & Restoration Objectives, prefix each supported fact with CLIENT REQUEST: when explicitly attributed to the client, or RESTORATION OBJECTIVE: when a documented professional aim. Never infer client speech, wishes or an undocumented objective.',
@@ -201,6 +288,8 @@ function bc_caseEvidenceExtract_(row) {
   output=validatedOutput;
   // Fail closed: no partial evidence is written on model error or quote mismatch.
   for (var j=0;j<labels.length;j++) col(labels[j]);
+  var packageData=bc_caseEvidenceBuildPackage_(postId,source,digest,labels,output);
+  bc_caseEvidenceStorePackage_(SpreadsheetApp.getActiveSpreadsheet(),packageData);
   sh.getRange(row, col(labels[0]), 1, labels.length).setValues([output]);
   statusCell.setValue(bc_caseEvidenceStatus_(digest));
   return {success:true, skipped:false, cost:totalCost, message:'Evidence quotations checked and categories independently reviewed against source'};
