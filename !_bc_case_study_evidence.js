@@ -137,7 +137,7 @@ function bc_caseEvidenceSnapshotActiveRow() {
 
 var BC_CASE_EVIDENCE_VERSION_ = 'v10';
 function bc_caseEvidenceStatus_(digest) { return 'SOURCE-QUOTED-' + BC_CASE_EVIDENCE_VERSION_ + ' | sha256:' + digest; }
-function bc_caseEvidenceExtract_(row){
+function bc_caseEvidenceExtract_(row,modelOverride){
  var ss=SpreadsheetApp.getActiveSpreadsheet(),sh=ss.getSheetByName('posts');
  row=Number(row);if(row<2)throw Error('Invalid posts row');
  var h=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
@@ -180,7 +180,8 @@ function bc_caseEvidenceExtract_(row){
  'Do not include quotations or commentary. An empty array is valid when no project facts exist.',
  paras.map(function(t,i){return '['+(i+1)+'] '+t;}).join('\n')].join('\n');
  var promptFingerprint=bc_caseEvidenceDigest_(prompt);
- var api=bc_sendPromptViaOpenAI(prompt,6500,MODEL_CHEAP);
+ var chosenModel=modelOverride||MODEL_CHEAP;
+ var api=bc_sendPromptViaOpenAI(prompt,6500,chosenModel);
  if(!api||!api.success)throw Error('Evidence extraction API failed');
  if(api.truncated||api.finishReason==='length')throw Error('Evidence extraction response truncated; existing evidence preserved');
  var data=JSON.parse(String(api.text||'').trim()),cells=[],facts=[],n=0;
@@ -210,7 +211,7 @@ function bc_caseEvidenceExtract_(row){
  sh.getRange(row,first,1,16).setValues([cells]);
  bc_caseEvidenceArchive_(sh,row,id,'AFTER',run,{
   promptFingerprint:promptFingerprint,
-  model:String(api.model||MODEL_CHEAP),
+  model:String(api.model||chosenModel),
   responseId:String(api.responseId||''),
   tokenUsage:JSON.stringify({promptTokens:Number(api.promptTokens||0),completionTokens:Number(api.completionTokens||0),finishReason:String(api.finishReason||'unknown')}),
   responseFingerprint:bc_caseEvidenceDigest_(String(api.text||''))
