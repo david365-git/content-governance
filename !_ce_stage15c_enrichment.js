@@ -246,7 +246,7 @@ function buildStage15CPrompt() {
         "\n";
     }
   }
-  const originalEvidenceHtml = String(originalHtml || '').replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1');
+  const originalEvidenceHtml = String(d['Article Type'] || '').trim() === 'Case Study' ? bc_caseEvidencePromptBlock_(row) : originalHtml;
   let prompt = `
 STAGE 1.5C — SECTION ENRICHMENT
 CASE STUDY SOURCE-FIRST EVIDENCE PASS — PERFORM BEFORE ANY ENRICHMENT:
