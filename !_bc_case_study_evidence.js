@@ -91,7 +91,7 @@ function bc_caseEvidenceBuildPackage_(postId, source, digest, labels, output) {
     // Explicitly mark these as unverified, not necessarily absent.
     limits.push({item:label,status:'Not established by this package; do not invent'});
   });
-  return {version:'v7',postId:String(postId),sourceDigest:digest,
+  return {version:'v8',postId:String(postId),sourceDigest:digest,
     provenance:'Source-quoted project account; not independently verified',
     facts:facts,media:media,links:links,
     chronology:facts.filter(function(f){return f.category==='Restoration Methods';})
@@ -114,14 +114,78 @@ function bc_caseEvidenceExtraColumns_(packageData, source) {
       status:matching.length?'Contains extracted quotation':'Needs manual classification'};
   });
   var uncovered=checked.filter(function(p){return !p.factIds.length;});
-  var coverage={state:uncovered.length?'REVIEW REQUIRED':'QUOTATION MAPPING ONLY — REVIEW REQUIRED',
-    mappedParagraphs:checked.length-uncovered.length,totalParagraphs:checked.length,
-    notes:'Quotation mapping is not semantic coverage. Unmatched passages may be generic advice, duplicates, or missing facts.',
+  // Separate review of *unmatched* passages and source-supported relationships.
+  // Missing or invalid review is recorded as unresolved, never silently passed.
+  var relationships={status:'REVIEW REQUIRED',links:[]}, decisions={}, reviewCost=0;
+  var factBrief=packageData.facts.map(function(f){
+    return {id:f.id,category:f.category,fact:f.fact,quote:f.quote};
+  });
+  var auditPrompt=[
+    'Audit a source-quoted floor-restoration case study evidence package.',
+    'For EACH unmatched passage below classify as one of:',
+    'PROJECT_FACT_MISSING, GENERAL_ADVICE, SEO_OR_HEADING, DUPLICATE, MEDIA_CAPTION, UNCERTAIN.',
+    'Only GENERAL_ADVICE, SEO_OR_HEADING, DUPLICATE, MEDIA_CAPTION may be excluded.',
+    'If the passage contains substantive job details absent from FACTS, choose PROJECT_FACT_MISSING.',
+    'If uncertain choose UNCERTAIN. Do not invent source details.',
+    'Identify only causal/decision relationships directly expressed in quoted original article wording.',
+    'Relationship fromId and toId MUST be existing fact IDs; provide exact short contiguous sourceQuote which explicitly supports their connection.',
+    'Do not connect facts merely because they are close or their order suggests cause.',
+    'Return JSON only: {"classifications":[{"paragraph":number,"classification":"ENUM","reason":"brief"}],',
+    '"relationships":[{"fromId":"F0001","toId":"F0002","type":"reason_for|led_to|limited|resulted_in","sourceQuote":"exact original quote"}]}.',
+    'EXTRACTED FACTS:'+JSON.stringify(factBrief),
+    'UNMATCHED PASSAGES:'+JSON.stringify(uncovered.map(function(p){return {paragraph:p.paragraph,text:paragraphs[p.paragraph-1]};})),
+    'ORIGINAL ARTICLE TEXT:'+bc_caseEvidenceText_(source)
+  ].join('\n');
+  var audit=bc_sendPromptViaOpenAI(auditPrompt,5000,MODEL_CHEAP);
+  if(!audit||!audit.success)throw new Error('Evidence coverage/relationship audit failed: '+(audit&&audit.message||'unknown'));
+  reviewCost+=Number(audit.cost||0);
+  var auditData;
+  try {
+    var raw=String(audit.text||'').trim().replace(/^\x60\x60\x60(?:json)?\s*/i,'').replace(/\s*\x60\x60\x60$/,'');
+    auditData=JSON.parse(raw);
+    if(!Array.isArray(auditData.classifications)||!Array.isArray(auditData.relationships))
+      throw new Error('Missing classifications or relationships arrays');
+  } catch(e){throw new Error('Invalid evidence coverage/relationship audit JSON: '+e.message);}
+  var allowed=['PROJECT_FACT_MISSING','GENERAL_ADVICE','SEO_OR_HEADING','DUPLICATE','MEDIA_CAPTION','UNCERTAIN'];
+  (auditData.classifications||[]).forEach(function(c){
+    var n=Number(c.paragraph),classification=String(c.classification||'');
+    if(!uncovered.some(function(p){return p.paragraph===n;})||allowed.indexOf(classification)<0)
+      throw new Error('Invalid evidence paragraph classification '+n+' '+classification);
+    if(decisions[n])throw new Error('Duplicate coverage classification '+n);
+    decisions[n]={classification:classification,reason:String(c.reason||'').slice(0,300)};
+  });
+  var ids={}; packageData.facts.forEach(function(f){ids[f.id]=true;});
+  var normalizedSource=bc_caseEvidenceText_(source);
+  auditData.relationships.forEach(function(link){
+    if(!ids[link.fromId]||!ids[link.toId]||link.fromId===link.toId)
+      throw new Error('Relationship references invalid fact IDs');
+    if(['reason_for','led_to','limited','resulted_in'].indexOf(String(link.type))<0)
+      throw new Error('Invalid relationship type');
+    var quote=bc_caseEvidenceRepairQuote_(link.sourceQuote,normalizedSource);
+    if(!quote)throw new Error('Relationship quote not found in source');
+    relationships.links.push({fromId:link.fromId,toId:link.toId,type:link.type,
+      sourceQuote:quote,verification:'Source quotation found; semantic connection requires independent review'});
+  });
+  relationships.status=relationships.links.length?
+    'Proposed source-quoted relationships; review causal meaning':'No directly supported relationships identified';
+  checked.forEach(function(p){
+    if(p.factIds.length){p.status='EXTRACTED';return;}
+    var d=decisions[p.paragraph];
+    p.classification=d?d.classification:'UNCERTAIN';
+    p.reason=d?d.reason:'Audit did not classify this passage';
+    p.status=(d&&['GENERAL_ADVICE','SEO_OR_HEADING','DUPLICATE','MEDIA_CAPTION'].indexOf(d.classification)>=0)?
+      'EXCLUDED WITH REASON':'REVIEW REQUIRED';
+  });
+  var unresolved=checked.filter(function(p){return p.status==='REVIEW REQUIRED';});
+  var coverage={state:unresolved.length?'REVIEW REQUIRED':'CLASSIFIED — RELATIONSHIP AND FACT REVIEW STILL ADVISED',
+    mappedParagraphs:checked.filter(function(p){return p.status==='EXTRACTED';}).length,
+    excludedParagraphs:checked.filter(function(p){return p.status==='EXCLUDED WITH REASON';}).length,
+    unresolvedParagraphs:unresolved.length,totalParagraphs:checked.length,
+    notes:'Source paragraph classification is AI-reviewed, not independent factual verification. Missing facts require extraction correction.',
     ledger:checked};
   var gap={unknowns:packageData.unknowns,
-    unresolvedSourcePassages:uncovered.map(function(p){return {paragraph:p.paragraph,preview:p.preview};}),
+    unresolvedSourcePassages:unresolved.map(function(p){return {paragraph:p.paragraph,preview:p.preview,classification:p.classification,reason:p.reason};}),
     contradictions:[],status:'No independent contradiction audit performed'};
-  var relationships={status:'Not established — do not infer links from proximity',links:[]};
   // Main package stores factual records; companion columns own the other datasets.
   var core={version:packageData.version,postId:packageData.postId,
     sourceDigest:packageData.sourceDigest,provenance:packageData.provenance,
@@ -130,10 +194,10 @@ function bc_caseEvidenceExtraColumns_(packageData, source) {
     note:'Source captions and alt text are claims, not independent image verification'};
   var parts=[core,relationships,coverage,media,gap].map(function(o){return JSON.stringify(o);});
   parts.forEach(function(v,i){if(v.length>49000)throw new Error('Evidence column '+(i+1)+' exceeds safe 49000-character limit; no evidence written');});
-  return parts;
+  return {parts:parts,cost:reviewCost};
 }
 
-var BC_CASE_EVIDENCE_VERSION_ = 'v7';
+var BC_CASE_EVIDENCE_VERSION_ = 'v8';
 function bc_caseEvidenceStatus_(digest) { return 'SOURCE-QUOTED-' + BC_CASE_EVIDENCE_VERSION_ + ' | sha256:' + digest; }
 function bc_caseEvidenceExtract_(row) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
@@ -311,7 +375,9 @@ function bc_caseEvidenceExtract_(row) {
   });
   if(col('Evidence Status')!==col(extraLabels[extraLabels.length-1])+1)
     throw new Error('Evidence Status must immediately follow Evidence Gaps & Uncertainties');
-  var extras=bc_caseEvidenceExtraColumns_(packageData,source);
+  var checkedExtras=bc_caseEvidenceExtraColumns_(packageData,source);
+  totalCost+=checkedExtras.cost;
+  var extras=checkedExtras.parts;
   // One rectangular write: ten legacy fields, five supporting fields and status (HA).
   sh.getRange(row,col(labels[0]),1,16).setValues([output.concat(extras,[bc_caseEvidenceStatus_(digest)])]);
   return {success:true, skipped:false, cost:totalCost, message:'Evidence quotations checked and categories independently reviewed against source'};
