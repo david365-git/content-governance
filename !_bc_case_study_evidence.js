@@ -312,6 +312,56 @@ function bc_caseEvidenceExtraColumns_(packageData, source, labels, prior) {
   return {parts:parts,cost:reviewCost};
 }
 
+/**
+ * Append-only run history in the existing "Case Study Evidence Package" tab.
+ * A:P mirror posts' 16 evidence columns. Q:W identify the run and snapshot.
+ * Never overwrite a prior history row; fail closed if the archive is unavailable.
+ */
+function bc_caseEvidenceArchive_(sh,row,postId,phase,runId) {
+  var ss=SpreadsheetApp.getActiveSpreadsheet();
+  var history=ss.getSheetByName('Case Study Evidence Package');
+  if(!history)throw new Error('Case Study Evidence Package history sheet missing; source evidence not overwritten');
+  var expected=['Project Location & Property','Observed Conditions','Client Requirements & Restoration Objectives',
+    'Materials & Construction','Inspection & Tests','Restoration Methods','Products & Equipment',
+    'Technical Findings','Project Results','Maintenance Handover','Case Study Evidence Package',
+    'Evidence Relationships','Evidence Coverage','Evidence Media & Links','Evidence Gaps & Uncertainties',
+    'Evidence Status','Post ID','Posts Row','Run ID','Snapshot Type','Snapshot Time','Evidence Version','Source Digest'];
+  var existing=history.getRange(1,1,1,23).getDisplayValues()[0];
+  expected.forEach(function(h,i){if(existing[i]!==h)throw new Error('Archive header mismatch at '+(i+1)+': '+h);});
+  var heads=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
+  var first=heads.indexOf(expected[0])+1;
+  if(first<1||expected.slice(0,16).some(function(h,i){return heads[first-1+i]!==h;}))
+    throw new Error('Evidence columns not contiguous in posts; archive aborted');
+  var cells=sh.getRange(row,first,1,16).getValues()[0].map(function(v){return String(v==null?'':v);});
+  var status=cells[15], match=status.match(/SOURCE-QUOTED-(v\d+)\s*\|\s*sha256:([a-f0-9]+)/i);
+  var version=match?match[1]:(status?'legacy/unknown':'none');
+  var digest=match?match[2]:'';
+  var appended=cells.concat([String(postId),row,String(runId),String(phase),new Date(),version,digest]);
+  var lock=LockService.getDocumentLock()||LockService.getScriptLock();
+  if(!lock.tryLock(30000))throw new Error('Could not lock evidence history for append');
+  try {
+    var next=Math.max(2,history.getLastRow()+1);
+    if(next>history.getMaxRows())history.insertRowsAfter(history.getMaxRows(),Math.max(100,next-history.getMaxRows()));
+    history.getRange(next,1,1,23).setValues([appended]);
+    SpreadsheetApp.flush();
+  } finally {lock.releaseLock();}
+  return next;
+}
+/** Manually preserve a current row (including v9) without rerunning the AI. */
+function bc_caseEvidenceSnapshotActiveRow() {
+  var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
+  if(!sh)throw new Error('posts sheet missing');
+  var row=SpreadsheetApp.getActiveRange().getRow();
+  if(row<2)throw new Error('Select a posts data row');
+  var h=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
+  var idcol=h.indexOf('Post ID')+1;
+  if(!idcol)throw new Error('Post ID column missing');
+  var id=String(sh.getRange(row,idcol).getDisplayValue()).trim();
+  if(!id)throw new Error('Post ID missing');
+  var runId='MANUAL-'+Utilities.getUuid();
+  return bc_caseEvidenceArchive_(sh,row,id,'MANUAL SNAPSHOT',runId);
+}
+
 var BC_CASE_EVIDENCE_VERSION_ = 'v9';
 function bc_caseEvidenceStatus_(digest) { return 'SOURCE-QUOTED-' + BC_CASE_EVIDENCE_VERSION_ + ' | sha256:' + digest; }
 function bc_caseEvidenceExtract_(row) {
@@ -346,7 +396,7 @@ function bc_caseEvidenceExtract_(row) {
   var statusCell = sh.getRange(row, col('Evidence Status'));
   var oldStatus = String(statusCell.getValue() || '');
   if (oldStatus === bc_caseEvidenceStatus_(digest)) {
-    return {success:true, skipped:true, cost:0, message:'Source-quoted evidence unchanged'};
+    return {success:true, skipped:true, cost:0, message:'Source-quoted evidence unchanged; use bc_caseEvidenceSnapshotActiveRow to archive current results'};
   }
   var labels = ['Project Location & Property','Observed Conditions','Client Requirements & Restoration Objectives',
     'Materials & Construction','Inspection & Tests','Restoration Methods',
@@ -499,9 +549,13 @@ function bc_caseEvidenceExtract_(row) {
   var checkedExtras=bc_caseEvidenceExtraColumns_(packageData,source,labels,priorFacts);
   totalCost+=checkedExtras.cost;
   var extras=checkedExtras.parts;
-  // One rectangular write: ten legacy fields, five supporting fields and status (HA).
+  // Archive current evidence BEFORE replacing it, then preserve the finished run.
+  // A failed pre-run archive aborts without overwriting the previous evidence.
+  var runId=Utilities.getUuid();
+  bc_caseEvidenceArchive_(sh,row,postId,'BEFORE',runId);
   sh.getRange(row,col(labels[0]),1,16).setValues([output.concat(extras,[bc_caseEvidenceStatus_(digest)])]);
-  return {success:true, skipped:false, cost:totalCost, message:'Evidence quotations checked and categories independently reviewed against source'};
+  bc_caseEvidenceArchive_(sh,row,postId,'AFTER',runId);
+  return {success:true, skipped:false, cost:totalCost, message:'Evidence checked; BEFORE and AFTER archived under run '+runId};
 }
 function bc_caseEvidenceActiveRow() {
   return bc_caseEvidenceExtract_(SpreadsheetApp.getActiveSpreadsheet().getActiveRange().getRow());
