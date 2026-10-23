@@ -91,7 +91,7 @@ function bc_caseEvidenceBuildPackage_(postId, source, digest, labels, output) {
     // Explicitly mark these as unverified, not necessarily absent.
     limits.push({item:label,status:'Not established by this package; do not invent'});
   });
-  return {version:'v8',postId:String(postId),sourceDigest:digest,
+  return {version:'v9',postId:String(postId),sourceDigest:digest,
     provenance:'Source-quoted project account; not independently verified',
     facts:facts,media:media,links:links,
     chronology:facts.filter(function(f){return f.category==='Restoration Methods';})
@@ -101,7 +101,7 @@ function bc_caseEvidenceBuildPackage_(postId, source, digest, labels, output) {
     coverage:{status:'Review required: source sentences are not yet exhaustively reconciled',
       extractedFactCount:facts.length,sourceQuotePositionsLocated:true}};
 }
-function bc_caseEvidenceExtraColumns_(packageData, source) {
+function bc_caseEvidenceExtraColumns_(packageData, source, labels, prior) {
   var paragraphs=String(source||'').replace(/<\/(?:p|h[1-6]|li|blockquote)>/gi,'\n')
     .replace(/<[^>]+>/g,' ').split(/\n+/).map(function(p){return bc_caseEvidenceText_(p);})
     .filter(function(p){return p.length>=50;});
@@ -154,9 +154,104 @@ function bc_caseEvidenceExtraColumns_(packageData, source) {
     if(decisions[n])throw new Error('Duplicate coverage classification '+n);
     decisions[n]={classification:classification,reason:String(c.reason||'').slice(0,300)};
   });
+
+  // Repair missing project evidence, but never convert general explanation into
+  // a performed project activity or site finding. Any uncertain material remains flagged.
+  var missing=uncovered.filter(function(p){
+    return decisions[p.paragraph]&&decisions[p.paragraph].classification==='PROJECT_FACT_MISSING';
+  });
+  var corrections=[], repairReview='No missing project facts proposed';
+  if(missing.length){
+    var repairPrompt=[
+      'Check the following purported missing facts against the exact original article.',
+      'Distinguish documented project observations/actions/results from generic restoration theory.',
+      'Return JSON only: {"additions":[{"paragraph":number,"category":"exact category name","fact":"plain UK English factual statement","quote":"exact contiguous source quotation"}],"notProjectFacts":[{"paragraph":number,"reason":"why this is generic theory, duplicated or unsupported"}]}.',
+      'Use only these ten categories: '+JSON.stringify(labels),
+      'Only add DISTINCT project-specific evidence not already in EXISTING FACTS. Do not upgrade guesses, conditional work, client speech, or future options.',
+      'For generic explanation, put paragraph in notProjectFacts. If unsure, leave the paragraph unresolved.',
+      'CANDIDATES:'+JSON.stringify(missing.map(function(p){return {paragraph:p.paragraph,text:paragraphs[p.paragraph-1]};})),
+      'EXISTING FACTS:'+JSON.stringify(packageData.facts.map(function(f){return {category:f.category,fact:f.fact,quote:f.quote};})),
+      'ORIGINAL ARTICLE:'+bc_caseEvidenceText_(source)
+    ].join('\n');
+    var repairApi=bc_sendPromptViaOpenAI(repairPrompt,2500,MODEL_CHEAP);
+    if(!repairApi||!repairApi.success)throw new Error('Evidence gap repair failed: '+(repairApi&&repairApi.message||'unknown'));
+    reviewCost+=Number(repairApi.cost||0);
+    var repaired;
+    try {
+      repaired=JSON.parse(String(repairApi.text||'').trim().replace(/^\x60\x60\x60(?:json)?\s*/i,'').replace(/\s*\x60\x60\x60$/,''));
+      if(!Array.isArray(repaired.additions)||!Array.isArray(repaired.notProjectFacts))throw new Error('Missing repair arrays');
+    }catch(e){throw new Error('Invalid missing-fact repair JSON: '+e.message);}
+    var missingIds={};missing.forEach(function(p){missingIds[p.paragraph]=true;});
+    repaired.notProjectFacts.forEach(function(item){
+      if(!missingIds[Number(item.paragraph)])throw new Error('Invalid repair exclusion reference');
+      decisions[Number(item.paragraph)]={classification:'GENERAL_ADVICE',reason:'Repair review: '+String(item.reason||'').slice(0,250)};
+    });
+    repaired.additions.forEach(function(item){
+      var number=Number(item.paragraph), category=String(item.category||'');
+      if(!missingIds[number]||labels.indexOf(category)<0)throw new Error('Invalid missing-fact addition category/paragraph');
+      var fact=String(item.fact||'').trim();
+      var quote=bc_caseEvidenceRepairQuote_(item.quote,bc_caseEvidenceText_(source));
+      if(!fact||!quote)throw new Error('Unverifiable missing-fact addition');
+      if(packageData.facts.some(function(f){return f.fact.toLowerCase()===fact.toLowerCase()||f.quote.toLowerCase()===quote.toLowerCase();}))
+        return;
+      corrections.push({category:category,fact:fact,quote:quote,paragraph:number});
+    });
+    repairReview='Proposed '+corrections.length+' additional evidence facts for independent validation';
+  }
+  // Independently verify every proposed addition and every proposed relationship
+  // before accepting them into the evidence record.
+  var proposals=auditData.relationships.map(function(link){return link;});
+  var gatePrompt=[
+    'Independently review source evidence. Return JSON only:',
+    '{"acceptedAdditions":[number indexes],"acceptedRelationships":[number indexes]}.',
+    'Accept an addition only if the quote supports ALL of the fact, including this job, location, status, scope and certainty; reject general theory and duplicated findings.',
+    'Accept a relationship only where the quoted wording explicitly supports that exact connection between both referenced facts, not simply proximity.',
+    'Be conservative. Return zero accepted indexes when unsupported.',
+    'ADDitions (zero-based indexes):'+JSON.stringify(corrections),
+    'RELATIONSHIPS (zero-based indexes):'+JSON.stringify(proposals),
+    'EXISTING FACTS:'+JSON.stringify(packageData.facts.map(function(f){return {id:f.id,fact:f.fact,quote:f.quote};})),
+    'ORIGINAL:'+bc_caseEvidenceText_(source)
+  ].join('\n');
+  var gateApi=bc_sendPromptViaOpenAI(gatePrompt,1800,MODEL_CHEAP);
+  if(!gateApi||!gateApi.success)throw new Error('Independent repair and relationship verification failed');
+  reviewCost+=Number(gateApi.cost||0);
+  var gate;
+  try {
+    gate=JSON.parse(String(gateApi.text||'').trim().replace(/^\x60\x60\x60(?:json)?\s*/i,'').replace(/\s*\x60\x60\x60$/,''));
+    if(!Array.isArray(gate.acceptedAdditions)||!Array.isArray(gate.acceptedRelationships))throw new Error('Missing accepted index arrays');
+  }catch(e){throw new Error('Invalid independent evidence verification: '+e.message);}
+  function acceptedIndexes(values,max) {
+    var result={};
+    values.forEach(function(n){if(!Number.isInteger(n)||n<0||n>=max)throw new Error('Invalid verification index '+n);result[n]=true;});
+    return result;
+  }
+  var acceptedAdd=acceptedIndexes(gate.acceptedAdditions,corrections.length);
+  var acceptedRel=acceptedIndexes(gate.acceptedRelationships,proposals.length);
+  // Add accepted facts, rebuild source-ordered IDs and retain both old and new fact references.
+  var acceptedFacts=corrections.filter(function(c,i){return acceptedAdd[i];});
+  if(acceptedFacts.length){
+    acceptedFacts.forEach(function(c){packageData.facts.push({category:c.category,fact:c.fact,quote:c.quote,
+      sourceOrder:bc_caseEvidenceText_(source).toLowerCase().indexOf(c.quote.toLowerCase()),
+      status:'source_documented',scope:'As stated in quotation',
+      certainty:'Documented in source; not independently verified',relatedFactIds:[]});});
+    packageData.facts.sort(function(a,b){return a.sourceOrder-b.sourceOrder;});
+    var remap={};
+    packageData.facts.forEach(function(f,i){if(f.id)remap[f.id]='F'+('000'+(i+1)).slice(-4);});
+    packageData.facts.forEach(function(f,i){f.id='F'+('000'+(i+1)).slice(-4);});
+    proposals.forEach(function(link){link.fromId=remap[link.fromId]||link.fromId;link.toId=remap[link.toId]||link.toId;});
+    checked.forEach(function(p){p.factIds=p.factIds.map(function(id){return remap[id]||id;});});
+    acceptedFacts.forEach(function(c){
+      var p=checked.filter(function(x){return x.paragraph===c.paragraph;})[0];
+      if(p){var f=packageData.facts.filter(function(x){return x.fact===c.fact&&x.quote===c.quote;})[0];if(f)p.factIds.push(f.id);}
+    });
+    packageData.chronology=packageData.facts.filter(function(f){return f.category==='Restoration Methods';})
+      .map(function(f){return {factId:f.id,sourceOrder:f.sourceOrder,status:f.status};});
+  }
   var ids={}; packageData.facts.forEach(function(f){ids[f.id]=true;});
+
   var normalizedSource=bc_caseEvidenceText_(source);
-  auditData.relationships.forEach(function(link){
+  proposals.forEach(function(link,index){
+    if(!acceptedRel[index])return;
     if(!ids[link.fromId]||!ids[link.toId]||link.fromId===link.toId)
       throw new Error('Relationship references invalid fact IDs');
     if(['reason_for','led_to','limited','resulted_in'].indexOf(String(link.type))<0)
@@ -183,7 +278,16 @@ function bc_caseEvidenceExtraColumns_(packageData, source) {
     unresolvedParagraphs:unresolved.length,totalParagraphs:checked.length,
     notes:'Source paragraph classification is AI-reviewed, not independent factual verification. Missing facts require extraction correction.',
     ledger:checked};
+  // Compare earlier extraction after verification, never silently discard its material facts.
+  var dropped=[];
+  (prior||[]).forEach(function(old){
+    if(!packageData.facts.some(function(f){return f.quote.toLowerCase()===String(old.quote||'').toLowerCase()||f.fact.toLowerCase()===String(old.fact||'').toLowerCase();}))
+      dropped.push({category:old.category,fact:old.fact,quote:old.quote,status:'Requires review — possibly omitted, paraphrased, merged or previously unsupported'});
+  });
+  if(dropped.length){coverage.state='REVIEW REQUIRED — PREVIOUS EVIDENCE CHANGED';coverage.previousEvidenceChanges=dropped;}
+
   var gap={unknowns:packageData.unknowns,
+    repairReview:repairReview,acceptedMissingFacts:acceptedFacts.length,
     unresolvedSourcePassages:unresolved.map(function(p){return {paragraph:p.paragraph,preview:p.preview,classification:p.classification,reason:p.reason};}),
     contradictions:[],status:'No independent contradiction audit performed'};
   // Main package stores factual records; companion columns own the other datasets.
@@ -192,12 +296,13 @@ function bc_caseEvidenceExtraColumns_(packageData, source) {
     facts:packageData.facts,chronology:packageData.chronology};
   var media={imagesAndVideos:packageData.media,links:packageData.links,
     note:'Source captions and alt text are claims, not independent image verification'};
+  gap.previousEvidenceChanges=dropped;
   var parts=[core,relationships,coverage,media,gap].map(function(o){return JSON.stringify(o);});
   parts.forEach(function(v,i){if(v.length>49000)throw new Error('Evidence column '+(i+1)+' exceeds safe 49000-character limit; no evidence written');});
   return {parts:parts,cost:reviewCost};
 }
 
-var BC_CASE_EVIDENCE_VERSION_ = 'v8';
+var BC_CASE_EVIDENCE_VERSION_ = 'v9';
 function bc_caseEvidenceStatus_(digest) { return 'SOURCE-QUOTED-' + BC_CASE_EVIDENCE_VERSION_ + ' | sha256:' + digest; }
 function bc_caseEvidenceExtract_(row) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
@@ -375,7 +480,13 @@ function bc_caseEvidenceExtract_(row) {
   });
   if(col('Evidence Status')!==col(extraLabels[extraLabels.length-1])+1)
     throw new Error('Evidence Status must immediately follow Evidence Gaps & Uncertainties');
-  var checkedExtras=bc_caseEvidenceExtraColumns_(packageData,source);
+  var priorFacts=[];
+  try {
+    var priorRaw=String(sh.getRange(row,col('Case Study Evidence Package')).getValue()||'');
+    var priorObj=priorRaw?JSON.parse(priorRaw):null;
+    if(priorObj&&String(priorObj.postId)===postId&&Array.isArray(priorObj.facts))priorFacts=priorObj.facts;
+  }catch(ignorePrior) { throw new Error('Cannot read previous evidence package safely: '+ignorePrior.message); }
+  var checkedExtras=bc_caseEvidenceExtraColumns_(packageData,source,labels,priorFacts);
   totalCost+=checkedExtras.cost;
   var extras=checkedExtras.parts;
   // One rectangular write: ten legacy fields, five supporting fields and status (HA).
