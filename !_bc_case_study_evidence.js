@@ -314,7 +314,7 @@ function bc_caseEvidenceExtraColumns_(packageData, source, labels, prior) {
 
 /**
  * Append-only run history in the existing "Case Study Evidence Package" tab.
- * A:P mirror posts' 16 evidence columns. Q:W identify the run and snapshot.
+ * A:G identify the run and snapshot. H:W mirror posts' 16 evidence columns.
  * Never overwrite a prior history row; fail closed if the archive is unavailable.
  */
 function bc_caseEvidenceArchive_(sh,row,postId,phase,runId) {
@@ -326,8 +326,9 @@ function bc_caseEvidenceArchive_(sh,row,postId,phase,runId) {
     'Technical Findings','Project Results','Maintenance Handover','Case Study Evidence Package',
     'Evidence Relationships','Evidence Coverage','Evidence Media & Links','Evidence Gaps & Uncertainties',
     'Evidence Status','Post ID','Posts Row','Run ID','Snapshot Type','Snapshot Time','Evidence Version','Source Digest'];
+  var historyHeadings=['Post ID','Posts Row','Run ID','Snapshot Type','Snapshot Time','Evidence Version','Source Digest'].concat(expected.slice(0,16));
   var existing=history.getRange(1,1,1,23).getDisplayValues()[0];
-  expected.forEach(function(h,i){if(existing[i]!==h)throw new Error('Archive header mismatch at '+(i+1)+': '+h);});
+  historyHeadings.forEach(function(h,i){if(existing[i]!==h)throw new Error('Archive header mismatch at '+(i+1)+': '+h);});
   var heads=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
   var first=heads.indexOf(expected[0])+1;
   if(first<1||expected.slice(0,16).some(function(h,i){return heads[first-1+i]!==h;}))
@@ -336,7 +337,7 @@ function bc_caseEvidenceArchive_(sh,row,postId,phase,runId) {
   var status=cells[15], match=status.match(/SOURCE-QUOTED-(v\d+)\s*\|\s*sha256:([a-f0-9]+)/i);
   var version=match?match[1]:(status?'legacy/unknown':'none');
   var digest=match?match[2]:'';
-  var appended=cells.concat([String(postId),row,String(runId),String(phase),new Date(),version,digest]);
+  var appended=[String(postId),row,String(runId),String(phase),new Date(),version,digest].concat(cells);
   var lock=LockService.getDocumentLock()||LockService.getScriptLock();
   if(!lock.tryLock(30000))throw new Error('Could not lock evidence history for append');
   try {
