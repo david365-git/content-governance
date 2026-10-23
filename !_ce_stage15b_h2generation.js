@@ -499,7 +499,7 @@ Do NOT broaden grout-only evidence into tile-and-grout sealing.
 
 STRUCTURED CASE STUDY EVIDENCE:
 ${articleType === "Case Study"
-  ? (originalHtml || "No original article HTML available.")
+  ? bc_caseEvidencePromptBlock_(row)
   : "Not Applicable — this is not a Case Study."}
 
 Before passing TEST 4 for a Case Study heading about treatment scope, compare the heading directly against this evidence.
@@ -2098,7 +2098,7 @@ H2 STORY FRAMEWORK RULES:
 ${articleAngleBlock}
 ${isCaseStudy ? `
 --- STRUCTURED CASE STUDY EVIDENCE — HARD LOCK ---
-For a Case Study, the original article HTML below is the factual authority for what actually happened on the project.
+For a Case Study, the structured evidence record below is the factual authority for what actually happened on the project.
 Heading wording must preserve the scope of the recorded work.
 Do NOT narrow, broaden, contradict or reinterpret a treatment merely to make a heading shorter or more technically cautious.
 Words such as "only", "solely", "just" or "exclusively" may be used only when the original article evidence explicitly supports that restriction.
@@ -2110,7 +2110,7 @@ If the source says sealer was applied to the floor, including the grout joints, 
 If the source says grout only was sealed, preserve grout-only.
 
 STRUCTURED CASE STUDY HTML:
-${originalHtml || "No original article HTML available."}
+${bc_caseEvidencePromptBlock_(row)}
 --- END ORIGINAL ARTICLE EVIDENCE ---
 ` : ""}
 --- PRIMARY THEMATIC GOVERNANCE ---
