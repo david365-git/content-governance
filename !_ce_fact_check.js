@@ -78,7 +78,7 @@ function buildFactCheckPrompt(sourceColumn) {
   const caseStudyEvidenceFields = [
     "Project Location & Property",
     "Observed Conditions",
-    "Client Requirements",
+    "Client Requirements & Restoration Objectives",
     "Materials & Construction",
     "Inspection & Tests",
     "Restoration Methods",
