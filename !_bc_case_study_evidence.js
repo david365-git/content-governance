@@ -32,7 +32,7 @@ function bc_caseEvidenceRepairQuote_(quote, sourceText) {
   }
   return null;
 }
-var BC_CASE_EVIDENCE_VERSION_ = 'v4';
+var BC_CASE_EVIDENCE_VERSION_ = 'v5';
 function bc_caseEvidenceStatus_(digest) { return 'SOURCE-QUOTED-' + BC_CASE_EVIDENCE_VERSION_ + ' | sha256:' + digest; }
 function bc_caseEvidenceExtract_(row) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
@@ -68,7 +68,7 @@ function bc_caseEvidenceExtract_(row) {
   if (oldStatus === bc_caseEvidenceStatus_(digest)) {
     return {success:true, skipped:true, cost:0, message:'Source-quoted evidence unchanged'};
   }
-  var labels = ['Project Location & Property','Observed Conditions','Client Requirements',
+  var labels = ['Project Location & Property','Observed Conditions','Client Requirements & Restoration Objectives',
     'Materials & Construction','Inspection & Tests','Restoration Methods',
     'Products & Equipment','Technical Findings','Project Results','Maintenance Handover'];
   var prompt = [
@@ -82,7 +82,8 @@ function bc_caseEvidenceExtract_(row) {
     'CLASSIFICATION AND CERTAINTY — MANDATORY:',
     'Project Location & Property: actual property facts only; exclude generic council, postcode and regional geography that does not describe this property.',
     'Observed Conditions: what was actually seen or recorded at this site; do not place treatment decisions here.',
-    'Client Requirements: include explicitly documented client requests labelled CLIENT REQUEST:, and documented professional restoration aims labelled RESTORATION OBJECTIVE:. Never present a restoration objective as something the homeowner asked for. If neither is documented, use [].',
+    'Client Requirements & Restoration Objectives: include explicitly documented client requests labelled CLIENT REQUEST:, and documented professional restoration aims labelled RESTORATION OBJECTIVE:. Never present a restoration objective as something the homeowner asked for. If neither is documented, use [].',
+    'RESTORATION OBJECTIVES MUST BE EXTRACTED: Inspect the original article for explicit project aims, planned outcomes and reasons the work was undertaken (for example stabilising loose tiles, removing old coatings, retaining the historic surface). Add each distinct documented objective to Client Requirements & Restoration Objectives as RESTORATION OBJECTIVE: even when no client request is recorded. Do not infer objectives solely from the completed treatment; require an explicit original-source quotation showing the aim or need.',
     'Materials & Construction: ONLY documented installed materials and construction; exclude hypothetical moisture paths, restoration systems, future sealers and generic technical principles.',
     'Inspection & Tests: separate what was inspected or CONSIDERED from findings actually confirmed; never imply a test occurred merely because it would be normal practice.',
     'Restoration Methods: actions actually performed, in documented order; conditional treatments must remain conditional, never imply they always occurred.',
@@ -153,7 +154,8 @@ function bc_caseEvidenceExtract_(row) {
     'Keep negative findings and distinct material job details. Separate considered conditions from confirmed discoveries.',
     'Do not remove unique documented completed steps while deduplicating broader method summaries: preserve old sealer stripping separately from cleaning and applying new sealer.',
     'Retain documented repair options considered (such as replacement-tile matching), clearly as considerations rather than completed repairs.',
-    'In Client Requirements, prefix each supported fact with CLIENT REQUEST: when explicitly attributed to the client, or RESTORATION OBJECTIVE: when a documented professional aim. Never infer client speech, wishes or an undocumented objective.',
+    'In Client Requirements & Restoration Objectives, prefix each supported fact with CLIENT REQUEST: when explicitly attributed to the client, or RESTORATION OBJECTIVE: when a documented professional aim. Never infer client speech, wishes or an undocumented objective.',
+    'Do not return an empty Client Requirements & Restoration Objectives array if the original explicitly states restoration aims or why the treatment was necessary. Verify that each such objective is retained with its exact quote. Keep client requests and professional objectives separately labelled.',
     'General maintenance RECOMMENDATIONS may appear in Maintenance Handover, but do not imply a personal handover.',
     'Materials & Construction must not include theoretical moisture paths or future protective treatments.',
     'Keep conditional methods conditional. Never infer tests, chemicals used, owner statements or outcomes.',
@@ -230,7 +232,7 @@ function bc_caseEvidencePromptBlock_(row) {
   if(status!==bc_caseEvidenceStatus_(bc_caseEvidenceDigest_(original))){
     throw new Error('Case Study Evidence is missing or out of date. Run Extract Case Study Evidence in Content Intelligence first.');
   }
-  var labels=['Project Location & Property','Observed Conditions','Client Requirements','Materials & Construction',
+  var labels=['Project Location & Property','Observed Conditions','Client Requirements & Restoration Objectives','Materials & Construction',
     'Inspection & Tests','Restoration Methods','Products & Equipment','Technical Findings','Project Results','Maintenance Handover'];
   var lines=[];
   labels.forEach(function(label){
