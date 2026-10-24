@@ -335,12 +335,10 @@ Your entire response must be exactly: "Stage 1B structural rules received."
 Nothing else.
 
 --- RULE 1: H2 SUBHEADINGS (Hard Lock) ---
-Every H2 must name the primary entity or mechanism explicitly.
-Framing constructions that open with "Where…", "When…", "How to…" without the material
-or process name present are prohibited. The stone type, defect name, or intervention
-method must appear in the heading itself.
-❌ WRONG: "Where DIY Filling Has Limits"
-✅ CORRECT: "Cementitious Grout: Appropriate Use Cases and Limits"
+Every H2 must accurately communicate its section's subject in natural UK English.
+Name the material, condition or method when it improves clarity; do not force
+the primary entity into every heading or ban natural question headings.
+Choose specificity and reader usefulness over a mechanical naming pattern.
 
 --- RULE 2: H2 AND ID MAPPING (Hard Lock) ---
 Every section id value, H2 heading text, and section content subject must all describe
@@ -855,9 +853,8 @@ function saveW1AOutput() {
     "1. Use British English exclusively (e.g., Specialist, Metres, Taps, Splashback).\n" +
     "2. " + ukLocal + "\n\n" +
     "--- SECTION CONTENT GOVERNANCE ---\n" +
-    "1. Primary Entity Focus: 80% of the word count must serve the PRIMARY ENTITY: " + primaryEntity + ".\n" +
-    "2. Peripheral Summarisation: Sections that do not strengthen the Primary Entity are limited to\n" +
-    "   maximum 300 words. Summarise principles and use the full URL from the Silo Map to link to the designated authority page.\n\n" +
+    "1. Primary Entity Focus: Keep the article centred on the PRIMARY ENTITY: " + primaryEntity + ", its relevant relationships and reader intent; do not impose a word-percentage quota.\n" +
+    "2. Peripheral Summarisation: Explain adjacent topics only when they help the reader. Avoid unnecessary digressions; link to the relevant authority page when useful, without a fixed word limit.\n\n" +
     "--- INTERNAL LINKING DATA ---\n" +
     "1. Use the full URL from the Silo Map for all href values — no placeholders.\n" +
     "2. Preserve relevant original Case Study links first; retain mandatory approved section-plan links. Add Silo Map links only when useful and permitted by the approved plan. Do not impose a minimum or maximum link count.\n" +
