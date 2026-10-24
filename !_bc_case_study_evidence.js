@@ -271,9 +271,26 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
      return {words:words,nums:nums,raw:raw};
    }
    var opp=[['wet','dry'],['acidic','alkaline'],['acid','alkaline'],['initial','final'],['coarse','fine'],['satin','gloss'],['satin','matt'],['matt','gloss']];
+   // A mention of another grit stage is context, not evidence that the stages match.
+   // Compare each fact's primary grit (first stated grit), not its whole number set.
+   function primaryGrit_(f){
+     var m=String(f.fact||'').match(/\\b(\\d[\\d,]*)\\s*(?:-\\s*)?grit\\b/i);
+     return m?m[1].replace(/,/g,''):'';
+   }
+   function stage_(f){
+     var t=String(f.fact||'').toLowerCase();
+     if(/\\b(?:ground|grinding|grind)\\b/.test(t))return 'grinding';
+     if(/\\b(?:honed|honing|hone)\\b/.test(t))return 'honing';
+     if(/\\b(?:polished|polishing|polish)\\b/.test(t))return 'polishing';
+     return '';
+   }
    var profiles=uniqueSplit.map(profile_),splitDuplicateCandidates=[];
    for(var di=0;di<uniqueSplit.length;di++)for(var dj=di+1;dj<uniqueSplit.length;dj++){
      var left=uniqueSplit[di],right=uniqueSplit[dj],pa=profiles[di],pb=profiles[dj];
+     var ga=primaryGrit_(left),gb=primaryGrit_(right);
+     if(ga&&gb&&ga!==gb)continue;
+     var sa=stage_(left),sb=stage_(right);
+     if(sa&&sb&&sa!==sb)continue;
      var na=Object.keys(pa.nums),nb=Object.keys(pb.nums);
      if(na.length&&nb.length&&(na.length!==nb.length||na.some(function(x){return !pb.nums[x];})))continue;
      if(opp.some(function(pair){return (pa.raw.indexOf(pair[0])>=0&&pb.raw.indexOf(pair[1])>=0)||(pa.raw.indexOf(pair[1])>=0&&pb.raw.indexOf(pair[0])>=0);}))continue;
