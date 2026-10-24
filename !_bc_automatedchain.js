@@ -6413,10 +6413,27 @@ function pipelineRunAuthorityBrief(row) {
         var overlapResult = checkProblemRegister(
           queryCluster, stageField('Stone Type'), stageField('URL'), articleType, angleCode
         );
-        if (overlapResult && /not yet built|is empty/i.test(String(overlapResult.message || ''))) {
-          bc_appendPipelineRunLog(row, 'W-1 review — Problem Register missing/empty; overlap not verified.');
+        if (!overlapResult || overlapResult.success === false) {
+          bc_appendPipelineRunLog(row, 'W-1 review — Problem Register check failed: ' +
+            String(overlapResult && overlapResult.message || 'No result'));
         } else {
-          bc_appendPipelineRunLog(row, 'W-1 review — Problem Register is an existing snapshot; check freshness before relying on overlaps.');
+          var registerSheet = ss.getSheetByName('Problem Register');
+          if (!registerSheet || registerSheet.getLastRow() < 2) {
+            bc_appendPipelineRunLog(row, 'W-1 review — Problem Register missing/empty; overlap not verified.');
+          } else {
+            var ageValue = registerSheet.getRange(2, 8).getValue();
+            var lastUpdated = ageValue instanceof Date ? ageValue : null;
+            if (!lastUpdated && typeof ageValue === 'string') {
+              var parts = ageValue.trim().split('/');
+              if (parts.length === 3) lastUpdated = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+            }
+            var ageDays = lastUpdated && !isNaN(lastUpdated.getTime())
+              ? Math.floor((Date.now() - lastUpdated.getTime()) / 86400000) : null;
+            if (ageDays === null || ageDays > 30 || ageDays < 0) {
+              bc_appendPipelineRunLog(row, 'W-1 review — Problem Register needs refreshing (last update ' +
+                (ageDays === null ? 'unknown' : ageDays + ' days ago') + ').');
+            }
+          }
         }
         var conflicts = overlapResult && Array.isArray(overlapResult.matches)
           ? overlapResult.matches.filter(function(m) {
