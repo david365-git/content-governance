@@ -218,7 +218,7 @@ function buildAuthorityBrief(targetRow) {
     brief += "NEW ENTITY DISCOVERY:\n";
     brief += "If you identify a technical entity during article generation that is NOT in the\n";
     brief += "provided TSM entity list but IS material-specific and technically accurate:\n";
-    brief += "- Use it with proper semantic fingerprint vocabulary (8-12 surrounding technical terms)\n";
+    brief += "- Use only the accurate supporting terminology needed to explain this relationship clearly.\n";
     brief += "- Ensure it describes THIS material's specific behaviour, not generic flooring\n";
     brief += "- The entity will be reviewed and added to the TSM during post-generation audit\n";
     brief += "\n";
