@@ -532,62 +532,23 @@ function checkClassificationDuplication(postsSheet, activeRow, headers, parsed) 
       'narrative_archetype': 'ac_narrative_archetype'
     };
 
-    const axisValues = {
-      'entry_condition': [
-        'Residue and coating build-up',
-        'Ingrained traffic soiling',
-        'Failed or incompatible previous treatment',
-        'Biological growth or salt activity',
-        'Physical damage or instability',
-        'Surface wear and pigment loss'
-      ],
-      'homeowner_perception': [
-        'Floor looks dirty despite regular cleaning',
-        'Pattern or colour has gradually disappeared',
-        'Previous treatment made it worse',
-        'Floor looks damaged or beyond saving',
-        'Unsure whether cleaning or restoration is needed',
-        'Concerned about damaging it further'
-      ],
-      'material_behaviour': [
-        'Porosity and residue lock-in',
-        'Calcium carbonate etch sensitivity',
-        'Salt migration and moisture movement',
-        'Cleavage plane or lamination fragility',
-        'Pigment depth and surface wear',
-        'Binder or aggregate vulnerability'
-      ],
-      'constraint': [
-        'No aggressive abrasion permitted',
-        'Acid chemistry excluded',
-        'Moisture sensitive installation',
-        'Vapour permeability must be maintained',
-        'Existing damage limits mechanical intervention',
-        'Heritage surface integrity governs all decisions'
-      ],
-      'process_emphasis': [
-        'Residue softening and extraction',
-        'Controlled drying and moisture management',
-        'Sealer or coating removal',
-        'Stabilisation before cleaning',
-        'Neutralisation and rinse control',
-        'Breathable protection decision'
-      ],
-      'result_type': [
-        'Pattern definition became readable again',
-        'Colour depth and tonal contrast returned',
-        'Surface stopped cycling back to dull after cleaning',
-        'Maintenance became noticeably easier',
-        'Physical stability restored alongside appearance',
-        'Original material character preserved without artificial finish'
-      ],
-      'narrative_archetype': [
-        'Diagnostic-first',
-        'Material-first',
-        'Constraint-first',
-        'Surface-history-first'
-      ]
+    // Use the current governed AC library, never obsolete hard-coded choices.
+    const articleType = activeArticleType;
+    const liveLibrary = getAcValuesForMaterial(activeStoneType, articleType);
+    const libraryValues = liveLibrary && liveLibrary.values || {};
+    const axisLibraryKeys = {
+      entry_condition:'ac_what_they_found',
+      homeowner_perception:'ac_why_they_called',
+      material_behaviour:'ac_what_the_floor_was_doing',
+      constraint:'ac_what_forced_careful_decisions',
+      process_emphasis:'ac_what_governed_the_approach',
+      result_type:'ac_what_changed_for_the_homeowner',
+      narrative_archetype:'ac_story_direction'
     };
+    const axisValues = {};
+    Object.keys(axisLibraryKeys).forEach(function(axis) {
+      axisValues[axis] = (libraryValues[axisLibraryKeys[axis]] || []).slice();
+    });
 
     const nudgePriority = [
       'narrative_archetype',
