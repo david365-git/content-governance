@@ -487,6 +487,307 @@ Stage: —
       <button id="masterBtnEvidence" style="background:#455a64;color:#fff;width:100%;margin-top:8px" onclick="masterRunCaseEvidence()">Extract Case Study Evidence — selected row (GL–GV)</button>
       <div id="masterEvidenceStatus" class="status-bar pending" style="margin-top:5px">Case studies only · source: site-export Column O</div>
 
+      <div style="margin-top:12px;padding:10px;border:1px solid #90a4ae;border-radius:6px">
+        <div style="font-weight:700;margin-bottom:5px">🧪 Test Split-Article Luna — posts rows</div>
+        <div style="font-size:11px;margin-bottom:6px">Enter posts-sheet row numbers separated by commas or new lines. Each case study runs and archives separately.</div>
+        <textarea id="masterSplitRows" rows="3" placeholder="155, 199" style="width:100%;box-sizing:border-box;font-size:12px"></textarea>
+        <button id="masterSplitButton" type="button" onclick="masterRunSplitRows()" style="width:100%;background:#455a64;color:#fff;margin-top:6px">▶ Run Split-Article Luna for These Rows</button>
+        <div id="masterSplitStatus" class="status-bar pending" style="margin-top:6px">Ready — enter posts row numbers.</div>
+        <textarea id="masterSplitResults" readonly rows="5" style="width:100%;box-sizing:border-box;margin-top:5px;font-size:11px"></textarea>
+      </div>
+      <script>
+      function masterRunSplitRows(){
+        var raw=document.getElementById('masterSplitRows').value.trim();
+        var parts=raw.split(/[\s,;]+/).filter(Boolean);
+        var status=document.getElementById('masterSplitStatus');
+        var log=document.getElementById('masterSplitResults');
+        var button=document.getElementById('masterSplitButton');
+        if(!parts.length||parts.length>30||parts.some(function(v){return !/^\d+$/.test(v)||Number(v)<2;})){
+          status.textContent='Enter 1–30 valid posts row numbers (2 or higher).';return;
+        }
+        var rows=parts.map(Number);
+        if(new Set(rows).size!==rows.length){status.textContent='Remove repeated row numbers.';return;}
+        button.disabled=true;log.value='';
+        var n=0,ok=0,fail=0,skip=0,cost=0;
+        function next(){
+          if(n>=rows.length){
+            button.disabled=false;
+            status.textContent='Finished: '+ok+' complete, '+skip+' skipped, '+fail+' failed. API cost 
+           style="
+             margin-top:8px;
+             font-family:JetBrains Mono,monospace;
+             font-size:11px;
+             white-space:pre-wrap;">
+      </div>
+
+      <div class="btn-row"
+           style="margin-top:8px">
+
+        <button
+          id="masterBtnIntelligence"
+          style="background:#1565c0;color:#fff"
+          onclick="masterRunContentIntelligence()">
+
+          ▶ Run Content Intelligence
+
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         2 — AUTOMATION RUNNER
+         ═══════════════════════════════════════════════════════ -->
+
+    <div style="
+      margin-bottom:16px;
+      padding:10px;
+      border:2px solid #d81b60;
+      border-radius:6px;
+      background:#fce4ec;">
+
+      <div style="
+        font-weight:700;
+        color:#ad1457;
+        margin-bottom:6px;">
+        2 — Automatic Workflow
+      </div>
+
+      <div style="
+        font-size:12px;
+        margin-bottom:8px;">
+        Choose a starting stage and an ending stage. The automation will stop after completing the ending stage.
+      </div>
+
+      <select id="masterRecoveryStart"
+              style="
+                width:100%;
+                padding:7px;
+                margin-bottom:8px;
+                font-family:JetBrains Mono,monospace;
+                font-size:11px;
+                border:1px solid #ad1457;
+                border-radius:4px;
+                background:#fff;">
+        <option value="Pre-AC">Pre-AC</option>
+        <option value="AC">AC</option>
+        <option value="W-1">W-1</option>
+        <option value="W1A-W1D">W1A-W1D</option>
+        <option value="W1.5A">W1.5A</option>
+        <option value="W1.5B">W1.5B</option>
+        <option value="W1.5C">W1.5C</option>
+        <option value="W1.5D">W1.5D</option>
+        <option value="W1.5E">W1.5E</option>
+        <option value="W2B">W2B</option>
+        <option value="W2B.05">W2B.05</option>
+        <option value="W2B.1">W2B.1</option>
+        <option value="W2B.2">W2B.2</option>
+        <option value="W2B.3">W2B.3</option>
+        <option value="W3">W3</option>
+        <option value="W4B">W4B</option>
+        <option value="W4">W4</option>
+        <option value="W4.5">W4.5</option>
+        <option value="W5">W5</option>
+        <option value="W5C">W5C</option>
+        <option value="W8E">W8E</option>
+      </select>
+      <div style="font-size:11px;font-weight:bold;margin:8px 0 4px">Ending stage (inclusive)</div>
+      <select id="masterRecoveryEnd"
+              style="
+                width:100%;
+                padding:7px;
+                margin-bottom:8px;
+                font-family:JetBrains Mono,monospace;
+                font-size:11px;
+                border:1px solid #ad1457;
+                border-radius:4px;
+                background:#fff;">
+        <option value="Pre-AC">Pre-AC</option>
+        <option value="AC">AC</option>
+        <option value="W-1">W-1</option>
+        <option value="W1A-W1D">W1A-W1D</option>
+        <option value="W1.5A">W1.5A</option>
+        <option value="W1.5B">W1.5B</option>
+        <option value="W1.5C">W1.5C</option>
+        <option value="W1.5D">W1.5D</option>
+        <option value="W1.5E">W1.5E</option>
+        <option value="W2B">W2B</option>
+        <option value="W2B.05">W2B.05</option>
+        <option value="W2B.1">W2B.1</option>
+        <option value="W2B.2">W2B.2</option>
+        <option value="W2B.3">W2B.3</option>
+        <option value="W3">W3</option>
+        <option value="W4B">W4B</option>
+        <option value="W4">W4</option>
+        <option value="W4.5">W4.5</option>
+        <option value="W5">W5</option>
+        <option value="W5C">W5C</option>
+        <option value="W8E" selected>W8E</option>
+      </select>
+
+      <div id="masterStatusRecovery"
+           class="status-bar pending">
+        Choose the start and end stages, then run.
+      </div>
+
+      <div id="masterLogRecovery"
+           style="
+             margin-top:8px;
+             font-family:JetBrains Mono,monospace;
+             font-size:11px;
+             white-space:pre-wrap;">
+      </div>
+
+      <div class="btn-row" style="margin-top:8px">
+        <button
+          id="masterBtnRecovery"
+          style="background:#d81b60;color:#fff"
+          onclick="document.getElementById('masterStatusRecovery').textContent = 'Starting selected stages…'; try { masterRunRecoveryToW8E(); } catch (e) { document.getElementById('masterStatusRecovery').textContent = '❌ Unable to start: ' + e.message; }">
+          ▶ Run Stages — Start to End
+        </button>
+      </div>
+
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         3 — MANUAL / FINAL WINDOWS
+         ═══════════════════════════════════════════════════════ -->
+
+    <div style="
+      margin-bottom:16px;
+      padding:10px;
+      border:1px solid #ddd;
+      border-radius:6px;">
+
+      <div style="
+        font-weight:700;
+        margin-bottom:8px;">
+        3 — Continue to Manual / Final Windows
+      </div>
+
+      <div class="btn-row"
+           style="display:flex;flex-wrap:wrap;gap:6px">
+
+        <button
+          style="background:#2e7d32;color:#fff"
+          onclick="navGoTo(16)">
+          W6
+        </button>
+
+        <button
+          style="background:#6a1b9a;color:#fff"
+          onclick="navGoTo('10b')">
+          Image Insertion
+        </button>
+
+        <button
+          style="background:#546e7a;color:#fff"
+          onclick="navGoTo('fi')">
+          Featured Image
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!-- ORIGINAL VS CT AUDIT TEST -->
+    <div style="margin-bottom:16px;padding:10px;border:1px solid #b39ddb;border-radius:6px">
+      <div style="font-weight:700;margin-bottom:6px">4 — AI Original vs Rewrite Audit (Test)</div>
+      <div style="font-size:11px;margin-bottom:6px">Enter up to 10 Post IDs. Compares original HTML (site-export O) with CT using the NEW Tier Structural Coverage Matrix.</div>
+      <textarea id="master-audit-ids" rows="5" placeholder="7898&#10;10138&#10;9594" style="width:100%;box-sizing:border-box;font-size:12px"></textarea>
+      <div class="btn-row" style="margin-top:6px">
+        <button id="master-audit-run" type="button" class="btn-generate" onclick="masterRunComparisonAudit()" style="background:#6a1b9a;color:white">▶ Compare Original vs CT</button>
+      </div>
+      <div id="master-audit-status" class="status-bar pending" style="margin-top:8px">Ready — reports saved to Rewrite Comparison Audit.</div>
+      <textarea id="master-audit-results" readonly rows="11" style="width:100%;box-sizing:border-box;font-size:10px;margin-top:8px;font-family:monospace"></textarea>
+    </div>
+    <script>
+    function masterRunComparisonAudit() {
+      var ids=document.getElementById('master-audit-ids').value.split(/[\s,;]+/).filter(Boolean);
+      var status=document.getElementById('master-audit-status');
+      var output=document.getElementById('master-audit-results');
+      var button=document.getElementById('master-audit-run');
+      if (!ids.length || ids.length>10 || ids.some(function(x){return !/^\d+$/.test(x);})) {
+        status.textContent='Enter 1–10 numeric Post IDs.';
+        return;
+      }
+      button.disabled=true;output.value='';
+      var index=0,successful=0,failed=0,totalCost=0;
+      function next() {
+        if(index>=ids.length){
+          button.disabled=false;
+          status.textContent='Finished: '+successful+' compared; '+failed+' failed; AI cost $'+totalCost.toFixed(4)+'. See Rewrite Comparison Audit.';
+          return;
+        }
+        var id=ids[index++];
+        status.textContent='Comparing '+id+' ('+index+' of '+ids.length+')…';
+        google.script.run.withSuccessHandler(function(result){
+          successful++;totalCost+=Number(result.cost||0);
+          output.value+='✔ '+id+' — '+result.title+'\n'+result.report+'\n\n';
+          next();
+        }).withFailureHandler(function(err){
+          failed++;
+          output.value+='✖ '+id+' — '+String(err && err.message || err)+'\n\n';
+          next();
+        }).ce_compareOriginalToCtById(id);
+      }
+      next();
+    }
+    </script>
+
+
+    <!-- ═══════════════════════════════════════════════════════
+         W6 FINAL NOTICE
+         ═══════════════════════════════════════════════════════ -->
+
+    <div id="masterW6Notice"
+         style="
+           display:none;
+           margin-top:12px;
+           padding:12px;
+           background:#e8f5e9;
+           border:1px solid #43a047;
+           border-radius:6px;">
+
+      <div style="
+        font-weight:700;
+        color:#2e7d32;
+        margin-bottom:5px;">
+        ✔ Content Pipeline Complete
+      </div>
+
+      <div>
+        ➡ Go to <strong>W6</strong>.
+      </div>
+
+    </div>
+
+
+  </div>
+
+</div>+cost.toFixed(4);
+            return;
+          }
+          var row=rows[n++];
+          status.textContent='Running posts row '+row+' ('+n+' of '+rows.length+')…';
+          google.script.run.withSuccessHandler(function(result){
+            cost+=Number(result.cost||0);
+            if(result.skipped){skip++;log.value+='SKIP row '+row+' — '+result.message+'\n';}
+            else if(result.success){ok++;log.value+='PASS row '+row+' — '+result.message+'\n';}
+            else {fail++;log.value+='FAIL row '+row+' — '+(result.message||'No details')+'\n';}
+            next();
+          }).withFailureHandler(function(error){
+            fail++;log.value+='FAIL row '+row+' — '+String(error&&error.message||error)+'\n';next();
+          }).bc_caseEvidenceSplitLunaByRow(row);
+        }
+        next();
+      }
+      </script>
+
       <div id="masterLogIntelligence"
            style="
              margin-top:8px;
