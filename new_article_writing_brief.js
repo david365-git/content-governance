@@ -118,9 +118,12 @@ function new_buildArticleWritingBrief(rowNumber) {
 
     var locality = articleType === 'Geo Service Page' ?
       'Locality: '+val('Locality')+'; Parent Area: '+val('Parent Area') : '';
+    // The legacy reader above validates the current v10 case-study package.
+    // It reads the same posts evidence as GL:HA, so do not insert it twice.
+    // "Case Study Evidence Package" sheet is an append-only BEFORE/AFTER
+    // archive; current writing authority is the selected posts row.
     var sourceContext = articleType === 'Case Study' ?
-      'AUTHORITATIVE CASE STUDY EVIDENCE:\n'+evidence+
-      '\nORIGINAL ARTICLE NARRATIVE CONTEXT (not authority for extra project facts):\n'+originalHtml+
+      'ORIGINAL ARTICLE NARRATIVE CONTEXT (not authority for extra project facts):\n'+originalHtml+
       '\nCommercial confidentiality: generic products must remain generic; never infer product brand, supplier, specific chemistry or equipment.' :
       'ORIGINAL ARTICLE AS DISTINCTIVE SOURCE CONTEXT:\n'+originalHtml;
     var prompt = [
@@ -134,7 +137,7 @@ function new_buildArticleWritingBrief(rowNumber) {
       'ARTICLE-TYPE RULES (authoritative):\n'+typeRules,
       'EXISTING CLASSIFICATION CONTEXT:\n'+selection,
       'ARTICLE-SPECIFIC TRUTH SOURCES — POSTS GL:HA (highest priority for project facts):\n'+truthBlock,
-      'TRUTH RULE: Treat GL:HA as the authoritative approved account of this article. Distinguish documented facts from blanks; never fill unknowns with assumptions. If original narrative or derived evidence conflicts with GL:HA, explicitly flag the conflict and follow GL:HA for the writing brief. Technical reference and SEO suggestions must not override these facts.',
+      'TRUTH RULE: Case Study Evidence Package sheet is a historical BEFORE/AFTER archive, not an additional independent truth source. Treat the selected posts row GL:HA as the current account of this article. Distinguish documented facts from blanks; never fill unknowns with assumptions. If original narrative or derived evidence conflicts with GL:HA, explicitly flag the conflict and follow GL:HA for the writing brief. Technical reference and SEO suggestions must not override these facts.',
       'SEARCH, GOVERNANCE AND SCOPE:\n'+scope,
       locality,
       'TECHNICAL MATRIX (general reference, never evidence of work performed):\n'+technical,
