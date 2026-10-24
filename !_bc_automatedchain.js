@@ -6413,6 +6413,11 @@ function pipelineRunAuthorityBrief(row) {
         var overlapResult = checkProblemRegister(
           queryCluster, stageField('Stone Type'), stageField('URL'), articleType, angleCode
         );
+        if (overlapResult && /not yet built|is empty/i.test(String(overlapResult.message || ''))) {
+          bc_appendPipelineRunLog(row, 'W-1 review — Problem Register missing/empty; overlap not verified.');
+        } else {
+          bc_appendPipelineRunLog(row, 'W-1 review — Problem Register is an existing snapshot; check freshness before relying on overlaps.');
+        }
         var conflicts = overlapResult && Array.isArray(overlapResult.matches)
           ? overlapResult.matches.filter(function(m) {
               return m.conflictType === 'POTENTIAL_CANNIBALISATION';
