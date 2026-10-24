@@ -39,7 +39,7 @@ function preAcBuildGapCheckPrompt() {
     const headerRow = data[0];
 
     const universalCol = headerRow.indexOf('Universal');
-    const stoneCol = headerRow.indexOf(stoneType);
+    const stoneCol = headerRow.findIndex(function(h){ return String(h || '').trim().toLowerCase() === String(stoneType || '').trim().toLowerCase(); });
 
     const fields = {};
     const fieldLabels = {};
