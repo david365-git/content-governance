@@ -500,7 +500,7 @@ function pushAuthorityBriefToSheet(brief, targetRow) {
    Codes: WHY | ID | FIX | PREVENT | CHOOSE | LOCAL | PROVE | DECIDE
 ============================================================ */
 
-var ANGLE_DEFINITIONS = {
+var AUTHORITY_ANGLE_DEFINITIONS = {
   "WHY":     { label: "Material Explanation", readerQ: "Why is this happening to my floor?", articleTypes: ["Hub Page","Educational Guide"], openingTemplate: "explains why [PROBLEM] occurs at material level, so you understand what you are actually dealing with" },
   "ID":      { label: "Diagnosis",            readerQ: "Which specific condition do I have?", articleTypes: ["Diagnostic Guide"], openingTemplate: "helps you identify which specific condition is causing [PROBLEM], so you choose the right solution" },
   "FIX":     { label: "Method / Process",     readerQ: "How is this professionally corrected?", articleTypes: ["Method Guide","Service Page"], openingTemplate: "explains how [PROBLEM] is professionally corrected, stage by stage" },
@@ -512,7 +512,7 @@ var ANGLE_DEFINITIONS = {
 };
 
 function buildProblemAngleStatement(angleCode, primaryProblem, locality) {
-  var def = ANGLE_DEFINITIONS[angleCode];
+  var def = AUTHORITY_ANGLE_DEFINITIONS[angleCode];
   if (!def) return "";
   var problem = primaryProblem || "this problem";
   var loc     = locality || "your area";
