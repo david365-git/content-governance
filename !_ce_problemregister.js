@@ -272,7 +272,7 @@ function autoAssignProblemAngle(targetRow) {
     var locality = val('Locality');
     var angleString = buildAngleString(angleCode, primaryProblem, locality);
     if (existingAngle) {
-      var existingCode = existingAngle.split(/[\\s—-]+/)[0].toUpperCase();
+      var existingCode = existingAngle.split(/[\s—-]+/)[0].toUpperCase();
       if (!ANGLE_DEFINITIONS[existingCode]) {
         return {success:false,message:'Existing Problem Angle code is unrecognised; review manually.'};
       }
