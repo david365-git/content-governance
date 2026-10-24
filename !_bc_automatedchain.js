@@ -6385,6 +6385,25 @@ function pipelineRunAC(row) {
 
 function pipelineRunAuthorityBrief(row) {
   try {
+    // Check the identity that all downstream entity governance depends on.
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sh = ss.getSheetByName('posts');
+    if (!sh) throw new Error('Posts sheet missing');
+    var heads = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]
+      .map(function(v) { return String(v || '').trim(); });
+    function stageField(name) {
+      var idx = heads.indexOf(name);
+      return idx < 0 ? '' : String(sh.getRange(row, idx + 1).getValue() || '').trim();
+    }
+    var articleType = stageField('Article Type');
+    var entity = stageField('Primary Entity');
+    if (!articleType || !entity) {
+      throw new Error('W-1 preflight: Article Type and Primary Entity must both be set.');
+    }
+    var queryCluster = stageField('Primary Query Cluster Owned');
+    if (!queryCluster) {
+      bc_appendPipelineRunLog(row, 'W-1 warning — Primary Query Cluster Owned is empty; verify search intent.');
+    }
     var result = autoRunAuthorityBrief(row);
 
     if (!result || result.success === false) {
