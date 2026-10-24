@@ -615,151 +615,20 @@ function getAuthorityBrief() {
 
 function autoRunAuthorityBrief(targetRow) {
   try {
-    console.log("AUTO W1 STARTED");
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName("posts");
-
-    if (!sheet) {
-      return { success: false, message: "Posts sheet not found." };
-    }
-
-    var row = targetRow || SpreadsheetApp.getActiveRange().getRow();
-    console.log("ACTIVE ROW: " + row);
-    if (row < 2) {
-      return { success: false, message: "Select a data row first." };
-    }
-
-    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn())
-                       .getValues()[0]
-                       .map(function(h) { return String(h).trim(); });
-
-    function getValue(name) {
-      var idx = headers.indexOf(name);
-      if (idx === -1) return "";
-      return String(sheet.getRange(row, idx + 1).getValue() || "").trim();
-    }
-
-    // ----------------------------------------------------------
-    // 1. ENSURE A PROBLEM ANGLE EXISTS
-    // ----------------------------------------------------------
+    if (!sheet) return {success:false,message:"Posts sheet not found."};
+    var row = Number(targetRow || sheet.getActiveRange().getRow());
+    if (row < 2) return {success:false,message:"Select a data row first."};
     var angleResult = autoAssignProblemAngle(row);
-
-    if (!angleResult.success) {
-     function autoRunAuthorityBrief(targetRow) {
-  try {
-    console.log("AUTO W1 STARTED");
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("posts");
-
-    if (!sheet) {
-      return { success: false, message: "Posts sheet not found." };
-    }
-
-    var row = targetRow || SpreadsheetApp.getActiveRange().getRow();
-    console.log("ACTIVE ROW: " + row);
-    if (row < 2) {
-      return { success: false, message: "Select a data row first." };
-    }
-
-    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn())
-                       .getValues()[0]
-                       .map(function(h) { return String(h).trim(); });
-
-    function getValue(name) {
-      var idx = headers.indexOf(name);
-      if (idx === -1) return "";
-      return String(sheet.getRange(row, idx + 1).getValue() || "").trim();
-    }
-
-    // ----------------------------------------------------------
-    // 1. ENSURE A PROBLEM ANGLE EXISTS
-    // ----------------------------------------------------------
-    var angleResult = autoAssignProblemAngle(row);
-
-    if (!angleResult.success) {
-      return {
-        success:false,
-        message:"W-1 stopped — Problem Angle could not be assigned: " + angleResult.message
-      };
-    }
-
-    // ----------------------------------------------------------
-    // 2. BUILD AUTHORITY BRIEF
-    // ----------------------------------------------------------
+    if (!angleResult || !angleResult.success) return {success:false,message:"W-1 stopped — Problem Angle could not be assigned: " + String(angleResult && angleResult.message || "Unknown error")};
     var buildResult = buildAuthorityBrief(row);
-
-    if (!buildResult.success) {
-      return {
-        success: false,
-        message: "W-1 stopped — Authority Brief could not be built: " +
-                 buildResult.message
-      };
-    }
-
-    // ----------------------------------------------------------
-    // 3. SAVE AUTHORITY BRIEF
-    // ----------------------------------------------------------
+    if (!buildResult || !buildResult.success) return {success:false,message:"W-1 stopped — Authority Brief could not be built: " + String(buildResult && buildResult.message || "Unknown error")};
     var saveResult = pushAuthorityBriefToSheet(buildResult.brief, row);
-
-    if (!saveResult.success) {
-      return {
-        success: false,
-        message: "W-1 stopped — Authority Brief could not be saved: " +
-                 saveResult.message
-      };
-    }
-
-    return {
-      success: true,
-      message: "W-1 complete — Problem Angle confirmed and Authority Brief saved."
-    };
-
+    if (!saveResult || !saveResult.success) return {success:false,message:"W-1 stopped — Authority Brief could not be saved: " + String(saveResult && saveResult.message || "Unknown error")};
+    return {success:true,message:"W-1 complete — Problem Angle confirmed and Authority Brief saved."};
   } catch (e) {
-    return {
-      success: false,
-      message: "Automated W-1 error: " + e.toString()
-    };
-  }
-}
-
-    }
-
-    // ----------------------------------------------------------
-    // 2. BUILD AUTHORITY BRIEF
-    // ----------------------------------------------------------
-    var buildResult = buildAuthorityBrief(row);
-
-    if (!buildResult.success) {
-      return {
-        success: false,
-        message: "W-1 stopped — Authority Brief could not be built: " +
-                 buildResult.message
-      };
-    }
-
-    // ----------------------------------------------------------
-    // 3. SAVE AUTHORITY BRIEF
-    // ----------------------------------------------------------
-    var saveResult = pushAuthorityBriefToSheet(buildResult.brief, row);
-
-    if (!saveResult.success) {
-      return {
-        success: false,
-        message: "W-1 stopped — Authority Brief could not be saved: " +
-                 saveResult.message
-      };
-    }
-
-    return {
-      success: true,
-      message: "W-1 complete — Problem Angle confirmed and Authority Brief saved."
-    };
-
-  } catch (e) {
-    return {
-      success: false,
-      message: "Automated W-1 error: " + e.toString()
-    };
+    return {success:false,message:"Automated W-1 error: " + String(e)};
   }
 }
 
