@@ -138,24 +138,10 @@ function buildAuthorityBrief(targetRow) {
     brief += "SEMANTIC FINGERPRINT DEPLOYMENT RULES\n";
     brief += "------------------------------------------------------------\n";
     brief += "For each Core Entity listed above:\n";
-    brief += "1. Create ONE dedicated focused paragraph explaining the entity mechanism\n";
-    brief += "2. Use the COMPLETE semantic fingerprint vocabulary for that entity\n";
-    brief += "3. Deploy all fingerprint terms as a cluster within 150 words\n";
-    brief += "4. Do NOT scatter 2-3 terms across multiple sections\n";
-    brief += "5. Show how the entity connects to the reader's observed problem\n";
-    brief += "\n";
-    brief += "ENTITY NAME REPETITION LIMIT (CRITICAL):\n";
-    brief += "- Entity names may appear 1-2 times MAXIMUM in the entire article\n";
-    brief += "- ALL other references use semantic fingerprint vocabulary instead\n";
-    brief += "- Example: 'Efflorescence' appears once; all other references use:\n";
-    brief += "  'white crystalline deposits', 'salt migration', 'dissolved minerals'\n";
-    brief += "\n";
-    brief += "VOCABULARY DISTRIBUTION PATTERN (MULTINOMIAL SCORING):\n";
-    brief += "Target 8-12 instances of semantic fingerprint vocabulary per Core Entity:\n";
-    brief += "- Opening section: 2-3 instances\n";
-    brief += "- Main content sections: 3-5 instances\n";
-    brief += "- Conclusion/outcome sections: 2-3 instances\n";
-    brief += "Distribution strengthens topical authority through term frequency signals.\n";
+    brief += "Explain each relevant Core Entity where it helps the reader understand the material, condition, treatment or outcome.\n";
+    brief += "Describe genuine relationships and mechanisms in natural homeowner-friendly language.\n";
+    brief += "Use entity names and their accurate alternatives as often as clarity requires, without quotas or forced synonyms.\n";
+    brief += "Do not force every related term, a dedicated paragraph, or a fixed distribution of terms into the article.\n";
     brief += "------------------------------------------------------------\n";
     brief += "\n";
     
@@ -372,7 +358,7 @@ function buildAuthorityBrief(targetRow) {
     brief += "- Above 75 words: Exceeds Google's featured snippet display threshold\n";
     brief += "- Target sweet spot: 55-65 words\n";
     brief += "\n";
-    brief += "HIGH-IDF TERM DENSITY: 8-12 technical terms (mandatory)\n";
+    brief += "Use only the material-specific terminology needed for a clear, accurate answer.\n";
     brief += "High-IDF terms are material-specific technical vocabulary that distinguish\n";
     brief += "expert content from generic advice. Examples per material:\n";
     brief += "\n";
@@ -404,7 +390,7 @@ function buildAuthorityBrief(targetRow) {
     brief += "VALIDATION CHECKLIST:\n";
     brief += "Before moving past the Summary Box, confirm:\n";
     brief += "□ Word count between 45-75 (use word counter)\n";
-    brief += "□ 8-12 material-specific technical terms present\n";
+    brief += "□ Relevant technical terms are accurate, useful and naturally explained\n";
     brief += "□ Problem + Cause + Solution all included\n";
     brief += "□ No generic flooring language ('looks dirty', 'needs cleaning', 'lasts longer')\n";
     brief += "□ Reads as complete standalone answer (could be extracted as featured snippet)\n";
