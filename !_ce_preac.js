@@ -194,38 +194,38 @@ function preAcAddGapToSheet(entry) {
       return {success:false,message:'Unrecognised Pre-AC field: ' + entry.field};
     if (!fieldLabel) fieldLabel = String(entry.field || dropdownKey).trim();
 
-    // If a new material has no column, create its governed applicability column.
-    const stoneScope = String(entry.scope || '').trim().toLowerCase();
-    if (stoneCol < 0 && stoneScope === String(stoneType || '').trim().toLowerCase() && stoneScope) {
+    const scope = String(entry.scope || '').trim().toLowerCase();
+    const materialScope = String(stoneType || '').trim().toLowerCase();
+    const universal = scope === 'universal';
+    const specific = !!materialScope && scope === materialScope;
+    if (!universal && !specific)
+      return {success:false,message:'Pre-AC option has invalid or missing scope'};
+    if (universal && universalCol < 0)
+      return {success:false,message:'Universal column missing'};
+    const normalizedSuggestion = String(entry.suggested_option || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!normalizedSuggestion)
+      return {success:false,message:'Empty suggested AC library option'};
+    const existingForKey = data.slice(1).some(function(existing) {
+      const applicable = universal
+        ? String(existing[universalCol] || '').trim().toLowerCase() === 'y'
+        : (String(existing[universalCol] || '').trim().toLowerCase() === 'y' ||
+           (stoneCol >= 0 && String(existing[stoneCol] || '').trim().toLowerCase() === 'y'));
+      return applicable && String(existing[dropdownCol] || '').trim() === dropdownKey &&
+        String(existing[valueCol] || '').trim().toLowerCase().replace(/\s+/g, ' ') === normalizedSuggestion;
+    });
+    if (existingForKey) return {success:true,skipped:true,message:'Already in AC library'};
+    // Only add a material column after the proposal has passed all checks.
+    if (specific && stoneCol < 0) {
       stoneCol = headerRow.length;
       acSheet.getRange(1, stoneCol + 1).setValue(String(stoneType).trim());
       headerRow.push(String(stoneType).trim());
     }
-    // Build new row matching the sheet structure
     const newRow = new Array(headerRow.length).fill('');
     newRow[dropdownCol] = dropdownKey;
     newRow[labelCol] = fieldLabel;
-    newRow[valueCol] = entry.suggested_option;
-
-    if (String(entry.scope || '').trim().toLowerCase() === 'universal') {
-      if (universalCol < 0) return {success:false,message:'Universal column missing'};
-      newRow[universalCol] = 'y';
-    } else if (String(entry.scope || '').trim().toLowerCase() === String(stoneType || '').trim().toLowerCase() && stoneCol > -1) {
-      newRow[stoneCol] = 'y';
-    } else {
-      return {success:false,message:'Pre-AC option has invalid or missing stone scope'};
-    }
-
-    // Avoid silently growing the AC library with repeated or near-identical entries.
-    const normalizedSuggestion = String(entry.suggested_option || '').trim().toLowerCase().replace(/\s+/g, ' ');
-    if (!normalizedSuggestion) return { success:false, message:'Empty suggested AC library option' };
-    const existingForKey = data.slice(1).some(function(existing) {
-      const applicable = String(existing[universalCol] || '').trim().toLowerCase() === 'y' ||
-        (stoneCol >= 0 && String(existing[stoneCol] || '').trim().toLowerCase() === 'y');
-      return applicable && String(existing[dropdownCol] || '').trim() === dropdownKey &&
-        String(existing[valueCol] || '').trim().toLowerCase().replace(/\s+/g, ' ') === normalizedSuggestion;
-    });
-    if (existingForKey) return { success:true, skipped:true, message:'Already in AC library' };
+    newRow[valueCol] = String(entry.suggested_option).trim();
+    if (universal) newRow[universalCol] = 'y';
+    else newRow[stoneCol] = 'y';
     acSheet.appendRow(newRow);
 
     logPipelineResume("Pre-AC — Gap Added to Sheet", "");
