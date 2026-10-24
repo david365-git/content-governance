@@ -39,7 +39,7 @@ function new_buildArticleWritingBrief(rowNumber) {
     var typeRules = '';
     if (typeof getArticleTypeExpectations === 'function') {
       typeRules = String(getArticleTypeExpectations(articleType) || '').trim();
-      if (/^ERROR:|not found|no expectations defined/i.test(typeRules))
+      if (!ss.getSheetByName('Article Type Control Sheet') || !typeRules || /error:|not found|no expectations defined/i.test(typeRules))
         return {success:false,message:'Article-type control missing for '+articleType+': '+typeRules};
     } else {
       return {success:false,message:'Article Type Control Sheet reader unavailable'};
@@ -49,6 +49,48 @@ function new_buildArticleWritingBrief(rowNumber) {
     var axes = ['ac_entry_condition','ac_homeowner_perception','ac_material_behaviour',
       'ac_constraint','ac_process_emphasis','ac_result_type','ac_narrative_archetype'];
     var selection = axes.map(function(k){return k+': '+(val(k)||'[not classified]');}).join('\n');
+    var acLibrary = getAcValuesForMaterial(material, articleType);
+    if (!acLibrary || !acLibrary.values || !Object.keys(acLibrary.values).length)
+      return {success:false,message:'AC library not available for this article type/material'};
+    var acProblems = axes.filter(function(k){
+      return val(k) && (acLibrary.values[k] || []).indexOf(val(k)) === -1;
+    });
+    if (acProblems.length)
+      return {success:false,message:'Invalid AC choices: '+acProblems.join(', ')};
+    selection = axes.map(function(k){
+      return String((acLibrary.labels || {})[k] || k)+': '+(val(k)||'[not classified]');
+    }).join('\n');
+    var evidence = '';
+    if (articleType === 'Case Study') {
+      if (typeof bc_caseEvidencePromptBlock_ !== 'function')
+        return {success:false,message:'Case Study evidence reader not available'};
+      evidence = bc_caseEvidencePromptBlock_(row);
+      if (!evidence || !evidence.includes('AUTHORITATIVE CASE STUDY FACTS'))
+        return {success:false,message:'Case Study evidence package unavailable'};
+    }
+    if (typeof getTechnicalMatrix !== 'function')
+      return {success:false,message:'Technical Matrix reader unavailable'};
+    var technical = getTechnicalMatrix(material);
+    var media = {
+      images:(originalHtml.match(/<img\b[^>]*>/gi)||[]).map(function(tag){
+        return {src:(tag.match(/\bsrc\s*=\s*["']([^"']+)["']/i)||[])[1]||'',
+          alt:(tag.match(/\balt\s*=\s*["']([^"']*)["']/i)||[])[1]||''};
+      }).filter(function(x){return !!x.src;}),
+      videos:(originalHtml.match(/<(?:iframe|video|source)\b[^>]*>/gi)||[]).map(function(tag){
+        return (tag.match(/\bsrc\s*=\s*["']([^"']+)["']/i)||[])[1]||'';
+      }).filter(Boolean)
+    };
+    var scopeKeys = ['Primary Entity','Supporting Entities Core','Page Rewrite Brief',
+      'Rewrite Governance Summary','Cannibalisation Guardrail','Safe Handoff Pages',
+      'Observed Query Cluster','Entity Role','Feeds Hub','Authority Brief','Article Angle',
+      'GSC Benchmark Queries','GSC Monitor Queries','Montr Queries'];
+    var scope = scopeKeys.map(function(k){return k+': '+(val(k)||'[not supplied]');}).join('\n');
+    var locality = articleType === 'Geo Service Page' ?
+      'Locality: '+val('Locality')+'; Parent Area: '+val('Parent Area') : '';
+    var sourceContext = articleType === 'Case Study' ?
+      'AUTHORITATIVE CASE STUDY EVIDENCE:\n'+evidence+
+      '\nOriginal HTML is context for the narrative, NOT authority for additional project claims.' :
+      'ORIGINAL ARTICLE AS DISTINCTIVE SOURCE CONTEXT:\n'+originalHtml;
     var prompt = [
       'ROLE: Senior UK stone and tile restoration editor. Prepare a UNIQUE writing brief, not the finished article.',
       'GOVERNING PRINCIPLE: Stay true to the details and experience recorded in the original article, but never allow its existing structure, wording or limitations to restrict the quality of the new article.',
@@ -59,20 +101,24 @@ function new_buildArticleWritingBrief(rowNumber) {
       'PRIMARY SEARCH TERM: '+val('Primary Search Term'),
       'ARTICLE-TYPE RULES (authoritative):\n'+typeRules,
       'EXISTING CLASSIFICATION CONTEXT:\n'+selection,
-      'ORIGINAL ARTICLE — project-specific factual input, not a prose template:\n'+originalHtml,
+      'SEARCH, GOVERNANCE AND SCOPE:\n'+scope,
+      locality,
+      'TECHNICAL MATRIX (general reference, never evidence of work performed):\n'+technical,
+      'ORIGINAL MEDIA ASSET INVENTORY:\n'+JSON.stringify(media),
+      sourceContext,
       'TASK: Analyse the original and produce a writing brief under the following headings:',
       '1. Distinctive value: what only THIS source article can credibly tell readers; quote short source anchors for traceability.',
-      '2. Documented details: client objective, visible conditions, location/property context if stated, methods, materials, outcomes, limits and assets; distinguish stated, uncertain and absent facts.',
+      articleType === 'Case Study' ? '2. Documented project details: client objective, conditions, decisions, methods, results and limits; distinguish proven from unknown.' : '2. Article-specific source insights and reader concerns; do not invent a client or restoration project.',
       '3. Reader questions and intent: which concerns matter most and why; do not add unsupported search-volume or competitor claims.',
       '4. Editorial opportunity: stronger explanation, useful decisions, natural technical context and what to omit as generic filler.',
       '5. Suggested article structure: each proposed section must have a clear job; no mandatory section count or template.',
-      '6. Evidence and claim boundaries: what must stay true; what must NOT be invented. Never infer tests, dates, work performed, customer reactions or results.',
+      '6. Evidence and claim boundaries: what must stay true; what must NOT be invented. Never infer tests, dates, work performed, customer reactions, results, products, brands, suppliers, chemistry or equipment.',
       '7. Brief-specific success test: what a reviewer should look for to distinguish an exceptional article from a generic AI article.',
       'Do not draft final HTML. Do not select internal links. Do not invent SERP findings, external sources or project facts.',
       'Write in practical homeowner-facing UK English. Technical Matrix and governed CX link plan are applied by their authoritative downstream stages.'
     ].join('\n\n');
     return {success:true,row:row,postId:postId,articleType:articleType,
       source:'site-export',originalCharacters:originalHtml.length,prompt:prompt,
-      warnings:axes.filter(function(k){return !val(k);}).map(function(k){return 'Missing classification: '+k;})};
+      media:media,warnings:axes.filter(function(k){return !val(k);}).map(function(k){return 'Missing classification: '+k;})};
   } catch(e) {return {success:false,message:'V2 brief error: '+String(e)};}
 }
