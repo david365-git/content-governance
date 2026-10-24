@@ -373,7 +373,9 @@ function parseClassificationResponse(response) {
       const data = JSON.parse(clean);
 
       data.forEach(function(entry) {
-
+        if (entry && entry.gap === true) {
+          throw new Error('AC has an unresolved library option gap; review Pre-AC before saving.');
+        }
         if (
           entry &&
           Number.isInteger(Number(entry.index)) &&
@@ -395,7 +397,7 @@ function parseClassificationResponse(response) {
         if (!parsed[axis]) parsed[axis] = '';
       });
 
-      parsed.problem_angle = '';
+      // Problem Angle belongs to W-1; AC does not assign or clear it.
 
       return parsed;
     }
@@ -436,8 +438,7 @@ function writeClassificationToSheet(postsSheet, activeRow, headers, parsed) {
       'constraint': 'ac_constraint',
       'process_emphasis': 'ac_process_emphasis',
       'result_type': 'ac_result_type',
-      'narrative_archetype': 'ac_narrative_archetype',
-      'problem_angle': 'Problem Angle'
+      'narrative_archetype': 'ac_narrative_archetype'
     };
 
     const angleDefinitions = {
@@ -507,6 +508,9 @@ function checkClassificationDuplication(postsSheet, activeRow, headers, parsed) 
     const stoneTypeCol = headers.indexOf('Stone Type') + 1;
     const activeStoneType = stoneTypeCol > 0 ? 
       String(postsSheet.getRange(activeRow, stoneTypeCol).getValue() || '').trim() : '';
+    const articleTypeIdx = headers.indexOf('Article Type');
+    const activeArticleType = articleTypeIdx >= 0 ?
+      String(postsSheet.getRange(activeRow, articleTypeIdx + 1).getValue() || '').trim() : '';
 
     const axisKeys = [
       'entry_condition',
@@ -606,6 +610,7 @@ function checkClassificationDuplication(postsSheet, activeRow, headers, parsed) 
       const rowNum = idx + 2;
       if (rowNum === activeRow) return;
       if (stoneTypeIdx > -1 && String(row[stoneTypeIdx] || '').trim() !== activeStoneType) return;
+      if (articleTypeIdx >= 0 && String(row[articleTypeIdx] || '').trim() !== activeArticleType) return;
 
       const rowValues = {};
       let hasClassification = false;
