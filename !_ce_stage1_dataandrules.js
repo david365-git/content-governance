@@ -801,7 +801,7 @@ function saveW1AOutput() {
   var originalHTML = "";
   for (var i = 1; i < exportData.length; i++) {
     if (String(exportData[i][idIndex]) === String(postID)) {
-      originalHTML = cleanHtmlForLLM(String(exportData[i][htmlIndex] || ""));
+      originalHTML = cleanHtmlForLLM(normaliseOriginalHtmlInternalUrls(String(exportData[i][htmlIndex] || "")));
       break;
     }
   }
