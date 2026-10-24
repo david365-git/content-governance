@@ -289,6 +289,15 @@ function autoAssignProblemAngle(targetRow) {
       if (!ANGLE_DEFINITIONS[existingCode]) {
         return {success:false,message:"Existing Problem Angle is unrecognised; review before replacing it."};
       }
+      if (existingCode !== angleCode) {
+        return {success:false,message:"Existing Problem Angle " + existingCode +
+          " conflicts with current article type (" + angleCode + "); review the row before proceeding."};
+      }
+      if (existingAngle !== angleString) {
+        angleCell.setValue(angleString);
+        return {success:true,message:"Problem Angle refreshed for current query cluster: " + angleCode,
+          angleCode:angleCode,angleString:angleString,refreshed:true};
+      }
       return {success:true,message:"Existing Problem Angle preserved: " + existingCode,
         angleCode:existingCode,angleString:existingAngle,preserved:true};
     }
