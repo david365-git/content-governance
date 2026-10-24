@@ -52,13 +52,17 @@ function new_buildArticleWritingBrief(rowNumber) {
     var acLibrary = getAcValuesForMaterial(material, articleType);
     if (!acLibrary || !acLibrary.values || !Object.keys(acLibrary.values).length)
       return {success:false,message:'AC library not available for this article type/material'};
-    var acProblems = axes.filter(function(k){
-      return val(k) && (acLibrary.values[k] || []).indexOf(val(k)) === -1;
+    var libraryKeys = ['ac_what_they_found','ac_why_they_called',
+      'ac_what_the_floor_was_doing','ac_what_forced_careful_decisions',
+      'ac_what_governed_the_approach','ac_what_changed_for_the_homeowner',
+      'ac_story_direction'];
+    var acProblems = axes.filter(function(k,i){
+      return val(k) && (acLibrary.values[libraryKeys[i]] || []).indexOf(val(k)) === -1;
     });
     if (acProblems.length)
       return {success:false,message:'Invalid AC choices: '+acProblems.join(', ')};
-    selection = axes.map(function(k){
-      return String((acLibrary.labels || {})[k] || k)+': '+(val(k)||'[not classified]');
+    selection = axes.map(function(k,i){
+      return String((acLibrary.labels || {})[libraryKeys[i]] || libraryKeys[i])+': '+(val(k)||'[not classified]');
     }).join('\n');
     var evidence = '';
     if (articleType === 'Case Study') {
@@ -82,9 +86,19 @@ function new_buildArticleWritingBrief(rowNumber) {
     };
     var scopeKeys = ['Primary Entity','Supporting Entities Core','Page Rewrite Brief',
       'Rewrite Governance Summary','Cannibalisation Guardrail','Safe Handoff Pages',
-      'Observed Query Cluster','Entity Role','Feeds Hub','Authority Brief','Article Angle',
-      'GSC Benchmark Queries','GSC Monitor Queries','Montr Queries'];
+      'Observed Query Cluster','Entity Role','Feeds Hub','Article Angle',
+      'Rewrite Status','Benmrk Queries','Montr Queries'];
     var scope = scopeKeys.map(function(k){return k+': '+(val(k)||'[not supplied]');}).join('\n');
+    var benchmarkQueries = typeof bc_getQueriesFromSheet === 'function'
+      ? String(bc_getQueriesFromSheet(postId,'GSC Benchmark') || '').trim() : '';
+    var monitorQueries = typeof bc_getQueriesFromSheet === 'function'
+      ? String(bc_getQueriesFromSheet(postId,'GSC Monitor') || '').trim() : '';
+    benchmarkQueries = benchmarkQueries || val('Benmrk Queries');
+    monitorQueries = monitorQueries || val('Montr Queries');
+    scope += '\nGSC pre-migration benchmark queries: '+(benchmarkQueries || '[unavailable]');
+    scope += '\nGSC monitor queries: '+(monitorQueries || '[unavailable]');
+    scope += '\nAuthority Brief: use only established entity ownership, governance and intent facts; ignore inherited word limits, fixed formats and vocabulary quotas.';
+
     var locality = articleType === 'Geo Service Page' ?
       'Locality: '+val('Locality')+'; Parent Area: '+val('Parent Area') : '';
     var sourceContext = articleType === 'Case Study' ?
@@ -112,7 +126,7 @@ function new_buildArticleWritingBrief(rowNumber) {
       articleType === 'Case Study' ? '2. Documented project details: client objective, conditions, decisions, methods, results and limits; distinguish proven from unknown.' : '2. Article-specific source insights and reader concerns; do not invent a client or restoration project.',
       '3. Reader questions and intent: which concerns matter most and why; do not add unsupported search-volume or competitor claims.',
       '4. Editorial opportunity: stronger explanation, useful decisions, natural technical context and what to omit as generic filler.',
-      '5. Suggested article structure: each proposed section must have a clear job; no mandatory section count or template.',
+      '5. Suggested article structure: follow the approved Article Angle as the structural direction, while selecting the most useful sections for THIS article. W1.5A–W1.5E remain the authority for the final governed structure; no mandatory section count.',
       '6. Evidence and claim boundaries: what must stay true; what must NOT be invented. Never infer tests, dates, work performed, customer reactions, results, products, brands, suppliers, chemistry or equipment.',
       '7. Brief-specific success test: what a reviewer should look for to distinguish an exceptional article from a generic AI article.',
       'Do not draft final HTML. Do not select internal links. Do not invent SERP findings, external sources or project facts.',
