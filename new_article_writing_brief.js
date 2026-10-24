@@ -87,7 +87,7 @@ function new_buildArticleWritingBrief(rowNumber) {
     var scopeKeys = ['Primary Entity','Supporting Entities Core','Page Rewrite Brief',
       'Rewrite Governance Summary','Cannibalisation Guardrail','Safe Handoff Pages',
       'Observed Query Cluster','Entity Role','Feeds Hub','Article Angle',
-      'Rewrite Status','Benmrk Queries','Montr Queries'];
+      'Rewrite Status','Page Governance Summary','Peripheral Entities Link Out'];
     var scope = scopeKeys.map(function(k){return k+': '+(val(k)||'[not supplied]');}).join('\n');
     var benchmarkQueries = typeof bc_getQueriesFromSheet === 'function'
       ? String(bc_getQueriesFromSheet(postId,'GSC Benchmark') || '').trim() : '';
@@ -97,7 +97,6 @@ function new_buildArticleWritingBrief(rowNumber) {
     monitorQueries = monitorQueries || val('Montr Queries');
     scope += '\nGSC pre-migration benchmark queries: '+(benchmarkQueries || '[unavailable]');
     scope += '\nGSC monitor queries: '+(monitorQueries || '[unavailable]');
-    scope += '\nAuthority Brief: use only established entity ownership, governance and intent facts; ignore inherited word limits, fixed formats and vocabulary quotas.';
 
     var locality = articleType === 'Geo Service Page' ?
       'Locality: '+val('Locality')+'; Parent Area: '+val('Parent Area') : '';
@@ -126,7 +125,7 @@ function new_buildArticleWritingBrief(rowNumber) {
       articleType === 'Case Study' ? '2. Documented project details: client objective, conditions, decisions, methods, results and limits; distinguish proven from unknown.' : '2. Article-specific source insights and reader concerns; do not invent a client or restoration project.',
       '3. Reader questions and intent: which concerns matter most and why; do not add unsupported search-volume or competitor claims.',
       '4. Editorial opportunity: stronger explanation, useful decisions, natural technical context and what to omit as generic filler.',
-      '5. Suggested article structure: follow the approved Article Angle as the structural direction, while selecting the most useful sections for THIS article. W1.5A–W1.5E remain the authority for the final governed structure; no mandatory section count.',
+      angle ? '5. Suggested article structure: follow the approved Article Angle ('+angle+') as the structural direction, while selecting useful sections for THIS article. W1.5A–W1.5E approve the final structure; no mandatory section count.' : '5. Suggested article structure: no Article Angle is approved yet. Suggest a suitable article-type-specific direction and flag it for explicit approval; do not treat the suggestion as an approved angle. W1.5A–W1.5E approve the final structure.',
       '6. Evidence and claim boundaries: what must stay true; what must NOT be invented. Never infer tests, dates, work performed, customer reactions, results, products, brands, suppliers, chemistry or equipment.',
       '7. Brief-specific success test: what a reviewer should look for to distinguish an exceptional article from a generic AI article.',
       'Do not draft final HTML. Do not select internal links. Do not invent SERP findings, external sources or project facts.',
