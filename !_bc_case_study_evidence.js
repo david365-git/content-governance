@@ -163,6 +163,12 @@ function bc_caseEvidenceExtract_(row,modelOverride,unused,splitMode){
  'Extract each distinct documented project fact separately, preserving meaningful details of the method, equipment, material, condition, inspection and outcome. Do not merge separate tools, actions or findings, or omit qualifying details merely to shorten the response. Avoid only genuine duplication and trivial restatement.',
  'STRICT PROJECT-EVIDENCE RULE: only retain facts clearly connected to this specific job. Exclude generic material behaviour, hypothetical homeowner symptoms, possible contaminants, other projects and conditional treatments.',
  'Never turn advice, possibilities or options into observed findings or performed work. Distinguish client requests from contractor objectives and verified observations from possible causes.',
+ 'COMMERCIAL CONFIDENTIALITY: preserve the exact level of product/tool specificity documented by this article. Generic terms such as specialist cleaner, solvent stripper, professional sealer remover, diamond tooling, medium brush, satin topical sealer must remain generic. Never infer brand, supplier, exact chemistry, ingredients, waterborne/solvent carrier, or product identity from other sources.',
+ 'Preserve explicit operational specifics such as diamond type, each grit size, pad/brush stiffness, and the distinct grinding, honing, polishing, stripping and sealing stages; never silently merge them.',
+ 'The azon product list is a homeowner maintenance catalogue, NOT evidence of products used professionally. Even when a named product appears in a catalogue or technical reference, never infer its use on this job.',
+ 'For client requirements, record a client request only when attributed to the client or an expressly agreed client scope. Otherwise record a documented contractor restoration objective without claiming the client requested it.',
+ 'Separate products/equipment actually used by the restoration contractor from products only pictured, advertised, discussed, recommended to readers, or handed over for future maintenance. Record client-specific advice or supplied aftercare items under Maintenance Handover. Exclude unconnected product promotions.',
+ 'Professional restoration methods must not include previous DIY cleaning by the homeowner; place documented homeowner attempts under Observed Conditions. Do not rephrase those attempts as contractor operations.',
  'Read the article in paragraph order. For each paragraph ask whether it records any actual observation, inspection, negative finding, action or outcome about this project; include all distinct documented facts without repetition.',
  'Return one JSON object with exactly one key "facts", containing a single array ordered by ascending paragraph number.',
  'Each fact must be {"paragraph":1,"category":"one exact category name","fact":"concise factual statement"}.',
@@ -296,6 +302,16 @@ function bc_caseEvidenceExtract_(row,modelOverride,unused,splitMode){
      var actionCats={'Restoration Methods':true,'Products & Equipment':true,'Project Results':true};
      if((conditionCats[left.category]&&actionCats[right.category])||
         (conditionCats[right.category]&&actionCats[left.category]))continue;
+     // Different named cleaning substances are distinct evidence, even when their
+     // warnings or applications are otherwise word-for-word identical.
+     var distinctChemicals_=['vinegar','bleach','limescale remover','acid cleaner','alkaline cleaner','solvent stripper'];
+     var ca=distinctChemicals_.filter(function(x){return pa.raw.indexOf(x)>=0;});
+     var cb=distinctChemicals_.filter(function(x){return pb.raw.indexOf(x)>=0;});
+     if(ca.length&&cb.length&&ca.join('|')!==cb.join('|'))continue;
+     // A client's stated requirement and a completed outcome remain different
+     // evidence roles; do not flag them as copies of each other.
+     if((left.category==='Client Requirements & Restoration Objectives'&&right.category==='Project Results')||
+        (right.category==='Client Requirements & Restoration Objectives'&&left.category==='Project Results'))continue;
      if(isMaintenance_(left)!==isMaintenance_(right))continue;
      var ga=primaryGrit_(left),gb=primaryGrit_(right);
      if(ga&&gb&&ga!==gb)continue;
