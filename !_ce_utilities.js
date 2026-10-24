@@ -3052,13 +3052,14 @@ function acBuildClassifyPrompt() {
     'ac_story_direction'
   ];
 
-  let fieldIndex = 0;
-  fieldOrder.forEach(function(key) {
-    if (!fields[key]) return;
-    prompt += `FIELD ${fieldIndex}: ${fieldLabels[key]}\n`;
-    fields[key].forEach(function(opt) { prompt += `- ${opt}\n`; });
+  fieldOrder.forEach(function(key, fieldIndex) {
+    prompt += `FIELD ${fieldIndex}: ${fieldLabels[key] || key}\n`;
+    if (fields[key] && fields[key].length) {
+      fields[key].forEach(function(opt) { prompt += `- ${opt}\n`; });
+    } else {
+      prompt += '- [NO AVAILABLE OPTIONS — report gap; do not invent a selection]\n';
+    }
     prompt += `\n`;
-    fieldIndex++;
   });
 
   // Fetch article content from site-export sheet
