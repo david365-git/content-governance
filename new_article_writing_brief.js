@@ -39,7 +39,7 @@ function new_buildArticleWritingBrief(rowNumber) {
     var typeRules = '';
     if (typeof getArticleTypeExpectations === 'function') {
       typeRules = String(getArticleTypeExpectations(articleType) || '').trim();
-      if (/^ERROR:|not found in Article Type Control Sheet/i.test(typeRules))
+      if (/^ERROR:|not found|no expectations defined/i.test(typeRules))
         return {success:false,message:'Article-type control missing for '+articleType+': '+typeRules};
     } else {
       return {success:false,message:'Article Type Control Sheet reader unavailable'};
