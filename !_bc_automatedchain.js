@@ -6409,7 +6409,7 @@ function pipelineRunAuthorityBrief(row) {
     if (queryCluster && typeof checkProblemRegister === 'function') {
       try {
         var angleText = stageField('Problem Angle');
-        var angleCode = String(angleText.trim().split(/[\\s—-]+/)[0] || '').toUpperCase();
+        var angleCode = String(angleText.trim().split(/[\s—-]+/)[0] || '').toUpperCase();
         var overlapResult = checkProblemRegister(
           queryCluster, stageField('Stone Type'), stageField('URL'), articleType, angleCode
         );
