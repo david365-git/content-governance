@@ -137,7 +137,7 @@ function bc_caseEvidenceSnapshotActiveRow() {
 
 var BC_CASE_EVIDENCE_VERSION_ = 'v10';
 function bc_caseEvidenceStatus_(digest) { return 'SOURCE-QUOTED-' + BC_CASE_EVIDENCE_VERSION_ + ' | sha256:' + digest; }
-function bc_caseEvidenceExtract_(row,modelOverride,twoPass){
+function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
  var ss=SpreadsheetApp.getActiveSpreadsheet(),sh=ss.getSheetByName('posts');
  row=Number(row);if(row<2)throw Error('Invalid posts row');
  var h=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
@@ -179,6 +179,17 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass){
  'Use only these ten category names: '+JSON.stringify(labels),
  'Do not include quotations or commentary. An empty array is valid when no project facts exist.',
  paras.map(function(t,i){return '['+(i+1)+'] '+t;}).join('\n')].join('\n');
+ var splitAt=Math.ceil(paras.length/2);
+ var fullParagraphBlock=paras.map(function(t,i){return '['+(i+1)+'] '+t;}).join('\n');
+ var splitPromptA=prompt;
+ var splitPromptB='';
+ if(splitMode){
+   var halfA=paras.slice(0,splitAt).map(function(t,i){return '['+(i+1)+'] '+t;}).join('\n');
+   var halfB=paras.slice(splitAt).map(function(t,i){return '['+(splitAt+i+1)+'] '+t;}).join('\n');
+   splitPromptA=prompt.slice(0,prompt.length-fullParagraphBlock.length)+halfA;
+   splitPromptB=prompt.slice(0,prompt.length-fullParagraphBlock.length)+halfB;
+   prompt=splitPromptA;
+ }
  var promptFingerprint=bc_caseEvidenceDigest_(prompt);
  var chosenModel=modelOverride||MODEL_CHEAP;
  var api=bc_sendPromptViaOpenAI(prompt,6500,chosenModel);
@@ -199,6 +210,38 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass){
    byCategory[name].push({fact:fact,paragraph:p});
  });
  labels.forEach(function(name){cells.push(JSON.stringify(byCategory[name]));});
+ if(splitMode){
+   // Two independent Luna extractions: do not show either half the other's facts.
+   // Preserve the first half in a distinct archive snapshot after validation.
+   var firstHalfFacts=facts.slice();
+   var firstHalfPromptFingerprint=promptFingerprint;
+   var firstHalfApi=api;
+   var second=bc_sendPromptViaOpenAI(splitPromptB,6500,MODEL_CHEAP);
+   if(!second||!second.success||second.truncated||second.finishReason==='length')throw Error('Second half extraction failed; existing row unchanged');
+   var secondData=JSON.parse(String(second.text||'').trim());
+   if(!secondData||!Array.isArray(secondData.facts))throw Error('Second half did not return a facts array');
+   secondData.facts.forEach(function(item){
+     var p=Number(item&&item.paragraph),cat=String(item&&item.category||'').trim(),fact=String(item&&item.fact||'').trim();
+     if(!fact||!Number.isInteger(p)||p<=splitAt||p>paras.length||!Object.prototype.hasOwnProperty.call(byCategory,cat))
+       throw Error('Invalid second-half fact/category/paragraph');
+     facts.push({category:cat,fact:fact,sourceParagraph:p,sourceOrder:p});
+     byCategory[cat].push({fact:fact,paragraph:p});
+   });
+   // Keep the first and second halves independent and avoid cross-half duplicate filtering.
+   cells=labels.map(function(name){return JSON.stringify(byCategory[name]);});
+   api={model:MODEL_CHEAP,responseId:String(second.responseId||''),text:String(second.text||''),
+     promptTokens:Number(firstHalfApi.promptTokens||0)+Number(second.promptTokens||0),
+     completionTokens:Number(firstHalfApi.completionTokens||0)+Number(second.completionTokens||0),
+     finishReason:String(second.finishReason||'unknown'),
+     cost:Number(firstHalfApi.cost||0)+Number(second.cost||0)};
+   promptFingerprint=bc_caseEvidenceDigest_(splitPromptA+'\n---SECOND HALF---\n'+splitPromptB);
+   // First-half response information is retained separately in the run log.
+   Logger.log('Split Luna first half: model='+String(firstHalfApi.model||MODEL_CHEAP)+
+     ' responseId='+String(firstHalfApi.responseId||'')+
+     ' promptFingerprint='+firstHalfPromptFingerprint+
+     ' responseFingerprint='+bc_caseEvidenceDigest_(String(firstHalfApi.text||''))+
+     ' facts='+firstHalfFacts.length);
+ }
  facts.sort(function(a,b){return a.sourceParagraph-b.sourceParagraph;});
  facts.forEach(function(f,i){f.id='F'+('000'+(i+1)).slice(-4);});
  var base=bc_caseEvidenceBuildPackage_(id,html,digest,labels,labels.map(function(){return '[]';}));
@@ -280,6 +323,10 @@ function bc_caseEvidenceActiveRow() {
  * Shared read-only evidence block for W1.5 and W2B.
  * Do not trust a prior extraction unless its original HTML fingerprint matches.
  */
+function bc_caseEvidenceActiveRowSplitLunaTest() {
+  return bc_caseEvidenceExtract_(SpreadsheetApp.getActiveSpreadsheet().getActiveRange().getRow(),MODEL_CHEAP,false,true);
+}
+
 function bc_caseEvidenceActiveRowTwoPassLunaTest() {
   return bc_caseEvidenceExtract_(SpreadsheetApp.getActiveSpreadsheet().getActiveRange().getRow(),MODEL_CHEAP,true);
 }
