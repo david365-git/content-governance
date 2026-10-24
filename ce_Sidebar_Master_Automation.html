@@ -496,23 +496,45 @@ Stage: —
         <textarea id="masterSplitResults" readonly rows="5" style="width:100%;box-sizing:border-box;margin-top:5px;font-size:11px"></textarea>
       </div>
       <script>
-      function masterRunSplitRows(){
-        var raw=document.getElementById('masterSplitRows').value.trim();
-        var parts=raw.split(/[\s,;]+/).filter(Boolean);
+      function masterRunSplitRows() {
+        var input=document.getElementById('masterSplitRows').value.trim();
+        var parts=input.split(/[\s,;]+/).filter(Boolean);
         var status=document.getElementById('masterSplitStatus');
         var log=document.getElementById('masterSplitResults');
         var button=document.getElementById('masterSplitButton');
         if(!parts.length||parts.length>30||parts.some(function(v){return !/^\d+$/.test(v)||Number(v)<2;})){
-          status.textContent='Enter 1–30 valid posts row numbers (2 or higher).';return;
+          status.textContent='Enter 1-30 valid posts row numbers (2 or higher).';
+          return;
         }
         var rows=parts.map(Number);
         if(new Set(rows).size!==rows.length){status.textContent='Remove repeated row numbers.';return;}
-        button.disabled=true;log.value='';
-        var n=0,ok=0,fail=0,skip=0,cost=0;
+        button.disabled=true;
+        log.value='';
+        var index=0,ok=0,skip=0,fail=0,cost=0;
         function next(){
-          if(n>=rows.length){
+          if(index===rows.length){
             button.disabled=false;
-            status.textContent='Finished: '+ok+' complete, '+skip+' skipped, '+fail+' failed. API cost 
+            status.textContent='Finished: '+ok+' complete, '+skip+' skipped, '+fail+' failed. API cost USD '+cost.toFixed(4);
+            return;
+          }
+          var row=rows[index++];
+          status.textContent='Running posts row '+row+' ('+index+' of '+rows.length+')...';
+          google.script.run.withSuccessHandler(function(result){
+            cost+=Number(result.cost||0);
+            if(result.skipped){skip++;log.value+='SKIP row '+row+': '+result.message+'\n';}
+            else if(result.success){ok++;log.value+='PASS row '+row+': '+result.message+'\n';}
+            else {fail++;log.value+='FAIL row '+row+': '+(result.message||'Unknown')+'\n';}
+            next();
+          }).withFailureHandler(function(error){
+            fail++;log.value+='FAIL row '+row+': '+String(error&&error.message||error)+'\n';
+            next();
+          }).bc_caseEvidenceSplitLunaByRow(row);
+        }
+        next();
+      }
+      </script>
+
+      <div id="masterLogIntelligence"
            style="
              margin-top:8px;
              font-family:JetBrains Mono,monospace;
