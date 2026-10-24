@@ -311,8 +311,41 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
      if(verdict)splitDuplicateCandidates.push({verdict:verdict,paragraphA:left.sourceParagraph,paragraphB:right.sourceParagraph,categoryA:left.category,factA:left.fact,categoryB:right.category,factB:right.fact,overlap:Number(overlap.toFixed(2)),jaccard:Number(jaccard.toFixed(2))});
    }
    splitDuplicateCandidates.sort(function(a,b){return a.verdict===b.verdict?b.overlap-a.overlap:a.verdict==='likely-duplicate'?-1:1;});
-   facts=uniqueSplit;
+   // Consolidate only strongly overlapping, same-paragraph METHOD / EQUIPMENT
+   // accounts of the same operation. Preserve both category memberships and
+   // the discarded wording as audit evidence. Other review candidates stay.
+   var consolidatedSplit=[],inactiveSplit=[];
+   splitDuplicateCandidates.forEach(function(c){
+     if(c.verdict!=='likely-duplicate'||c.paragraphA!==c.paragraphB||c.overlap<0.8)return;
+     var types=[c.categoryA,c.categoryB];
+     if(types.indexOf('Restoration Methods')<0||types.indexOf('Products & Equipment')<0)return;
+     var ia=uniqueSplit.findIndex(function(f){return f.sourceParagraph===c.paragraphA&&f.category===c.categoryA&&f.fact===c.factA;});
+     var ib=uniqueSplit.findIndex(function(f){return f.sourceParagraph===c.paragraphB&&f.category===c.categoryB&&f.fact===c.factB;});
+     if(ia<0||ib<0||inactiveSplit.indexOf(ia)>=0||inactiveSplit.indexOf(ib)>=0)return;
+     var fa=uniqueSplit[ia],fb=uniqueSplit[ib];
+     var ga=primaryGrit_(fa),gb=primaryGrit_(fb),sa=stage_(fa),sb=stage_(fb);
+     if(ga&&gb&&ga!==gb||sa&&sb&&sa!==sb)return;
+     var keepIdx=fa.fact.length>=fb.fact.length?ia:ib,dropIdx=keepIdx===ia?ib:ia;
+     var kept=uniqueSplit[keepIdx],dropped=uniqueSplit[dropIdx];
+     if(!kept.evidenceCategories)kept.evidenceCategories=[kept.category];
+     if(kept.evidenceCategories.indexOf(dropped.category)<0)kept.evidenceCategories.push(dropped.category);
+     if(!kept.alsoFacts)kept.alsoFacts=[];
+     kept.alsoFacts.push({category:dropped.category,paragraph:dropped.sourceParagraph,fact:dropped.fact});
+     if(!kept.alsoParagraphs)kept.alsoParagraphs=[];
+     if(dropped.sourceParagraph!==kept.sourceParagraph&&kept.alsoParagraphs.indexOf(dropped.sourceParagraph)<0)kept.alsoParagraphs.push(dropped.sourceParagraph);
+     inactiveSplit.push(dropIdx);
+     consolidatedSplit.push({keptParagraph:kept.sourceParagraph,keptFact:kept.fact,mergedCategory:dropped.category,mergedFact:dropped.fact});
+   });
+   facts=uniqueSplit.filter(function(f,i){return inactiveSplit.indexOf(i)<0;});
    byCategory={};labels.forEach(function(name){byCategory[name]=[];});
+   facts.forEach(function(f){
+     (f.evidenceCategories||[f.category]).forEach(function(cat){
+       byCategory[cat].push({fact:f.fact,paragraph:f.sourceParagraph,alsoParagraphs:f.alsoParagraphs||[],alsoFacts:f.alsoFacts||[]});
+     });
+   });
+   cells=labels.map(function(name){return JSON.stringify(byCategory[name]);});
+   Logger.log('Split Luna strongly overlapping method/equipment facts consolidated: '+consolidatedSplit.length+'; '+JSON.stringify(consolidatedSplit));
+
    facts.forEach(function(f){byCategory[f.category].push({fact:f.fact,paragraph:f.sourceParagraph,alsoParagraphs:f.alsoParagraphs||[]});});
    cells=labels.map(function(name){return JSON.stringify(byCategory[name]);});
    Logger.log('Split Luna exact removed: '+splitDuplicates.length+'; '+JSON.stringify(splitDuplicates));
@@ -324,7 +357,7 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
  var pkg={version:'v10',postId:id,sourceDigest:digest,facts:facts,chronology:facts.filter(function(f){return f.category==='Restoration Methods';})};
  var mapped={};facts.forEach(function(f){mapped[f.sourceParagraph]=true;});
  var coverage={state:'SOURCE INDEXED',totalParagraphs:paras.length,paragraphsWithFacts:Object.keys(mapped).length,facts:facts.length};
- if(splitMode){coverage.exactDuplicatesRemoved=splitDuplicates.length;coverage.possibleDuplicatesForReview=splitDuplicateCandidates.length;coverage.duplicateReviewCandidates=splitDuplicateCandidates.slice(0,30);coverage.likelyDuplicateCount=splitDuplicateCandidates.filter(function(x){return x.verdict==='likely-duplicate';}).length;coverage.complementaryCount=splitDuplicateCandidates.filter(function(x){return x.verdict==='complementary';}).length;}
+ if(splitMode){coverage.exactDuplicatesRemoved=splitDuplicates.length;coverage.possibleDuplicatesForReview=splitDuplicateCandidates.length;coverage.duplicateReviewCandidates=splitDuplicateCandidates.slice(0,30);coverage.likelyDuplicateCount=splitDuplicateCandidates.filter(function(x){return x.verdict==='likely-duplicate';}).length;coverage.complementaryCount=splitDuplicateCandidates.filter(function(x){return x.verdict==='complementary';}).length;coverage.consolidatedMethodEquipmentFacts=consolidatedSplit.length;coverage.consolidatedFactsAudit=consolidatedSplit.slice(0,30);}
  if(splitMode){
    var firstHalfMapped={};firstHalfFacts.forEach(function(f){firstHalfMapped[f.sourceParagraph]=true;});
    var halfPkg={version:'v10',postId:id,sourceDigest:digest,facts:firstHalfFacts,
