@@ -164,7 +164,7 @@ function preAcAddGapToSheet(entry) {
     const headerRow = data[0];
 
     const universalCol = headerRow.indexOf('Universal');
-    const stoneCol = headerRow.findIndex(function(h) { return String(h || '').trim().toLowerCase() === String(stoneType || '').trim().toLowerCase(); });
+    let stoneCol = headerRow.findIndex(function(h) { return String(h || '').trim().toLowerCase() === String(stoneType || '').trim().toLowerCase(); });
     const dropdownCol = headerRow.indexOf('dropdown');
     const labelCol = headerRow.indexOf('Label');
     const valueCol = headerRow.indexOf('value') > -1 ? headerRow.indexOf('value') : headerRow.indexOf('Value');
@@ -194,6 +194,13 @@ function preAcAddGapToSheet(entry) {
       return {success:false,message:'Unrecognised Pre-AC field: ' + entry.field};
     if (!fieldLabel) fieldLabel = String(entry.field || dropdownKey).trim();
 
+    // If a new material has no column, create its governed applicability column.
+    const stoneScope = String(entry.scope || '').trim().toLowerCase();
+    if (stoneCol < 0 && stoneScope === String(stoneType || '').trim().toLowerCase() && stoneScope) {
+      stoneCol = headerRow.length;
+      acSheet.getRange(1, stoneCol + 1).setValue(String(stoneType).trim());
+      headerRow.push(String(stoneType).trim());
+    }
     // Build new row matching the sheet structure
     const newRow = new Array(headerRow.length).fill('');
     newRow[dropdownCol] = dropdownKey;
