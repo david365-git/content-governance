@@ -257,11 +257,37 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
        uniqueSplit.push(f);
      }
    });
+   // Review-only semantic candidates: same source paragraph, strong shared
+   // content words, including facts classified into different categories.
+   // Never automatically merge these: technical qualifiers can change meaning.
+   var splitDuplicateCandidates=[];
+   function bc_splitWords_(v){
+     var stop={the:1,and:1,was:1,were:1,with:1,from:1,into:1,that:1,this:1,for:1,had:1,been:1,after:1,before:1,used:1,using:1,each:1,over:1,across:1,floor:1,stone:1,tiles:1,travertine:1,restored:1,restoration:1};
+     var words=String(v).toLowerCase().replace(/[^a-z0-9]+/g,' ').split(/ +/);
+     return words.filter(function(w){return w.length>2&&!stop[w];});
+   }
+   for(var di=0;di<uniqueSplit.length;di++){
+     for(var dj=di+1;dj<uniqueSplit.length;dj++){
+       var left=uniqueSplit[di],right=uniqueSplit[dj];
+       if(left.sourceParagraph!==right.sourceParagraph)continue;
+       var wa=bc_splitWords_(left.fact),wb=bc_splitWords_(right.fact);
+       var ua={};wa.forEach(function(w){ua[w]=true;});
+       var ub={};wb.forEach(function(w){ub[w]=true;});
+       var ka=Object.keys(ua),kb=Object.keys(ub);
+       if(Math.min(ka.length,kb.length)<3)continue;
+       var shared=ka.filter(function(w){return ub[w];}).length;
+       var score=shared/Math.min(ka.length,kb.length);
+       if(shared>=3&&score>=0.8){
+         splitDuplicateCandidates.push({paragraph:left.sourceParagraph,categoryA:left.category,factA:left.fact,categoryB:right.category,factB:right.fact,overlap:Number(score.toFixed(2))});
+       }
+     }
+   }
    facts=uniqueSplit;
    byCategory={};labels.forEach(function(name){byCategory[name]=[];});
    facts.forEach(function(f){byCategory[f.category].push({fact:f.fact,paragraph:f.sourceParagraph});});
    cells=labels.map(function(name){return JSON.stringify(byCategory[name]);});
    Logger.log('Split Luna exact duplicates removed: '+splitDuplicates.length+'; '+JSON.stringify(splitDuplicates));
+   Logger.log('Split Luna duplicate review candidates: '+splitDuplicateCandidates.length+'; '+JSON.stringify(splitDuplicateCandidates));
  }
  facts.sort(function(a,b){return a.sourceParagraph-b.sourceParagraph;});
  facts.forEach(function(f,i){f.id='F'+('000'+(i+1)).slice(-4);});
@@ -269,7 +295,7 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
  var pkg={version:'v10',postId:id,sourceDigest:digest,facts:facts,chronology:facts.filter(function(f){return f.category==='Restoration Methods';})};
  var mapped={};facts.forEach(function(f){mapped[f.sourceParagraph]=true;});
  var coverage={state:'SOURCE INDEXED',totalParagraphs:paras.length,paragraphsWithFacts:Object.keys(mapped).length,facts:facts.length};
- if(splitMode)coverage.exactDuplicatesRemoved=splitDuplicates.length;
+ if(splitMode){coverage.exactDuplicatesRemoved=splitDuplicates.length;coverage.possibleDuplicatesForReview=splitDuplicateCandidates.length;coverage.duplicateReviewCandidates=splitDuplicateCandidates.slice(0,30);}
  if(splitMode){
    var firstHalfMapped={};firstHalfFacts.forEach(function(f){firstHalfMapped[f.sourceParagraph]=true;});
    var halfPkg={version:'v10',postId:id,sourceDigest:digest,facts:firstHalfFacts,
