@@ -413,12 +413,21 @@ function bc_caseEvidenceActiveRowSplitLunaTest() {
 }
 
 /** Explicit posts-row runner used by the Master Automation sidebar. */
-function bc_caseEvidenceSplitLunaByRow(row) {
-  row=Number(row);
+function bc_caseEvidenceSplitLunaByPostId(postId) {
+  var id=String(postId||'').trim();
+  if(!/^\d+$/.test(id))throw Error('Invalid Post ID: '+id);
   var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
-  if(!sh||!Number.isInteger(row)||row<2||row>sh.getLastRow())throw Error('Invalid posts row: '+row);
+  if(!sh)throw Error('posts sheet missing');
+  var headers=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
+  var col=headers.indexOf('Post ID')+1;
+  if(!col)throw Error('Post ID column missing');
+  var values=sh.getRange(2,col,Math.max(1,sh.getLastRow()-1),1).getDisplayValues();
+  var matches=[];
+  values.forEach(function(v,i){if(String(v[0]).trim()===id)matches.push(i+2);});
+  if(matches.length!==1)throw Error(matches.length?'Duplicate Post ID in posts: '+id:'Post ID not found: '+id);
+  var row=matches[0];
   var result=bc_caseEvidenceExtract_(row,MODEL_CHEAP,false,true);
-  return {row:row,success:result.success,skipped:!!result.skipped,cost:Number(result.cost||0),message:result.skipped?'Not a Case Study':String(result.message||'Complete')};
+  return {postId:id,row:row,success:result.success,skipped:!!result.skipped,cost:Number(result.cost||0),message:result.skipped?'Not a Case Study':String(result.message||'Complete')};
 }
 
 function bc_caseEvidencePromptBlock_(row){
