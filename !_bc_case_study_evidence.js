@@ -248,7 +248,7 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
    // Never discard a shorter/longer claim merely because it shares technical vocabulary.
    var seenSplit={},uniqueSplit=[],splitDuplicates=[];
    facts.forEach(function(f){
-     var normalized=String(f.fact).toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z0-9]+/g,' ').trim().replace(/\\s+/g,' ');
+     var normalized=String(f.fact).toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z0-9]+/g,' ').trim().replace(/ +/g,' ');
      var signature=f.category+'|'+normalized;
      if(seenSplit[signature]){
        splitDuplicates.push({keptParagraph:seenSplit[signature].sourceParagraph,removedParagraph:f.sourceParagraph,category:f.category,fact:f.fact});
