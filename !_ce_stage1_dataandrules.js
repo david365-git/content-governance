@@ -399,38 +399,12 @@ Your entire response must be exactly: "Stage 1C paragraph rules received."
 Nothing else.
 
 --- RULE 5: PARAGRAPH ARCHITECTURE (Hard Lock) ---
-Generate each paragraph by writing the topic sentence first. The semantic payload —
-the named entity or mechanism being discussed — must appear in the first clause of the
-first sentence. Each paragraph's opening sentence must be able to stand alone as a
-complete, indexable statement of the point that follows.
-
-ACTIVE VOICE REQUIREMENT (Hard Lock):
-The subject of each sentence must perform the action, not receive it. Do not use passive
-constructions ("was needed", "was applied", "was removed", "is treated", "was chosen").
-Rewrite passive sentences so a named or implied active agent performs the verb.
-❌ WRONG: "Controlled alkaline cleaning was needed because residue had built up."
-✅ CORRECT: "Technicians applied controlled alkaline cleaning because residue had built up."
-❌ WRONG: "The old sealer was stripped using a solvent-based remover."
-✅ CORRECT: "A solvent-based remover stripped the old sealer."
-This rule applies within the third-person voice already required by the Article Type
-Control Lock — it does not authorise first-person "we" language.
-
-Prohibited opening constructions:
-"In…", "For…", "If…", "When…", "There are…", "It is…", "One of…", "Many…", "This is…"
-
-If the topic sentence opens with any prohibited construction — discard it and rewrite
-before continuing to the supporting sentences.
-
-FRAMING VERB PROHIBITION: The first verb must state what the entity does, causes,
-prevents, or produces — not introduce it. Prohibited first verbs:
-explains, explains why, are explained, describes, refers to, presents, discusses,
-covers, addresses, outlines, details, shows, illustrates, highlights, demonstrates,
-demonstrate, appear in, appear across, can be seen in, documents, reveals.
-
-❌ WRONG: "Travertine floor behaviour explains why this defect appears frequently."
-✅ CORRECT: "Travertine's natural cavity structure spreads residue from tile pits into grout lines."
-❌ WRONG: "Domestic steam cleaning presents additional risks for travertine grout."
-✅ CORRECT: "Domestic steam cleaning forces liquified soil deeper into grout pores because it heats without extracting."
+Write paragraphs with a clear purpose and natural progression. Name the relevant
+material, condition or treatment when it improves understanding, not according to
+a fixed first-clause formula. Prefer active voice when clearer, but use natural
+passive voice when the treatment or result matters more than the actor.
+Vary sentence openings. Preserve documented professional voice and article-type
+requirements. Avoid repetitive meta-commentary and unsupported technical claims.
 
 INTERNAL LINK SIGNPOSTING PROHIBITION:
 Passive signposting constructions are prohibited as paragraph openers:
