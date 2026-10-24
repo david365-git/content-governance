@@ -136,3 +136,37 @@ function new_buildArticleWritingBrief(rowNumber) {
       media:media,warnings:axes.filter(function(k){return !val(k);}).map(function(k){return 'Missing classification: '+k;})};
   } catch(e) {return {success:false,message:'V2 brief error: '+String(e)};}
 }
+
+
+/**
+ * Manual entry point for the existing Posts menu.
+ * Produces a read-only prompt preview; no AI calls and no writes.
+ */
+function new_previewWritingBriefActiveRow() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var posts = ss.getSheetByName('posts');
+  if (!posts) { SpreadsheetApp.getUi().alert('Posts sheet not found.'); return; }
+  var row = posts.getActiveRange().getRow();
+  var result = new_buildArticleWritingBrief(row);
+  if (!result.success) {
+    SpreadsheetApp.getUi().alert('New Writing Brief — row ' + row + '\n\n' + result.message);
+    return;
+  }
+  var escaped = String(result.prompt || '').replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  var html = '<!doctype html><html><head><base target="_top"><style>' +
+    'body{font-family:Arial,sans-serif;padding:12px}' +
+    'textarea{width:100%;height:75vh;box-sizing:border-box;font:12px/1.45 Consolas,monospace}' +
+    'button{margin:8px 0;padding:9px 16px}</style></head><body>' +
+    '<strong>Row ' + result.row + ' — ' + String(result.articleType).replace(/</g, '&lt;') +
+    '</strong><p>Read-only writing brief. Nothing has been changed.</p>' +
+    '<button onclick="var e=document.getElementById(\'brief\');e.select();' +
+    'document.execCommand(\'copy\');">Copy brief</button>' +
+    '<textarea id="brief" readonly>' + escaped + '</textarea>' +
+    '</body></html>';
+  SpreadsheetApp.getUi().showModalDialog(
+    HtmlService.createHtmlOutput(html).setWidth(920).setHeight(650),
+    'NEW article writing brief — row ' + row
+  );
+}
