@@ -6428,6 +6428,10 @@ function pipelineRunAuthorityBrief(row) {
       };
     }
 
+    if (result.review) {
+      bc_appendPipelineRunLog(row, String(result.message || 'W-1 Problem Angle requires review'));
+    }
+
     // Report existing intent conflicts without allowing a heuristic keyword
     // match to block an otherwise valid article automatically.
     if (queryCluster && typeof checkProblemRegister === 'function') {
