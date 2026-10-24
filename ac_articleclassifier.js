@@ -395,7 +395,7 @@ function parseClassificationResponse(response) {
         if (!parsed[axis]) parsed[axis] = '';
       });
 
-      parsed.problem_angle = '';
+      // Problem Angle belongs to W-1; AC does not assign or clear it.
 
       return parsed;
     }
@@ -436,8 +436,7 @@ function writeClassificationToSheet(postsSheet, activeRow, headers, parsed) {
       'constraint': 'ac_constraint',
       'process_emphasis': 'ac_process_emphasis',
       'result_type': 'ac_result_type',
-      'narrative_archetype': 'ac_narrative_archetype',
-      'problem_angle': 'Problem Angle'
+      'narrative_archetype': 'ac_narrative_archetype'
     };
 
     const angleDefinitions = {
