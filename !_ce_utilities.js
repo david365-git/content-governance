@@ -513,7 +513,7 @@ function buildSemanticFingerprintBlock(material) {
       var tier = priorityEntities.indexOf(e) > -1 ? " [PRIORITY]" :
                  supportingEntities.indexOf(e) > -1 ? " [SUPPORTING]" : "";
       block += "ENTITY: " + e.name + tier + "\n";
-      block += "REQUIRED VOCABULARY: " + e.fingerprint + "\n\n";
+      block += "RELEVANT VOCABULARY (use where accurate): " + e.fingerprint + "\n\n";
     }
 
     block += "CRITICAL RULES:\n";
