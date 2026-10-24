@@ -259,57 +259,34 @@ function autoAssignProblemAngle(targetRow) {
       return { success: false, message: "Article Type not set for this row — run governance prompts first." };
     }
 
-    var angleCode = resolveAngleCode(
-      articleType,
-      entityRole,
-      primaryEntity,
-      primaryProblem
-    );
-    var locality = val('Locality');
-    var angleString = buildAngleString(
-      angleCode,
-      primaryProblem,
-      locality
-    );
-
-    
-
-    // Write to Problem Angle column
+    // Do not generate malformed angle text without a query cluster.
     var angleIdx = headers.indexOf('Problem Angle');
-    if (angleIdx === -1) {
-      return { success: false, message: "Problem Angle column not found in Posts sheet." };
-    }
-
+    if (angleIdx < 0) return {success:false,message:'Problem Angle column not found'};
     var angleCell = postsSheet.getRange(activeRow, angleIdx + 1);
     var existingAngle = String(angleCell.getValue() || '').trim();
-    // Preserve a previously selected or owner-edited angle when it is valid.
-    // Only fill an empty field here; changes require an explicit angle action.
+    if (!primaryProblem) {
+      return {success:true,review:true,message:'Problem Angle REVIEW — Primary Query Cluster Owned is empty; existing angle unchanged.',
+        angleString:existingAngle};
+    }
+    var angleCode = resolveAngleCode(articleType, entityRole, primaryEntity, primaryProblem);
+    var locality = val('Locality');
+    var angleString = buildAngleString(angleCode, primaryProblem, locality);
     if (existingAngle) {
-      var existingCode = existingAngle.split(/[\s—-]+/)[0].toUpperCase();
+      var existingCode = existingAngle.split(/[\\s—-]+/)[0].toUpperCase();
       if (!ANGLE_DEFINITIONS[existingCode]) {
-        return {success:false,message:"Existing Problem Angle is unrecognised; review before replacing it."};
+        return {success:false,message:'Existing Problem Angle code is unrecognised; review manually.'};
       }
-      if (existingCode !== angleCode) {
-        return {success:false,message:"Existing Problem Angle " + existingCode +
-          " conflicts with current article type (" + angleCode + "); review the row before proceeding."};
-      }
-      if (existingAngle !== angleString) {
-        angleCell.setValue(angleString);
-        return {success:true,message:"Problem Angle refreshed for current query cluster: " + angleCode,
-          angleCode:angleCode,angleString:angleString,refreshed:true};
-      }
-      return {success:true,message:"Existing Problem Angle preserved: " + existingCode,
-        angleCode:existingCode,angleString:existingAngle,preserved:true};
+      // Existing angle, including sidebar and owner edits, remains authoritative.
+      // Do not confuse different approved templates with stale user intent.
+      return {success:true,preserved:true,review:existingCode !== angleCode,
+        message:existingCode !== angleCode ?
+          'Problem Angle REVIEW — existing ' + existingCode + ' differs from suggested ' + angleCode + '; kept without overwriting.' :
+          'Existing Problem Angle preserved: ' + existingCode,
+        angleCode:existingCode,angleString:existingAngle};
     }
     angleCell.setValue(angleString);
-
-    return {
-      success: true,
-      message: "Angle assigned: " + angleCode + " — " + ANGLE_DEFINITIONS[angleCode].label,
-      angleCode: angleCode,
-      angleString: angleString
-    };
-
+    return {success:true,angleCode:angleCode,angleString:angleString,
+      message:'Problem Angle assigned: ' + angleCode};
   } catch(e) {
     return { success: false, message: "Auto-assign error: " + e.toString() };
   }
