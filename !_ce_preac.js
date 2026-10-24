@@ -207,7 +207,7 @@ function preAcAddGapToSheet(entry) {
     newRow[labelCol] = fieldLabel;
     newRow[valueCol] = entry.suggested_option;
 
-    if (entry.scope === 'Universal') {
+    if (String(entry.scope || '').trim().toLowerCase() === 'universal') {
       if (universalCol < 0) return {success:false,message:'Universal column missing'};
       newRow[universalCol] = 'y';
     } else if (String(entry.scope || '').trim().toLowerCase() === String(stoneType || '').trim().toLowerCase() && stoneCol > -1) {
