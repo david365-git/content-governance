@@ -78,8 +78,8 @@ function classifyDonorArticle() {
 
   // Parse XML tags from response
   const parsed = parseClassificationResponse(response);
-  if (!parsed) {
-    ui.alert('Classification response could not be parsed. Please try again.');
+  if (!parsed || parsed._error) {
+    ui.alert(parsed && parsed._error || 'Classification response could not be parsed. Please try again.');
     return;
   }
 
@@ -156,6 +156,27 @@ function saveClassificationResponseToSheet(response, row) {
 
   const parsed = parseClassificationResponse(response);
   if (!parsed || parsed._error) return { success: false, message: parsed && parsed._error || 'Could not parse classification response.' };
+  // Enforce all seven current-library choices before writing to Posts.
+  const axisKeys = ['entry_condition','homeowner_perception','material_behaviour',
+    'constraint','process_emphasis','result_type','narrative_archetype'];
+  const libraryKeys = ['ac_what_they_found','ac_why_they_called',
+    'ac_what_the_floor_was_doing','ac_what_forced_careful_decisions',
+    'ac_what_governed_the_approach','ac_what_changed_for_the_homeowner',
+    'ac_story_direction'];
+  const stoneIdx = postsHeaders.indexOf('Stone Type');
+  const typeIdx = postsHeaders.indexOf('Article Type');
+  const material = stoneIdx < 0 ? '' : String(postsSheet.getRange(activeRow, stoneIdx + 1).getValue() || '').trim();
+  const articleType = typeIdx < 0 ? '' : String(postsSheet.getRange(activeRow, typeIdx + 1).getValue() || '').trim();
+  const allowed = getAcValuesForMaterial(material, articleType);
+  const values = allowed && allowed.values || {};
+  for (let i = 0; i < axisKeys.length; i++) {
+    const choice = String(parsed[axisKeys[i]] || '').trim();
+    const options = values[libraryKeys[i]] || [];
+    if (!choice || !options.includes(choice)) {
+      return {success:false,message:'AC option missing or not in library for ' +
+        libraryKeys[i] + ': ' + (choice || '[blank]')};
+    }
+  }
 
   // Run duplication check before saving
   const dupCheck = checkClassificationDuplication(postsSheet, activeRow, postsHeaders, parsed);
