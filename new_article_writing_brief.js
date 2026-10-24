@@ -78,8 +78,16 @@ function new_buildArticleWritingBrief(rowNumber) {
         return {success:false,message:'Truth-source column '+(ti+1)+' (GL:HA) has no heading'};
       truthFields.push({heading:truthHeader,value:truthValue});
     }
-    var truthFilled = truthFields.filter(function(x){return !!x.value;});
-    var truthBlock = truthFields.map(function(x){
+    // Keep the ten organised fact categories (GL:GU) plus evidence
+    // relationships, coverage, media, uncertainties and status (GW:HA).
+    // GV holds the full v10 package and repeats the same fact records:
+    // validate it via bc_caseEvidencePromptBlock_ below but do not send its
+    // bulky JSON in the writing-brief prompt.
+    if (truthFields[10].heading !== 'Case Study Evidence Package')
+      return {success:false,message:'Expected Case Study Evidence Package in GV; evidence layout changed'};
+    var promptTruthFields = truthFields.filter(function(x,i){return i !== 10;});
+    var truthFilled = promptTruthFields.filter(function(x){return !!x.value;});
+    var truthBlock = promptTruthFields.map(function(x){
       return x.heading+': '+(x.value || '[not documented]');
     }).join('\n\n');
     var evidence = '';
@@ -136,7 +144,7 @@ function new_buildArticleWritingBrief(rowNumber) {
       'PRIMARY SEARCH TERM: '+val('Primary Search Term'),
       'ARTICLE-TYPE RULES (authoritative):\n'+typeRules,
       'EXISTING CLASSIFICATION CONTEXT:\n'+selection,
-      'ARTICLE-SPECIFIC TRUTH SOURCES — POSTS GL:HA (highest priority for project facts):\n'+truthBlock,
+      'ARTICLE-SPECIFIC TRUTH SOURCES — POSTS GL:GU AND GW:HA (GV package validated but omitted as duplicate):\n'+truthBlock,
       'TRUTH RULE: Case Study Evidence Package sheet is a historical BEFORE/AFTER archive, not an additional independent truth source. Treat the selected posts row GL:HA as the current account of this article. Distinguish documented facts from blanks; never fill unknowns with assumptions. If original narrative or derived evidence conflicts with GL:HA, explicitly flag the conflict and follow GL:HA for the writing brief. Technical reference and SEO suggestions must not override these facts.',
       'SEARCH, GOVERNANCE AND SCOPE:\n'+scope,
       locality,
