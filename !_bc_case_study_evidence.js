@@ -204,7 +204,7 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
    var fact=String(item&&item.fact||'').trim();
    var p=Number(item&&item.paragraph);
    var name=String(item&&item.category||'').trim();
-   if(!fact||!Number.isInteger(p)||p<1||p>paras.length)throw Error('Invalid fact or paragraph reference');
+   if(!fact||!Number.isInteger(p)||p<1||p>(splitMode?splitAt:paras.length))throw Error('Invalid fact or paragraph reference');
    if(!Object.prototype.hasOwnProperty.call(byCategory,name))throw Error('Unknown evidence category '+name);
 
    facts.push({id:'F'+('000'+(++n)).slice(-4),category:name,fact:fact,sourceParagraph:p,sourceOrder:p});
