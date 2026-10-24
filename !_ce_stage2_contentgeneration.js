@@ -670,10 +670,6 @@ function buildRecoveryBlueprintInjectionBlock(entities) {
     block += "PRIORITY ENTITIES (must appear — anchor co-occurrence targets):\n";
     block += entities.priority.join(", ") + "\n";
     block += "Rule: Each priority entity MUST appear explicitly by name at least once.\n";
-    block += "Surround each with its full semantic fingerprint vocabulary as specified above.\n";
-    block += "PROXIMITY RULE: When the entity name appears, at least 3 of its fingerprint terms MUST appear within 2-3 sentences of the entity name.\n";
-    block += "Do not place fingerprint terms in a different paragraph from the entity name.\n";
-    block += "Distribute fingerprint terms naturally in the sentences immediately surrounding the entity name — not clustered after it.\n\n";
     block += "CAUSAL CHAIN RULE (Hard Lock — applies to all Priority Entities):\n";
     block += "When two or more Priority Entities appear in the same section, you MUST state the mechanical relationship between them.\n";
     block += "Do not treat entities as isolated topics. Show how one entity creates the condition for another to act.\n";
@@ -687,7 +683,6 @@ function buildRecoveryBlueprintInjectionBlock(entities) {
     block += "SUPPORTING ENTITIES (use where contextually relevant):\n";
     block += entities.supporting.join(", ") + "\n";
     block += "Rule: Include where the section topic naturally supports it. Do not force.\n";
-    block += "PROXIMITY RULE: When a supporting entity name appears, at least 2 of its fingerprint terms MUST appear within 2-3 sentences of the entity name.\n\n";
   }
 
   if (entities.peripheral && entities.peripheral.length > 0) {
