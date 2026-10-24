@@ -6389,6 +6389,30 @@ function pipelineRunAuthorityBrief(row) {
     if (!queryCluster) {
       bc_appendPipelineRunLog(row, 'W-1 warning — Primary Query Cluster Owned is empty; verify search intent.');
     }
+    // Readiness gate for the automated path. The manual UI readiness function
+    // writes to a dashboard and depends on the active row, so do not call it
+    // from an automated batch.
+    var readinessBlocks = [];
+    var readinessReviews = [];
+    if (!articleType || !entity) readinessBlocks.push('Missing article type or primary entity');
+    if (!queryCluster) readinessBlocks.push('Primary Query Cluster Owned missing');
+    var rewriteStatus = stageField('Rewrite Status');
+    if (!rewriteStatus) readinessReviews.push('Rewrite Status missing');
+    else if (rewriteStatus === 'Needs Rewrite') {
+      // A rewrite-needed page is the expected input to this pipeline.
+      readinessReviews.push('Needs Rewrite — proceeding with governed rewrite');
+    } else if (rewriteStatus === 'Governance Tightening Recommended') {
+      readinessReviews.push('Governance tightening recommended');
+    }
+    if (!stageField('Problem Angle')) readinessReviews.push('Problem Angle will be assigned at W-1');
+    if (readinessBlocks.length) {
+      throw new Error('W-1 readiness BLOCKED — ' + readinessBlocks.join('; '));
+    }
+    if (readinessReviews.length) {
+      bc_appendPipelineRunLog(row, 'W-1 readiness REVIEW — ' + readinessReviews.join('; '));
+    } else {
+      bc_appendPipelineRunLog(row, 'W-1 readiness GO — required governance inputs present.');
+    }
     var result = autoRunAuthorityBrief(row);
 
     if (!result || result.success === false) {
