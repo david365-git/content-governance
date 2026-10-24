@@ -155,7 +155,7 @@ function saveClassificationResponseToSheet(response, row) {
   const postsHeaders = postsSheet.getRange(1, 1, 1, postsSheet.getLastColumn()).getValues()[0];
 
   const parsed = parseClassificationResponse(response);
-  if (!parsed) return { success: false, message: 'Could not parse classification response.' };
+  if (!parsed || parsed._error) return { success: false, message: parsed && parsed._error || 'Could not parse classification response.' };
 
   // Run duplication check before saving
   const dupCheck = checkClassificationDuplication(postsSheet, activeRow, postsHeaders, parsed);
@@ -372,9 +372,11 @@ function parseClassificationResponse(response) {
 
       const data = JSON.parse(clean);
 
+      const gaps = data.filter(function(entry) { return entry && entry.gap === true; });
+      if (gaps.length) throw new Error('Unresolved AC library gap(s): ' + gaps.map(function(e){return e.field || e.index;}).join(', '));
       data.forEach(function(entry) {
         if (entry && entry.gap === true) {
-          throw new Error('AC has an unresolved library option gap; review Pre-AC before saving.');
+          return; // unresolved gap is reported below after parsing
         }
         if (
           entry &&
