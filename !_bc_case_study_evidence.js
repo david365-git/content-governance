@@ -244,50 +244,58 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
      ' facts='+firstHalfFacts.length);
  }
  if(splitMode){
-   // Conservative duplicate check: only the same category and effectively identical wording.
-   // Never discard a shorter/longer claim merely because it shares technical vocabulary.
+   // Exact repetitions may be removed; semantic similarities are REVIEW ONLY.
    var seenSplit={},uniqueSplit=[],splitDuplicates=[];
+   function norm_(v){return String(v||'').toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z0-9]+/g,' ').trim().replace(/ +/g,' ');}
    facts.forEach(function(f){
-     var normalized=String(f.fact).toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z0-9]+/g,' ').trim().replace(/ +/g,' ');
-     var signature=f.category+'|'+normalized;
-     if(seenSplit[signature]){
-       splitDuplicates.push({keptParagraph:seenSplit[signature].sourceParagraph,removedParagraph:f.sourceParagraph,category:f.category,fact:f.fact});
-     }else{
-       seenSplit[signature]=f;
-       uniqueSplit.push(f);
-     }
+     var sig=f.category+'|'+norm_(f.fact),kept=seenSplit[sig];
+     if(kept){
+       if(!kept.alsoParagraphs)kept.alsoParagraphs=[];
+       if(f.sourceParagraph!==kept.sourceParagraph&&kept.alsoParagraphs.indexOf(f.sourceParagraph)<0)kept.alsoParagraphs.push(f.sourceParagraph);
+       splitDuplicates.push({keptParagraph:kept.sourceParagraph,removedParagraph:f.sourceParagraph,category:f.category,fact:f.fact});
+     }else{seenSplit[sig]=f;uniqueSplit.push(f);}
    });
-   // Review-only semantic candidates: same source paragraph, strong shared
-   // content words, including facts classified into different categories.
-   // Never automatically merge these: technical qualifiers can change meaning.
-   var splitDuplicateCandidates=[];
-   function bc_splitWords_(v){
-     var stop={the:1,and:1,was:1,were:1,with:1,from:1,into:1,that:1,this:1,for:1,had:1,been:1,after:1,before:1,used:1,using:1,each:1,over:1,across:1,floor:1,stone:1,tiles:1,travertine:1,restored:1,restoration:1};
-     var words=String(v).toLowerCase().replace(/[^a-z0-9]+/g,' ').split(/ +/);
-     return words.filter(function(w){return w.length>2&&!stop[w];});
+   var stop={the:1,and:1,was:1,were:1,with:1,from:1,into:1,that:1,this:1,for:1,had:1,been:1,after:1,before:1,used:1,using:1,use:1,applied:1,apply:1,each:1,over:1,across:1,then:1,also:1,are:1,has:1,have:1,its:1,their:1,they:1,which:1,while:1,where:1,when:1,by:1,to:1,of:1,in:1,on:1,at:1};
+   function stem_(w){
+     if(/^vacuum(ed|ing)?$/.test(w))return 'vacuum';
+     if(/^repair(s|ed|ing)?$/.test(w))return 'repair';
+     if(/^seal(ed|ing|er)?$/.test(w))return 'seal';
+     if(w.length>5&&/ing$/.test(w))return w.slice(0,-3);
+     if(w.length>4&&/ed$/.test(w))return w.slice(0,-2);
+     if(w.length>4&&/s$/.test(w)&&!/ss$/.test(w))return w.slice(0,-1);
+     return w;
    }
-   for(var di=0;di<uniqueSplit.length;di++){
-     for(var dj=di+1;dj<uniqueSplit.length;dj++){
-       var left=uniqueSplit[di],right=uniqueSplit[dj];
-       if(left.sourceParagraph!==right.sourceParagraph)continue;
-       var wa=bc_splitWords_(left.fact),wb=bc_splitWords_(right.fact);
-       var ua={};wa.forEach(function(w){ua[w]=true;});
-       var ub={};wb.forEach(function(w){ub[w]=true;});
-       var ka=Object.keys(ua),kb=Object.keys(ub);
-       if(Math.min(ka.length,kb.length)<3)continue;
-       var shared=ka.filter(function(w){return ub[w];}).length;
-       var score=shared/Math.min(ka.length,kb.length);
-       if(shared>=3&&score>=0.8){
-         splitDuplicateCandidates.push({paragraph:left.sourceParagraph,categoryA:left.category,factA:left.fact,categoryB:right.category,factB:right.fact,overlap:Number(score.toFixed(2))});
-       }
-     }
+   function profile_(f){
+     var raw=norm_(f.fact).split(' '),words={},nums={};
+     raw.forEach(function(w){if(/^\\d+$/.test(w))nums[w]=true;else if(w.length>2&&!stop[w])words[stem_(w)]=true;});
+     return {words:words,nums:nums,raw:raw};
    }
+   var opp=[['wet','dry'],['acidic','alkaline'],['acid','alkaline'],['initial','final'],['coarse','fine'],['satin','gloss'],['satin','matt'],['matt','gloss']];
+   var profiles=uniqueSplit.map(profile_),splitDuplicateCandidates=[];
+   for(var di=0;di<uniqueSplit.length;di++)for(var dj=di+1;dj<uniqueSplit.length;dj++){
+     var left=uniqueSplit[di],right=uniqueSplit[dj],pa=profiles[di],pb=profiles[dj];
+     var na=Object.keys(pa.nums),nb=Object.keys(pb.nums);
+     if(na.length&&nb.length&&(na.length!==nb.length||na.some(function(x){return !pb.nums[x];})))continue;
+     if(opp.some(function(pair){return (pa.raw.indexOf(pair[0])>=0&&pb.raw.indexOf(pair[1])>=0)||(pa.raw.indexOf(pair[1])>=0&&pb.raw.indexOf(pair[0])>=0);}))continue;
+     var ka=Object.keys(pa.words),kb=Object.keys(pb.words),size=Math.min(ka.length,kb.length);
+     if(size<3)continue;
+     var shared=ka.filter(function(x){return pb.words[x];}).length;
+     if(shared<3)continue;
+     var overlap=shared/size,jaccard=shared/(ka.length+kb.length-shared),sameP=left.sourceParagraph===right.sourceParagraph;
+     var verdict='';
+     if(sameP){
+       if(overlap>=0.75)verdict='likely-duplicate';
+       else if(left.category!==right.category&&overlap>=0.5)verdict='complementary';
+     }else if(shared>=4&&overlap>=0.8)verdict='likely-duplicate';
+     if(verdict)splitDuplicateCandidates.push({verdict:verdict,paragraphA:left.sourceParagraph,paragraphB:right.sourceParagraph,categoryA:left.category,factA:left.fact,categoryB:right.category,factB:right.fact,overlap:Number(overlap.toFixed(2)),jaccard:Number(jaccard.toFixed(2))});
+   }
+   splitDuplicateCandidates.sort(function(a,b){return a.verdict===b.verdict?b.overlap-a.overlap:a.verdict==='likely-duplicate'?-1:1;});
    facts=uniqueSplit;
    byCategory={};labels.forEach(function(name){byCategory[name]=[];});
-   facts.forEach(function(f){byCategory[f.category].push({fact:f.fact,paragraph:f.sourceParagraph});});
+   facts.forEach(function(f){byCategory[f.category].push({fact:f.fact,paragraph:f.sourceParagraph,alsoParagraphs:f.alsoParagraphs||[]});});
    cells=labels.map(function(name){return JSON.stringify(byCategory[name]);});
-   Logger.log('Split Luna exact duplicates removed: '+splitDuplicates.length+'; '+JSON.stringify(splitDuplicates));
-   Logger.log('Split Luna duplicate review candidates: '+splitDuplicateCandidates.length+'; '+JSON.stringify(splitDuplicateCandidates));
+   Logger.log('Split Luna exact removed: '+splitDuplicates.length+'; '+JSON.stringify(splitDuplicates));
+   Logger.log('Split Luna review candidates: '+splitDuplicateCandidates.length+'; '+JSON.stringify(splitDuplicateCandidates.slice(0,40)));
  }
  facts.sort(function(a,b){return a.sourceParagraph-b.sourceParagraph;});
  facts.forEach(function(f,i){f.id='F'+('000'+(i+1)).slice(-4);});
@@ -295,7 +303,7 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
  var pkg={version:'v10',postId:id,sourceDigest:digest,facts:facts,chronology:facts.filter(function(f){return f.category==='Restoration Methods';})};
  var mapped={};facts.forEach(function(f){mapped[f.sourceParagraph]=true;});
  var coverage={state:'SOURCE INDEXED',totalParagraphs:paras.length,paragraphsWithFacts:Object.keys(mapped).length,facts:facts.length};
- if(splitMode){coverage.exactDuplicatesRemoved=splitDuplicates.length;coverage.possibleDuplicatesForReview=splitDuplicateCandidates.length;coverage.duplicateReviewCandidates=splitDuplicateCandidates.slice(0,30);}
+ if(splitMode){coverage.exactDuplicatesRemoved=splitDuplicates.length;coverage.possibleDuplicatesForReview=splitDuplicateCandidates.length;coverage.duplicateReviewCandidates=splitDuplicateCandidates.slice(0,30);coverage.likelyDuplicateCount=splitDuplicateCandidates.filter(function(x){return x.verdict==='likely-duplicate';}).length;coverage.complementaryCount=splitDuplicateCandidates.filter(function(x){return x.verdict==='complementary';}).length;}
  if(splitMode){
    var firstHalfMapped={};firstHalfFacts.forEach(function(f){firstHalfMapped[f.sourceParagraph]=true;});
    var halfPkg={version:'v10',postId:id,sourceDigest:digest,facts:firstHalfFacts,
