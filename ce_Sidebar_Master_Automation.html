@@ -488,11 +488,11 @@ Stage: —
       <div id="masterEvidenceStatus" class="status-bar pending" style="margin-top:5px">Case studies only · source: site-export Column O</div>
 
       <div style="margin-top:12px;padding:10px;border:1px solid #90a4ae;border-radius:6px">
-        <div style="font-weight:700;margin-bottom:5px">🧪 Test Split-Article Luna — posts rows</div>
-        <div style="font-size:11px;margin-bottom:6px">Enter posts-sheet row numbers separated by commas or new lines. Each case study runs and archives separately.</div>
-        <textarea id="masterSplitRows" rows="3" placeholder="155, 199" style="width:100%;box-sizing:border-box;font-size:12px"></textarea>
-        <button id="masterSplitButton" type="button" onclick="masterRunSplitRows()" style="width:100%;background:#455a64;color:#fff;margin-top:6px">▶ Run Split-Article Luna for These Rows</button>
-        <div id="masterSplitStatus" class="status-bar pending" style="margin-top:6px">Ready — enter posts row numbers.</div>
+        <div style="font-weight:700;margin-bottom:5px">🧪 Test Split-Article Luna — Post IDs</div>
+        <div style="font-size:11px;margin-bottom:6px">Enter Post IDs from column D, separated by commas or new lines. Each case study runs and archives separately.</div>
+        <textarea id="masterSplitRows" rows="3" placeholder="10138, 22353" style="width:100%;box-sizing:border-box;font-size:12px"></textarea>
+        <button id="masterSplitButton" type="button" onclick="masterRunSplitRows()" style="width:100%;background:#455a64;color:#fff;margin-top:6px">▶ Run Split-Article Luna for These Post IDs</button>
+        <div id="masterSplitStatus" class="status-bar pending" style="margin-top:6px">Ready — enter Post IDs.</div>
         <textarea id="masterSplitResults" readonly rows="5" style="width:100%;box-sizing:border-box;margin-top:5px;font-size:11px"></textarea>
       </div>
       <script>
@@ -502,33 +502,33 @@ Stage: —
         var status=document.getElementById('masterSplitStatus');
         var log=document.getElementById('masterSplitResults');
         var button=document.getElementById('masterSplitButton');
-        if(!parts.length||parts.length>30||parts.some(function(v){return !/^\d+$/.test(v)||Number(v)<2;})){
-          status.textContent='Enter 1-30 valid posts row numbers (2 or higher).';
+        if(!parts.length||parts.length>30||parts.some(function(v){return !/^\d+$/.test(v)||Number(v)<1;})){
+          status.textContent='Enter 1-30 numeric Post IDs.';
           return;
         }
-        var rows=parts.map(Number);
-        if(new Set(rows).size!==rows.length){status.textContent='Remove repeated row numbers.';return;}
+        var ids=parts;
+        if(new Set(ids).size!==ids.length){status.textContent='Remove repeated Post IDs.';return;}
         button.disabled=true;
         log.value='';
         var index=0,ok=0,skip=0,fail=0,cost=0;
         function next(){
-          if(index===rows.length){
+          if(index===ids.length){
             button.disabled=false;
             status.textContent='Finished: '+ok+' complete, '+skip+' skipped, '+fail+' failed. API cost USD '+cost.toFixed(4);
             return;
           }
-          var row=rows[index++];
-          status.textContent='Running posts row '+row+' ('+index+' of '+rows.length+')...';
+          var id=ids[index++];
+          status.textContent='Running Post ID '+id+' ('+index+' of '+ids.length+')...';
           google.script.run.withSuccessHandler(function(result){
             cost+=Number(result.cost||0);
-            if(result.skipped){skip++;log.value+='SKIP row '+row+': '+result.message+'\n';}
-            else if(result.success){ok++;log.value+='PASS row '+row+': '+result.message+'\n';}
-            else {fail++;log.value+='FAIL row '+row+': '+(result.message||'Unknown')+'\n';}
+            if(result.skipped){skip++;log.value+='SKIP Post ID '+id+': '+result.message+'\n';}
+            else if(result.success){ok++;log.value+='PASS Post ID '+id+': '+result.message+'\n';}
+            else {fail++;log.value+='FAIL Post ID '+id+': '+(result.message||'Unknown')+'\n';}
             next();
           }).withFailureHandler(function(error){
-            fail++;log.value+='FAIL row '+row+': '+String(error&&error.message||error)+'\n';
+            fail++;log.value+='FAIL Post ID '+id+': '+String(error&&error.message||error)+'\n';
             next();
-          }).bc_caseEvidenceSplitLunaByRow(row);
+          }).bc_caseEvidenceSplitLunaByPostId(id);
         }
         next();
       }
@@ -795,15 +795,15 @@ Stage: —
             return;
           }
           var row=rows[n++];
-          status.textContent='Running posts row '+row+' ('+n+' of '+rows.length+')…';
+          status.textContent='Running posts Post ID '+id+' ('+n+' of '+rows.length+')…';
           google.script.run.withSuccessHandler(function(result){
             cost+=Number(result.cost||0);
-            if(result.skipped){skip++;log.value+='SKIP row '+row+' — '+result.message+'\n';}
-            else if(result.success){ok++;log.value+='PASS row '+row+' — '+result.message+'\n';}
-            else {fail++;log.value+='FAIL row '+row+' — '+(result.message||'No details')+'\n';}
+            if(result.skipped){skip++;log.value+='SKIP Post ID '+id+' — '+result.message+'\n';}
+            else if(result.success){ok++;log.value+='PASS Post ID '+id+' — '+result.message+'\n';}
+            else {fail++;log.value+='FAIL Post ID '+id+' — '+(result.message||'No details')+'\n';}
             next();
           }).withFailureHandler(function(error){
-            fail++;log.value+='FAIL row '+row+' — '+String(error&&error.message||error)+'\n';next();
+            fail++;log.value+='FAIL Post ID '+id+' — '+String(error&&error.message||error)+'\n';next();
           }).bc_caseEvidenceSplitLunaByRow(row);
         }
         next();
