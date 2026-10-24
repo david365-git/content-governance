@@ -481,8 +481,8 @@ function buildSemanticFingerprintBlock(material) {
     block += "------------------------------------------------------------\n";
     block += "LSI ENTITY TRANSLATION RULE (Hard Lock — Semantic Fingerprint)\n";
     block += "------------------------------------------------------------\n";
-    block += "Use governed entities and relevant attributes naturally where they help explain the article subject.\\n";
-    block += "Describe accurate relationships without entity-frequency targets or forced synonyms.\\n\\n";
+    block += "Use governed entities and relevant attributes naturally where they help explain the article subject.\n";
+    block += "Describe accurate relationships without entity-frequency targets or forced synonyms.\n\n";
     block += "GOVERNED ENTITIES FOR THIS MATERIAL (" + material + "):\n\n";
 
     // Get Recovery Blueprint entities for priority ordering
@@ -521,7 +521,7 @@ function buildSemanticFingerprintBlock(material) {
     block += "- Capitalize only if proper noun or sentence start\n";
     block += "- Use fingerprint vocabulary naturally — no keyword stuffing\n";
     block += "- Fingerprint terms should appear throughout the article, not clustered in one section\n";
-    block += "- Every governed entity in the Recovery Blueprint MUST use its fingerprint vocabulary\n";
+    block += "- Use supporting vocabulary when accurate and relevant to the article's purpose.\n";
     block += "- COMMA LIST PROHIBITION (Hard Lock): Never place fingerprint vocabulary terms in a\n";
     block += "  comma-separated list with no verb between items. A sentence reading\n";
     block += "  'term1, term2, term3, term4, term5 help explain...' is a CRITICAL FAILURE.\n";
