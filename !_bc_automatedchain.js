@@ -1454,8 +1454,7 @@ function bc_runPreACPromptAutomated() {
       preAcAddGapToSheet(entry);
 
     if (addResult && addResult.success) {
-
-      gapsAdded++;
+      if (!addResult.skipped) gapsAdded++;
 
       added.push(
         String(entry.field || 'Unknown field') +
@@ -1577,18 +1576,6 @@ function bc_runACPromptAutomated(row) {
     var suggestedValue =
       String(saveResult.nudgeSuggestion || '').trim();
 
-    if (!axisToNudge) {
-      throw new Error(
-        'AC found a duplicate but supplied no axis to nudge.'
-      );
-    }
-
-    if (!suggestedValue) {
-      throw new Error(
-        'AC found a duplicate but supplied no suggested nudge value.'
-      );
-    }
-
     // The classifier intentionally leaves duplicates unsaved for manual review.
     // Automated mode must save the original truthful classification itself.
     var acPostsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
@@ -1597,10 +1584,8 @@ function bc_runACPromptAutomated(row) {
     // Never change a genuine classification solely to create artificial
     // variety. Keep the original and report possible overlap for review.
     message =
-      'AC possible classification overlap — original values preserved; suggested review: ' +
-      axisToNudge +
-      ' → ' +
-      suggestedValue;
+      'AC possible classification overlap — original values preserved' +
+      (axisToNudge && suggestedValue ? '; optional review: ' + axisToNudge + ' → ' + suggestedValue : '; no alternative library option available');
 
   } else {
 
