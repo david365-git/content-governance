@@ -626,7 +626,9 @@ function autoRunAuthorityBrief(targetRow) {
     if (!buildResult || !buildResult.success) return {success:false,message:"W-1 stopped — Authority Brief could not be built: " + String(buildResult && buildResult.message || "Unknown error")};
     var saveResult = pushAuthorityBriefToSheet(buildResult.brief, row);
     if (!saveResult || !saveResult.success) return {success:false,message:"W-1 stopped — Authority Brief could not be saved: " + String(saveResult && saveResult.message || "Unknown error")};
-    return {success:true,message:"W-1 complete — Problem Angle confirmed and Authority Brief saved."};
+    return {success:true,review:!!angleResult.review,
+      message:angleResult.review ? "W-1 complete with Problem Angle REVIEW — " + angleResult.message :
+      "W-1 complete — Problem Angle confirmed and Authority Brief saved."};
   } catch (e) {
     return {success:false,message:"Automated W-1 error: " + String(e)};
   }
