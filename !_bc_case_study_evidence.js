@@ -86,7 +86,7 @@ function bc_caseEvidenceBuildPackage_(postId, source, digest, labels, output) {
  * A:G identify the run and snapshot. H:W mirror posts' 16 evidence columns.
  * Never overwrite a prior history row; fail closed if the archive is unavailable.
  */
-function bc_caseEvidenceArchive_(sh,row,postId,phase,runId,diagnostics) {
+function bc_caseEvidenceArchive_(sh,row,postId,phase,runId,diagnostics,snapshotCells) {
   var ss=SpreadsheetApp.getActiveSpreadsheet();
   var history=ss.getSheetByName('Case Study Evidence Package');
   if(!history)throw new Error('Case Study Evidence Package history sheet missing; source evidence not overwritten');
@@ -103,7 +103,8 @@ function bc_caseEvidenceArchive_(sh,row,postId,phase,runId,diagnostics) {
   var first=heads.indexOf(expected[0])+1;
   if(first<1||expected.slice(0,16).some(function(h,i){return heads[first-1+i]!==h;}))
     throw new Error('Evidence columns not contiguous in posts; archive aborted');
-  var cells=sh.getRange(row,first,1,16).getValues()[0].map(function(v){return String(v==null?'':v);});
+  var cells=(snapshotCells||sh.getRange(row,first,1,16).getValues()[0]).map(function(v){return String(v==null?'':v);});
+  if(cells.length!==16)throw Error('Evidence archive snapshot must contain 16 cells');
   var status=cells[15], match=status.match(/SOURCE-QUOTED-(v\d+)\s*\|\s*sha256:([a-f0-9]+)/i);
   var version=match?match[1]:(status?'legacy/unknown':'none');
   var digest=match?match[2]:'';
@@ -235,7 +236,7 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
      finishReason:String(second.finishReason||'unknown'),
      cost:Number(firstHalfApi.cost||0)+Number(second.cost||0)};
    promptFingerprint=bc_caseEvidenceDigest_(splitPromptA+'\n---SECOND HALF---\n'+splitPromptB);
-   // First-half response information is retained separately in the run log.
+   // First-half response metadata is held until both calls succeed.
    Logger.log('Split Luna first half: model='+String(firstHalfApi.model||MODEL_CHEAP)+
      ' responseId='+String(firstHalfApi.responseId||'')+
      ' promptFingerprint='+firstHalfPromptFingerprint+
@@ -248,6 +249,23 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
  var pkg={version:'v10',postId:id,sourceDigest:digest,facts:facts,chronology:facts.filter(function(f){return f.category==='Restoration Methods';})};
  var mapped={};facts.forEach(function(f){mapped[f.sourceParagraph]=true;});
  var coverage={state:'SOURCE INDEXED',totalParagraphs:paras.length,paragraphsWithFacts:Object.keys(mapped).length,facts:facts.length};
+ if(splitMode){
+   var firstHalfMapped={};firstHalfFacts.forEach(function(f){firstHalfMapped[f.sourceParagraph]=true;});
+   var halfPkg={version:'v10',postId:id,sourceDigest:digest,facts:firstHalfFacts,
+     chronology:firstHalfFacts.filter(function(f){return f.category==='Restoration Methods';})};
+   var halfCells=labels.map(function(name){return JSON.stringify(firstHalfFacts.filter(function(f){return f.category===name;}).map(function(f){return {fact:f.fact,paragraph:f.sourceParagraph};}));});
+   halfCells=halfCells.concat([JSON.stringify(halfPkg),JSON.stringify({links:[],status:'No inferred relationships'}),
+     JSON.stringify({state:'SOURCE INDEXED',totalParagraphs:paras.length,paragraphsWithFacts:Object.keys(firstHalfMapped).length,facts:firstHalfFacts.length}),
+     JSON.stringify({imagesAndVideos:base.media,links:base.links}),JSON.stringify({unknowns:base.unknowns}),bc_caseEvidenceStatus_(digest)]);
+   halfCells.forEach(function(v){if(v.length>49000)throw Error('First-half archive cell too long');});
+   cells.forEach(function(v){if(v.length>49000)throw Error('Merged evidence cell too long');});
+   bc_caseEvidenceArchive_(sh,row,id,'FIRST_HALF',run,{
+      promptFingerprint:firstHalfPromptFingerprint,model:String(firstHalfApi.model||MODEL_CHEAP),
+      responseId:String(firstHalfApi.responseId||''),
+      tokenUsage:JSON.stringify({promptTokens:Number(firstHalfApi.promptTokens||0),completionTokens:Number(firstHalfApi.completionTokens||0),finishReason:String(firstHalfApi.finishReason||'unknown')}),
+      responseFingerprint:bc_caseEvidenceDigest_(String(firstHalfApi.text||''))
+   },halfCells);
+ }
  cells=cells.concat([JSON.stringify(pkg),JSON.stringify({links:[],status:'No inferred relationships'}),JSON.stringify(coverage),JSON.stringify({imagesAndVideos:base.media,links:base.links}),JSON.stringify({unknowns:base.unknowns}),bc_caseEvidenceStatus_(digest)]);
  if(twoPass){
    // Persist and archive the first Luna pass before supplementing it.
