@@ -290,6 +290,12 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
    var profiles=uniqueSplit.map(profile_),splitDuplicateCandidates=[];
    for(var di=0;di<uniqueSplit.length;di++)for(var dj=di+1;dj<uniqueSplit.length;dj++){
      var left=uniqueSplit[di],right=uniqueSplit[dj],pa=profiles[di],pb=profiles[dj];
+     // A documented pre-work condition and the subsequent treatment are
+     // separate evidence, even if they mention the same defect/material.
+     var conditionCats={'Observed Conditions':true,'Inspection & Tests':true};
+     var actionCats={'Restoration Methods':true,'Products & Equipment':true,'Project Results':true};
+     if((conditionCats[left.category]&&actionCats[right.category])||
+        (conditionCats[right.category]&&actionCats[left.category]))continue;
      if(isMaintenance_(left)!==isMaintenance_(right))continue;
      var ga=primaryGrit_(left),gb=primaryGrit_(right);
      if(ga&&gb&&ga!==gb)continue;
