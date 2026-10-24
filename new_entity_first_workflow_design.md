@@ -2,9 +2,13 @@
 
 Status: design only; not implemented or approved for production.
 Branch: `new-tier-matrix-adapter-review`.
-Principle: **protect evidence, not inherited prose**.
+**Governing principle:** Stay true to the details and experience recorded in the original article, but never allow its existing structure, wording or limitations to restrict the quality of the new article.
+
+**Primary objective:** Produce an outstanding, distinctive, genuinely helpful article built around the original article's unique real-world information, with accurate explanations and a clear match to the reader's search intent. Safety checks support this objective; they are not the main editorial goal.
 
 ## Success criteria
+The first test is whether the finished article is substantially more useful and distinctive than the original, without distorting what really happened or inventing experience. Every article must have its own factual and editorial identity rather than following a standardised restoration narrative.
+
 The resulting page serves its specific search intent and article type, gives useful, practical answers, demonstrates expertise grounded in real restoration work, and is clear to homeowners. Rankings are a goal, not a guaranteed output.
 
 ## Immutable evidence and governance
@@ -31,6 +35,14 @@ The resulting page serves its specific search intent and article type, gives use
 4. Independently fact-check all specific material/project claims against evidence and technical references, recording a versioned **fact-lock ledger** of corrections and protected claims.
 5. Editorially improve the current draft; edits may be extensive but must not change protected facts, media or approved links. Recheck the ledger after any rewrite.
 6. Prepare publication assets, metadata and schema; run a final post-W8E rules-based gate on final HTML and metadata, with no unvalidated changes afterwards.
+
+## Quality-first acceptance gate
+- Require a clear, article-specific reason for publication: what unique experience, observation, explanation, decision or insight does this page contribute?
+- Reward the strongest treatment of the searcher's need, not word count, entity density, compliance scores or similarity to the source.
+- Assess whether the article is engaging, practical, specific, original in substance and free of repetitive generic filler.
+- Preserve the real story and its limitations; substantial rewriting is desirable where it improves the experience for the reader.
+- Reject polished but generic output even if every mechanical check passes.
+- Treat factual integrity, provenance, media and link controls as non-negotiable guardrails, not substitutes for editorial excellence.
 
 ## What to measure in an old-vs-new test
 - Factual claims supported / unsupported, and documented project details retained.
