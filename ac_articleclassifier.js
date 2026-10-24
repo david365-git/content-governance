@@ -427,7 +427,7 @@ function parseClassificationResponse(response) {
       error.toString()
     );
 
-    return null;
+    return { _error: 'AC classification failed: ' + error.message };
   }
 }
 
