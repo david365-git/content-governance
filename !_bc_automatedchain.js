@@ -1589,25 +1589,10 @@ function bc_runACPromptAutomated(row) {
       );
     }
 
-    // Same action as pressing the suggested option
-    // in the manual duplicate-warning panel.
-    nudgedValues[axisToNudge] = suggestedValue;
-
-    var nudgeResult =
-      saveClassificationWithNudge(nudgedValues);
-
-    if (
-      nudgeResult &&
-      nudgeResult.success === false
-    ) {
-      throw new Error(
-        nudgeResult.message ||
-        'AC suggested nudge could not be saved.'
-      );
-    }
-
+    // Never change a genuine classification solely to create artificial
+    // variety. Keep the original and report possible overlap for review.
     message =
-      'AC duplicate detected — automatic suggested nudge applied: ' +
+      'AC possible classification overlap — original values preserved; suggested review: ' +
       axisToNudge +
       ' → ' +
       suggestedValue;
