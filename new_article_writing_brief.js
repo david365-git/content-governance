@@ -64,6 +64,24 @@ function new_buildArticleWritingBrief(rowNumber) {
     selection = axes.map(function(k,i){
       return String((acLibrary.labels || {})[libraryKeys[i]] || libraryKeys[i])+': '+(val(k)||'[not classified]');
     }).join('\n');
+    // Article-specific truth-source columns GL:HA, preserved with their live row-1 headings.
+    // Read by position so duplicate/renamed header keys cannot silently suppress facts.
+    // Column 194 = GL, column 209 = HA.
+    var truthStart = 194, truthEnd = 209;
+    if (headers.length < truthEnd)
+      return {success:false,message:'Article truth-source range GL:HA is missing or incomplete'};
+    var truthFields = [];
+    for (var ti = truthStart - 1; ti < truthEnd; ti++) {
+      var truthHeader = String(headers[ti] || '').trim();
+      var truthValue = String(values[ti] == null ? '' : values[ti]).trim();
+      if (!truthHeader)
+        return {success:false,message:'Truth-source column '+(ti+1)+' (GL:HA) has no heading'};
+      truthFields.push({heading:truthHeader,value:truthValue});
+    }
+    var truthFilled = truthFields.filter(function(x){return !!x.value;});
+    var truthBlock = truthFields.map(function(x){
+      return x.heading+': '+(x.value || '[not documented]');
+    }).join('\n\n');
     var evidence = '';
     if (articleType === 'Case Study') {
       if (typeof bc_caseEvidencePromptBlock_ !== 'function')
@@ -115,6 +133,8 @@ function new_buildArticleWritingBrief(rowNumber) {
       'PRIMARY SEARCH TERM: '+val('Primary Search Term'),
       'ARTICLE-TYPE RULES (authoritative):\n'+typeRules,
       'EXISTING CLASSIFICATION CONTEXT:\n'+selection,
+      'ARTICLE-SPECIFIC TRUTH SOURCES — POSTS GL:HA (highest priority for project facts):\n'+truthBlock,
+      'TRUTH RULE: Treat GL:HA as the authoritative approved account of this article. Distinguish documented facts from blanks; never fill unknowns with assumptions. If original narrative or derived evidence conflicts with GL:HA, explicitly flag the conflict and follow GL:HA for the writing brief. Technical reference and SEO suggestions must not override these facts.',
       'SEARCH, GOVERNANCE AND SCOPE:\n'+scope,
       locality,
       'TECHNICAL MATRIX (general reference, never evidence of work performed):\n'+technical,
@@ -132,7 +152,7 @@ function new_buildArticleWritingBrief(rowNumber) {
       'Write in practical homeowner-facing UK English. Technical Matrix and governed CX link plan are applied by their authoritative downstream stages.'
     ].join('\n\n');
     return {success:true,row:row,postId:postId,articleType:articleType,
-      source:'site-export',originalCharacters:originalHtml.length,prompt:prompt,
+      source:'site-export',truthSourceColumns:'GL:HA',truthFieldsPresent:truthFilled.length,originalCharacters:originalHtml.length,prompt:prompt,
       media:media,warnings:axes.filter(function(k){return !val(k);}).map(function(k){return 'Missing classification: '+k;})};
   } catch(e) {return {success:false,message:'V2 brief error: '+String(e)};}
 }
