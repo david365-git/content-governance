@@ -109,13 +109,14 @@ function preAcBuildGapCheckPrompt() {
     prompt += `Only set gap to true if none of the existing options adequately describe the article. If an existing option fits reasonably well, set gap to false.\n\n`;
     prompt += `---\n\nFIELDS AND EXISTING OPTIONS:\n\n`;
 
-    let fieldIndex = 0;
-    fieldOrder.forEach(function(key) {
-      if (!fields[key]) return;
-      prompt += `FIELD ${fieldIndex}: ${fieldLabels[key]}\n`;
-      fields[key].forEach(function(opt) { prompt += `- ${opt}\n`; });
+    fieldOrder.forEach(function(key, fieldIndex) {
+      prompt += `FIELD ${fieldIndex}: ${fieldLabels[key] || key}\n`;
+      if (fields[key] && fields[key].length) {
+        fields[key].forEach(function(opt) { prompt += `- ${opt}\n`; });
+      } else {
+        prompt += '- [NO AVAILABLE OPTIONS — report a gap]\n';
+      }
       prompt += `\n`;
-      fieldIndex++;
     });
 
     prompt += `---\n\nARTICLE CONTENT:\n\n${articleContent}`;
@@ -188,9 +189,12 @@ function preAcAddGapToSheet(entry) {
     newRow[valueCol] = entry.suggested_option;
 
     if (entry.scope === 'Universal') {
+      if (universalCol < 0) return {success:false,message:'Universal column missing'};
       newRow[universalCol] = 'y';
-    } else if (stoneCol > -1) {
+    } else if (String(entry.scope || '').trim() === String(stoneType || '').trim() && stoneCol > -1) {
       newRow[stoneCol] = 'y';
+    } else {
+      return {success:false,message:'Pre-AC option has invalid or missing stone scope'};
     }
 
     // Avoid silently growing the AC library with repeated or near-identical entries.
