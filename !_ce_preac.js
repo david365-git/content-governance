@@ -193,6 +193,14 @@ function preAcAddGapToSheet(entry) {
       newRow[stoneCol] = 'y';
     }
 
+    // Avoid silently growing the AC library with repeated or near-identical entries.
+    const normalizedSuggestion = String(entry.suggested_option || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!normalizedSuggestion) return { success:false, message:'Empty suggested AC library option' };
+    const existingForKey = data.slice(1).some(function(existing) {
+      return String(existing[dropdownCol] || '').trim() === dropdownKey &&
+        String(existing[valueCol] || '').trim().toLowerCase().replace(/\s+/g, ' ') === normalizedSuggestion;
+    });
+    if (existingForKey) return { success:true, skipped:true, message:'Already in AC library' };
     acSheet.appendRow(newRow);
 
     logPipelineResume("Pre-AC — Gap Added to Sheet", "");
