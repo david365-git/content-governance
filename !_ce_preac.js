@@ -164,23 +164,35 @@ function preAcAddGapToSheet(entry) {
     const headerRow = data[0];
 
     const universalCol = headerRow.indexOf('Universal');
-    const stoneCol = headerRow.indexOf(stoneType);
+    const stoneCol = headerRow.findIndex(function(h) { return String(h || '').trim().toLowerCase() === String(stoneType || '').trim().toLowerCase(); });
     const dropdownCol = headerRow.indexOf('dropdown');
     const labelCol = headerRow.indexOf('Label');
     const valueCol = headerRow.indexOf('value') > -1 ? headerRow.indexOf('value') : headerRow.indexOf('Value');
 
-    // Find the dropdown key for this field by matching the label
-    let dropdownKey = '';
+    // Accept a governed field key or its human-readable label.
+    const fieldKeys = ['ac_what_they_found','ac_why_they_called',
+      'ac_what_the_floor_was_doing','ac_what_forced_careful_decisions',
+      'ac_what_governed_the_approach','ac_what_changed_for_the_homeowner',
+      'ac_story_direction'];
+    const fieldIndex = Number(entry.index);
+    let dropdownKey = fieldKeys.indexOf(String(entry.field || '').trim()) >= 0
+      ? String(entry.field).trim()
+      : (Number.isInteger(fieldIndex) && fieldIndex >= 0 && fieldIndex < fieldKeys.length
+          ? fieldKeys[fieldIndex] : '');
     let fieldLabel = '';
     for (let i = 1; i < data.length; i++) {
-      if (String(data[i][labelCol] || '').trim() === entry.field) {
-        dropdownKey = String(data[i][dropdownCol] || '').trim();
-        fieldLabel = entry.field;
+      const k = String(data[i][dropdownCol] || '').trim();
+      const l = String(data[i][labelCol] || '').trim();
+      if (l.toLowerCase() === String(entry.field || '').trim().toLowerCase()) {
+        dropdownKey = k;
+        fieldLabel = l;
         break;
       }
+      if (k === dropdownKey && !fieldLabel) fieldLabel = l;
     }
-
-    if (!dropdownKey) return { success: false, message: 'Could not find dropdown key for field: ' + entry.field };
+    if (!dropdownKey || fieldKeys.indexOf(dropdownKey) < 0)
+      return {success:false,message:'Unrecognised Pre-AC field: ' + entry.field};
+    if (!fieldLabel) fieldLabel = String(entry.field || dropdownKey).trim();
 
     // Build new row matching the sheet structure
     const newRow = new Array(headerRow.length).fill('');
@@ -191,7 +203,7 @@ function preAcAddGapToSheet(entry) {
     if (entry.scope === 'Universal') {
       if (universalCol < 0) return {success:false,message:'Universal column missing'};
       newRow[universalCol] = 'y';
-    } else if (String(entry.scope || '').trim() === String(stoneType || '').trim() && stoneCol > -1) {
+    } else if (String(entry.scope || '').trim().toLowerCase() === String(stoneType || '').trim().toLowerCase() && stoneCol > -1) {
       newRow[stoneCol] = 'y';
     } else {
       return {success:false,message:'Pre-AC option has invalid or missing stone scope'};
@@ -201,7 +213,9 @@ function preAcAddGapToSheet(entry) {
     const normalizedSuggestion = String(entry.suggested_option || '').trim().toLowerCase().replace(/\s+/g, ' ');
     if (!normalizedSuggestion) return { success:false, message:'Empty suggested AC library option' };
     const existingForKey = data.slice(1).some(function(existing) {
-      return String(existing[dropdownCol] || '').trim() === dropdownKey &&
+      const applicable = String(existing[universalCol] || '').trim().toLowerCase() === 'y' ||
+        (stoneCol >= 0 && String(existing[stoneCol] || '').trim().toLowerCase() === 'y');
+      return applicable && String(existing[dropdownCol] || '').trim() === dropdownKey &&
         String(existing[valueCol] || '').trim().toLowerCase().replace(/\s+/g, ' ') === normalizedSuggestion;
     });
     if (existingForKey) return { success:true, skipped:true, message:'Already in AC library' };
