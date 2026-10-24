@@ -302,9 +302,8 @@ ${siloMap}
 2. ${ukLocalisation}
 
 --- SECTION CONTENT GOVERNANCE ---
-1. Primary Entity Focus: 80% of the word count must serve the PRIMARY ENTITY: ${primaryEntity}.
-2. Peripheral Summarisation: Sections that do not strengthen the Primary Entity are limited to
-   maximum 300 words. Summarise principles and use the full URL from the Silo Map to link to the designated authority page.
+1. Keep the article centred on the PRIMARY ENTITY: ${primaryEntity}, its relevant relationships and the reader's purpose without a percentage quota.
+2. Discuss adjacent subjects only where useful; link to a relevant authority page when appropriate, without a word-count cap.
 
 --- ORIGINAL HTML ---
 ${originalHTML}
