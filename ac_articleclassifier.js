@@ -373,7 +373,9 @@ function parseClassificationResponse(response) {
       const data = JSON.parse(clean);
 
       data.forEach(function(entry) {
-
+        if (entry && entry.gap === true) {
+          throw new Error('AC has an unresolved library option gap; review Pre-AC before saving.');
+        }
         if (
           entry &&
           Number.isInteger(Number(entry.index)) &&
