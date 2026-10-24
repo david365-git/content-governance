@@ -274,19 +274,23 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
    // A mention of another grit stage is context, not evidence that the stages match.
    // Compare each fact's primary grit (first stated grit), not its whole number set.
    function primaryGrit_(f){
-     var m=String(f.fact||'').match(/\\b(\\d[\\d,]*)\\s*(?:-\\s*)?grit\\b/i);
+     var m=String(f.fact||'').match(/\b(\d[\d,]*)\s*(?:-\s*)?grit\b/i);
      return m?m[1].replace(/,/g,''):'';
    }
    function stage_(f){
      var t=String(f.fact||'').toLowerCase();
-     if(/\\b(?:ground|grinding|grind)\\b/.test(t))return 'grinding';
-     if(/\\b(?:honed|honing|hone)\\b/.test(t))return 'honing';
-     if(/\\b(?:polished|polishing|polish)\\b/.test(t))return 'polishing';
+     if(/\b(?:ground|grinding|grind)\b/.test(t))return 'grinding';
+     if(/\b(?:honed|honing|hone)\b/.test(t))return 'honing';
+     if(/\b(?:polished|polishing|polish)\b/.test(t))return 'polishing';
      return '';
+   }
+   function isMaintenance_(f){
+     return f.category==='Maintenance Handover' || /\b(?:recommended|advised)\b.{0,100}\b(?:maintain|maintenance|cleaner|cleaning)\b/i.test(String(f.fact||''));
    }
    var profiles=uniqueSplit.map(profile_),splitDuplicateCandidates=[];
    for(var di=0;di<uniqueSplit.length;di++)for(var dj=di+1;dj<uniqueSplit.length;dj++){
      var left=uniqueSplit[di],right=uniqueSplit[dj],pa=profiles[di],pb=profiles[dj];
+     if(isMaintenance_(left)!==isMaintenance_(right))continue;
      var ga=primaryGrit_(left),gb=primaryGrit_(right);
      if(ga&&gb&&ga!==gb)continue;
      var sa=stage_(left),sb=stage_(right);
