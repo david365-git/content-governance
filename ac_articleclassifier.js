@@ -501,6 +501,7 @@ function writeClassificationToSheet(postsSheet, activeRow, headers, parsed) {
 
   } catch (error) {
     Logger.log('Error writing classification to sheet: ' + error.toString());
+    throw error;
   }
 }
 function checkClassificationDuplication(postsSheet, activeRow, headers, parsed) {
