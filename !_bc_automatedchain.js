@@ -1589,6 +1589,11 @@ function bc_runACPromptAutomated(row) {
       );
     }
 
+    // The classifier intentionally leaves duplicates unsaved for manual review.
+    // Automated mode must save the original truthful classification itself.
+    var acPostsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
+    var acHeaders = acPostsSheet.getRange(1, 1, 1, acPostsSheet.getLastColumn()).getValues()[0];
+    writeClassificationToSheet(acPostsSheet, row, acHeaders, nudgedValues);
     // Never change a genuine classification solely to create artificial
     // variety. Keep the original and report possible overlap for review.
     message =
