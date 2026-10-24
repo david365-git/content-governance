@@ -481,14 +481,8 @@ function buildSemanticFingerprintBlock(material) {
     block += "------------------------------------------------------------\n";
     block += "LSI ENTITY TRANSLATION RULE (Hard Lock — Semantic Fingerprint)\n";
     block += "------------------------------------------------------------\n";
-    block += "Each governed entity MUST be surrounded by its required semantic vocabulary.\n";
-    block += "Entity name appears 1-2x explicitly across the entire article.\n";
-    block += "All other references use semantic fingerprint vocabulary.\n\n";
-    block += "DISTRIBUTION PATTERN:\n";
-    block += "- Opening section: 2-3 fingerprint instances\n";
-    block += "- Main content: 3-5 fingerprint instances\n";
-    block += "- Conclusion: 2-3 fingerprint instances\n";
-    block += "- Target: 8-12 total fingerprint term instances per entity across article\n\n";
+    block += "Use governed entities and relevant attributes naturally where they help explain the article subject.\\n";
+    block += "Describe accurate relationships without entity-frequency targets or forced synonyms.\\n\\n";
     block += "GOVERNED ENTITIES FOR THIS MATERIAL (" + material + "):\n\n";
 
     // Get Recovery Blueprint entities for priority ordering
