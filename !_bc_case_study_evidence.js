@@ -243,12 +243,33 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
      ' responseFingerprint='+bc_caseEvidenceDigest_(String(firstHalfApi.text||''))+
      ' facts='+firstHalfFacts.length);
  }
+ if(splitMode){
+   // Conservative duplicate check: only the same category and effectively identical wording.
+   // Never discard a shorter/longer claim merely because it shares technical vocabulary.
+   var seenSplit={},uniqueSplit=[],splitDuplicates=[];
+   facts.forEach(function(f){
+     var normalized=String(f.fact).toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z0-9]+/g,' ').trim().replace(/\\s+/g,' ');
+     var signature=f.category+'|'+normalized;
+     if(seenSplit[signature]){
+       splitDuplicates.push({keptParagraph:seenSplit[signature].sourceParagraph,removedParagraph:f.sourceParagraph,category:f.category,fact:f.fact});
+     }else{
+       seenSplit[signature]=f;
+       uniqueSplit.push(f);
+     }
+   });
+   facts=uniqueSplit;
+   byCategory={};labels.forEach(function(name){byCategory[name]=[];});
+   facts.forEach(function(f){byCategory[f.category].push({fact:f.fact,paragraph:f.sourceParagraph});});
+   cells=labels.map(function(name){return JSON.stringify(byCategory[name]);});
+   Logger.log('Split Luna exact duplicates removed: '+splitDuplicates.length+'; '+JSON.stringify(splitDuplicates));
+ }
  facts.sort(function(a,b){return a.sourceParagraph-b.sourceParagraph;});
  facts.forEach(function(f,i){f.id='F'+('000'+(i+1)).slice(-4);});
  var base=bc_caseEvidenceBuildPackage_(id,html,digest,labels,labels.map(function(){return '[]';}));
  var pkg={version:'v10',postId:id,sourceDigest:digest,facts:facts,chronology:facts.filter(function(f){return f.category==='Restoration Methods';})};
  var mapped={};facts.forEach(function(f){mapped[f.sourceParagraph]=true;});
  var coverage={state:'SOURCE INDEXED',totalParagraphs:paras.length,paragraphsWithFacts:Object.keys(mapped).length,facts:facts.length};
+ if(splitMode)coverage.exactDuplicatesRemoved=splitDuplicates.length;
  if(splitMode){
    var firstHalfMapped={};firstHalfFacts.forEach(function(f){firstHalfMapped[f.sourceParagraph]=true;});
    var halfPkg={version:'v10',postId:id,sourceDigest:digest,facts:firstHalfFacts,
