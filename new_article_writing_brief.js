@@ -89,7 +89,8 @@ function new_buildArticleWritingBrief(rowNumber) {
       'Locality: '+val('Locality')+'; Parent Area: '+val('Parent Area') : '';
     var sourceContext = articleType === 'Case Study' ?
       'AUTHORITATIVE CASE STUDY EVIDENCE:\n'+evidence+
-      '\nOriginal HTML is context for the narrative, NOT authority for additional project claims.' :
+      '\nORIGINAL ARTICLE NARRATIVE CONTEXT (not authority for extra project facts):\n'+originalHtml+
+      '\nCommercial confidentiality: generic products must remain generic; never infer product brand, supplier, specific chemistry or equipment.' :
       'ORIGINAL ARTICLE AS DISTINCTIVE SOURCE CONTEXT:\n'+originalHtml;
     var prompt = [
       'ROLE: Senior UK stone and tile restoration editor. Prepare a UNIQUE writing brief, not the finished article.',
