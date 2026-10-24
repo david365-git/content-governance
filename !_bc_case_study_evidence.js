@@ -138,7 +138,7 @@ function bc_caseEvidenceSnapshotActiveRow() {
 
 var BC_CASE_EVIDENCE_VERSION_ = 'v10';
 function bc_caseEvidenceStatus_(digest) { return 'SOURCE-QUOTED-' + BC_CASE_EVIDENCE_VERSION_ + ' | sha256:' + digest; }
-function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
+function bc_caseEvidenceExtract_(row,modelOverride,unused,splitMode){
  var ss=SpreadsheetApp.getActiveSpreadsheet(),sh=ss.getSheetByName('posts');
  row=Number(row);if(row<2)throw Error('Invalid posts row');
  var h=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
@@ -389,61 +389,6 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
    },halfCells);
  }
  cells=cells.concat([JSON.stringify(pkg),JSON.stringify({links:[],status:'No inferred relationships'}),JSON.stringify(coverage),JSON.stringify({imagesAndVideos:base.media,links:base.links}),JSON.stringify({unknowns:base.unknowns}),bc_caseEvidenceStatus_(digest)]);
- if(twoPass){
-   // Persist and archive the first Luna pass before supplementing it.
-   cells.forEach(function(v){if(v.length>49000)throw Error('First-pass evidence cell too long');});
-   sh.getRange(row,first,1,16).setValues([cells]);
-   bc_caseEvidenceArchive_(sh,row,id,'FIRST_PASS',run,{
-     promptFingerprint:promptFingerprint,model:String(api.model||chosenModel),
-     responseId:String(api.responseId||''),
-     tokenUsage:JSON.stringify({promptTokens:Number(api.promptTokens||0),completionTokens:Number(api.completionTokens||0),finishReason:String(api.finishReason||'unknown')}),
-     responseFingerprint:bc_caseEvidenceDigest_(String(api.text||''))
-   });
-   var prior=facts.map(function(f){return {paragraph:f.sourceParagraph,category:f.category,fact:f.fact};});
-   var missingPrompt=[
-     'Find ONLY important project-specific facts missing from the existing extraction. This is a gap-finding pass, not a rewrite or independent new extraction.',
-     'Read every numbered source paragraph against ALL facts already extracted. Do not repeat, paraphrase, split or reclassify an existing fact. Ignore general advice, hypotheticals, conditional treatments and other projects.',
-     'Preserve meaningful omitted qualifiers, distinct equipment, technical methods, actual inspections and outcomes where explicitly stated in the source.',
-     'Use these exact category names: '+JSON.stringify(labels),
-     'Return JSON with exactly one key "facts": an array of {"paragraph":1,"category":"exact category","fact":"only genuinely missing documented fact"} in ascending paragraph order. Return [] if nothing material is missing.',
-     'ALREADY EXTRACTED FACTS (DO NOT REPEAT):',JSON.stringify(prior),
-     'ORIGINAL NUMBERED PARAGRAPHS:',paras.map(function(t,i){return '['+(i+1)+'] '+t;}).join('\n')
-   ].join('\n');
-   var extra=bc_sendPromptViaOpenAI(missingPrompt,6500,MODEL_CHEAP);
-   if(!extra||!extra.success||extra.truncated||extra.finishReason==='length')throw Error('Second Luna pass failed or truncated; first pass preserved in archive');
-   var extraData=JSON.parse(String(extra.text||'').trim());
-   if(!extraData||!Array.isArray(extraData.facts))throw Error('Second Luna pass did not return facts array; first pass preserved');
-   function wordSet_(v){return String(v).toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(function(w){return w.length>2;});}
-   var additions=[];
-   extraData.facts.forEach(function(item){
-     var p=Number(item&&item.paragraph),category=String(item&&item.category||'').trim(),fact=String(item&&item.fact||'').trim();
-     if(!Number.isInteger(p)||p<1||p>paras.length||!fact||!Object.prototype.hasOwnProperty.call(byCategory,category))throw Error('Invalid second-pass fact');
-     var w=wordSet_(fact);
-     var duplicate=facts.concat(additions).some(function(f){
-       if(f.sourceParagraph!==p)return false;
-       var other=wordSet_(f.fact),shared=w.filter(function(x){return other.indexOf(x)!==-1;}).length;
-       return String(f.fact).toLowerCase()===fact.toLowerCase() || (w.length>0&&other.length>0&&shared/Math.min(w.length,other.length)>=0.96);
-     });
-     if(!duplicate)additions.push({category:category,fact:fact,sourceParagraph:p,sourceOrder:p});
-   });
-   facts=facts.concat(additions).sort(function(a,b){return a.sourceParagraph-b.sourceParagraph;});
-   facts.forEach(function(f,i){f.id='F'+('000'+(i+1)).slice(-4);});
-   byCategory={};labels.forEach(function(name){byCategory[name]=[];});
-   facts.forEach(function(f){byCategory[f.category].push({fact:f.fact,paragraph:f.sourceParagraph});});
-   pkg.facts=facts;pkg.chronology=facts.filter(function(f){return f.category==='Restoration Methods';});
-   mapped={};facts.forEach(function(f){mapped[f.sourceParagraph]=true;});
-   coverage.paragraphsWithFacts=Object.keys(mapped).length;coverage.facts=facts.length;
-   cells=labels.map(function(name){return JSON.stringify(byCategory[name]);}).concat([
-     JSON.stringify(pkg),JSON.stringify({links:[],status:'No inferred relationships'}),JSON.stringify(coverage),
-     JSON.stringify({imagesAndVideos:base.media,links:base.links}),JSON.stringify({unknowns:base.unknowns}),bc_caseEvidenceStatus_(digest)
-   ]);
-   api={model:MODEL_CHEAP,responseId:String(extra.responseId||''),text:String(extra.text||''),
-     promptTokens:Number(api.promptTokens||0)+Number(extra.promptTokens||0),
-     completionTokens:Number(api.completionTokens||0)+Number(extra.completionTokens||0),
-     finishReason:String(extra.finishReason||'unknown'),
-     cost:Number(api.cost||0)+Number(extra.cost||0)};
-   promptFingerprint=bc_caseEvidenceDigest_(prompt+'\nSECOND PASS:\n'+missingPrompt);
- }
  cells.forEach(function(v){if(v.length>49000)throw Error('Evidence cell too long');});
  sh.getRange(row,first,1,16).setValues([cells]);
  bc_caseEvidenceArchive_(sh,row,id,'AFTER',run,{
@@ -467,12 +412,13 @@ function bc_caseEvidenceActiveRowSplitLunaTest() {
   return bc_caseEvidenceExtract_(SpreadsheetApp.getActiveSpreadsheet().getActiveRange().getRow(),MODEL_CHEAP,false,true);
 }
 
-function bc_caseEvidenceActiveRowTwoPassLunaTest() {
-  return bc_caseEvidenceExtract_(SpreadsheetApp.getActiveSpreadsheet().getActiveRange().getRow(),MODEL_CHEAP,true);
-}
-
-function bc_caseEvidenceActiveRowMidTest() {
-  return bc_caseEvidenceExtract_(SpreadsheetApp.getActiveSpreadsheet().getActiveRange().getRow(), MODEL_MID);
+/** Explicit posts-row runner used by the Master Automation sidebar. */
+function bc_caseEvidenceSplitLunaByRow(row) {
+  row=Number(row);
+  var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
+  if(!sh||!Number.isInteger(row)||row<2||row>sh.getLastRow())throw Error('Invalid posts row: '+row);
+  var result=bc_caseEvidenceExtract_(row,MODEL_CHEAP,false,true);
+  return {row:row,success:result.success,skipped:!!result.skipped,cost:Number(result.cost||0),message:result.skipped?'Not a Case Study':String(result.message||'Complete')};
 }
 
 function bc_caseEvidencePromptBlock_(row){
