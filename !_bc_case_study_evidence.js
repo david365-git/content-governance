@@ -336,6 +336,15 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
      inactiveSplit.push(dropIdx);
      consolidatedSplit.push({keptParagraph:kept.sourceParagraph,keptFact:kept.fact,mergedCategory:dropped.category,mergedFact:dropped.fact});
    });
+   // The review list must contain only unresolved pairs. Any pair referring
+   // to a fact consolidated away is resolved and remains in consolidatedSplit.
+   splitDuplicateCandidates=splitDuplicateCandidates.filter(function(c){
+     return !consolidatedSplit.some(function(done){
+       return (c.paragraphA===done.keptParagraph&&c.factA===done.keptFact&&c.factB===done.mergedFact&&c.categoryB===done.mergedCategory)||
+              (c.paragraphB===done.keptParagraph&&c.factB===done.keptFact&&c.factA===done.mergedFact&&c.categoryA===done.mergedCategory);
+     }) && uniqueSplit.some(function(f,i){return inactiveSplit.indexOf(i)<0&&f.sourceParagraph===c.paragraphA&&f.category===c.categoryA&&f.fact===c.factA;}) &&
+          uniqueSplit.some(function(f,i){return inactiveSplit.indexOf(i)<0&&f.sourceParagraph===c.paragraphB&&f.category===c.categoryB&&f.fact===c.factB;});
+   });
    facts=uniqueSplit.filter(function(f,i){return inactiveSplit.indexOf(i)<0;});
    byCategory={};labels.forEach(function(name){byCategory[name]=[];});
    facts.forEach(function(f){
@@ -346,8 +355,6 @@ function bc_caseEvidenceExtract_(row,modelOverride,twoPass,splitMode){
    cells=labels.map(function(name){return JSON.stringify(byCategory[name]);});
    Logger.log('Split Luna strongly overlapping method/equipment facts consolidated: '+consolidatedSplit.length+'; '+JSON.stringify(consolidatedSplit));
 
-   facts.forEach(function(f){byCategory[f.category].push({fact:f.fact,paragraph:f.sourceParagraph,alsoParagraphs:f.alsoParagraphs||[]});});
-   cells=labels.map(function(name){return JSON.stringify(byCategory[name]);});
    Logger.log('Split Luna exact removed: '+splitDuplicates.length+'; '+JSON.stringify(splitDuplicates));
    Logger.log('Split Luna review candidates: '+splitDuplicateCandidates.length+'; '+JSON.stringify(splitDuplicateCandidates.slice(0,40)));
  }
