@@ -280,7 +280,19 @@ function autoAssignProblemAngle(targetRow) {
       return { success: false, message: "Problem Angle column not found in Posts sheet." };
     }
 
-    postsSheet.getRange(activeRow, angleIdx + 1).setValue(angleString);
+    var angleCell = postsSheet.getRange(activeRow, angleIdx + 1);
+    var existingAngle = String(angleCell.getValue() || '').trim();
+    // Preserve a previously selected or owner-edited angle when it is valid.
+    // Only fill an empty field here; changes require an explicit angle action.
+    if (existingAngle) {
+      var existingCode = existingAngle.split(/[\s—-]+/)[0].toUpperCase();
+      if (!ANGLE_DEFINITIONS[existingCode]) {
+        return {success:false,message:"Existing Problem Angle is unrecognised; review before replacing it."};
+      }
+      return {success:true,message:"Existing Problem Angle preserved: " + existingCode,
+        angleCode:existingCode,angleString:existingAngle,preserved:true};
+    }
+    angleCell.setValue(angleString);
 
     return {
       success: true,
