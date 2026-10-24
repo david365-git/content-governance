@@ -6419,6 +6419,29 @@ function pipelineRunAuthorityBrief(row) {
       };
     }
 
+    // Report existing intent conflicts without allowing a heuristic keyword
+    // match to block an otherwise valid article automatically.
+    if (queryCluster && typeof checkProblemRegister === 'function') {
+      try {
+        var angleText = stageField('Problem Angle');
+        var angleCode = String(angleText.split(/[\\s—-]+/)[0] || '').toUpperCase();
+        var overlapResult = checkProblemRegister(
+          queryCluster, stageField('Stone Type'), stageField('URL'), articleType, angleCode
+        );
+        var conflicts = overlapResult && Array.isArray(overlapResult.matches)
+          ? overlapResult.matches.filter(function(m) {
+              return m.conflictType === 'POTENTIAL_CANNIBALISATION';
+            }) : [];
+        if (conflicts.length) {
+          bc_appendPipelineRunLog(row, 'W-1 review — ' + conflicts.length +
+            ' possible overlapping intent(s) in Problem Register; original classification retained.');
+        }
+      } catch (registerError) {
+        bc_appendPipelineRunLog(row, 'W-1 review — Problem Register check unavailable: ' +
+          String(registerError));
+      }
+    }
+
     bc_recordPipelineStage(
       row,
       "W-1",
