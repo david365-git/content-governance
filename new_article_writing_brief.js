@@ -193,7 +193,29 @@ function new_generateArticleWritingBriefForRow(rowNumber) {
         'GSC monitor queries: Omitted from this editorial brief; preserve search intent above.')
       .replace(/(\[M [^\n]*[\s\S]*?)(?=\n\[N [^\n]*)[\s\S]*?(?=\n\nORIGINAL MEDIA ASSET INVENTORY:)/,
         '$1');
-    var api = bc_sendPromptViaOpenAI(aiPrompt, 6500, chosenModel);
+    // Shape the output, not the project truth: retain full evidence in the
+    // source input, but avoid repeating each fact in several brief sections.
+    aiPrompt = [
+      'OUTPUT CONTRACT — CONCISE EDITORIAL WRITING BRIEF ONLY:',
+      'Target 900–1,300 words, maximum 1,500. No article prose.',
+      'Use these headings exactly: (1) Distinctive project value,',
+      '(2) Verified facts and owner confirmations, (3) Reader intent,',
+      '(4) Editorial angle and structure, (5) Evidence-led media plan,',
+      '(6) Claim boundaries and unknowns, (7) Final quality checklist.',
+      'Write each project fact once in its most useful section; refer back',
+      'rather than restating entire fact lists or the restoration sequence.',
+      'Include the project-specific before, actions, results and limits;',
+      'distinguish owner-confirmed facts from source-quoted facts.',
+      'Give a practical 4–6-section H2 outline, each with one-sentence intent;',
+      'make media placement concise, without reproducing every URL.',
+      'State the essential prohibitions and important unknowns once, grouped.',
+      'Do not omit a material constraint, source-supported result, or',
+      'evidence-integrity safeguard merely to meet the word target.',
+      'Project truth and technical restrictions always outrank brevity.',
+      '',
+      aiPrompt
+    ].join('\\n');
+    var api = bc_sendPromptViaOpenAI(aiPrompt, 4500, chosenModel);
     if (!api || !api.success || api.truncated || api.finishReason === 'length')
       return {success:false,message:'AI brief incomplete. Reason: '+(api&&api.message||api&&api.error||'not supplied')+
         '; finishReason='+String(api&&api.finishReason||'unknown')+
