@@ -63,7 +63,7 @@ function new_eer_findExceptions(row,expectedPostId) {
       'OWNER CONFIRMATIONS FOR THIS POST ID: '+JSON.stringify(confirmations),
       'SOURCE AND EVIDENCE:',
       assembled.prompt
-    ].join('\\n');
+    ].join('\n');
     var model=typeof MODEL_CHEAP!=='undefined'?MODEL_CHEAP:null;
     if (!model||typeof bc_sendPromptViaOpenAI!=='function')throw new Error('OpenAI model or API sender unavailable.');
     var api=bc_sendPromptViaOpenAI(prompt,4000,model);
