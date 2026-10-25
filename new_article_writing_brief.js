@@ -207,28 +207,24 @@ function new_generateArticleWritingBriefForRow(rowNumber) {
       // Drop repetitive N:R only; never remove the mandatory S section.
       .replace(/(\[M [^\n]*[\s\S]*?)(?=\n\[N [^\n]*)[\s\S]*?(?=\n\[S [^\n]*)/,
         '$1');
-    // Shape the output, not the project truth: retain full evidence in the
-    // source input, but avoid repeating each fact in several brief sections.
+    // One type-aware output contract. The existing task below supplies the
+    // authoritative seven headings and W1.5A–E own the final article layout.
     aiPrompt = [
-      'OUTPUT CONTRACT — CONCISE EDITORIAL WRITING BRIEF ONLY:',
-      'Target 900–1,300 words, maximum 1,500. No article prose.',
-      'Use these headings exactly: (1) Distinctive project value,',
-      '(2) Verified facts and owner confirmations, (3) Reader intent,',
-      '(4) Editorial angle and structure, (5) Evidence-led media plan,',
-      '(6) Claim boundaries and unknowns, (7) Final quality checklist.',
-      'Write each project fact once in its most useful section; refer back',
-      'rather than restating entire fact lists or the restoration sequence.',
-      'Include the project-specific before, actions, results and limits;',
-      'distinguish owner-confirmed facts from source-quoted facts.',
-      'Give a practical 4–6-section H2 outline, each with one-sentence intent;',
-      'make media placement concise, without reproducing every URL.',
-      'State the essential prohibitions and important unknowns once, grouped.',
-      'Do not omit a material constraint, source-supported result, or',
-      'evidence-integrity safeguard merely to meet the word target.',
-      'Project truth and technical restrictions always outrank brevity.',
+      'OUTPUT CONTRACT: Produce the seven sections under TASK below.',
+      'Target 900–1,300 words (maximum 1,500), provided no evidence or',
+      'material restriction is lost. Do not draft article prose.',
+      assembled.articleType === 'Case Study'
+        ? 'Case Study: distinguish owner-confirmed and source-quoted facts; cover the real before condition, actual work, results and limits.'
+        : 'Non-case-study: focus on source-supported guidance and reader needs; do not invent a client, project, performed work or before/after outcomes.',
+      'List facts and prohibitions once, without repetitive summaries.',
+      'Suggest an article-type-appropriate structure, with no fixed section',
+      'count; W1.5A–W1.5E must approve the final structure.',
+      'Provide concise media placement suggestions where useful.',
+      'Never weaken project evidence, Technical Matrix S restrictions,',
+      'source provenance or article-type governance to meet length.',
       '',
       aiPrompt
-    ].join('\\n');
+    ].join('\n');
     var api = bc_sendPromptViaOpenAI(aiPrompt, 4500, chosenModel);
     if (!api || !api.success || api.truncated || api.finishReason === 'length')
       return {success:false,message:'AI brief incomplete. Reason: '+(api&&api.message||api&&api.error||'not supplied')+
