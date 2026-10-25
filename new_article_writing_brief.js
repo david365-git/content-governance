@@ -187,11 +187,11 @@ function new_generateArticleWritingBriefForRow(rowNumber) {
     // needs key SEO queries and technical reference M: repeated N:S guidance
     // and hundreds of incidental GSC queries waste input context.
     var aiPrompt = assembled.prompt
-      .replace(/GSC pre-migration benchmark queries:[\\s\\S]*?(?=\\nGSC monitor queries:)/,
-        'GSC pre-migration benchmark queries: Use the primary search term and owned intent stated above.\\n')
-      .replace(/GSC monitor queries:[\\s\\S]*?(?=\\n\\nTECHNICAL MATRIX)/,
+      .replace(/GSC pre-migration benchmark queries:[\s\S]*?(?=\nGSC monitor queries:)/,
+        'GSC pre-migration benchmark queries: Use the primary search term and owned intent stated above.\n')
+      .replace(/GSC monitor queries:[\s\S]*?(?=\n\nTECHNICAL MATRIX)/,
         'GSC monitor queries: Omitted from this editorial brief; preserve search intent above.')
-      .replace(/(\\[M [^\\n]*[\\s\\S]*?)(?=\\n\\[N [^\\n]*)[\\s\\S]*?(?=\\n\\nORIGINAL MEDIA ASSET INVENTORY:)/,
+      .replace(/(\[M [^\n]*[\s\S]*?)(?=\n\[N [^\n]*)[\s\S]*?(?=\n\nORIGINAL MEDIA ASSET INVENTORY:)/,
         '$1');
     var api = bc_sendPromptViaOpenAI(aiPrompt, 6500, chosenModel);
     if (!api || !api.success || api.truncated || api.finishReason === 'length')
