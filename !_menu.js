@@ -10,6 +10,7 @@ function onOpen(e) {
     .addItem('🔎 Batch Extract Case Study Evidence (filtered stone type)', 'bc_caseEvidenceOpenBatchProgress')
     .addItem('🧪 NEW Simplified Workflow Test', 'new_openWorkflowSidebar')
     .addItem('📝 NEW Article Writing Brief (selected row)', 'new_previewWritingBriefActiveRow')
+    .addItem('🧪 NEW Evidence Exception Review (selected row)', 'new_eer_reviewSelectedRow')
     .addItem('✂️ Restore lost NewHtml etc', 'restoreActiveRowFromSiteExport')
     .addItem('📋 Batch Build Authority Briefs', 'bc_batchBuildAuthorityBriefs')
     .addSeparator()
