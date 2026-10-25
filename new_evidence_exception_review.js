@@ -32,7 +32,7 @@ function new_eer_reviewSelectedRow() {
     '<script>var PID='+JSON.stringify(p.postId)+', ROW='+p.row+';'+
     'function run(){document.getElementById("go").disabled=true;document.getElementById("notice").textContent="Checking source evidence...";google.script.run.withSuccessHandler(show).withFailureHandler(fail).new_eer_findExceptions(ROW,PID);}' +
     'function fail(e){document.getElementById("go").disabled=false;document.getElementById("notice").textContent=String(e);}' +
-    'function show(r){document.getElementById("go").disabled=false;if(!r||!r.success){document.getElementById("notice").textContent=r&&r.message||"Failed";return;}document.getElementById("notice").textContent=r.questions.length+" material owner question(s); "+r.technicalExceptions.length+" technical/evidence issue(s); "+r.nonessential.length+" non-essential unknown(s). Status: "+r.status+". API cost $"+Number(r.cost||0).toFixed(4)+". Recheck after saving answers.";var d=document.getElementById("list");d.textContent="";r.technicalExceptions.forEach(function(q){var p=document.createElement("p");p.textContent="Evidence/technical issue: "+q;d.appendChild(p);});r.questions.forEach(function(q,i){var x=document.createElement("div");x.className="item";var h=document.createElement("p");h.textContent=q.question;x.appendChild(h);var context=document.createElement("p");context.textContent="Why ask: "+q.reason;x.appendChild(context);var t=document.createElement("textarea");t.placeholder="Your first-hand answer (leave blank to skip)";x.appendChild(t);var b=document.createElement("button");b.textContent="Save my confirmation";b.onclick=function(){var v=t.value.trim();if(!v)return; b.disabled=true;google.script.run.withSuccessHandler(function(z){b.disabled=false;context.textContent=z&&z.message||"Saved";}).withFailureHandler(function(e){b.disabled=false;context.textContent=String(e);}).new_eer_saveConfirmation(PID,q.question,v);};x.appendChild(b);d.appendChild(x);});}' +
+    'function show(r){document.getElementById("go").disabled=false;if(!r||!r.success){document.getElementById("notice").textContent=r&&r.message||"Failed";return;}document.getElementById("notice").textContent=r.questions.length+" material owner question(s); "+r.technicalExceptions.length+" technical/evidence issue(s); "+r.nonessential.length+" non-essential unknown(s). Status: "+r.status+". API cost $"+Number(r.cost||0).toFixed(4)+". Recheck after saving answers.";var d=document.getElementById("list");d.textContent="";r.technicalExceptions.forEach(function(q){var x=document.createElement("div");x.className="item";var p=document.createElement("p");p.textContent="Evidence/technical issue: "+q;x.appendChild(p);var t=document.createElement("textarea");t.placeholder="Your response or correction (optional)";x.appendChild(t);var sel=document.createElement("select");["Agree","Disagree","Needs correction"].forEach(function(v){var o=document.createElement("option");o.value=v;o.textContent=v;sel.appendChild(o);});x.appendChild(sel);var b=document.createElement("button");b.textContent="Save response";b.onclick=function(){b.disabled=true;google.script.run.withSuccessHandler(function(z){b.disabled=false;if(z&&z.success){b.textContent="Saved";}else{b.textContent=z&&z.message||"Save failed";}}).withFailureHandler(function(e){b.disabled=false;b.textContent=String(e);}).new_eer_saveReviewResponse(PID,q,sel.value,t.value);};x.appendChild(b);d.appendChild(x);});r.questions.forEach(function(q,i){var x=document.createElement("div");x.className="item";var h=document.createElement("p");h.textContent=q.question;x.appendChild(h);var context=document.createElement("p");context.textContent="Why ask: "+q.reason;x.appendChild(context);var t=document.createElement("textarea");t.placeholder="Your first-hand answer (leave blank to skip)";x.appendChild(t);var b=document.createElement("button");b.textContent="Save my confirmation";b.onclick=function(){var v=t.value.trim();if(!v)return; b.disabled=true;google.script.run.withSuccessHandler(function(z){b.disabled=false;context.textContent=z&&z.message||"Saved";}).withFailureHandler(function(e){b.disabled=false;context.textContent=String(e);}).new_eer_saveConfirmation(PID,q.question,v);};x.appendChild(b);d.appendChild(x);});}' +
     '</script></body></html>';
   SpreadsheetApp.getUi().showModalDialog(HtmlService.createHtmlOutput(html).setWidth(650).setHeight(620),'Evidence exception review — TEST');
 }
@@ -107,4 +107,35 @@ function new_eer_saveConfirmation(postId,question,answer) {
     sheet.appendRow([new Date(),p.postId,p.title,question,answer,'OWNER CONFIRMED — not yet integrated into W2B']);
     return {success:true,message:'Saved for Post '+p.postId+'. Not yet used by writing/fact-check stages.'};
   }catch(e){return {success:false,message:String(e)};}finally{lock.releaseLock();}
+}
+
+/**
+ * Records owner's view on a technical/editorial finding.
+ * Unlike firsthand project confirmations, this is NOT evidence that
+ * a project event occurred. It is kept in a separate review ledger.
+ */
+function new_eer_saveReviewResponse(postId,finding,decision,reply) {
+  var lock=LockService.getDocumentLock();
+  if(!lock)return {success:false,message:'Document lock unavailable'};
+  lock.waitLock(15000);
+  try {
+    var p=new_eer_getSelected_();
+    if(String(p.postId)!==String(postId))throw new Error('Selection changed; nothing saved.');
+    finding=String(finding||'').trim();
+    decision=String(decision||'').trim();
+    reply=String(reply||'').trim();
+    if(!finding||['Agree','Disagree','Needs correction'].indexOf(decision)<0)
+      throw new Error('Select a valid response.');
+    var ss=SpreadsheetApp.getActiveSpreadsheet();
+    var sheet=ss.getSheetByName('Evidence Review Responses');
+    if(!sheet){
+      sheet=ss.insertSheet('Evidence Review Responses');
+      sheet.appendRow(['Timestamp','Post ID','Article Title','Finding','Decision','Owner Reply','Status']);
+      sheet.setFrozenRows(1);
+    }
+    sheet.appendRow([new Date(),p.postId,p.title,finding,decision,reply,
+      'REVIEW FEEDBACK — not yet integrated into W2B']);
+    return {success:true,message:'Review response saved for Post '+postId};
+  }catch(e){return {success:false,message:String(e)};}
+  finally{lock.releaseLock();}
 }
