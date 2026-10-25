@@ -15,6 +15,13 @@ function new_eer_getSelected_() {
   if (!id) throw new Error('Missing Post ID.');
   return {row:row,postId:id,title:col('Title'),articleType:col('Article Type')};
 }
+function new_eer_confirmations_(postId) {
+  var sheet=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Owner Confirmations');
+  if(!sheet || sheet.getLastRow()<2)return [];
+  var rows=sheet.getRange(2,1,sheet.getLastRow()-1,6).getValues();
+  return rows.filter(function(x){return String(x[1]).trim()===String(postId)&&String(x[4]).trim();})
+    .map(function(x){return {question:String(x[3]).trim(),answer:String(x[4]).trim()};});
+}
 function new_eer_reviewSelectedRow() {
   var p;
   try{p=new_eer_getSelected_();}catch(e){SpreadsheetApp.getUi().alert(String(e));return;}
@@ -25,7 +32,7 @@ function new_eer_reviewSelectedRow() {
     '<script>var PID='+JSON.stringify(p.postId)+', ROW='+p.row+';'+
     'function run(){document.getElementById("go").disabled=true;document.getElementById("notice").textContent="Checking source evidence...";google.script.run.withSuccessHandler(show).withFailureHandler(fail).new_eer_findExceptions(ROW,PID);}' +
     'function fail(e){document.getElementById("go").disabled=false;document.getElementById("notice").textContent=String(e);}' +
-    'function show(r){document.getElementById("go").disabled=false;if(!r||!r.success){document.getElementById("notice").textContent=r&&r.message||"Failed";return;}document.getElementById("notice").textContent=r.questions.length+" potential question(s); nothing saved. API cost $"+Number(r.cost||0).toFixed(4);var d=document.getElementById("list");d.textContent="";r.questions.forEach(function(q,i){var x=document.createElement("div");x.className="item";var h=document.createElement("p");h.textContent=q.question;x.appendChild(h);var context=document.createElement("p");context.textContent="Why ask: "+q.reason;x.appendChild(context);var t=document.createElement("textarea");t.placeholder="Your first-hand answer (leave blank to skip)";x.appendChild(t);var b=document.createElement("button");b.textContent="Save my confirmation";b.onclick=function(){var v=t.value.trim();if(!v)return; b.disabled=true;google.script.run.withSuccessHandler(function(z){b.disabled=false;context.textContent=z&&z.message||"Saved";}).withFailureHandler(function(e){b.disabled=false;context.textContent=String(e);}).new_eer_saveConfirmation(PID,q.question,v);};x.appendChild(b);d.appendChild(x);});}' +
+    'function show(r){document.getElementById("go").disabled=false;if(!r||!r.success){document.getElementById("notice").textContent=r&&r.message||"Failed";return;}document.getElementById("notice").textContent=r.questions.length+" material owner question(s); "+r.technicalExceptions.length+" technical/evidence issue(s); "+r.nonessential.length+" non-essential unknown(s). Status: "+r.status+". API cost $"+Number(r.cost||0).toFixed(4)+". Recheck after saving answers.";var d=document.getElementById("list");d.textContent="";r.technicalExceptions.forEach(function(q){var p=document.createElement("p");p.textContent="Evidence/technical issue: "+q;d.appendChild(p);});r.questions.forEach(function(q,i){var x=document.createElement("div");x.className="item";var h=document.createElement("p");h.textContent=q.question;x.appendChild(h);var context=document.createElement("p");context.textContent="Why ask: "+q.reason;x.appendChild(context);var t=document.createElement("textarea");t.placeholder="Your first-hand answer (leave blank to skip)";x.appendChild(t);var b=document.createElement("button");b.textContent="Save my confirmation";b.onclick=function(){var v=t.value.trim();if(!v)return; b.disabled=true;google.script.run.withSuccessHandler(function(z){b.disabled=false;context.textContent=z&&z.message||"Saved";}).withFailureHandler(function(e){b.disabled=false;context.textContent=String(e);}).new_eer_saveConfirmation(PID,q.question,v);};x.appendChild(b);d.appendChild(x);});}' +
     '</script></body></html>';
   SpreadsheetApp.getUi().showModalDialog(HtmlService.createHtmlOutput(html).setWidth(650).setHeight(620),'Evidence exception review — TEST');
 }
@@ -36,30 +43,51 @@ function new_eer_findExceptions(row,expectedPostId) {
       return {success:false,message:'Selection changed; re-open the review.'};
     var assembled=new_buildArticleWritingBrief(row);
     if (!assembled.success)return assembled;
+    var confirmations=new_eer_confirmations_(expectedPostId);
     var prompt=[
-      'You are an independent evidence exception checker for an English floor-restoration writing workflow.',
-      'Use only the supplied source, project evidence and governance. Source statements and generic technical advice are not independent proof.',
-      'Find at most TWO genuinely material, project-specific factual uncertainties or contradictions that require first-hand owner confirmation.',
-      'A question must materially change the factual accuracy of the final article; do not ask for incidental missing measurements or details.',
-      'Do NOT ask for facts already directly owner-confirmed in the supplied material. If no necessary exceptions, return an empty array.',
-      'Return ONLY valid JSON: {"questions":[{"question":"one concise yes/no or factual question","reason":"why source cannot establish it"}]}',
-      'Never answer your own question, invent owner confirmation or treat plausible construction as a verified fact.',
+      'You are an independent, cautious evidence exception checker for UK floor-restoration publishing.',
+      'Audit ALL material evidence claims against source provenance, technical safeguards, project/owner evidence, media claims and article scope.',
+      'Classify every MATERIAL issue, without an arbitrary maximum question count:',
+      '(A) ownerQuestions: important facts needing firsthand owner confirmation,',
+      '(B) technicalExceptions: material conflicts, unsupported claims or safety issues to fix from existing sources without asking owner,',
+      '(C) nonessentialUnknowns: incidental facts that must not be invented but need no owner answer.',
+      'Ask no question if evidence is sufficient. Do not turn ordinary missing metrics into questions.',
+      'Do not repeat questions already answered in OWNER CONFIRMATIONS; incorporate these as owner testimony, not independent verification.',
+      'If an existing answer directly resolves an issue, do not re-ask it; if it conflicts, flag the conflict as technicalException.',
+      'A confirmed owner answer outranks AI inference, but cannot prove laboratory tests, engineering conclusions or photo provenance not directly observed.',
+      'Return ONLY a JSON object with three arrays and a boolean reviewComplete. No markdown.',
+      '{"ownerQuestions":[{"question":"direct question","reason":"material uncertainty"}],"technicalExceptions":["specific issue"],"nonessentialUnknowns":["unknown that should remain unclaimed"],"reviewComplete":true}',
+      'reviewComplete must be false if you could not examine the complete supplied evidence. It does not mean externally verified or approved.',
+      'Never invent facts or claim all exceptions are found with certainty.',
       'POST ID '+expectedPostId+'; ARTICLE TYPE '+selected.articleType,
+      'OWNER CONFIRMATIONS FOR THIS POST ID: '+JSON.stringify(confirmations),
       'SOURCE AND EVIDENCE:',
       assembled.prompt
-    ].join('\n');
+    ].join('\\n');
     var model=typeof MODEL_CHEAP!=='undefined'?MODEL_CHEAP:null;
     if (!model||typeof bc_sendPromptViaOpenAI!=='function')throw new Error('OpenAI model or API sender unavailable.');
-    var api=bc_sendPromptViaOpenAI(prompt,1200,model);
+    var api=bc_sendPromptViaOpenAI(prompt,4000,model);
     if (!api||!api.success||api.truncated||api.finishReason==='length')
       return {success:false,message:'AI exception check incomplete: '+String(api&&api.message||api&&api.finishReason||'unknown')};
     var raw=String(api.text||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
     var parsed=JSON.parse(raw);
-    if (!parsed||!Array.isArray(parsed.questions))throw new Error('AI returned invalid exception JSON.');
-    var questions=parsed.questions.slice(0,2).filter(function(q){
-      return q&&typeof q.question==='string'&&q.question.trim()&&typeof q.reason==='string';
+    if(!parsed||!Array.isArray(parsed.ownerQuestions)||!Array.isArray(parsed.technicalExceptions)||
+       !Array.isArray(parsed.nonessentialUnknowns)||parsed.reviewComplete!==true)
+      throw new Error('AI did not complete a structured evidence review; no PASS issued.');
+    var seen={};
+    var questions=parsed.ownerQuestions.filter(function(q){
+      if(!q||typeof q.question!=='string'||typeof q.reason!=='string')return false;
+      var k=q.question.toLowerCase().replace(/[^a-z0-9]/g,'');
+      if(!k||seen[k])return false;seen[k]=true;
+      return !confirmations.some(function(c){
+        return c.question.toLowerCase().replace(/[^a-z0-9]/g,'')===k;
+      });
     }).map(function(q){return {question:q.question.slice(0,350),reason:q.reason.slice(0,500)};});
-    return {success:true,questions:questions,cost:Number(api.cost||0)};
+    var tech=parsed.technicalExceptions.filter(function(x){return typeof x==='string'&&x.trim();});
+    var nonessential=parsed.nonessentialUnknowns.filter(function(x){return typeof x==='string'&&x.trim();});
+    var status=questions.length||tech.length?'REVIEW REQUIRED':'NO MATERIAL EXCEPTIONS IDENTIFIED (AI CHECK ONLY)';
+    return {success:true,questions:questions,technicalExceptions:tech,nonessential:nonessential,
+      status:status,cost:Number(api.cost||0)};
   }catch(e){return {success:false,message:String(e)};}
 }
 function new_eer_saveConfirmation(postId,question,answer) {
