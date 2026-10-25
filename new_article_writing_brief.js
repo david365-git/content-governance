@@ -145,6 +145,7 @@ function new_buildArticleWritingBrief(rowNumber) {
       'ARTICLE-TYPE RULES (authoritative):\n'+typeRules,
       'EXISTING CLASSIFICATION CONTEXT:\n'+selection,
       'ARTICLE-SPECIFIC TRUTH SOURCES — POSTS GL:GU AND GW:HA (GV package validated but omitted as duplicate):\n'+truthBlock,
+      postId === '22021' && articleType === 'Case Study' ? 'OWNER-CONFIRMED CORRECTION (Penkhull only): The hallway floor had no damp-proof membrane. This is a direct owner confirmation, not an inference from the article. Preserve this in the brief, distinguishing it from source-quoted facts.' : '',
       'TRUTH RULE: Case Study Evidence Package sheet is a historical BEFORE/AFTER archive, not an additional independent truth source. Treat the selected posts row GL:HA as the current account of this article. Distinguish documented facts from blanks; never fill unknowns with assumptions. If original narrative or derived evidence conflicts with GL:HA, explicitly flag the conflict and follow GL:HA for the writing brief. Technical reference and SEO suggestions must not override these facts.',
       'SEARCH, GOVERNANCE AND SCOPE:\n'+scope,
       locality,
@@ -169,9 +170,34 @@ function new_buildArticleWritingBrief(rowNumber) {
 }
 
 
+
+/**
+ * Generate the ACTUAL editorial brief. Called only after the user presses
+ * the explicit Generate with AI button; does not write to Sheets.
+ */
+function new_generateArticleWritingBriefForRow(rowNumber) {
+  var assembled = new_buildArticleWritingBrief(rowNumber);
+  if (!assembled.success) return assembled;
+  if (typeof bc_sendPromptViaOpenAI !== 'function')
+    return {success:false,message:'Existing OpenAI request function is unavailable'};
+  try {
+    var chosenModel = typeof MODEL_CHEAP !== 'undefined' ? MODEL_CHEAP : undefined;
+    if (!chosenModel) return {success:false,message:'MODEL_CHEAP is not configured'};
+    var api = bc_sendPromptViaOpenAI(assembled.prompt, 4500, chosenModel);
+    if (!api || !api.success || api.truncated || api.finishReason === 'length')
+      return {success:false,message:'AI did not return a complete brief. No data was changed.',cost:Number(api && api.cost || 0)};
+    var brief = String(api.text || '').trim();
+    if (!brief) return {success:false,message:'AI returned an empty brief. No data was changed.',cost:Number(api.cost || 0)};
+    return {success:true,row:assembled.row,brief:brief,cost:Number(api.cost||0),
+      message:'Generated with AI. Preview only; nothing saved to the spreadsheet.'};
+  } catch(e) {
+    return {success:false,message:'AI writing-brief generation failed: '+String(e)};
+  }
+}
+
 /**
  * Manual entry point for the existing Posts menu.
- * Produces a read-only prompt preview; no AI calls and no writes.
+ * Produces a read-only prompt preview; AI generation requires a separate click.
  */
 function new_previewWritingBriefActiveRow() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -193,9 +219,20 @@ function new_previewWritingBriefActiveRow() {
     '<strong>Row ' + result.row + ' — ' + String(result.articleType).replace(/</g, '&lt;') +
     '</strong><p>Read-only writing brief. Nothing has been changed.</p>' +
     '<button onclick="var e=document.getElementById(\'brief\');e.select();' +
-    'document.execCommand(\'copy\');">Copy brief</button>' +
+    'document.execCommand(\'copy\');">Copy text</button>' +
+    '<button id="generate" onclick="generateBrief()">Generate writing brief with AI (API cost)</button>' +
+    '<span id="status" style="margin-left:10px"></span>' +
     '<textarea id="brief" readonly>' + escaped + '</textarea>' +
-    '</body></html>';
+    '<script>function generateBrief(){' +
+    'var b=document.getElementById("generate"), t=document.getElementById("status");' +
+    'b.disabled=true;t.textContent="Generating AI writing brief...";' +
+    'google.script.run.withSuccessHandler(function(r){' +
+    'b.disabled=false;if(!r||!r.success){t.textContent=(r&&r.message)||"Generation failed";return;}' +
+    'document.getElementById("brief").value=r.brief;' +
+    't.textContent="Actual AI brief (not saved). API cost: $"+Number(r.cost||0).toFixed(4);' +
+    '}).withFailureHandler(function(e){b.disabled=false;t.textContent=String(e);})' +
+    '.new_generateArticleWritingBriefForRow(' + result.row + ');' +
+    '}</script></body></html>';
   SpreadsheetApp.getUi().showModalDialog(
     HtmlService.createHtmlOutput(html).setWidth(920).setHeight(650),
     'NEW article writing brief — row ' + row
