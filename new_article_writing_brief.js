@@ -186,13 +186,25 @@ function new_generateArticleWritingBriefForRow(rowNumber) {
     // The preview preserves the full archive context. The API request only
     // needs key SEO queries and technical reference M: repeated N:S guidance
     // and hundreds of incidental GSC queries waste input context.
+    // Keep the highest-impression real GSC queries (20 per period), rather
+    // than dropping them all. Preserve locality following the monitor list.
+    function topGscQueries_(block) {
+      var lines = String(block || '').split('\n').map(function(x){return x.trim();}).filter(Boolean);
+      if (!lines.length) return '[unavailable]';
+      var ranked = lines.map(function(line, i){
+        var match = line.match(/\s(\d+)\s+(\d+)\s*$/);
+        return {line:line, i:i, impressions:match ? Number(match[2]) : 0};
+      });
+      ranked.sort(function(a,b){return b.impressions-a.impressions || a.i-b.i;});
+      return ranked.slice(0,20).map(function(x){return x.line;}).join('\n');
+    }
     var aiPrompt = assembled.prompt
-      .replace(/GSC pre-migration benchmark queries:[\s\S]*?(?=\nGSC monitor queries:)/,
-        'GSC pre-migration benchmark queries: Use the primary search term and owned intent stated above.\n')
-      .replace(/GSC monitor queries:[\s\S]*?(?=\n\nTECHNICAL MATRIX)/,
-        'GSC monitor queries: Omitted from this editorial brief; preserve search intent above.')
-      // Retain concise M knowledge AND mandatory S safeguards. Drop only
-      // repetitive N:R detail; do not treat M as a replacement for S.
+      .replace(/(GSC pre-migration benchmark queries: )([\s\S]*?)(?=\nGSC monitor queries:)/,
+        function(all,heading,records){return heading+topGscQueries_(records);})
+      .replace(/(GSC monitor queries: )([\s\S]*?)(?=\nLocality:|\n\nTECHNICAL MATRIX)/,
+        function(all,heading,records){return heading+topGscQueries_(records);})
+      // M and S are complementary: M explains, S governs the restrictions.
+      // Drop repetitive N:R only; never remove the mandatory S section.
       .replace(/(\[M [^\n]*[\s\S]*?)(?=\n\[N [^\n]*)[\s\S]*?(?=\n\[S [^\n]*)/,
         '$1');
     // Shape the output, not the project truth: retain full evidence in the
