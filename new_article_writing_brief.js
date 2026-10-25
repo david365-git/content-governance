@@ -191,7 +191,9 @@ function new_generateArticleWritingBriefForRow(rowNumber) {
         'GSC pre-migration benchmark queries: Use the primary search term and owned intent stated above.\n')
       .replace(/GSC monitor queries:[\s\S]*?(?=\n\nTECHNICAL MATRIX)/,
         'GSC monitor queries: Omitted from this editorial brief; preserve search intent above.')
-      .replace(/(\[M [^\n]*[\s\S]*?)(?=\n\[N [^\n]*)[\s\S]*?(?=\n\nORIGINAL MEDIA ASSET INVENTORY:)/,
+      // Retain concise M knowledge AND mandatory S safeguards. Drop only
+      // repetitive N:R detail; do not treat M as a replacement for S.
+      .replace(/(\[M [^\n]*[\s\S]*?)(?=\n\[N [^\n]*)[\s\S]*?(?=\n\[S [^\n]*)/,
         '$1');
     // Shape the output, not the project truth: retain full evidence in the
     // source input, but avoid repeating each fact in several brief sections.
