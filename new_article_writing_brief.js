@@ -183,9 +183,23 @@ function new_generateArticleWritingBriefForRow(rowNumber) {
   try {
     var chosenModel = typeof MODEL_CHEAP !== 'undefined' ? MODEL_CHEAP : undefined;
     if (!chosenModel) return {success:false,message:'MODEL_CHEAP is not configured'};
-    var api = bc_sendPromptViaOpenAI(assembled.prompt, 4500, chosenModel);
+    // The preview preserves the full archive context. The API request only
+    // needs key SEO queries and technical reference M: repeated N:S guidance
+    // and hundreds of incidental GSC queries waste input context.
+    var aiPrompt = assembled.prompt
+      .replace(/GSC pre-migration benchmark queries:[\\s\\S]*?(?=\\nGSC monitor queries:)/,
+        'GSC pre-migration benchmark queries: Use the primary search term and owned intent stated above.\\n')
+      .replace(/GSC monitor queries:[\\s\\S]*?(?=\\n\\nTECHNICAL MATRIX)/,
+        'GSC monitor queries: Omitted from this editorial brief; preserve search intent above.')
+      .replace(/(\\[M [^\\n]*[\\s\\S]*?)(?=\\n\\[N [^\\n]*)[\\s\\S]*?(?=\\n\\nORIGINAL MEDIA ASSET INVENTORY:)/,
+        '$1');
+    var api = bc_sendPromptViaOpenAI(aiPrompt, 6500, chosenModel);
     if (!api || !api.success || api.truncated || api.finishReason === 'length')
-      return {success:false,message:'AI did not return a complete brief. No data was changed.',cost:Number(api && api.cost || 0)};
+      return {success:false,message:'AI brief incomplete. Reason: '+(api&&api.message||api&&api.error||'not supplied')+
+        '; finishReason='+String(api&&api.finishReason||'unknown')+
+        '; truncated='+String(!!(api&&api.truncated))+
+        '; receivedCharacters='+String(api&&api.text?String(api.text).length:0)+
+        '. No data was changed.',cost:Number(api && api.cost || 0)};
     var brief = String(api.text || '').trim();
     if (!brief) return {success:false,message:'AI returned an empty brief. No data was changed.',cost:Number(api.cost || 0)};
     return {success:true,row:assembled.row,brief:brief,cost:Number(api.cost||0),
