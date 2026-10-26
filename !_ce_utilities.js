@@ -800,18 +800,28 @@ function bc_getRelevantTechnicalMatrixExcerpt_(material, context, maxChars, arti
       parts.push({column:"MNOPQR"[i],paragraph,score:overlap + (preferred.includes(i) ? 3 : 0),index:j});
     });
   }
+  // Mandatory restoration constraints must not compete with relevance scoring or its character budget.
+  // Match firm, material-specific instructions; retain the full paragraph for context and qualifications.
+  const hardRule = /\b(?:must(?:\s+not)?|never|do\s+not|should\s+always|cannot|can't|not\s+(?:offered|a\s+service|recommended|suitable|permitted)|only\s+(?:as\s+a\s+last\s+resort|after\s+professional\s+cleaning)|required\s+before)\b/i;
+  const materialRule = /\b(?:grout|sealer|seal(?:ing)?|acid|alkaline|bleach|damp|moisture|DPM|coating|glaz(?:e|ed)|polish|hone|grind|scratch|lippage|stone|tile|silicone|repair|restore|efflorescence|abrasiv|slip|surface|dust)\b/i;
+  const mandatory = parts.filter(p => hardRule.test(p.paragraph) && materialRule.test(p.paragraph));
+  const mandatoryKeys = new Set(mandatory.map(p => p.column + "\\u0000" + p.index));
   parts.sort((a,b) => b.score-a.score || a.column.localeCompare(b.column) || a.index-b.index);
   const chosen = [];
   let length = 0;
   for (const part of parts) {
+    if (mandatoryKeys.has(part.column + "\\u0000" + part.index)) continue; // always supplied separately
     if (part.score < 2 && chosen.length) continue;
     if (length + part.paragraph.length + 2 > budget) continue;
     chosen.push(part);
     length += part.paragraph.length + 2;
   }
   chosen.sort((a,b) => a.column.localeCompare(b.column) || a.index-b.index);
+  mandatory.sort((a,b) => a.column.localeCompare(b.column) || a.index-b.index);
   return "LIVE APPROVED TECHNICAL REFERENCE — general knowledge only, never evidence of project actions:\n" +
     chosen.map(p => "[" + p.column + "] " + p.paragraph).join("\n\n") +
+    "\n\n[M:R — REQUIRED MATERIAL RULES; NOT SUBJECT TO RELEVANCE BUDGET]\n" +
+    mandatory.map(p => "[" + p.column + "] " + p.paragraph).join("\n\n") +
     "\n\n[S — REQUIRED TECHNICAL SAFEGUARDS]\n" + safeguards +
     "\nEND LIVE APPROVED TECHNICAL REFERENCE";
 }
