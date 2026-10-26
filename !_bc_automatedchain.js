@@ -1476,6 +1476,7 @@ function bc_runACPromptAutomated(row) {
   var handoff=null;
   var handoffRaw=PropertiesService.getDocumentProperties().getProperty(preAcHandoffKey_(row));
   if(handoffRaw){
+    try {
     var stored=JSON.parse(handoffRaw);
     var identity=preAcSourceFingerprint_(row);
     var postsSheet=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
@@ -1493,6 +1494,8 @@ function bc_runACPromptAutomated(row) {
         handoff=keys.map(function(k,i){return {index:i,selected:stored.decisions[k],gap:false};});
       }
     }
+    } catch (handoffError) { handoff=null; }
+    if(!handoff) PropertiesService.getDocumentProperties().deleteProperty(preAcHandoffKey_(row));
   }
   // Standalone AC still uses its original classifier when no valid Pre-AC handoff exists.
   if(handoff){
@@ -1504,6 +1507,7 @@ function bc_runACPromptAutomated(row) {
       var acHeaders=acSheet.getRange(1,1,1,acSheet.getLastColumn()).getValues()[0];
       writeClassificationToSheet(acSheet,row,acHeaders,cachedSave.currentValues);
     }
+    PropertiesService.getDocumentProperties().deleteProperty(preAcHandoffKey_(row));
     return {success:true,message:'AC used validated Pre-AC choices'+(cachedSave.isDuplicate?' (existing classification overlap preserved)':''),
       text:cachedResponse,duplicateDetected:!!cachedSave.isDuplicate,cost:0};
   }
