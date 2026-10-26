@@ -4,11 +4,11 @@
    Can be deleted entirely if the Pre-AC feature is abandoned.
 ============================================================ */
 
-function preAcBuildGapCheckPrompt() {
+function preAcBuildGapCheckPrompt(targetRow) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const postsSheet = ss.getSheetByName('posts');
-    const row = ss.getActiveSheet().getActiveCell().getRow();
+    const row = Number(targetRow || postsSheet.getActiveCell().getRow());
     const headers = postsSheet.getRange(1, 1, 1, postsSheet.getLastColumn()).getValues()[0];
 
     const articleTypeCol = headers.indexOf('Article Type');
@@ -103,10 +103,10 @@ function preAcBuildGapCheckPrompt() {
     prompt += `    "suggested_option": "[your suggested new option wording, or empty string if no gap]",\n`;
     prompt += `    "scope": "Universal" or "[Stone Type]",\n`;
     prompt += `    "scope_reason": "[one sentence explaining why this applies universally or only to this stone type]",\n`;
-    prompt += `    "gap_reason": "[one sentence explaining why no existing option fits, or empty string if no gap]"\n`;
+    prompt += `    "gap_reason": "[one sentence explaining why no existing option fits, or empty string if no gap]",\n    "evidence": "[short verbatim supporting phrase from article text, or empty string if unavailable]"\n`;
     prompt += `  }\n`;
     prompt += `]\n\n`;
-    prompt += `Only set gap to true if none of the existing options adequately describe the article. If an existing option fits reasonably well, set gap to false.\n\n`;
+    prompt += `Only select a genuinely close, factually supported option. Do NOT force an imperfect match; flag a gap where needed. Never invent motivations, reactions or outcomes. Copy closest_existing character-for-character from the listed options. For each field include an evidence quote copied verbatim from the ARTICLE CONTENT (not an image alt or link), in the JSON property \"evidence\". If the article does not support a claim, use a more neutral supported classification or report an unresolved gap.\n\n`;
     prompt += `---\n\nFIELDS AND EXISTING OPTIONS:\n\n`;
 
     fieldOrder.forEach(function(key, fieldIndex) {
@@ -129,11 +129,11 @@ function preAcBuildGapCheckPrompt() {
 }
 
 
-function preAcAddGapToSheet(entry) {
+function preAcAddGapToSheet(entry, targetRow) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const postsSheet = ss.getSheetByName('posts');
-    const row = ss.getActiveSheet().getActiveCell().getRow();
+    const row = Number(targetRow || postsSheet.getActiveCell().getRow());
     const headers = postsSheet.getRange(1, 1, 1, postsSheet.getLastColumn()).getValues()[0];
 
     const articleTypeCol = headers.indexOf('Article Type');
