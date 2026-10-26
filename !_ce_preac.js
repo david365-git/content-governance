@@ -235,3 +235,27 @@ function preAcAddGapToSheet(entry) {
     return { success: false, message: 'preAcAddGapToSheet error: ' + e.message };
   }
 }
+
+/**
+ * Bind Pre-AC classifications to the original case-study text and Post ID.
+ * A changed source invalidates the handoff rather than reusing stale choices.
+ */
+function preAcSourceFingerprint_(row) {
+  var ss=SpreadsheetApp.getActiveSpreadsheet();
+  var posts=ss.getSheetByName('posts'), site=ss.getSheetByName('site-export');
+  var headers=posts.getRange(1,1,1,posts.getLastColumn()).getDisplayValues()[0];
+  var idIndex=headers.indexOf('Post ID');
+  if(idIndex<0 || !site)throw new Error('Pre-AC source fingerprint: missing posts Post ID or site-export.');
+  var id=String(posts.getRange(row,idIndex+1).getDisplayValue()).trim();
+  var h=site.getRange(1,1,1,site.getLastColumn()).getDisplayValues()[0];
+  var idCol=h.indexOf('ID'),htmlCol=h.indexOf('Full Post HTML');
+  if(idCol<0||htmlCol<0)throw new Error('Pre-AC source fingerprint: site-export headers missing.');
+  var items=site.getRange(2,1,Math.max(1,site.getLastRow()-1),site.getLastColumn()).getValues();
+  var sources=items.filter(function(v){return String(v[idCol]).trim()===id;});
+  if(sources.length!==1)throw new Error('Pre-AC source fingerprint: expected one source for Post ID '+id+', found '+sources.length);
+  var source=String(sources[0][htmlCol]||'');
+  var digest=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,source,Utilities.Charset.UTF_8)
+    .map(function(b){return ('0'+(b&255).toString(16)).slice(-2);}).join('');
+  return {postId:id,hash:digest};
+}
+function preAcHandoffKey_(row){return 'PREAC_APPROVED_ROW_'+row;}
