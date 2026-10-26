@@ -1426,6 +1426,9 @@ function bc_runPreACPromptAutomated() {
     );
   }
 
+  var sourceRow = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts').getActiveRange().getRow();
+  var handoffKey = preAcHandoffKey_(sourceRow);
+  PropertiesService.getDocumentProperties().deleteProperty(handoffKey); // fail closed on a new Pre-AC attempt
   var gapsFound = 0;
   var gapsAdded = 0;
   var added = [];
@@ -1490,6 +1493,31 @@ function bc_runPreACPromptAutomated() {
     );
   }
 
+  // Pre-AC is authoritative only when each of the seven decisions is valid in the live library.
+  var keys=['ac_what_they_found','ac_why_they_called','ac_what_the_floor_was_doing',
+    'ac_what_forced_careful_decisions','ac_what_governed_the_approach',
+    'ac_what_changed_for_the_homeowner','ac_story_direction'];
+  var material=String(promptData.stoneType||'').trim();
+  var type=String(promptData.articleType||'').trim();
+  var allowed=getAcValuesForMaterial(material,type);
+  var choices=(allowed && allowed.values)||{};
+  var decisions={};
+  if(entries.length!==7)throw new Error('Pre-AC must return exactly seven classification decisions.');
+  entries.forEach(function(entry){
+    var idx=Number(entry && entry.index),key=keys[idx];
+    if(!Number.isInteger(idx)||!key||Object.prototype.hasOwnProperty.call(decisions,key))
+      throw new Error('Pre-AC returned duplicate or invalid classification index: '+idx);
+    var value=String(entry.gap===true?entry.suggested_option:entry.closest_existing||'').trim();
+    if(!(choices[key]||[]).includes(value))
+      throw new Error('Pre-AC selected value not available in live '+key+' library: '+value);
+    decisions[key]=value;
+  });
+  if(keys.some(function(k){return !decisions[k];}))throw new Error('Pre-AC did not validate every classification field.');
+  var identity=preAcSourceFingerprint_(sourceRow);
+  PropertiesService.getDocumentProperties().setProperty(handoffKey,JSON.stringify({
+    postId:identity.postId,sourceHash:identity.hash,articleType:type,stoneType:material,
+    decisions:decisions
+  }));
   var message;
 
   if (gapsFound === 0) {
@@ -1520,6 +1548,40 @@ function bc_runACPromptAutomated(row) {
 
   var startTime = Date.now();
 
+  var handoff=null;
+  var handoffRaw=PropertiesService.getDocumentProperties().getProperty(preAcHandoffKey_(row));
+  if(handoffRaw){
+    var stored=JSON.parse(handoffRaw);
+    var identity=preAcSourceFingerprint_(row);
+    var postsSheet=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
+    var headers=postsSheet.getRange(1,1,1,postsSheet.getLastColumn()).getDisplayValues()[0];
+    var currentMaterial=String(postsSheet.getRange(row,headers.indexOf('Stone Type')+1).getValue()||'').trim();
+    var currentType=String(postsSheet.getRange(row,headers.indexOf('Article Type')+1).getValue()||'').trim();
+    if(stored.postId===identity.postId && stored.sourceHash===identity.hash &&
+       stored.stoneType===currentMaterial && stored.articleType===currentType){
+      var allowed=getAcValuesForMaterial(currentMaterial,currentType);
+      var options=(allowed&&allowed.values)||{};
+      var keys=['ac_what_they_found','ac_why_they_called','ac_what_the_floor_was_doing',
+        'ac_what_forced_careful_decisions','ac_what_governed_the_approach',
+        'ac_what_changed_for_the_homeowner','ac_story_direction'];
+      if(keys.every(function(k){return (options[k]||[]).includes(stored.decisions[k]);})){
+        handoff=keys.map(function(k,i){return {index:i,selected:stored.decisions[k],gap:false};});
+      }
+    }
+  }
+  // Standalone AC still uses its original classifier when no valid Pre-AC handoff exists.
+  if(handoff){
+    var cachedResponse=JSON.stringify(handoff);
+    var cachedSave=saveClassificationResponseToSheet(cachedResponse,row);
+    if(!cachedSave||!cachedSave.success)throw new Error(cachedSave&&cachedSave.message||'Pre-AC handoff could not be saved.');
+    if(cachedSave.isDuplicate){
+      var acSheet=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
+      var acHeaders=acSheet.getRange(1,1,1,acSheet.getLastColumn()).getValues()[0];
+      writeClassificationToSheet(acSheet,row,acHeaders,cachedSave.currentValues);
+    }
+    return {success:true,message:'AC used validated Pre-AC choices'+(cachedSave.isDuplicate?' (existing classification overlap preserved)':''),
+      text:cachedResponse,duplicateDetected:!!cachedSave.isDuplicate,cost:0};
+  }
   var promptData = acBuildClassifyPrompt();
 
   if (!promptData || !promptData.prompt) {
