@@ -791,49 +791,7 @@ Stage: —
 
   </div>
 
-</div>+cost.toFixed(4);
-            return;
-          }
-          var row=rows[n++];
-          status.textContent='Running posts Post ID '+id+' ('+n+' of '+rows.length+')…';
-          google.script.run.withSuccessHandler(function(result){
-            cost+=Number(result.cost||0);
-            if(result.skipped){skip++;log.value+='SKIP Post ID '+id+' — '+result.message+'\n';}
-            else if(result.success){ok++;log.value+='PASS Post ID '+id+' — '+result.message+'\n';}
-            else {fail++;log.value+='FAIL Post ID '+id+' — '+(result.message||'No details')+'\n';}
-            next();
-          }).withFailureHandler(function(error){
-            fail++;log.value+='FAIL Post ID '+id+' — '+String(error&&error.message||error)+'\n';next();
-          }).bc_caseEvidenceSplitLunaByRow(row);
-        }
-        next();
-      }
-      </script>
-
-      <div id="masterLogIntelligence"
-           style="
-             margin-top:8px;
-             font-family:JetBrains Mono,monospace;
-             font-size:11px;
-             white-space:pre-wrap;">
-      </div>
-
-      <div class="btn-row"
-           style="margin-top:8px">
-
-        <button
-          id="masterBtnIntelligence"
-          style="background:#1565c0;color:#fff"
-          onclick="masterRunContentIntelligence()">
-
-          ▶ Run Content Intelligence
-
-        </button>
-
-      </div>
-
-    </div>
-
+</div>
 
     <!-- ═══════════════════════════════════════════════════════
          2 — AUTOMATION RUNNER
