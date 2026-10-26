@@ -1380,168 +1380,93 @@ function bc_runW0BAutomated() {
 }
 
 function bc_runPreACPromptAutomated() {
-
-  var startTime = Date.now();
-
-  var promptData = preAcBuildGapCheckPrompt();
-
-  if (!promptData || promptData.error) {
-    throw new Error(
-      promptData && promptData.error
-        ? promptData.error
-        : 'Pre-AC prompt could not be built.'
-    );
-  }
-
-  var apiResult = bc_sendPromptViaOpenAI(
-    promptData.prompt,
-    null,
-    MODEL_CHEAP
-  );
-
-  if (!apiResult.success) {
-    throw new Error(apiResult.message);
-  }
-
-  var raw = String(apiResult.text || '').trim();
-
-  raw = raw
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim();
-
+  var startTime=Date.now();
+  var ss=SpreadsheetApp.getActiveSpreadsheet(),posts=ss.getSheetByName('posts');
+  if(ss.getActiveSheet().getName()!=='posts')throw new Error('Select a row on posts before running Pre-AC.');
+  var row=posts.getActiveCell().getRow();
+  if(row<2)throw new Error('Select a data row before running Pre-AC.');
+  var key=preAcHandoffKey_(row),props=PropertiesService.getDocumentProperties();
+  props.deleteProperty(key); // clear even when prompting, API, or JSON parsing fails
+  var identity=preAcSourceFingerprint_(row);
+  var promptData=preAcBuildGapCheckPrompt(row);
+  if(!promptData||promptData.error)throw new Error(promptData&&promptData.error||'Pre-AC prompt unavailable.');
+  var apiResult=bc_sendPromptViaOpenAI(promptData.prompt,null,MODEL_CHEAP);
+  if(!apiResult.success)throw new Error(apiResult.message);
+  var raw=String(apiResult.text||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim();
   var entries;
-
-  try {
-    entries = JSON.parse(raw);
-  } catch (e) {
-    throw new Error(
-      'Pre-AC returned invalid JSON — ' + e.message
-    );
-  }
-
-  if (!Array.isArray(entries)) {
-    throw new Error(
-      'Pre-AC response was not a JSON array.'
-    );
-  }
-
-  var sourceRow = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts').getActiveRange().getRow();
-  var handoffKey = preAcHandoffKey_(sourceRow);
-  PropertiesService.getDocumentProperties().deleteProperty(handoffKey); // fail closed on a new Pre-AC attempt
-  var gapsFound = 0;
-  var gapsAdded = 0;
-  var added = [];
-  var failed = [];
-
-  entries.forEach(function(entry) {
-
-    if (!entry || entry.gap !== true) {
-      return;
-    }
-
-    gapsFound++;
-
-    var suggestion =
-      String(entry.suggested_option || '').trim();
-
-    if (!suggestion) {
-      failed.push(
-        String(entry.field || 'Unknown field') +
-        ' — gap was TRUE but suggested_option was empty'
-      );
-      return;
-    }
-
-    var addResult =
-      preAcAddGapToSheet(entry);
-
-    if (addResult && addResult.success) {
-      if (!addResult.skipped) gapsAdded++;
-
-      added.push(
-        String(entry.field || 'Unknown field') +
-        ': ' +
-        suggestion
-      );
-
-    } else {
-
-      failed.push(
-        String(entry.field || 'Unknown field') +
-        ' — ' +
-        (
-          addResult && addResult.message
-            ? addResult.message
-            : 'could not be added'
-        )
-      );
-    }
-  });
-
-  bc_addToApiCostAndTime(
-    apiResult.cost,
-    (Date.now() - startTime) / 1000
-  );
-
-  if (failed.length > 0) {
-    throw new Error(
-      'Pre-AC found ' +
-      gapsFound +
-      ' gap(s), but not all could be saved. ' +
-      failed.join(' | ')
-    );
-  }
-
-  // Pre-AC is authoritative only when each of the seven decisions is valid in the live library.
+  try{entries=JSON.parse(raw);}catch(e){throw new Error('Pre-AC returned invalid JSON — '+e.message);}
   var keys=['ac_what_they_found','ac_why_they_called','ac_what_the_floor_was_doing',
     'ac_what_forced_careful_decisions','ac_what_governed_the_approach',
     'ac_what_changed_for_the_homeowner','ac_story_direction'];
-  var material=String(promptData.stoneType||'').trim();
-  var type=String(promptData.articleType||'').trim();
-  var allowed=getAcValuesForMaterial(material,type);
-  var choices=(allowed && allowed.values)||{};
-  var decisions={};
-  if(entries.length!==7)throw new Error('Pre-AC must return exactly seven classification decisions.');
+  if(!Array.isArray(entries)||entries.length!==keys.length)
+    throw new Error('Pre-AC must return exactly seven classification decisions.');
+  var allowed=getAcValuesForMaterial(promptData.stoneType,promptData.articleType);
+  var choices=(allowed&&allowed.values)||{},seen={},pending=[];
+  var library=ss.getSheetByName('ac-library-'+String(promptData.articleType).toLowerCase().replace(/\s+/g,'-'));
+  if(!library)throw new Error('Pre-AC library not found.');
+  var lib=library.getDataRange().getValues(),hdr=lib[0];
+  var labels={};lib.slice(1).forEach(function(v){if(keys.indexOf(String(v[0]))>=0)labels[v[0]]=String(v[1]||'').trim();});
+  var site=ss.getSheetByName('site-export'),siteHeaders=site.getRange(1,1,1,site.getLastColumn()).getDisplayValues()[0];
+  var idCol=siteHeaders.indexOf('ID'),htmlCol=siteHeaders.indexOf('Full Post HTML');
+  if(idCol<0||htmlCol<0)throw new Error('Pre-AC site-export headers missing.');
+  var siteValues=site.getRange(2,1,Math.max(1,site.getLastRow()-1),site.getLastColumn()).getValues();
+  var matches=siteValues.filter(function(v){return String(v[idCol]).trim()===identity.postId;});
+  if(matches.length!==1)throw new Error('Pre-AC original article missing or duplicated.');
+  var source=String(matches[0][htmlCol]||'')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ')
+    .replace(/<img\b[^>]*>/gi,' ').replace(/<[^>]*>/g,' ')
+    .replace(/&(?:nbsp|#160);/gi,' ').replace(/&(?:amp);/gi,'&')
+    .replace(/&#(?:39);|&apos;/gi,"'").replace(/&quot;/gi,'"')
+    .replace(/&#(\d+);/g,function(_,n){return String.fromCharCode(Number(n));})
+    .replace(/\s+/g,' ').trim().toLowerCase();
   entries.forEach(function(entry){
-    var idx=Number(entry && entry.index),key=keys[idx];
-    if(!Number.isInteger(idx)||!key||Object.prototype.hasOwnProperty.call(decisions,key))
-      throw new Error('Pre-AC returned duplicate or invalid classification index: '+idx);
-    var value=String(entry.gap===true?entry.suggested_option:entry.closest_existing||'').trim();
-    if(!(choices[key]||[]).includes(value))
-      throw new Error('Pre-AC selected value not available in live '+key+' library: '+value);
-    decisions[key]=value;
-  });
-  if(keys.some(function(k){return !decisions[k];}))throw new Error('Pre-AC did not validate every classification field.');
-  var identity=preAcSourceFingerprint_(sourceRow);
-  PropertiesService.getDocumentProperties().setProperty(handoffKey,JSON.stringify({
-    postId:identity.postId,sourceHash:identity.hash,articleType:type,stoneType:material,
-    decisions:decisions
-  }));
-  var message;
-
-  if (gapsFound === 0) {
-    message =
-      'Pre-AC PASS — existing AC library options adequately cover the article.';
-  } else {
-    message =
-      'Pre-AC complete — ' +
-      gapsAdded +
-      ' new AC option(s) added';
-
-    if (added.length > 0) {
-      message += ': ' + added.join(' | ');
+    var idx=Number(entry&&entry.index),k=keys[idx];
+    if(!Number.isInteger(idx)||!k||seen[k])throw new Error('Pre-AC invalid/duplicate index '+idx);
+    seen[k]=true;
+    if(String(entry.field||'').trim()!==labels[k])
+      throw new Error('Pre-AC field label/index mismatch for '+k);
+    if(entry.gap!==true&&entry.gap!==false)throw new Error('Pre-AC missing boolean gap for '+k);
+    var evidence=String(entry.evidence||'').replace(/\s+/g,' ').trim().toLowerCase();
+    if(!evidence||source.indexOf(evidence)<0)
+      throw new Error('Pre-AC unsupported or missing original-article evidence for '+k);
+    var value=String(entry.gap?entry.suggested_option:entry.closest_existing||'').trim();
+    if(!value)throw new Error('Pre-AC empty classification for '+k);
+    if(entry.gap){
+      var scope=String(entry.scope||'').trim();
+      if(scope!=='Universal'&&scope!==String(promptData.stoneType))
+        throw new Error('Pre-AC invalid library scope for '+k);
+      pending.push({entry:entry,key:k,value:value});
+    }else if(!(choices[k]||[]).includes(value)){
+      throw new Error('Pre-AC selection not in approved library for '+k+': '+value);
     }
-  }
-
-  return {
-    success: true,
-    message: message,
-    text: apiResult.text,
-    gapsFound: gapsFound,
-    gapsAdded: gapsAdded,
-    cost: apiResult.cost
-  };
+  });
+  if(keys.some(function(k){return !seen[k];}))throw new Error('Pre-AC missing classification fields.');
+  // Validate the whole model response before changing the classification library.
+  var added=[];
+  pending.forEach(function(item){
+    var result=preAcAddGapToSheet(item.entry,row);
+    if(!result||!result.success)throw new Error('Pre-AC library update failed: '+(result&&result.message||item.key));
+    if(!result.skipped)added.push(item.key+': '+item.value);
+  });
+  var revised=getAcValuesForMaterial(promptData.stoneType,promptData.articleType);
+  var choicesNow=(revised&&revised.values)||{},decisions={};
+  entries.forEach(function(entry){
+    var k=keys[Number(entry.index)],v=String(entry.gap?entry.suggested_option:entry.closest_existing||'').trim();
+    if(!(choicesNow[k]||[]).includes(v))throw new Error('Pre-AC choice not in updated library for '+k);
+    decisions[k]=v;
+  });
+  var fresh=preAcSourceFingerprint_(row);
+  if(fresh.postId!==identity.postId||fresh.hash!==identity.hash)
+    throw new Error('Original article changed during Pre-AC; rerun before AC.');
+  props.setProperty(key,JSON.stringify({postId:identity.postId,sourceHash:identity.hash,
+    articleType:String(promptData.articleType),stoneType:String(promptData.stoneType),
+    decisions:decisions}));
+  bc_addToApiCostAndTime(apiResult.cost,(Date.now()-startTime)/1000);
+  return {success:true,message:pending.length?
+    'Pre-AC complete — '+added.length+' new AC option(s) added: '+added.join(' | '):
+    'Pre-AC PASS — seven supported library choices validated.',
+    text:apiResult.text,gapsFound:pending.length,gapsAdded:added.length,cost:apiResult.cost};
 }
 
 function bc_runACPromptAutomated(row) {
