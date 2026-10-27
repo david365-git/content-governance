@@ -29,7 +29,7 @@ function glc_apiRun(postId,route,promptVersion,preparedRow) {
     'TITLE: '+a.title,'MATERIAL: '+a.material,'APPROVED N:S: '+a.technical,'GLOBAL RULE: '+globalRule
   ].join('\n\n');
   // Use the same existing adapter as the simplified workflow.
-  if(prompt.length>49000) throw new Error('Prompt exceeds single-cell limit.');
+  // Long frozen prompts are stored losslessly across multiple cells.
   var stamp=Utilities.formatDate(new Date(),'Etc/UTC',"yyyy-MM-dd'T'HH:mm:ss'Z'");
   var sheet=ss.getSheetByName('GL Model Comparison Tests');
   if(!sheet){
@@ -47,7 +47,7 @@ function glc_apiRun(postId,route,promptVersion,preparedRow) {
   sheet.getRange(row,11,1,6).setValues([[a.originalSource,a.original.length,a.technicalSource,a.technical.length,(a.original.match(/<img\b/gi)||[]).length,a.url]]);
   sheet.getRange(row,17).setValue(String(model));
   sheet.getRange(row,21).setValue(glc_hash_(prompt));
-  sheet.getRange(row,20).setValue(prompt);
+  sheet.getRange(row,20).setValue(glc_promptCellValue_(preparedRow,prompt));
   SpreadsheetApp.flush();
   var cost=0;
   try{
@@ -76,7 +76,7 @@ function glc_runSelfCheck(testRow){
   if(!sh||!Number.isInteger(row)||row<2||row>sh.getLastRow())throw new Error('Invalid comparison test row');
   var html=String(sh.getRange(row,9).getValue()||'');
   if(!html)throw new Error('No saved HTML for this test.');
-  var prompt=String(sh.getRange(row,20).getValue()||'');
+  var prompt=glc_resolvePromptCell_(String(sh.getRange(row,20).getValue()||''));
   var model=String(typeof MODEL_CHEAP!=='undefined'?MODEL_CHEAP:'');
   if(!model)throw new Error('Missing recorded API model.');
   var auditPrompt=['Common fixed-model comparison check (same checker for both API writers). Provisional; not an independent human audit. Do not rewrite.', 'Provisional SELF-CHECK only: assess the article for unsupported experience, misleading images, technical errors and whether it answers the title. Never claim independence or owner approval. Return concise JSON with verdict and findings.','Check sealer terminology: if urethane or polyurethane names the sealer type in homeowner-facing copy, it must instead say film-forming sealer; do not change topical, surface or impregnating sealer or unrelated chemical references. Flag violations explicitly.', 'SOURCE PROMPT:',prompt,'GENERATED HTML:',html].join('\n\n');
@@ -116,7 +116,7 @@ function glc_preparePrompt(postId){
   throw new Error('Article source or approved N:S matrix missing.');
  var globalRule=glc_moistureRule_();
  var prompt=glc_buildPrompt_(a,globalRule);
- if(prompt.length>49000)throw new Error('Prompt exceeds Sheets single-cell limit; preparation blocked without truncation.');
+ // Preserve the entire source: large prompts use chunked storage.
  var ss=SpreadsheetApp.getActiveSpreadsheet(),sh=ss.getSheetByName('GL Comparison Prompts');
  if(!sh){
   sh=ss.insertSheet('GL Comparison Prompts');
@@ -127,8 +127,9 @@ function glc_preparePrompt(postId){
  if(!lock.tryLock(30000))throw new Error('Prompt sheet busy.');
  var row;
  try{
-  sh.appendRow([Utilities.formatDate(new Date(),'Etc/UTC',"yyyy-MM-dd'T'HH:mm:ss'Z'"),a.postId,'1.2',glc_hash_(prompt),prompt,a.technicalSource,a.originalSource]);
+  sh.appendRow([Utilities.formatDate(new Date(),'Etc/UTC',"yyyy-MM-dd'T'HH:mm:ss'Z'"),a.postId,'1.2',glc_hash_(prompt),'',a.technicalSource,a.originalSource]);
   row=sh.getLastRow();
+  sh.getRange(row,5).setValue(glc_promptCellValue_(row,prompt));
  }finally{lock.releaseLock();}
  return {row:row,hash:glc_hash_(prompt),length:prompt.length,postId:a.postId,version:'1.2'};
 }
@@ -160,7 +161,37 @@ function glc_readPreparedPrompt_(row,postId){
  if(!sh||!Number.isInteger(row)||row<2||row>sh.getLastRow())throw new Error('Invalid frozen prompt row.');
  var v=sh.getRange(row,2,1,4).getValues()[0];
  if(String(v[0])!==String(postId))throw new Error('Frozen prompt belongs to a different Post ID.');
- var prompt=String(v[3]||''),hash=glc_hash_(prompt);
+ var prompt=glc_resolvePromptCell_(String(v[3]||'')),hash=glc_hash_(prompt);
  if(hash!==String(v[2]))throw new Error('Frozen prompt SHA-256 mismatch.');
  return {version:String(v[1]),prompt:prompt,hash:hash};
+}
+
+/** Lossless storage for prompts longer than the Sheets single-cell limit. */
+function glc_promptCellValue_(ownerRow,prompt){
+  if(prompt.length<=48000)return prompt;
+  var ss=SpreadsheetApp.getActiveSpreadsheet();
+  var sh=ss.getSheetByName('GL Prompt Chunks');
+  if(!sh){sh=ss.insertSheet('GL Prompt Chunks');sh.appendRow(['Frozen prompt row','Part number','Text']);sh.setFrozenRows(1);}
+  var parts=[];
+  for(var start=0;start<prompt.length;start+=30000)parts.push([ownerRow,parts.length+1,prompt.slice(start,start+30000)]);
+  var first=sh.getLastRow()+1;
+  sh.getRange(first,1,parts.length,3).setValues(parts);
+  return 'GL_CHUNKS:'+first+':'+parts.length+':'+glc_hash_(prompt);
+}
+function glc_resolvePromptCell_(cell){
+  var match=/^GL_CHUNKS:(\d+):(\d+):([0-9a-f]{64})$/.exec(cell);
+  if(!match)return cell;
+  var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('GL Prompt Chunks');
+  if(!sh)throw new Error('Missing frozen prompt chunks sheet.');
+  var first=Number(match[1]),count=Number(match[2]);
+  if(first<2||count<2||count>1000||first+count-1>sh.getLastRow())throw new Error('Invalid frozen prompt chunk reference.');
+  var lines=sh.getRange(first,1,count,3).getValues();
+  var owner=String(lines[0][0]),parts=[];
+  for(var i=0;i<lines.length;i++){
+    if(String(lines[i][0])!==owner||Number(lines[i][1])!==i+1)throw new Error('Frozen prompt chunk order mismatch.');
+    parts.push(String(lines[i][2]));
+  }
+  var prompt=parts.join('');
+  if(glc_hash_(prompt)!==match[3])throw new Error('Frozen prompt chunks SHA-256 mismatch.');
+  return prompt;
 }
