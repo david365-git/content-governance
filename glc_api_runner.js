@@ -184,7 +184,7 @@ function glc_resolvePromptCell_(cell){
   var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('GL Prompt Chunks');
   if(!sh)throw new Error('Missing frozen prompt chunks sheet.');
   var first=Number(match[1]),count=Number(match[2]);
-  if(first<2||count<2||count>1000||first+count-1>sh.getLastRow())throw new Error('Invalid frozen prompt chunk reference.');
+  if(first<1||count<2||count>1000||first+count-1>sh.getLastRow())throw new Error('Invalid frozen prompt chunk reference.');
   var lines=sh.getRange(first,1,count,3).getValues();
   var owner=String(lines[0][0]),parts=[];
   for(var i=0;i<lines.length;i++){
