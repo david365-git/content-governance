@@ -96,10 +96,11 @@ function glc_moistureRule_(){
  var c1=String(sh.getRange('C1').getDisplayValue()||'');
  var marker='MatrixTECHNICAL GUARDRAILS FOR CONTENT GENERATION';
  var i=c1.indexOf(marker);
- if(i<0)throw new Error('C1 legacy boundary not found; refusing to send material-specific legacy guidance as global.');
- var rule=c1.substring(0,i).trim();
+ var rule=(i>=0?c1.substring(0,i):c1).trim();
  if(rule.indexOf('GLOBAL FLOOR-MOISTURE TERMINOLOGY RULE')!==0 || rule.length<150)
   throw new Error('C1 global moisture restriction is malformed; generation blocked.');
+ if(i<0 && /CERAMIC TILE MATERIAL SCIENCE|POLYMER GROUT HAZE REMOVAL|END RECOGNISED TECHNICAL ENTITIES/i.test(rule))
+  throw new Error('C1 contains unexpected legacy technical material; generation blocked.');
  return rule;
 }
 /** Freeze exact model input before either model runs. Only the isolated test sheet is written. */
