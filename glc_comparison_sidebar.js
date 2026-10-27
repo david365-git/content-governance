@@ -30,15 +30,23 @@ function glc_getArticle_(postId) {
   }
   var technical=ss.getSheetByName('technical'),matrix='',technicalSource='not matched';
   if(technical){
-    var mRows=technical.getLastRow(), mCols=technical.getLastColumn();
-    // Inspect material labels in column A, never use a cached matrix output.
-    var matVals=technical.getRange(2,1,Math.max(1,mRows-1),1).getDisplayValues();
-    var found=[];
-    matVals.forEach(function(x,i){if(String(x[0]).trim().toLowerCase()===String(rec.r[materialCol]).trim().toLowerCase())found.push(i+2);});
-    if(found.length===1&&mCols>=19){
-      matrix=technical.getRange(found[0],14,1,6).getDisplayValues()[0].join('\n\n--- APPROVED NEXT COLUMN ---\n\n');
-      technicalSource='technical!N'+found[0]+':S'+found[0];
-    } else technicalSource='technical match count: '+found.length;
+    var th=technical.getRange(1,1,1,technical.getLastColumn()).getDisplayValues()[0];
+    var materialColumn=th.findIndex(function(v){return String(v).trim().toLowerCase()==='material';})+1;
+    if(!materialColumn) throw new Error('technical sheet has no material header.');
+    var materialNames=String(rec.r[materialCol]||'').split(',').map(function(v){return v.trim();}).filter(Boolean);
+    var labels=technical.getRange(2,materialColumn,Math.max(1,technical.getLastRow()-1),1).getDisplayValues();
+    var blocks=[],refs=[];
+    materialNames.forEach(function(name){
+      var found=[];
+      labels.forEach(function(v,i){if(String(v[0]).trim().toLowerCase()===name.toLowerCase())found.push(i+2);});
+      if(found.length!==1)throw new Error('Technical Matrix: expected one row for "'+name+'", found '+found.length+'.');
+      var values=technical.getRange(found[0],14,1,6).getDisplayValues()[0];
+      if(values.some(function(v){return !String(v).trim();}))throw new Error('Approved N:S is incomplete for '+name+'.');
+      blocks.push('MATERIAL: '+name+'\n'+values.join('\n\n--- APPROVED NEXT COLUMN ---\n\n'));
+      refs.push('technical!N'+found[0]+':S'+found[0]);
+    });
+    matrix=blocks.join('\n\n=== NEXT MATERIAL ===\n\n');
+    technicalSource=refs.join('; ');
   }
   var result={postId:String(postId),row:rec.row,title:String(rec.r[titleCol]||''),material:String(rec.r[materialCol]||''),type:String(rec.r[typeCol]||''),url:String(rec.r[urlCol]||''),original:original,originalSource:source,technical:matrix,technicalSource:technicalSource};
   return result;
@@ -55,7 +63,7 @@ function glc_saveComparison(payload){
   var sh=ss.getSheetByName('GL Model Comparison Tests');
   if(!sh){
     sh=ss.insertSheet('GL Model Comparison Tests');
-    sh.appendRow(['Recorded UTC','Post ID','Title','Material','Type','Model / route','Prompt version','Run status','HTML or result','Notes','Original source','Original chars','Technical source','Technical chars','Image count','Source URL']);
+    sh.appendRow(glc_headings_());
     sh.setFrozenRows(1);
   }
   var output=String(payload.output||''),notes=String(payload.notes||''),route=String(payload.route||'');
@@ -65,4 +73,12 @@ function glc_saveComparison(payload){
   var stamp=Utilities.formatDate(new Date(),'Etc/UTC',"yyyy-MM-dd'T'HH:mm:ss'Z'");
   sh.appendRow([stamp,a.postId,a.title,a.material,a.type,route,String(payload.promptVersion||''),'CAPTURED — NOT AUDITED',output,notes,a.originalSource,a.original.length,a.technicalSource,a.technical.length,(a.original.match(/<img\b/gi)||[]).length,a.url]);
   return {message:'Saved isolated comparison record to GL Model Comparison Tests, row '+sh.getLastRow(),row:sh.getLastRow()};
+}
+
+function glc_headings_(){
+ return ['Recorded UTC','Post ID','Title','Material','Type','Model / route','Prompt version','Run status','HTML or result','Notes','Original source','Original chars','Technical source','Technical chars','Image count','Source URL','API model','API cost USD','Self-check','Prompt','Prompt SHA-256','Truncated'];
+}
+function glc_hash_(value){
+ var bytes=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,String(value),Utilities.Charset.UTF_8);
+ return bytes.map(function(x){return ('0'+(x<0?x+256:x).toString(16)).slice(-2);}).join('');
 }
