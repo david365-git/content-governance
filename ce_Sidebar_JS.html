@@ -829,9 +829,12 @@
   var _w0bWindowIdx = 2; // W0B is index 2 — only shown for Geo Service Pages
 
   function navGoTo(idx) {
-    // Hide current
+    // Isolate stage panels even when moving between independent groups.
+    document.querySelectorAll('.window-card[id^="window-"]').forEach(function(panel) {
+      panel.style.display = 'none';
+    });
+    document.body.setAttribute('data-active-window', String(idx));
     var cur = document.getElementById('window-' + _currentWindow);
-    if (cur) cur.style.display = 'none';
     var curBtn = document.getElementById('navbtn-' + _currentWindow);
     if (curBtn) { curBtn.style.background = '#37474f'; curBtn.style.color = '#90a4ae'; }
 
