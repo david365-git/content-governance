@@ -44,6 +44,7 @@ function glc_apiRun(postId,route,promptVersion) {
     'TITLE: '+a.title,'MATERIAL: '+a.material,'APPROVED N:S: '+a.technical,'GLOBAL RULE: '+globalRule
   ].join('\n\n');
   // Use the same existing adapter as the simplified workflow.
+  if(prompt.length>49000) throw new Error('Full prompt exceeds one Sheets cell; cannot perform fair comparison without separate complete prompt storage.');
   var stamp=Utilities.formatDate(new Date(),'Etc/UTC',"yyyy-MM-dd'T'HH:mm:ss'Z'");
   var sheet=ss.getSheetByName('GL Model Comparison Tests');
   if(!sheet){
@@ -61,8 +62,7 @@ function glc_apiRun(postId,route,promptVersion) {
   sheet.getRange(row,11,1,6).setValues([[a.originalSource,a.original.length,a.technicalSource,a.technical.length,(a.original.match(/<img\b/gi)||[]).length,a.url]]);
   sheet.getRange(row,17).setValue(String(model));
   sheet.getRange(row,21).setValue(glc_hash_(prompt));
-  sheet.getRange(row,20).setValue(prompt.slice(0,49000));
-  if(prompt.length>49000) throw new Error('Full comparison prompt exceeds one cell; safe pilot refuses to truncate input.');
+  sheet.getRange(row,20).setValue(prompt);
   SpreadsheetApp.flush();
   var cost=0;
   try{
