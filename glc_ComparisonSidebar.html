@@ -12,7 +12,7 @@ button:disabled{opacity:.5;cursor:default}
 small{color:#68737f}
 </style></head><body>
 <h2>Model comparison</h2><p class="hint">Independent Google Love pilot. Compare ChatGPT with API model outputs without touching the existing Content Engine modal, production posts or WordPress.</p>
-<div class="warn">API runs call the configured model and record an initial draft plus provisional audit. Nothing is published. ChatGPT conversation results can still be pasted manually.</div>
+<div class="warn">API mode calls the configured model and records a provisional audit; no publishing. ChatGPT output can be pasted manually.</div>
 <label for="post">Post ID</label><input id="post" inputmode="numeric" value="48034" placeholder="48034">
 <button id="load" onclick="load()">Load article details</button>
 <div class="meta" id="meta">Choose a Post ID and load its source details.</div>
@@ -20,7 +20,8 @@ small{color:#68737f}
 <label for="version">Prompt version</label><input id="version" value="1.1 (draft)" placeholder="e.g. v1.1">
 <label for="result">Article HTML or result</label><textarea id="result" placeholder="Paste the generated article or model output here."></textarea>
 <label for="notes">Test notes</label><textarea id="notes" style="min-height:80px" placeholder="Source issues, cost, execution details..."></textarea>
-<button id="api" onclick="runApi()">Run selected API model</button>\n<button id="save" onclick="save()">Save isolated test result</button>
+<button id="api" onclick="runApi()">Run selected API model</button>
+<button id="save" onclick="save()">Save isolated test result</button>
 <p id="status" aria-live="polite"></p>
 <small>Results are stored only in the dedicated “GL Model Comparison Tests” sheet. No published content is replaced.</small>
 <script>
@@ -41,19 +42,20 @@ function load(){
  .glc_loadArticle(document.getElementById('post').value.trim());
 }
 function runApi(){
- if(!current||current.postId!==document.getElementById('post').value.trim()){say('Load this Post ID first.');return;}
+ if(!current || current.postId!==document.getElementById('post').value.trim()){say('Load the Post ID first.');return;}
  var route=document.getElementById('route').value;
- if(route==='ChatGPT conversation'){say('Choose an API route. ChatGPT conversation outputs are saved with the separate Save button.');return;}
- busy(true);say('Calling the API and recording isolated test output…');
- google.script.run.withSuccessHandler(function(r){busy(false);say(r.status+' | '+r.model+' | 
+ if(route==='ChatGPT conversation'){say('Choose API route.');return;}
+ busy(true);say('Running the API test…');
+ google.script.run.withSuccessHandler(function(r){
+ busy(false);say(r.status+' | '+r.model+' | 
  if(!current||current.postId!==document.getElementById('post').value.trim()){say('Load this Post ID before saving.');return;}
  busy(true);say('Saving isolated result…');
  google.script.run.withSuccessHandler(function(r){busy(false);say(r.message);})
  .withFailureHandler(function(e){busy(false);say('ERROR: '+(e.message||e));})
  .glc_saveComparison({postId:current.postId,route:document.getElementById('route').value,promptVersion:document.getElementById('version').value,output:document.getElementById('result').value,notes:document.getElementById('notes').value});
 }
-</script></body></html>+Number(r.cost||0).toFixed(4)+' | test row '+r.row+'\\n'+r.audit);})
- .withFailureHandler(function(e){busy(false);say('ERROR: '+(e.message||e));})
+</script></body></html>+Number(r.cost||0).toFixed(4)+' | test row '+r.row+' | '+r.audit);
+ }).withFailureHandler(function(e){busy(false);say('ERROR: '+(e.message||e));})
  .glc_apiRun(current.postId,route,document.getElementById('version').value);
 }
 function save(){
