@@ -79,14 +79,20 @@ function glc_runSelfCheck(testRow){
   var prompt=String(sh.getRange(row,20).getValue()||'');
   var model=String(typeof MODEL_CHEAP!=='undefined'?MODEL_CHEAP:'');
   if(!model)throw new Error('Missing recorded API model.');
-  var auditPrompt=['Common fixed-model comparison check (same checker for both API writers). Provisional; not an independent human audit. Do not rewrite.', 'Provisional SELF-CHECK only: assess the article for unsupported experience, misleading images, technical errors and whether it answers the title. Never claim independence or owner approval. Return concise JSON with verdict and findings.','SOURCE PROMPT:',prompt,'GENERATED HTML:',html].join('\n\n');
+  var auditPrompt=['Common fixed-model comparison check (same checker for both API writers). Provisional; not an independent human audit. Do not rewrite.', 'Provisional SELF-CHECK only: assess the article for unsupported experience, misleading images, technical errors and whether it answers the title. Never claim independence or owner approval. Return concise JSON with verdict and findings.','Check sealer terminology: if urethane or polyurethane names the sealer type in homeowner-facing copy, it must instead say film-forming sealer; do not change topical, surface or impregnating sealer or unrelated chemical references. Flag violations explicitly.', 'SOURCE PROMPT:',prompt,'GENERATED HTML:',html].join('\n\n');
+  var terminologyIssue=/(?:\\b(?:poly)?urethane\\b[\\s\\S]{0,45}\\bsealer\\b|\\bsealer\\b[\\s\\S]{0,35}\\b(?:poly)?urethane\\b)/i.test(html.replace(/<[^>]*>/g,' '));
   var response=bc_sendPromptViaOpenAI(auditPrompt,3500,model);
   var oldCost=Number(sh.getRange(row,18).getValue()||0);
   sh.getRange(row,18).setValue(oldCost+Number(response&&response.cost||0));
   if(!response||!response.success){sh.getRange(row,8).setValue('SELF-CHECK FAILED');throw new Error(String(response&&response.message||'Self-check returned no result'));}
-  sh.getRange(row,19).setValue(String(response.text||'').slice(0,49000));
-  sh.getRange(row,8).setValue('SELF-CHECK RECORDED — NOT INDEPENDENT');
-  return {row:row,status:'Self-check recorded (not independent)',cost:Number(response.cost||0),audit:String(response.text||'').slice(0,600)};
+  var checkedText=String(response.text||'');
+  if(terminologyIssue){
+    checkedText+='\\nTERMINOLOGY REVIEW REQUIRED: Possible urethane/polyurethane sealer naming in generated text; manually or automatically verify context. This screening is conservative.';
+    sh.getRange(row,8).setValue('SELF-CHECK — TERMINOLOGY REVIEW');
+  }
+  sh.getRange(row,19).setValue(checkedText.slice(0,49000));
+  if(!terminologyIssue)sh.getRange(row,8).setValue('SELF-CHECK RECORDED — NOT INDEPENDENT');
+  return {row:row,status:'Self-check recorded (not independent)',cost:Number(response.cost||0),audit:checkedText.slice(0,600)};
 }
 
 /** The only global rule is the complete first C1 block, stopping at the legacy marker. */
@@ -137,6 +143,7 @@ function glc_buildPrompt_(a,globalRule){
  'From the historical article retain relevant genuine knowledge, images and internal links consistent with the approved matrix. Correct or omit conflicting technical claims. Never manufacture project evidence.',
  'Never infer specific work carried out from general technical guidance. Distinguish likely causes from actual observations.',
  'No product recommendations or brand-name product insertion. No unsupported guarantees.',
+ 'SEALER TERMINOLOGY — ALL MATERIALS: In homeowner-facing article text, when urethane or polyurethane identifies the type of sealer, call it a film-forming sealer. Preserve modifiers and documented application details (for example, two coats of colour-enhancing film-forming sealer). Do not replace the separate sealer terms topical, surface, or impregnating. Do not alter unrelated mentions of urethane or polyurethane. Do not silently generalise away an evidenced sealer application.',
  'Preserve relevant existing image src attributes and honest captions. Do not portray illustrations as project photographs.',
  'Preserve relevant internal links from the source only if they can be checked later; do not invent links.',
  'Do not include banned UK property-defect moisture terminology or imply that diagnosis.',
