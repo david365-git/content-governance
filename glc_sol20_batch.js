@@ -73,7 +73,7 @@ function glc_processSol20Batch() {
       if(age>12*60*1000) {
         props.deleteProperty('GLC_SOL20_ACTIVE');
         glc_sol20RemoveTriggers_();
-        sh.getRange('G1').setValue('STOPPED: unresolved API request for '+inflight+'. Inspect comparison sheet before any restart.');
+        sh.getRange('H1').setValue('STOPPED: unresolved API request for '+inflight+'. Inspect comparison sheet before any restart.');
       }
       return;
     }
@@ -81,7 +81,7 @@ function glc_processSol20Batch() {
     var spent=costValues.reduce(function(sum,x){return sum+(Number(x[0])||0);},0);
     if(spent>=GLC_SOL20_CAP_USD) {
       props.deleteProperty('GLC_SOL20_ACTIVE'); glc_sol20RemoveTriggers_();
-      sh.getRange('G1').setValue('STOPPED: $'+GLC_SOL20_CAP_USD+' recorded cost limit reached.');
+      sh.getRange('H1').setValue('STOPPED: $'+GLC_SOL20_CAP_USD+' recorded cost limit reached.');
       return;
     }
     var states=sh.getRange(2,2,GLC_SOL20_IDS.length,2).getValues();
@@ -90,7 +90,7 @@ function glc_processSol20Batch() {
     }
     if(i<0) {
       props.deleteProperty('GLC_SOL20_ACTIVE'); glc_sol20RemoveTriggers_();
-      sh.getRange('G1').setValue('COMPLETE: '+GLC_SOL20_IDS.length+' drafts saved.');
+      sh.getRange('H1').setValue('COMPLETE: '+GLC_SOL20_IDS.length+' drafts saved.');
       return;
     }
     id=GLC_SOL20_IDS[i];
