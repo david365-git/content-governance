@@ -130,3 +130,26 @@ function glc_sol20Status() {
   var spent=vals.reduce(function(v,r){return v+(Number(r[3])||0);},0);
   return {active:props.getProperty('GLC_SOL20_ACTIVE')==='YES',inflight:props.getProperty('GLC_SOL20_INFLIGHT')||null,done:done,total:GLC_SOL20_IDS.length,costUSD:spent,statusSheet:GLC_SOL20_SHEET};
 }
+
+/** Sidebar read-only snapshot. Does not create triggers or API calls. */
+function glc_sol20DashboardData(){
+  var sh=glc_sol20Sheet_();
+  var p=PropertiesService.getScriptProperties();
+  var values=sh.getRange(2,1,GLC_SOL20_IDS.length,7).getDisplayValues();
+  var rows=values.map(function(v){return {id:v[0],state:v[1]||'PENDING',promptRow:v[2],resultRow:v[3],cost:Number(v[4])||0,updated:v[5],message:v[6]};});
+  var completed=rows.filter(function(r){return r.state==='DONE';}).length;
+  var failed=rows.filter(function(r){return r.state.indexOf('STOPPED')===0;}).length;
+  var active=p.getProperty('GLC_SOL20_ACTIVE')==='YES';
+  var inflight=p.getProperty('GLC_SOL20_INFLIGHT')||'';
+  var current=rows.filter(function(r){return r.id===inflight;})[0] ||
+    rows.filter(function(r){return r.state!=='DONE';})[0] || null;
+  return {running:active,processing:!!inflight,completed:completed,total:rows.length,
+    failed:failed,cost:rows.reduce(function(n,r){return n+r.cost;},0),
+    current:current,rows:rows,updated:glc_sol20Clock_(),
+    status:!active ? (completed===rows.length?'COMPLETE': failed?'STOPPED — REVIEW REQUIRED':'STOPPED')
+     : (inflight?'RUNNING — API REQUEST':'RUNNING — WAITING FOR NEXT ARTICLE')};
+}
+function glc_openSol20Sidebar(){
+  SpreadsheetApp.getUi().showSidebar(HtmlService.createHtmlOutputFromFile('glc_Sol20_Progress')
+    .setTitle('Google Love — Sol 20 Progress'));
+}
