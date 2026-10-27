@@ -1,0 +1,42 @@
+<!doctype html><html><head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+body{font:13px Arial,sans-serif;margin:0;padding:15px;background:#f8fafc;color:#182235}h2{font-size:18px;margin:0 0 4px}.muted{color:#657287}#flag{padding:10px;border-radius:7px;background:#e5e7eb;margin:14px 0;font-weight:bold}.run{background:#d6f5e8!important;color:#075e42}.stop{background:#ffe7d9!important;color:#8b2e10}.stats{display:flex;gap:8px;margin:12px 0}.stat{flex:1;background:#fff;padding:10px 5px;text-align:center;border:1px solid #d8dfe9;border-radius:7px}.value{font-size:22px;font-weight:bold}.caption{font-size:11px;color:#657287}.progress{height:15px;background:#e4e8ef;border-radius:20px;overflow:hidden}.fill{height:100%;width:0;background:#1673c8;transition:width .3s}.current{margin:13px 0;padding:10px;border-radius:6px;background:#fff;border:1px solid #d8dfe9;line-height:1.6}.row{padding:9px 2px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;gap:6px}.row small{color:#607087}.tag{font-size:11px;font-weight:bold}.ok{color:#12683c}.err{color:#9e3d1f}.wait{color:#62748a}button{border:0;border-radius:6px;background:#135e9c;color:white;padding:10px 12px;cursor:pointer}button.secondary{background:#64748b}button.warn{background:#a84024}button:disabled{opacity:.5}.controls{display:flex;gap:8px;margin:14px 0;flex-wrap:wrap}#message{white-space:pre-wrap;font-size:12px;line-height:1.5;min-height:16px}#updated{margin-top:7px}
+</style></head><body>
+<h2>Google Love — Sol Batch</h2><div class="muted">20 articles • GPT-6.1 Sol • automatic refresh every 10 seconds</div>
+<div id="flag">Checking status…</div>
+<div class="stats"><div class="stat"><div id="completed" class="value">–</div><div class="caption">Completed / 20</div></div><div class="stat"><div id="remaining" class="value">–</div><div class="caption">Remaining</div></div><div class="stat"><div id="cost" class="value">–</div><div class="caption">Recorded API cost</div></div></div>
+<div class="progress"><div id="bar" class="fill"></div></div><div id="percent" class="muted" style="margin-top:5px">0% complete</div>
+<div class="current"><strong>Current article</strong><div id="current">Checking…</div></div>
+<div class="controls"><button id="start" onclick="act('start')">Start / Resume</button><button id="stop" class="warn" onclick="act('stop')">Stop Batch</button><button class="secondary" onclick="refresh()">Refresh</button></div>
+<div id="message"></div><div id="updated" class="muted"></div><h3>All articles</h3><div id="articles"></div>
+<script>
+var busy=false;
+function el(id){return document.getElementById(id)}
+function safe(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function refresh(){if(busy)return;google.script.run.withSuccessHandler(show).withFailureHandler(function(e){el('message').textContent='Status error: '+(e.message||e)}).glc_sol20DashboardData()}
+function show(d){
+ el('flag').textContent=d.status;
+ el('flag').className=d.running?'run':'stop';
+ el('completed').textContent=d.completed+' / '+d.total;
+ el('remaining').textContent=d.total-d.completed;
+ el('cost').textContent='$'+d.cost.toFixed(4);
+ el('bar').style.width=(100*d.completed/d.total)+'%';
+ el('percent').textContent=Math.round(100*d.completed/d.total)+'% complete';
+ el('current').textContent=d.current?('Post '+d.current.id+' — '+d.current.state+(d.current.message?'\n'+d.current.message:'')):'All 20 completed';
+ el('stop').disabled=!d.running;el('start').disabled=d.running;
+ el('updated').textContent='Last checked: '+new Date().toLocaleTimeString()+' • Status snapshot: '+d.updated;
+ el('articles').innerHTML=d.rows.map(function(r){
+ var cls=r.state==='DONE'?'ok':r.state.indexOf('STOPPED')===0?'err':'wait';
+ return '<div class="row"><div><strong>'+safe(r.id)+'</strong><br><small>'+safe(r.message||'')+'</small></div><div style="text-align:right"><span class="tag '+cls+'">'+safe(r.state)+'</span><br><small>'+(r.cost?'$'+r.cost.toFixed(4):'')+'</small></div></div>'
+ }).join('');
+}
+function act(which){
+ if(busy)return;
+ if(which==='start'&&!confirm('Start/resume paid GPT-6.1 Sol API generation for the remaining articles?'))return;
+ if(which==='stop'&&!confirm('Stop scheduling additional API requests? A current request may still finish.'))return;
+ busy=true;el('start').disabled=true;el('stop').disabled=true;
+ el('message').textContent=which==='start'?'Scheduling batch…':'Stopping batch…';
+ var call=google.script.run.withSuccessHandler(function(result){busy=false;el('message').textContent=result;refresh()}).withFailureHandler(function(e){busy=false;el('message').textContent='ERROR: '+(e.message||e);refresh()});
+ if(which==='start')call.glc_startSol20Batch();else call.glc_stopSol20Batch();
+}
+refresh();setInterval(refresh,10000);
+</script></body></html>
