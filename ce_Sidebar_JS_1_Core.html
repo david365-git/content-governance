@@ -150,8 +150,14 @@
   var _isGeoPage    = false;
 
   function navGoTo(idx) {
-    var cur    = document.getElementById('window-' + _currentWindow);
-    if (cur) cur.style.display = 'none';
+    // Keep every stage isolated, including Master Automation.
+    // Hiding only the previous stage leaves another open window visible
+    // when an earlier navigation state was not synchronised.
+    document.querySelectorAll('.window-card[id^="window-"]').forEach(function(panel) {
+      panel.style.display = 'none';
+    });
+    var masterPanel = document.getElementById('window-master-automation');
+    if (masterPanel) masterPanel.style.display = 'none';
     var curBtn = document.getElementById('navbtn-' + _currentWindow);
     if (curBtn) { curBtn.style.background = '#37474f'; curBtn.style.color = '#90a4ae'; }
     _currentWindow = idx;
