@@ -9,6 +9,7 @@ function onOpen(e) {
     .addItem('🔎 Extract Case Study Evidence (selected row)', 'bc_caseEvidenceActiveRow')
     .addItem('🔎 Extract Case Study Evidence (filtered stone type — Batch)', 'bc_caseEvidenceFilteredBatch')
     .addItem('🧪 NEW Simplified Workflow Test', 'new_openWorkflowSidebar')
+    .addItem('🧪 Google Love Model Comparison', 'glc_openComparisonSidebar')
     .addItem('✂️ Restore lost NewHtml etc', 'restoreActiveRowFromSiteExport')
     .addItem('📋 Batch Build Authority Briefs', 'bc_batchBuildAuthorityBriefs')
     .addSeparator()
