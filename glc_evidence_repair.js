@@ -37,6 +37,8 @@ function glc_repairNextCase(){
   var pending=GLC_ER_IDS.filter(function(x){return !done.some(function(r){return String(r[0])===x&&String(r[1]).indexOf('REPAIRED')===0;});});
   if(!pending.length)return 'All 11 repaired drafts saved for review.';
   id=pending[0];
+  var existing=done.filter(function(r){return String(r[0])===id;});
+  if(existing.length && (String(existing[0][1]).indexOf('STOPPED')===0 || String(existing[0][1])==='IN PROGRESS')) throw Error('Prior repair for '+id+' requires review before retry. No API call made.');
   record=glc_erSource_(id);
   glc_erSave_(id,'IN PROGRESS',{row:record.row,notes:'API request in progress — check before rerunning after interruption.'});
  }finally{guard.releaseLock();}
@@ -71,5 +73,32 @@ function glc_repairNextCase(){
  }catch(e){
   glc_erSave_(id,'STOPPED — REVIEW REQUIRED',{row:record.row,notes:String(e.message||e),cost:Number(result&&result.cost)||0});
   throw e;
+ }
+}
+
+/** Optional unattended runner: one case study per minute, stops on any error. */
+function glc_evidenceRepairTriggers_(){return ScriptApp.getProjectTriggers().filter(function(t){return t.getHandlerFunction()==='glc_evidenceRepairTick';});}
+function glc_stopEvidenceRepairBatch(){
+ PropertiesService.getScriptProperties().deleteProperty('GLC_EVIDENCE_BATCH_ACTIVE');
+ glc_evidenceRepairTriggers_().forEach(function(t){ScriptApp.deleteTrigger(t);});
+ return 'Evidence repair scheduling stopped. A current request might finish.';
+}
+function glc_startEvidenceRepairBatch(){
+ var sh=glc_erSheet_(),all=sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,2).getValues():[];
+ var blocked=all.filter(function(r){return String(r[1])==='IN PROGRESS'||String(r[1]).indexOf('STOPPED')===0;});
+ if(blocked.length)throw Error('Review existing repair status for Post '+blocked[0][0]+' before resuming; no duplicate API calls.');
+ glc_stopEvidenceRepairBatch();
+ PropertiesService.getScriptProperties().setProperty('GLC_EVIDENCE_BATCH_ACTIVE','YES');
+ ScriptApp.newTrigger('glc_evidenceRepairTick').timeBased().everyMinutes(1).create();
+ return 'Scheduled the 11-case-study evidence repair. Outputs saved separately in GL Evidence Repairs.';
+}
+function glc_evidenceRepairTick(){
+ if(PropertiesService.getScriptProperties().getProperty('GLC_EVIDENCE_BATCH_ACTIVE')!=='YES')return;
+ try{
+  var status=glc_repairNextCase();
+  if(typeof status==='string' && status.indexOf('All 11')===0)glc_stopEvidenceRepairBatch();
+ }catch(e){
+  glc_stopEvidenceRepairBatch();
+  console.error('Evidence repair stopped: '+String(e.message||e));
  }
 }
