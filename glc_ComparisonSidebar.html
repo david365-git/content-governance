@@ -12,7 +12,7 @@ button:disabled{opacity:.5;cursor:default}
 small{color:#68737f}
 </style></head><body>
 <h2>Model comparison</h2><p class="hint">Independent Google Love pilot. Compare ChatGPT with API model outputs without touching the existing Content Engine modal, production posts or WordPress.</p>
-<div class="warn">API mode calls the configured model and records a provisional audit; no publishing. ChatGPT output can be pasted manually.</div>
+<div class="warn">API runs generate a comparison draft and provisional audit. Nothing is published. ChatGPT results can be pasted and saved.</div>
 <label for="post">Post ID</label><input id="post" inputmode="numeric" value="48034" placeholder="48034">
 <button id="load" onclick="load()">Load article details</button>
 <div class="meta" id="meta">Choose a Post ID and load its source details.</div>
@@ -42,21 +42,14 @@ function load(){
  .glc_loadArticle(document.getElementById('post').value.trim());
 }
 function runApi(){
- if(!current || current.postId!==document.getElementById('post').value.trim()){say('Load the Post ID first.');return;}
- var route=document.getElementById('route').value;
- if(route==='ChatGPT conversation'){say('Choose API route.');return;}
- busy(true);say('Running the API test…');
+ if(!current || current.postId!==document.getElementById("post").value.trim()){say("Load the Post ID first.");return;}
+ var route=document.getElementById("route").value;
+ if(route==="ChatGPT conversation"){say("Choose an API route.");return;}
+ busy(true);say("Running API test…");
  google.script.run.withSuccessHandler(function(r){
- busy(false);say(r.status+' | '+r.model+' | 
- if(!current||current.postId!==document.getElementById('post').value.trim()){say('Load this Post ID before saving.');return;}
- busy(true);say('Saving isolated result…');
- google.script.run.withSuccessHandler(function(r){busy(false);say(r.message);})
- .withFailureHandler(function(e){busy(false);say('ERROR: '+(e.message||e));})
- .glc_saveComparison({postId:current.postId,route:document.getElementById('route').value,promptVersion:document.getElementById('version').value,output:document.getElementById('result').value,notes:document.getElementById('notes').value});
-}
-</script></body></html>+Number(r.cost||0).toFixed(4)+' | test row '+r.row+' | '+r.audit);
- }).withFailureHandler(function(e){busy(false);say('ERROR: '+(e.message||e));})
- .glc_apiRun(current.postId,route,document.getElementById('version').value);
+  busy(false);say(r.status+" | "+r.model+" | $"+Number(r.cost||0).toFixed(4)+" | test row "+r.row+" | "+r.audit);
+ }).withFailureHandler(function(e){busy(false);say("ERROR: "+(e.message||e));})
+ .glc_apiRun(current.postId,route,document.getElementById("version").value);
 }
 function save(){
  if(!current||current.postId!==document.getElementById('post').value.trim()){say('Load this Post ID before saving.');return;}
