@@ -17,18 +17,19 @@ small{color:#68737f}
 <button id="load" onclick="load()">Load article details</button>
 <div class="meta" id="meta">Choose a Post ID and load its source details.</div>
 <label for="route">Test route</label><select id="route"><option>ChatGPT conversation</option><option>API — Luna</option><option>API — stronger model</option></select>
-<label for="version">Prompt version</label><input id="version" value="1.1 (draft)" placeholder="e.g. v1.1">
+<label for="version">Prompt version</label><input id="version" value="1.2" readonly placeholder="e.g. v1.1">
 <label for="result">Article HTML or result</label><textarea id="result" placeholder="Paste the generated article or model output here."></textarea>
 <label for="notes">Test notes</label><textarea id="notes" style="min-height:80px" placeholder="Source issues, cost, execution details..."></textarea>
-<button id="api" onclick="runApi()">Run selected API model</button>
+<button id="prepare" onclick="prepare()">Prepare frozen v1.2 prompt</button><button id="api" onclick="runApi()">Run selected API model</button>
 <button id="save" onclick="save()">Save isolated test result</button><button id="audit" onclick="audit()">Self-check last API draft</button>
 <p id="status" aria-live="polite"></p>
 <small>Results are stored only in the dedicated “GL Model Comparison Tests” sheet. No published content is replaced.</small>
 <script>
-var current=null,lastTestRow=null;
+var current=null,lastTestRow=null,preparedRow=null;
 function busy(on){document.querySelectorAll('button').forEach(function(b){b.disabled=on});}
 function say(msg){document.getElementById('status').textContent=msg;}
 function load(){
+ preparedRow=null;lastTestRow=null;
  busy(true);say('Reading source details…');
  google.script.run.withSuccessHandler(function(a){
  current=a;busy(false);
@@ -41,15 +42,23 @@ function load(){
  }).withFailureHandler(function(e){busy(false);say('ERROR: '+(e.message||e));})
  .glc_loadArticle(document.getElementById('post').value.trim());
 }
+function prepare(){
+ if(!current||current.postId!==document.getElementById('post').value.trim()){say('Load the Post ID first.');return;}
+ busy(true);say('Preparing identical v1.2 inputs for both models…');
+ google.script.run.withSuccessHandler(function(r){busy(false);preparedRow=r.row;say('Frozen v1.2 prompt prepared in GL Comparison Prompts row '+r.row+' | SHA-256 '+r.hash+' | '+r.length+' characters. Both API routes will use this exact prompt.');})
+ .withFailureHandler(function(e){busy(false);say('ERROR: '+(e.message||e));})
+ .glc_preparePrompt(current.postId);
+}
 function runApi(){
  if(!current || current.postId!==document.getElementById("post").value.trim()){say("Load the Post ID first.");return;}
+ if(!preparedRow){say('Prepare the frozen v1.2 prompt before making an API call.');return;}
  var route=document.getElementById("route").value;
  if(route==="ChatGPT conversation"){say("Choose an API route.");return;}
  busy(true);say("Running API test…");
  google.script.run.withSuccessHandler(function(r){
   busy(false);lastTestRow=r.row;say(r.status+" | "+r.model+" | $"+Number(r.cost||0).toFixed(4)+" | test row "+r.row+" | "+r.audit);
  }).withFailureHandler(function(e){busy(false);say("ERROR: "+(e.message||e));})
- .glc_apiRun(current.postId,route,document.getElementById("version").value);
+ .glc_apiRun(current.postId,route,document.getElementById("version").value,preparedRow);
 }
 function audit(){
  if(!lastTestRow){say('Generate an API draft first, then run its self-check.');return;}
