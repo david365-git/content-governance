@@ -13,7 +13,7 @@ function glc_apiRun(postId,route,promptVersion) {
   var globalRule=String(ss.getSheetByName('technical').getRange('C1').getDisplayValue()||'');
   var model=route==='API — Luna'
     ? (typeof MODEL_CHEAP!=='undefined'?MODEL_CHEAP:null)
-    : PropertiesService.getScriptProperties().getProperty('GLC_STRONG_MODEL');
+    : (PropertiesService.getScriptProperties().getProperty('GLC_STRONG_MODEL') || (typeof MODEL_STRONG!=='undefined'?MODEL_STRONG:null));
   if (!model) throw new Error('Model not configured for '+route+'. Set GLC_STRONG_MODEL for stronger model.');
   var prompt=[
     'ROLE: Skilled UK stone and tile floor restoration editor. Create a genuinely useful homeowner article.',
@@ -48,35 +48,58 @@ function glc_apiRun(postId,route,promptVersion) {
   var sheet=ss.getSheetByName('GL Model Comparison Tests');
   if(!sheet){
     sheet=ss.insertSheet('GL Model Comparison Tests');
-    sheet.appendRow(['Recorded UTC','Post ID','Title','Material','Type','Model / route','Prompt version','Run status','HTML or result','Notes','Original source','Original chars','Technical source','Technical chars','Image count','Source URL','API model','API cost USD','Independent audit','Prompt']);
+    sheet.appendRow(glc_headings_());
     sheet.setFrozenRows(1);
   }
-  var row=sheet.getLastRow()+1;
-  sheet.getRange(row,1,1,8).setValues([[stamp,a.postId,a.title,a.material,a.type,route,String(promptVersion||'pilot-v1'),'RUNNING']]);
+  var lock=LockService.getDocumentLock() || LockService.getScriptLock();
+  if(!lock.tryLock(30000))throw new Error('Another comparison is reserving a test row. Retry.');
+  var row;
+  try {
+    sheet.appendRow([stamp,a.postId,a.title,a.material,a.type,route,String(promptVersion||'pilot-v1'),'RUNNING']);
+    row=sheet.getLastRow();
+  } finally {lock.releaseLock();}
   sheet.getRange(row,11,1,6).setValues([[a.originalSource,a.original.length,a.technicalSource,a.technical.length,(a.original.match(/<img\b/gi)||[]).length,a.url]]);
   sheet.getRange(row,17).setValue(String(model));
+  sheet.getRange(row,21).setValue(glc_hash_(prompt));
+  sheet.getRange(row,20).setValue(prompt.slice(0,49000));
+  if(prompt.length>49000) throw new Error('Full comparison prompt exceeds one cell; safe pilot refuses to truncate input.');
   SpreadsheetApp.flush();
   var cost=0;
   try{
-    var draft=bc_sendPromptViaOpenAI(prompt,6500,model);
+    var draft=bc_sendPromptViaOpenAI(prompt,16000,model);
     cost+=Number(draft&&draft.cost||0);
     if(!draft||!draft.success||!String(draft.text||'').trim()) throw new Error('API draft failed: '+String(draft&&draft.message||'empty response'));
+    if(draft.truncated){sheet.getRange(row,22).setValue('TRUE');throw new Error('Model output truncated; draft rejected.');}
     var html=String(draft.text).replace(/^\s*```(?:html)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
     if(html.length>49000)throw new Error('Draft too long for single-cell test storage.');
     if(!/<(?:p|section|h2)\b/i.test(html))throw new Error('Model did not return article HTML.');
     sheet.getRange(row,9).setValue(html);
-    var audit=bc_sendPromptViaOpenAI(auditPrompt+'\n\n=== DRAFT HTML ===\n'+html,1500,model);
-    cost+=Number(audit&&audit.cost||0);
-    var auditText=audit&&audit.success?String(audit.text||''):'AUDIT API FAILURE: '+String(audit&&audit.message||'unknown');
-    sheet.getRange(row,19).setValue(auditText.slice(0,49000));
-    sheet.getRange(row,20).setValue(prompt.slice(0,49000));
     sheet.getRange(row,18).setValue(cost);
-    sheet.getRange(row,8).setValue(audit&&audit.success?'GENERATED — AUDIT PROVISIONAL':'GENERATED — AUDIT FAILED');
-    return {row:row,model:String(model),cost:cost,status:audit&&audit.success?'Draft generated; provisional AI audit recorded':'Draft generated; audit failed',audit:auditText.slice(0,600)};
+    sheet.getRange(row,8).setValue('DRAFT READY — SELF-CHECK SEPARATE');
+    return {row:row,model:String(model),cost:cost,status:'Draft ready — run separate self-check',audit:'Saved with prompt SHA-256.'};
   }catch(e){
     sheet.getRange(row,8).setValue('FAILED');
     sheet.getRange(row,10).setValue(String(e.message||e).slice(0,8000));
     sheet.getRange(row,18).setValue(cost);
     throw new Error('Test row '+row+': '+e.message);
   }
+}
+
+function glc_runSelfCheck(testRow){
+  var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('GL Model Comparison Tests');
+  var row=Number(testRow);
+  if(!sh||!Number.isInteger(row)||row<2||row>sh.getLastRow())throw new Error('Invalid comparison test row');
+  var html=String(sh.getRange(row,9).getValue()||'');
+  if(!html)throw new Error('No saved HTML for this test.');
+  var prompt=String(sh.getRange(row,20).getValue()||'');
+  var model=String(sh.getRange(row,17).getValue()||'');
+  if(!model)throw new Error('Missing recorded API model.');
+  var auditPrompt=['Provisional SELF-CHECK only: assess the article for unsupported experience, misleading images, technical errors and whether it answers the title. Never claim independence or owner approval. Return concise JSON with verdict and findings.','SOURCE PROMPT:',prompt,'GENERATED HTML:',html].join('\n\n');
+  var response=bc_sendPromptViaOpenAI(auditPrompt,3500,model);
+  var oldCost=Number(sh.getRange(row,18).getValue()||0);
+  sh.getRange(row,18).setValue(oldCost+Number(response&&response.cost||0));
+  if(!response||!response.success){sh.getRange(row,8).setValue('SELF-CHECK FAILED');throw new Error(String(response&&response.message||'Self-check returned no result'));}
+  sh.getRange(row,19).setValue(String(response.text||'').slice(0,49000));
+  sh.getRange(row,8).setValue('SELF-CHECK RECORDED — NOT INDEPENDENT');
+  return {row:row,status:'Self-check recorded (not independent)',cost:Number(response.cost||0),audit:String(response.text||'').slice(0,600)};
 }
