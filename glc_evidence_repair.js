@@ -62,7 +62,7 @@ function glc_repairNextCase(){
  try{
   result=bc_sendPromptViaOpenAI(prompt,16000,'gpt-6.1-sol');
   if(!result||!result.success||result.truncated||!String(result.text||'').trim())throw Error('Repair API unsuccessful/truncated: '+String(result&&result.message||''));
-  var html=String(result.text).replace(/^\s*```(?:html)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
+  var html=String(result.text).replace(/^\s*`{3}(?:html)?\s*/i,'').replace(/\s*`{3}\s*$/,'').trim();
   if(!/<h[12]\b/i.test(html)||!/<p\b/i.test(html)||html.length>49000)throw Error('Repair HTML invalid or too long — not saved.');
   var newer=glc_erImages_(html),omitted=orig.filter(function(x){return newer.indexOf(x)<0;});
   var prohibited=/\brising[\s-]+damp\b/i.test(html.replace(/<[^>]*>/g,' '));
