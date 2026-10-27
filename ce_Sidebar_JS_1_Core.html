@@ -156,6 +156,7 @@
     document.querySelectorAll('.window-card[id^="window-"]').forEach(function(panel) {
       panel.style.display = 'none';
     });
+    document.body.setAttribute('data-active-window', String(idx));
     var masterPanel = document.getElementById('window-master-automation');
     if (masterPanel) masterPanel.style.display = 'none';
     var curBtn = document.getElementById('navbtn-' + _currentWindow);
