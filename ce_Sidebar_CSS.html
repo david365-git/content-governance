@@ -96,6 +96,10 @@
     }
 
     /* ── Window cards ── */
+    /* Master controls are restricted to the dedicated Master Workflow window. */
+    body:not([data-active-window="master-automation"]) #window-master-automation {
+      display: none !important;
+    }
     .window-card {
       background: var(--surface);
       border: 1px solid var(--border);
