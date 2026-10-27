@@ -21,11 +21,11 @@ small{color:#68737f}
 <label for="result">Article HTML or result</label><textarea id="result" placeholder="Paste the generated article or model output here."></textarea>
 <label for="notes">Test notes</label><textarea id="notes" style="min-height:80px" placeholder="Source issues, cost, execution details..."></textarea>
 <button id="api" onclick="runApi()">Run selected API model</button>
-<button id="save" onclick="save()">Save isolated test result</button>
+<button id="save" onclick="save()">Save isolated test result</button><button id="audit" onclick="audit()">Self-check last API draft</button>
 <p id="status" aria-live="polite"></p>
 <small>Results are stored only in the dedicated “GL Model Comparison Tests” sheet. No published content is replaced.</small>
 <script>
-var current=null;
+var current=null,lastTestRow=null;
 function busy(on){document.querySelectorAll('button').forEach(function(b){b.disabled=on});}
 function say(msg){document.getElementById('status').textContent=msg;}
 function load(){
@@ -47,9 +47,16 @@ function runApi(){
  if(route==="ChatGPT conversation"){say("Choose an API route.");return;}
  busy(true);say("Running API test…");
  google.script.run.withSuccessHandler(function(r){
-  busy(false);say(r.status+" | "+r.model+" | $"+Number(r.cost||0).toFixed(4)+" | test row "+r.row+" | "+r.audit);
+  busy(false);lastTestRow=r.row;say(r.status+" | "+r.model+" | $"+Number(r.cost||0).toFixed(4)+" | test row "+r.row+" | "+r.audit);
  }).withFailureHandler(function(e){busy(false);say("ERROR: "+(e.message||e));})
  .glc_apiRun(current.postId,route,document.getElementById("version").value);
+}
+function audit(){
+ if(!lastTestRow){say('Generate an API draft first, then run its self-check.');return;}
+ busy(true);say('Checking saved test row '+lastTestRow+'…');
+ google.script.run.withSuccessHandler(function(r){busy(false);say(r.status+' | row '+r.row+' | '+r.audit);})
+ .withFailureHandler(function(e){busy(false);say('ERROR: '+(e.message||e));})
+ .glc_runSelfCheck(lastTestRow);
 }
 function save(){
  if(!current||current.postId!==document.getElementById('post').value.trim()){say('Load this Post ID before saving.');return;}
