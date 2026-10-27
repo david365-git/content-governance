@@ -4,15 +4,15 @@
  * Strong model can be set in Script Properties: GLC_STRONG_MODEL.
  */
 function glc_apiRun(postId,route,promptVersion,preparedRow) {
-  if (route!=='API — Luna' && route!=='API — stronger model') throw new Error('Choose an API route.');
+  if (route!=='API — Luna' && route!=='API — stronger model' && route!=='API — GPT-6.1 Sol') throw new Error('Choose an API route.');
   if(typeof bc_sendPromptViaOpenAI!=='function') throw new Error('Existing OpenAI API adapter is unavailable.');
   var a=glc_getArticle_(String(postId||'').trim());
   if (!a.original.trim()) throw new Error('No original content found in site-export. No API call made.');
   if (!a.technical.trim() || a.technicalSource.indexOf('technical!')!==0) throw new Error('Approved N:S Technical Matrix not found. No API call made.');
   var ss=SpreadsheetApp.getActiveSpreadsheet();
   var globalRule=glc_moistureRule_();
-  var model=route==='API — Luna'
-    ? (typeof MODEL_CHEAP!=='undefined'?MODEL_CHEAP:null)
+  var model=route==='API — GPT-6.1 Sol' ? 'gpt-6.1-sol'
+    : route==='API — Luna' ? (typeof MODEL_CHEAP!=='undefined'?MODEL_CHEAP:null)
     : (PropertiesService.getScriptProperties().getProperty('GLC_STRONG_MODEL') || (typeof MODEL_STRONG!=='undefined'?MODEL_STRONG:null));
   if (!model) throw new Error('Model not configured for '+route+'. Set GLC_STRONG_MODEL for stronger model.');
   var prompt=glc_buildPrompt_(a,globalRule);
