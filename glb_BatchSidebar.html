@@ -13,6 +13,7 @@ small{color:#777}.ok{color:#137333}.warn{color:#9b5700}.err{color:#b3261e}
 <h3>Content Intelligence → Google Love Sol</h3>
 <p>Paste Post IDs, separated by commas or new lines. Each Post ID runs the <b>existing full Content Intelligence</b> (including case-study and media extraction), then one Sol article generation. The finished HTML is saved in <b>posts → New HTML</b> for your original image, meta and schema windows.</p>
 <textarea id="ids" placeholder="5628&#10;11417&#10;6847"></textarea>
+<div><button class="secondary" onclick="useFinalTest()">Use 8-Article Final Test</button></div>
 <div><button id="load" onclick="loadIds()">Load / Add Post IDs</button><button id="start" onclick="startRun()">Start / Resume</button><button class="secondary" onclick="stopRun()">Stop after current step</button></div>
 <div id="status">Ready.</div><small>Closing the sidebar stops automatic progression. An interrupted in-flight paid step is marked for manual review; it will not be charged again automatically.</small>
 <div id="grid"><table><thead><tr><th>Post ID</th><th>Stage</th><th>CI completed</th><th>Sol completed</th></tr></thead><tbody id="rows"></tbody></table></div>
@@ -23,6 +24,7 @@ function log(x){var el=document.getElementById('log');el.textContent+=(el.textCo
 function status(x){document.getElementById('status').textContent=x;}
 function err(e){active=false;busy=false;status('Stopped: '+(e&&e.message||e));log('ERROR: '+(e&&e.message||e));}
 function parseIds(){return Array.from(new Set(document.getElementById('ids').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean)));}
+function useFinalTest(){document.getElementById('ids').value='22872\n5597\n8265\n8351\n8566\n5486\n43064\n43364';status('Eight fresh final-test Post IDs selected. Click Load / Add Post IDs.');}
 function refresh(done){
  google.script.run.withSuccessHandler(function(a){
   queue=a||[];var body=document.getElementById('rows');body.textContent='';
