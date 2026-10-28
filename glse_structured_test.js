@@ -47,13 +47,35 @@ function glse_outputImages_(html){
  while((m=re.exec(html)))urls.push(m[2].replace(/&amp;/g,'&'));
  return urls;
 }
-function glse_mediaCheck_(html,media){
- var expected=media.images.map(function(x){return String(x.url).replace(/&amp;/g,'&');});
- var actual=glse_outputImages_(html);
- var missing=expected.filter(function(u){return actual.indexOf(u)<0;});
- var unexpected=actual.filter(function(u){return expected.indexOf(u)<0;});
- return {expected:expected.length,used:actual.length,missing:missing,unexpected:unexpected};
+function glse_mediaCategory_(image){
+ var u=String(image.url||'').toLowerCase(),d=[image.alt,image.originalCaption,image.title].join(' ').toLowerCase();
+ // Evidence-based metadata classification only, never a visual identification.
+ if(/(?:^|\/)david[_-]allen\.(?:jpe?g|png|webp)(?:[?#]|$)/i.test(u)||/\bauthor (?:portrait|headshot)\b|\bportrait of (?:the )?author\b/i.test(d))return 'author portrait';
+ if(/m\.media-amazon\.com|images-na\.ssl-images-amazon\.com/i.test(u))return 'product image';
+ if(/\bdiagram\b|\binfographic\b|\billustration\b|\bschematic\b|\bgraphic showing\b/i.test(d)||/diagram|infographic|illustration|greasy-soil-process|sealer-protection|aftercare-routine/i.test(u))return 'illustration';
+ return 'project photograph / unclassified';
 }
+function glse_mediaCheck_(html,media){
+ var actual=glse_outputImages_(html);
+ var items=media.images.map(function(x){return {url:String(x.url).replace(/&amp;/g,'&'),category:glse_mediaCategory_(x)};});
+ var missingItems=items.filter(function(x){return actual.indexOf(x.url)<0;});
+ var unexpected=actual.filter(function(u){return !items.some(function(x){return x.url===u;});});
+ var projectMissing=missingItems.filter(function(x){return x.category==='project photograph / unclassified';});
+ return {expected:items.length,used:actual.length,missing:missingItems.map(function(x){return x.url;}),
+  unexpected:unexpected,
+  missingProjectEvidence:projectMissing.map(function(x){return x.url;}),
+  omittedNonProject:missingItems.filter(function(x){return x.category!=='project photograph / unclassified';}),
+  countsByCategory:items.reduce(function(a,x){a[x.category]=(a[x.category]||0)+1;return a;},{}),
+  classificationBasis:'Source URL and descriptions only; uncertain media treated as project evidence'};
+}
+function glse_mediaReport_(check){
+ return 'Single-pass media-aware draft; '+check.used+'/'+check.expected+' image references. '+
+  (check.missingProjectEvidence.length?'Project/unclassified media missing: '+check.missingProjectEvidence.join(' | ')+'. ':'')+
+  (check.omittedNonProject.length?'Other media omitted ('+check.omittedNonProject.map(function(x){return x.category;}).join(', ')+'). ':'')+
+  (check.unexpected.length?'Unapproved image URLs: '+check.unexpected.join(' | ')+'. ':'')+
+  'Independent editorial review pending.';
+}
+
 function glse_saved_(id){
  var s=glse_sheet_(),n=s.getLastRow();
  if(n<2)return null;
@@ -129,11 +151,8 @@ function glse_generateOne_(id){
   if(html.length>48000||!/<h[12]\b/i.test(html)||!/<p\b/i.test(html))throw Error('Output too long or not valid article HTML.');
   if(/\brising[\s-]+damp\b/i.test(html.replace(/<[^>]*>/g,' ')))throw Error('Generated prohibited moisture terminology; no article saved.');
   var check=glse_mediaCheck_(html,media);
-  var review=check.missing.length>0||check.unexpected.length>0;
-  var report='Single-pass media-aware draft; '+check.used+'/'+check.expected+' image references. '+
-    (check.missing.length?'Omitted source URLs: '+check.missing.join(' | ')+'. ':'')+
-    (check.unexpected.length?'Unapproved image URLs: '+check.unexpected.join(' | ')+'. ':'')+
-    'Independent editorial review pending.';
+  var review=check.missingProjectEvidence.length>0||check.unexpected.length>0;
+  var report=glse_mediaReport_(check);
   glse_write_(id,review?'DONE — MEDIA REVIEW':'DONE',e,html,Number(result.cost)||0,report,check);
  }catch(err){
   glse_write_(id,'STOPPED — REVIEW',e,'',Number(result&&result.cost)||0,String(err.message||err));
@@ -170,3 +189,26 @@ function glse_tick(){
  finally{lock.releaseLock();}
 }
 function glse_openSidebar(){SpreadsheetApp.getUi().showSidebar(HtmlService.createHtmlOutputFromFile('glse_Progress').setTitle('Google Love — Evidence Test'));}
+
+/**
+ * Reassess already generated media-test drafts at zero API cost.
+ * Updates only their status, media report and JSON audit, preserving HTML and cost.
+ */
+function glse_recheckExistingMedia(){
+ var sh=glse_sheet_(),last=sh.getLastRow(),results=[];
+ if(last<2)return results;
+ for(var row=2;row<=last;row++){
+  var id=String(sh.getRange(row,1).getDisplayValue()||'').trim();
+  if(GLSE_IDS.indexOf(id)<0)continue;
+  var status=String(sh.getRange(row,2).getDisplayValue()||'');
+  if(status.indexOf('DONE')!==0)continue;
+  var html=String(sh.getRange(row,6).getValue()||'');
+  if(!html)continue;
+  var check=glse_mediaCheck_(html,glse_media_(glse_evidence_(id)));
+  var newStatus=check.missingProjectEvidence.length||check.unexpected.length?'DONE — MEDIA REVIEW':'DONE';
+  sh.getRange(row,2).setValue(newStatus);
+  sh.getRange(row,10,1,2).setValues([[glse_mediaReport_(check),JSON.stringify(check)]]);
+  results.push({postId:id,status:newStatus,projectImagesMissing:check.missingProjectEvidence.length,nonProjectOmitted:check.omittedNonProject.length});
+ }
+ return results;
+}
