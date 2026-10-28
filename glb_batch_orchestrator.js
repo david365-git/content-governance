@@ -272,7 +272,7 @@ function glb_runSol(postId){
   var html=glb_appendAuthorCta_(String(res.text).replace(/^\s*```(?:html)?\s*/i,'').replace(/\s*```\s*$/,'').trim());
   if(html.length>48000||!/<h[12]\b/i.test(html)||!/<p\b/i.test(html))throw Error('Sol returned invalid or oversized HTML');
   if(/\brising[\s-]+damp\b/i.test(html.replace(/<[^>]*>/g,' ')))throw Error('Prohibited moisture wording detected');
-  var audit=a.type==='Case Study'?glse_mediaCheck_(html,{images:built.media.imagesAndVideos.filter(function(x){return x&&x.type==='image'&&x.url;})}):null;
+  var audit=a.type==='Case Study'?glse_mediaCheck_(html.replace(/<div class="abbey-bio-box"[\s\S]*?(?=<footer class="abbey-article-cta")/i,''),{images:built.media.imagesAndVideos.filter(function(x){return x&&x.type==='image'&&x.url;})}):null;
   var issues=audit&&(audit.missingProjectEvidence.length||audit.unexpected.length);
   // Save a recoverable draft before replacing the production New HTML cell.
   var ss=SpreadsheetApp.getActiveSpreadsheet(),out=ss.getSheetByName('Google Love Production Drafts');
