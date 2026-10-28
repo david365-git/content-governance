@@ -19,9 +19,8 @@ function glb_col_(sh,label,create){
  return next;
 }
 function glb_setup_(){
- var posts=glb_posts_();
- glb_col_(posts,GLB_CI_HEADER,true);
- glb_col_(posts,GLB_SOL_HEADER,true);
+ // Keep sidebar polling read-only; initialise posts tracking headings only in glb_prepare.
+
  var ss=SpreadsheetApp.getActiveSpreadsheet(),s=ss.getSheetByName(GLB_SHEET);
  if(!s){s=ss.insertSheet(GLB_SHEET);s.getRange(1,1,1,GLB_QUEUE_HEADERS.length).setValues([GLB_QUEUE_HEADERS]);s.setFrozenRows(1);}
  var h=s.getRange(1,1,1,GLB_QUEUE_HEADERS.length).getDisplayValues()[0];
@@ -53,15 +52,19 @@ function glb_prepare(postIds){
  if(!ids.length)throw Error('Enter at least one Post ID');
  if(ids.length>50)throw Error('Maximum 50 Post IDs per batch');
  var seen={};ids=ids.filter(function(id){if(!/^\d+$/.test(id))throw Error('Invalid Post ID '+id);if(seen[id])return false;seen[id]=true;return true;});
- var objects=ids.map(glb_lookup_);
+ var posts=glb_posts_();
+ var data=posts.getRange(2,2,Math.max(1,posts.getLastRow()-1),7).getDisplayValues();
+ var byId={};data.forEach(function(r,i){var id=String(r[2]||'').trim();if(!id)return;if(byId[id])byId[id].duplicate=true;else byId[id]={id:id,row:i+2,title:r[0],material:r[5],type:r[6]};});
+ var objects=ids.map(function(id){var x=byId[id];if(!x||x.duplicate)throw Error('Post ID missing or duplicated in posts: '+id);return x;});
+ glb_col_(posts,GLB_CI_HEADER,true);
+ glb_col_(posts,GLB_SOL_HEADER,true);
  var q=glb_setup_();
  var lock=LockService.getScriptLock();if(!lock.tryLock(15000))throw Error('Batch queue busy');
  try{
-  objects.forEach(function(x){
-   var at=glb_findQueueRow_(q,x.id);
-   if(at>=2)return; // Never reset a completed or uncertain paid operation.
-   q.appendRow([x.id,x.row,x.title,x.type,'QUEUED','','',0,0,'',glb_utc_()]);
-  });
+  var last=q.getLastRow(),existing=last>1?q.getRange(2,1,last-1,1).getDisplayValues():[];
+  var present={};existing.forEach(function(v){if(v[0])present[String(v[0])]=true;});
+  var added=objects.filter(function(x){return !present[x.id];}).map(function(x){return [x.id,x.row,x.title,x.type,'QUEUED','','',0,0,'',glb_utc_()];});
+  if(added.length)q.getRange(last+1,1,added.length,11).setValues(added);
  }finally{lock.releaseLock();}
  return {ids:ids,rows:glb_progress().filter(function(x){return seen[x.postId];})};
 }
