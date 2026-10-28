@@ -1,3 +1,125 @@
+
+/**
+ * Enrich Evidence Media & Links from exact site-export HTML (no AI/API).
+ * Retains existing links; recovers missing image/video tags; records the
+ * source section and surrounding original text as placement context, not
+ * independently verified visual identification.
+ */
+function bc_caseEvidenceEnrichMedia_(row, source, headers) {
+  var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
+  var col=headers.indexOf('Evidence Media & Links')+1;
+  if(!col)throw new Error('Evidence Media & Links column missing');
+  var cell=sh.getRange(row,col),previous=String(cell.getValue()||'');
+  var record;
+  try{record=previous?JSON.parse(previous):{};}catch(e){throw new Error('Existing media JSON invalid: '+e.message);}
+  if(!record||Array.isArray(record)||typeof record!=='object')throw new Error('Invalid media inventory');
+  if(!Array.isArray(record.imagesAndVideos))record.imagesAndVideos=[];
+  if(!Array.isArray(record.links))record.links=[];
+  function decode(v){return String(v||'').replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#39;/gi,"'").trim();}
+  function attr(tag,name){
+    var m=new RegExp('(?:^|\\s)'+name+'\\s*=\\s*(["\\x27])([\\s\\S]*?)\\1','i').exec(tag);
+    return m?decode(m[2]):'';
+  }
+  function plain(s){return String(s||'').replace(/<[^>]*>/g,' ').replace(/&nbsp;|&#160;/gi,' ').replace(/&amp;/gi,'&').replace(/\s+/g,' ').trim();}
+  function sectionAt(index){
+    var h=/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/gi,m,last='';
+    while((m=h.exec(source))&&m.index<index)last=plain(m[1]);
+    return last.slice(0,220);
+  }
+  function nearby(index,tagLen){
+    var before=source.slice(Math.max(0,index-450),index),after=source.slice(index+tagLen,index+tagLen+450);
+    var fm=/<figcaption\b[^>]*>([\s\S]*?)<\/figcaption>/i.exec(after);
+    if(fm)return {text:plain(fm[1]).slice(0,350),basis:'source figcaption'};
+    var p=/<p\b[^>]*>([\s\S]*?)<\/p>/gi,m,last='';
+    while((m=p.exec(before)))last=plain(m[1]);
+    if(last)return {text:last.slice(-260),basis:'preceding paragraph'};
+    var next=/<p\b[^>]*>([\s\S]*?)<\/p>/i.exec(after);
+    return {text:next?plain(next[1]).slice(0,260):'',basis:next?'following paragraph':'no adjacent text'};
+  }
+  function stage(text){
+    var t=String(text||'').toLowerCase();
+    var phases=[['before',/\bbefore\b|\bpre[- ]restoration\b|\buntreated\b/],
+      ['inspection',/\binspect(?:ion|ed)?\b|\btest patch\b|\bsurvey\b/],
+      ['cleaning',/\bscrubb?(?:ing|ed)?\b|\bcleaning\b|\brins(?:e|ing)\b|\bextract(?:ion|ing)\b/],
+      ['repair',/\brepair(?:ing|ed)?\b|\bfilling\b|\bfiller\b|\bregrout\b/],
+      ['surface refinement',/\bgrind(?:ing)?\b|\bhon(?:e|ing)\b|\bpolish(?:ing|ed)?\b/],
+      ['sealing',/\bseal(?:ing|er|ed)?\b|\bwax(?:ing|ed)?\b/],
+      ['after',/\bafter\b|\bfinished\b|\bcompleted\b|\brestored floor\b/]];
+    var found=phases.filter(function(x){return x[1].test(t);});
+    return found.length===1?found[0][0]:'uncertain';
+  }
+  var tags=/<img\b[^>]*>|<iframe\b[^>]*>|<video\b[^>]*>|<source\b[^>]*>/gi,m,seen={},items=[];
+  while((m=tags.exec(source))){
+    var tag=m[0],kind=/^<img\b/i.test(tag)?'image':/^<iframe\b/i.test(tag)?'video':/^<video\b/i.test(tag)?'video':'video-source';
+    var url=attr(tag,'src')||attr(tag,'data-src');
+    if(!url||seen[kind+'|'+url])continue;
+    seen[kind+'|'+url]=true;
+    var original=record.imagesAndVideos.filter(function(x){return decode(x.url)===url;})[0]||{};
+    var context=nearby(m.index,tag.length),section=sectionAt(m.index);
+    var caption=String(original.originalCaption||'');
+    var alt=attr(tag,'alt')||String(original.alt||'');
+    var label=caption||alt;
+    var phase=stage(label);
+    // Source prose may suggest a placement section, but it never verifies pixels.
+    var item={};
+    Object.keys(original).forEach(function(k){item[k]=original[k];});
+    item.order=items.length+1;
+    item.type=kind==='video-source'?'video':kind;
+    item.url=url;
+    item.alt=alt;
+    item.title=attr(tag,'title')||String(original.title||'');
+    item.originalCaption=caption;
+    item.provenance='Original HTML and metadata; image contents not independently verified';
+    item.sourcePosition=m.index;
+    item.sourceSection=section;
+    item.nearbySourceText=context.text;
+    item.nearbyTextBasis=context.basis;
+    item.suggestedStage=phase;
+    item.stageBasis=phase==='uncertain'?'No unambiguous stage in existing description':'Original caption or alt text only; not image-verified';
+    item.placementConfidence=phase==='uncertain'?'unconfirmed':'source-description-only';
+    items.push(item);
+  }
+  // Preserve any previously indexed media not found by the tag extractor,
+  // such as poster images or embedded services not represented by src tags.
+  record.imagesAndVideos.forEach(function(x){
+    if(!x||!x.url)return;
+    if(!items.some(function(y){return y.url===x.url&&y.type===x.type})){
+      var retained={};Object.keys(x).forEach(function(k){retained[k]=x[k];});
+      retained.placementConfidence='unconfirmed';
+      retained.sourcePosition=null;
+      retained.stageBasis='Previously indexed; not matched to source media tag';
+      items.push(retained);
+    }
+  });
+  record.imagesAndVideos=items;
+  record.mediaAudit={
+    sourceImageTags:(source.match(/<img\b/gi)||[]).length,
+    capturedImageUrls:items.filter(function(x){return x.type==='image'&&x.sourcePosition!==null&&x.sourcePosition!==undefined;}).length,
+    unconfirmedPlacement:items.filter(function(x){return x.placementConfidence==='unconfirmed';}).length,
+    missingSourceImageUrls:0,
+    descriptionBasis:'Source HTML captions/alt and surrounding context only; not actual image inspection'
+  };
+  var json=JSON.stringify(record);
+  if(json.length>49000)throw new Error('Media inventory too long for Sheets cell; no media update made');
+  if(json!==previous)cell.setValue(json);
+  return record.mediaAudit;
+}
+function bc_caseEvidenceMediaActiveRow(){
+  var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts'),row=sh.getActiveRange().getRow();
+  if(row<2)throw new Error('Select a case-study row');
+  var heads=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
+  function c(n){var i=heads.indexOf(n);if(i<0)throw new Error('Missing column '+n);return i+1;}
+  if(String(sh.getRange(row,c('Article Type')).getValue()).trim()!=='Case Study')throw new Error('Selected row is not a Case Study');
+  var postId=String(sh.getRange(row,c('Post ID')).getDisplayValue()).trim();
+  var ex=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('site-export');
+  var ids=ex.getRange(2,1,ex.getLastRow()-1,1).getDisplayValues(),match=[];
+  ids.forEach(function(v,i){if(String(v[0]).trim()===postId)match.push(i+2);});
+  if(match.length!==1)throw new Error('Expected exactly one site-export source for '+postId);
+  var src=String(ex.getRange(match[0],15).getValue()||'');
+  if(!src)throw new Error('Original HTML missing');
+  return bc_caseEvidenceEnrichMedia_(row,src,heads);
+}
+
 /**
  * Content Intelligence: source-quoted case-study evidence, GL:GV.
  * Evidence quotes must match original HTML in site-export Column O, by Post ID.
@@ -64,7 +186,8 @@ function bc_caseEvidenceExtract_(row) {
   var statusCell = sh.getRange(row, col('Evidence Status'));
   var oldStatus = String(statusCell.getValue() || '');
   if (oldStatus === 'SOURCE-QUOTED | sha256:' + digest) {
-    return {success:true, skipped:true, cost:0, message:'Source-quoted evidence unchanged'};
+    bc_caseEvidenceEnrichMedia_(row,source,headers);
+    return {success:true, skipped:true, cost:0, message:'Source-quoted facts unchanged; media inventory checked'};
   }
   var labels = ['Project Location & Property','Observed Conditions','Client Requirements',
     'Materials & Construction','Inspection & Tests','Restoration Methods',
@@ -126,6 +249,7 @@ function bc_caseEvidenceExtract_(row) {
   // Fail closed: no partial evidence is written on model error or quote mismatch.
   for (var j=0;j<labels.length;j++) col(labels[j]);
   sh.getRange(row, col(labels[0]), 1, labels.length).setValues([output]);
+  bc_caseEvidenceEnrichMedia_(row,source,headers);
   statusCell.setValue('SOURCE-QUOTED | sha256:' + digest);
   return {success:true, skipped:false, cost:totalCost, message:'Evidence quotations matched to source (not independently fact-checked)'};
 }
