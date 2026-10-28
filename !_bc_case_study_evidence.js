@@ -189,7 +189,7 @@ function bc_caseEvidenceExtract_(row) {
     bc_caseEvidenceEnrichMedia_(row,source,headers);
     return {success:true, skipped:true, cost:0, message:'Source-quoted facts unchanged; media inventory checked'};
   }
-  var labels = ['Project Location & Property','Observed Conditions','Client Requirements',
+  var labels = ['Project Location & Property','Observed Conditions','Client Requirements & Restoration Objectives',
     'Materials & Construction','Inspection & Tests','Restoration Methods',
     'Products & Equipment','Technical Findings','Project Results','Maintenance Handover'];
   var prompt = [
@@ -280,7 +280,7 @@ function bc_caseEvidencePromptBlock_(row) {
   if(status!=='SOURCE-QUOTED | sha256:'+bc_caseEvidenceDigest_(original)){
     throw new Error('Case Study Evidence is missing or out of date. Run Extract Case Study Evidence in Content Intelligence first.');
   }
-  var labels=['Project Location & Property','Observed Conditions','Client Requirements','Materials & Construction',
+  var labels=['Project Location & Property','Observed Conditions','Client Requirements & Restoration Objectives','Materials & Construction',
     'Inspection & Tests','Restoration Methods','Products & Equipment','Technical Findings','Project Results','Maintenance Handover'];
   var lines=[];
   labels.forEach(function(label){
