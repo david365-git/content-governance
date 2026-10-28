@@ -127,6 +127,36 @@ function glb_retryCI(postId){
  q.sh.getRange(q.row,11).setValue(glb_utc_());
  return {success:true,message:'Post '+id+' queued for another full Content Intelligence run.'};
 }
+/** Run exactly the requested Post ID: full existing CI then one Sol call.
+ * No queue state gate; the sidebar controls sequence. A failed stage returns
+ * an error and the sidebar moves to the next explicitly supplied ID.
+ */
+function glb_runRequestedPost(postId){
+ var id=String(postId||'').trim(),a=glb_lookup_(id);
+ var q=glb_setup_(),qr=glb_findQueueRow_(q,id);
+ if(qr<2){q.appendRow([id,a.row,a.title,a.type,'QUEUED','','',0,0,'',glb_utc_()]);}
+ else{
+  // A new user-initiated batch intentionally resets the listed item.
+  q.getRange(qr,2,1,10).setValues([[a.row,a.title,a.type,'QUEUED','','',0,0,'Requested again by operator',glb_utc_()]]);
+ }
+ return {success:true,postId:id};
+}
+function glb_runRequestedCI(postId){
+ var id=String(postId||''),a=glb_lookup_(id),q=glb_queueState_(id);
+ glb_mark_(id,'CI RUNNING','Content Intelligence started for requested Post ID.');
+ try{
+  var result=runMasterContentIntelligenceBatchRow(a.row,a.material);
+  if(!result||!result.success)throw Error(result&&result.message||'Content Intelligence failed');
+  var date=glb_stamp_(a.row,GLB_CI_HEADER);
+  q.sh.getRange(q.row,6).setValue(date);
+  glb_mark_(id,'CI DONE','Full Content Intelligence finished.',Number(result.cost)||0,'CI');
+  return {success:true,postId:id,cost:Number(result.cost)||0};
+ }catch(e){glb_mark_(id,'CI FAILED',String(e.message||e));return {success:false,postId:id,message:String(e.message||e)};}
+}
+function glb_runRequestedSol(postId){
+ // Use existing tested Sol logic, which requires the preceding CI DONE mark.
+ return glb_runSol(postId);
+}
 function glb_buildSolPrompt_(a){
  if(typeof glc_getArticle_!=='function')throw Error('Missing Google Love article reader');
  var source=glc_getArticle_(a.id);
