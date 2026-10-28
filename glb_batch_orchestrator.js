@@ -262,7 +262,7 @@ function glb_openSidebar(){
 /** Direct operator-selected batch: no queue setup, retry decisions or state gating.
  * Processes each supplied ID once per click. Existing stages are not changed.
  */
-function glb_runDirectPost_(postId,phase){
+function glb_runDirectPost(postId,phase){
  var a=glb_lookup_(String(postId));
  if(phase==='CI'){
   glb_mark_(a.id,'CI RUNNING','Content Intelligence running');
