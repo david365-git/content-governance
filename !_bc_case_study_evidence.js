@@ -349,3 +349,29 @@ function bc_caseEvidenceFilteredBatch() {
     +'\nRun the same menu item again to continue; completed rows are skipped.'
   );
 }
+
+
+/** Refresh only the eleven Google Love test case-study media inventories.
+ * No AI calls. Does not alter the first ten evidence fields or published posts.
+ */
+function bc_caseEvidenceMediaTest11(){
+ var ids=['48109','7952','5774','21838','21746','8027','8336','12107','11452','22942','11945'];
+ var ss=SpreadsheetApp.getActiveSpreadsheet(),sh=ss.getSheetByName('posts'),ex=ss.getSheetByName('site-export');
+ var heads=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
+ function c(n){var i=heads.indexOf(n);if(i<0)throw Error('Missing header '+n);return i+1;}
+ var rows=sh.getRange(2,c('Post ID'),sh.getLastRow()-1,1).getDisplayValues(),map={};
+ rows.forEach(function(v,i){var id=String(v[0]).trim();if(ids.indexOf(id)>=0){if(map[id])throw Error('Duplicate posts ID '+id);map[id]=i+2;}});
+ var erows=ex.getRange(2,1,ex.getLastRow()-1,1).getDisplayValues(),sources={};
+ erows.forEach(function(v,i){var id=String(v[0]).trim();if(ids.indexOf(id)>=0){if(sources[id])throw Error('Duplicate export ID '+id);sources[id]=i+2;}});
+ var results=[];
+ ids.forEach(function(id){
+  if(!map[id]||!sources[id])throw Error('Missing source or posts row for '+id);
+  if(String(sh.getRange(map[id],c('Article Type')).getValue()).trim()!=='Case Study')throw Error('Wrong article type '+id);
+  var html=String(ex.getRange(sources[id],15).getValue()||'');
+  if(!html)throw Error('Missing original HTML '+id);
+  var m=bc_caseEvidenceEnrichMedia_(map[id],html,heads);
+  results.push({postId:id,sourceImages:m.sourceImageTags,recordedImages:m.capturedImageUrls,uncertainPlacement:m.unconfirmedPlacement});
+ });
+ console.log(JSON.stringify(results));
+ return results;
+}
