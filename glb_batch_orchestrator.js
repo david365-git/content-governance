@@ -169,9 +169,10 @@ function glb_runSol(postId){
   var issues=audit&&(audit.missingProjectEvidence.length||audit.unexpected.length);
   // Save a recoverable draft before replacing the production New HTML cell.
   var ss=SpreadsheetApp.getActiveSpreadsheet(),out=ss.getSheetByName('Google Love Production Drafts');
-  if(!out){out=ss.insertSheet('Google Love Production Drafts');out.appendRow(['Post ID','Posts row','UTC','HTML','Model','Cost USD','Media audit JSON']);out.setFrozenRows(1);}
-  out.appendRow([id,a.row,glb_utc_(),html,'gpt-6.1-sol',Number(res.cost)||0,audit?JSON.stringify(audit):'']);
+  if(!out){out=ss.insertSheet('Google Love Production Drafts');out.appendRow(['Post ID','Posts row','UTC','HTML','Model','Cost USD','Media audit JSON','Prior New HTML']);out.setFrozenRows(1);}
   var target=glb_posts_(),col=glb_col_(target,'New HTML',false);
+  var prior=String(target.getRange(a.row,col).getValue()||'');
+  out.appendRow([id,a.row,glb_utc_(),html,'gpt-6.1-sol',Number(res.cost)||0,audit?JSON.stringify(audit):'',prior]);
   target.getRange(a.row,col).setValue(html);
   var date=glb_stamp_(a.row,GLB_SOL_HEADER);
   q.sh.getRange(q.row,7).setValue(date);
