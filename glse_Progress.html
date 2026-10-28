@@ -1,7 +1,7 @@
 <!doctype html><html><head><base target="_top"><style>
 body{font:13px Arial,sans-serif;padding:14px;color:#1d2939;background:#f8fafc}h2{font-size:18px;margin:0 0 7px}.minor{font-size:12px;color:#64748b;line-height:1.5}.state{background:#eef2f6;padding:11px;border-radius:6px;font-weight:bold;margin:12px 0}.bar{height:12px;background:#e2e8f0;border-radius:9px;overflow:hidden}.fill{background:#16825e;height:100%;width:0}.stats{display:flex;gap:7px;margin:10px 0}.stat{flex:1;border:1px solid #dce2ea;background:white;padding:9px;text-align:center;border-radius:6px}.num{font-size:21px;font-weight:bold}button{border:0;border-radius:6px;padding:10px 12px;background:#155a91;color:white;cursor:pointer}button:disabled{opacity:.4}.row{padding:9px 0;border-bottom:1px solid #e0e5eb;display:flex;justify-content:space-between;gap:8px}.right{text-align:right}.ok{color:#16825e}.problem{color:#a33c22}.note{color:#667085}#message{white-space:pre-wrap;margin:10px 0;font-size:12px}
 </style></head><body>
-<h2>Google Love — Evidence Test</h2><p class="minor">11 case studies • GPT-6.1 Sol • one generation per eligible post • original articles not supplied as factual source</p>
+<h2>Google Love — Media Evidence Test</h2><p class="minor">11 case studies • Media-aware single generation • Original draft results preserved</p>
 <div id="status" class="state">Checking…</div><div class="stats"><div class="stat"><div id="done" class="num">–</div><small>Completed</small></div><div class="stat"><div id="left" class="num">–</div><small>Remaining</small></div><div class="stat"><div id="blocked" class="num">–</div><small>No evidence</small></div></div>
 <div class="bar"><div class="fill" id="progress"></div></div><p id="pct" class="minor"></p>
 <p class="minor">Empty evidence records are skipped, not generated. Partial evidence is clearly marked; an article is still subject to independent review.</p>
@@ -17,7 +17,7 @@ function render(d){
  el('progress').style.width=(100*d.completed/d.total)+'%';el('pct').textContent=Math.round(100*d.completed/d.total)+'% generated';
  el('start').disabled=d.running;el('stop').disabled=!d.running;
  el('records').innerHTML=d.items.map(function(x){
- var label=x.state==='DONE'?'ok':x.state==='NO EVIDENCE'||x.state.indexOf('STOPPED')>=0?'problem':'note';
+ var label=x.state.indexOf('DONE')===0?(x.state.indexOf('REVIEW')>=0?'problem':'ok'):x.state==='NO EVIDENCE'||x.state.indexOf('STOPPED')>=0?'problem':'note';
  return '<div class="row"><div><b>'+escapeHtml(x.id)+'</b><div class="minor">'+x.populated+'/16 evidence fields</div></div><div class="right '+label+'">'+escapeHtml(x.state)+'</div></div>';
  }).join('');
 }
