@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html><head><base target="_top"><style>
+body{font:13px Arial,sans-serif;color:#202124;padding:12px;margin:0}
+h3{margin:0 0 8px}p{line-height:1.45;color:#555}
+textarea{box-sizing:border-box;width:100%;min-height:100px;border:1px solid #dadce0;border-radius:6px;padding:8px;font:13px Consolas,monospace}
+button{border:0;border-radius:5px;padding:9px 12px;margin:8px 6px 7px 0;color:white;background:#1967d2;cursor:pointer}
+button.secondary{background:#555}button:disabled{background:#aaa;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:11px}td,th{padding:6px 3px;border-bottom:1px solid #e5e5e5;text-align:left;vertical-align:top}
+small{color:#777}.ok{color:#137333}.warn{color:#9b5700}.err{color:#b3261e}
+#log{white-space:pre-wrap;max-height:150px;overflow:auto;background:#f5f5f5;padding:8px;margin-top:8px}
+#status{padding:6px 0;font-weight:bold}#grid{max-height:315px;overflow:auto}
+</style></head><body>
+<h3>Content Intelligence → Google Love Sol</h3>
+<p>Paste Post IDs, separated by commas or new lines. Each Post ID runs the <b>existing full Content Intelligence</b> (including case-study and media extraction), then one Sol article generation. The finished HTML is saved in <b>posts → New HTML</b> for your original image, meta and schema windows.</p>
+<textarea id="ids" placeholder="5628&#10;11417&#10;6847"></textarea>
+<div><button id="load" onclick="loadIds()">Load / Add Post IDs</button><button id="start" onclick="startRun()">Start / Resume</button><button class="secondary" onclick="stopRun()">Stop after current step</button></div>
+<div id="status">Ready.</div><small>Closing the sidebar stops automatic progression. An interrupted in-flight paid step is marked for manual review; it will not be charged again automatically.</small>
+<div id="grid"><table><thead><tr><th>Post ID</th><th>Stage</th><th>CI completed</th><th>Sol completed</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div id="log"></div>
+<script>
+var active=false,queue=[],chosen=[],busy=false;
+function log(x){var el=document.getElementById('log');el.textContent+=(el.textContent?'\n':'')+x;el.scrollTop=el.scrollHeight;}
+function status(x){document.getElementById('status').textContent=x;}
+function err(e){active=false;busy=false;status('Stopped: '+(e&&e.message||e));log('ERROR: '+(e&&e.message||e));}
+function parseIds(){return Array.from(new Set(document.getElementById('ids').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean)));}
+function refresh(done){
+ google.script.run.withSuccessHandler(function(a){
+  queue=a||[];var body=document.getElementById('rows');body.textContent='';
+  queue.forEach(function(q){
+   var tr=document.createElement('tr');
+   [q.postId,q.status,q.ciDate||'—',q.solDate||'—'].forEach(function(txt){
+    var td=document.createElement('td');td.textContent=txt;
+    if(/REVIEW/.test(q.status))td.className='err';
+    else if(/DONE/.test(q.status))td.className='ok';
+    tr.appendChild(td);
+   });body.appendChild(tr);
+  });if(done)done();
+ }).withFailureHandler(err).glb_progress();
+}
+function loadIds(){
+ if(busy)return;var ids=parseIds();
+ if(!ids.length){status('Enter at least one Post ID');return;}
+ busy=true;status('Checking Post IDs and setting up the queue…');
+ google.script.run.withSuccessHandler(function(res){
+  busy=false;chosen=res.ids;status('Loaded '+chosen.length+' Post IDs. Ready to start.');
+  refresh();log('Loaded: '+chosen.join(', '));
+ }).withFailureHandler(err).glb_prepare(ids.join('\n'));
+}
+function startRun(){
+ if(active||busy)return;
+ var typed=parseIds();
+ if(typed.length&&!chosen.length){status('Load the Post IDs first, then start.');return;}
+ if(!chosen.length){chosen=queue.map(x=>x.postId);}
+ if(!chosen.length){status('No queued Post IDs');return;}
+ active=true;status('Running queued Post IDs…');next();
+}
+function stopRun(){active=false;status('Stop requested; current API step may finish.');}
+function next(){
+ if(!active)return;
+ refresh(function(){
+  if(!active)return;
+  var x=queue.find(q=>chosen.indexOf(q.postId)>=0&&['QUEUED','CI DONE'].indexOf(q.status)>=0);
+  if(!x){
+   active=false;var blocked=queue.filter(q=>chosen.indexOf(q.postId)>=0&&/REVIEW|RUNNING/.test(q.status));
+   status(blocked.length?'Stopped — '+blocked.length+' item(s) require review.':'Selected Post IDs complete.');
+   return;
+  }
+  var isCI=x.status==='QUEUED';status('Post ID '+x.postId+' — '+(isCI?'Content Intelligence':'Google Love Sol'));
+  log('Post '+x.postId+': '+(isCI?'Content Intelligence':'Sol')+' started');
+  var runner=google.script.run.withSuccessHandler(function(r){
+   log('Post '+x.postId+': '+((r&&r.success)?(r.status||'completed'):'STOPPED — '+(r&&r.message||'unknown failure')));
+   if(!r||!r.success){active=false;status('Stopped — review Post ID '+x.postId);refresh();return;}
+   next();
+  }).withFailureHandler(err);
+  if(isCI)runner.glb_runCI(x.postId);else runner.glb_runSol(x.postId);
+ });
+}
+refresh();
+</script></body></html>
