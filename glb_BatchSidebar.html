@@ -11,106 +11,74 @@ small{color:#777}.ok{color:#137333}.warn{color:#9b5700}.err{color:#b3261e}
 #status{padding:6px 0;font-weight:bold}#grid{max-height:315px;overflow:auto}
 </style></head><body>
 <h3>Content Intelligence → Google Love Sol</h3>
-<p>Paste Post IDs, separated by commas or new lines. Each Post ID runs the <b>existing full Content Intelligence</b> (including case-study and media extraction), then one Sol article generation. The finished HTML is saved in <b>posts → New HTML</b> for your original image, meta and schema windows.</p>
+<p>Enter the Post IDs to process, separated by commas or new lines. Each Post ID runs the <b>existing full Content Intelligence</b> (including case-study and media extraction), then one Sol article generation. The finished HTML is saved in <b>posts → New HTML</b> for your original image, meta and schema windows.</p>
 <textarea id="ids" placeholder="5628&#10;11417&#10;6847"></textarea>
-<div><button class="secondary" onclick="useFinalTest()">Use 8-Article Final Test</button></div>
-<div><button id="load" onclick="loadIds()">Load / Add Post IDs</button><button id="start" onclick="startRun()">Start / Resume</button><button class="secondary" onclick="stopRun()">Stop after current step</button></div>
-<div id="status">Ready.</div><div id="progressSummary">0 / 0 completed</div><div id="barOuter"><div id="barInner"></div></div><div id="counts"><span id="remaining">0 remaining</span><span id="blocked">0 require review</span></div><div id="current">Current: —</div><button class="secondary" id="retry" onclick="retryReview()" style="display:none">Retry corrected CI Post ID</button><small>The progress table refreshes automatically. Closing the sidebar stops automatic progression. An interrupted in-flight paid step is marked for manual review; it will not be charged again automatically.</small>
+<div><button id="run" onclick="runPosts()">Run Post IDs</button><button class="secondary" onclick="stopRun()">Stop after current stage</button></div>
+<div id="status">Ready.</div><div id="progressSummary">0 / 0 completed</div><div id="barOuter"><div id="barInner"></div></div><div id="counts"><span id="remaining">0 remaining</span><span id="blocked">0 require review</span></div><div id="current">Current: —</div><small>Post IDs run in the order entered. Keep this sidebar open during the batch. If a stage fails, the batch stops and displays the reason.</small>
 <div id="grid"><table><thead><tr><th>Post ID</th><th>Stage</th><th>CI completed</th><th>Sol completed</th></tr></thead><tbody id="rows"></tbody></table></div>
 <div id="log"></div>
 <script>
-var active=false,queue=[],chosen=[],busy=false,refreshBusy=false,pendingStep=null;
+var active=false,busy=false,items=[],index=0,phase='CI',queue=[],refreshBusy=false;
 function el(id){return document.getElementById(id);}
-function log(t){var x=el('log');x.textContent+=(x.textContent?'\n':'')+t;x.scrollTop=x.scrollHeight;}
-function status(t){el('status').textContent=t;}
-function err(e){active=false;busy=false;pendingStep=null;status('Stopped: '+(e&&e.message||e));log('ERROR: '+(e&&e.message||e));refresh();}
-function parseIds(){return Array.from(new Set(el('ids').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean)));}
-function useFinalTest(){el('ids').value='22872\n5597\n8265\n8351\n8566\n5486\n43064\n43364';status('Final test IDs entered. Click Load / Add Post IDs.');}
-function selected(){return queue.filter(q=>!chosen.length||chosen.includes(q.postId));}
-function updateView(){
+function show(t){el('status').textContent=t;}
+function log(t){var n=el('log');n.textContent+=(n.textContent?'\n':'')+t;n.scrollTop=n.scrollHeight;}
+function parse(){return Array.from(new Set(el('ids').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean)));}
+function render(){
  var body=el('rows');body.textContent='';
  queue.forEach(function(q){
+  if(items.length&&!items.includes(q.postId))return;
   var tr=document.createElement('tr');
-  [q.postId,q.status,q.ciDate||'—',q.solDate||'—'].forEach(function(t){
-   var td=document.createElement('td');td.textContent=t;
-   if(/REVIEW/.test(q.status))td.className='err';
-   else if(/DONE/.test(q.status))td.className='ok';
-   tr.appendChild(td);
+  [q.postId,q.status,q.ciDate||'—',q.solDate||'—'].forEach(function(v){
+   var td=document.createElement('td');td.textContent=v;if(/REVIEW/.test(q.status))td.className='err';tr.appendChild(td);
   });body.appendChild(tr);
  });
- var list=selected(),done=list.filter(q=>q.status==='SOL DONE'||q.status==='SOL REVIEW').length;
- var reviews=list.filter(q=>q.status==='CI REVIEW'||q.status==='SOL REVIEW'||q.status==='CI RUNNING'||q.status==='SOL RUNNING');
- var remaining=list.length-done;
- el('progressSummary').textContent=done+' / '+list.length+' articles generated';
- el('barInner').style.width=(list.length?Math.round(100*done/list.length):0)+'%';
- el('remaining').textContent=remaining+' awaiting Sol';
- el('blocked').textContent=reviews.length+' review / in progress';
- var current=list.find(q=>q.status==='CI RUNNING'||q.status==='SOL RUNNING')||list.find(q=>q.status==='CI REVIEW')||list.find(q=>q.status==='QUEUED'||q.status==='CI DONE');
- el('current').textContent=current?'Current / next: '+current.postId+' — '+current.status:'Current: —';
- var retry=list.find(q=>q.status==='CI REVIEW');
- el('retry').style.display=retry?'inline-block':'none';
- if(!active&&!pendingStep&&list.length&&remaining===0&&!reviews.some(q=>q.status==='CI REVIEW'||q.status==='CI RUNNING'||q.status==='SOL RUNNING'))status('FINISHED — Check results');
+ var n=items.length;
+ el('progressSummary').textContent=index+' / '+n+' processed';
+ el('barInner').style.width=(n?Math.round(index/n*100):0)+'%';
+ el('remaining').textContent=(n-index)+' remaining';
+ el('blocked').textContent=active?'Running':'';
+ el('current').textContent=active&&items[index]?'Current: '+items[index]+' — '+phase:'Current: —';
 }
-function refresh(done){
- if(refreshBusy){if(done)setTimeout(()=>refresh(done),400);return;}
+function poll(){
+ if(refreshBusy)return;
  refreshBusy=true;
- google.script.run.withSuccessHandler(function(a){refreshBusy=false;queue=a||[];updateView();if(done)done();})
- .withFailureHandler(function(e){refreshBusy=false;err(e);}).glb_progress();
+ google.script.run.withSuccessHandler(function(v){refreshBusy=false;queue=v||[];render();})
+  .withFailureHandler(function(e){refreshBusy=false;log('Progress refresh: '+(e.message||e));}).glb_progress();
 }
-function loadIds(){
- if(busy||active)return;
- var ids=parseIds();if(!ids.length){status('Enter Post IDs');return;}
- busy=true;status('Loading Post IDs into queue…');
- google.script.run.withSuccessHandler(function(res){
-  busy=false;chosen=res.ids;status('Loaded '+chosen.length+' Post IDs. Ready to start.');
-  log('Loaded '+chosen.join(', '));refresh();
- }).withFailureHandler(err).glb_prepare(ids.join('\n'));
+function runPosts(){
+ if(active||busy)return;
+ items=parse();if(!items.length){show('Enter at least one Post ID');return;}
+ active=true;busy=true;index=0;phase='CI';el('run').disabled=true;
+ el('log').textContent='';show('Preparing '+items.length+' Post IDs…');render();
+ google.script.run.withSuccessHandler(function(v){
+  busy=false;items=v.ids;log('Processing '+items.join(', '));advance();
+ }).withFailureHandler(stopError).glb_prepare(items.join('\n'));
 }
-function startRun(){
- if(active||busy||pendingStep)return;
- if(parseIds().length&&!chosen.length){status('Load the Post IDs first, then start.');return;}
- if(!chosen.length)chosen=queue.map(q=>q.postId);
- if(!chosen.length){status('No queued Post IDs');return;}
- active=true;status('RUNNING — Selecting next stage…');next();
+function stopError(e){
+ active=false;busy=false;el('run').disabled=false;
+ show('STOPPED — '+String(e&&e.message||e));log('Stopped: '+String(e&&e.message||e));poll();
 }
-function stopRun(){active=false;status('Stopping after current step.');}
-function next(){
- if(!active||pendingStep)return;
- refresh(function(){
-  if(!active)return;
-  var list=selected();
-  var blocked=list.find(q=>q.status==='CI REVIEW'||q.status==='CI RUNNING'||q.status==='SOL RUNNING');
-  if(blocked){
-   active=false;status('STOPPED — Post ID '+blocked.postId+' requires attention ('+blocked.status+').');
-   log('Stopped at '+blocked.postId+': '+blocked.message);
-   return;
-  }
-  var x=list.find(q=>q.status==='QUEUED'||q.status==='CI DONE');
-  if(!x){active=false;status('FINISHED — Check results');return;}
-  var isCI=x.status==='QUEUED';
-  var stage=isCI?'Content Intelligence':'Google Love Sol';
-  pendingStep=x.postId;
-  el('current').textContent='RUNNING: '+x.postId+' — '+stage;
-  status('RUNNING — Post ID '+x.postId+' — '+stage);
-  log('Starting '+stage+' for '+x.postId);
-  var handler=google.script.run.withSuccessHandler(function(r){
-   pendingStep=null;
-   log('Post '+x.postId+': '+(r&&r.success?(r.status||'stage complete'):'STOPPED '+(r&&r.message||'Unknown error')));
-   if(!r||!r.success){active=false;status('STOPPED — Review '+x.postId);refresh();return;}
-   next();
-  }).withFailureHandler(err);
-  if(isCI)handler.glb_runCI(x.postId);else handler.glb_runSol(x.postId);
- });
+function stopRun(){
+ active=false;show('Stopping after current stage…');
+ if(!busy){el('run').disabled=false;show('Stopped by operator');}
 }
-function retryReview(){
- if(active||pendingStep||busy)return;
- var x=selected().find(q=>q.status==='CI REVIEW');
- if(!x)return;
- if(!confirm('You have corrected the missing source information for Post '+x.postId+'?\nThis reruns its complete Content Intelligence and may incur new API charges. It does NOT repeat Sol.'))return;
- busy=true;status('Resetting corrected Post '+x.postId+' to queued…');
- google.script.run.withSuccessHandler(function(r){busy=false;log(r.message);status('Post '+x.postId+' ready. Click Start / Resume.');refresh();})
- .withFailureHandler(err).glb_retryCI(x.postId);
+function advance(){
+ if(!active){busy=false;el('run').disabled=false;poll();return;}
+ if(index>=items.length){
+  active=false;busy=false;el('run').disabled=false;
+  show('FINISHED — Check results');log('All '+items.length+' Post IDs processed');poll();return;
+ }
+ var id=items[index],step=phase==='CI'?'Content Intelligence':'Google Love Sol';
+ busy=true;show('RUNNING — '+id+' — '+step);el('current').textContent='RUNNING: '+id+' — '+step;
+ log('Starting '+id+' — '+step);
+ google.script.run.withSuccessHandler(function(r){
+  busy=false;poll();
+  if(!r||!r.success){stopError(new Error('Post '+id+': '+(r&&r.message||'stage failed')));return;}
+  log(id+' — '+step+' completed');
+  if(phase==='CI')phase='SOL';
+  else{index++;phase='CI';}
+  render();advance();
+ }).withFailureHandler(stopError).glb_runDirectPost_(id,phase);
 }
-setInterval(function(){if(!refreshBusy)refresh();},5000);
-refresh();
+setInterval(poll,5000);poll();
 </script></body></html>
