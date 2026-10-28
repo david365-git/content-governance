@@ -144,11 +144,32 @@ function glb_buildSolPrompt_(a){
   var media=JSON.parse(String(v[13]||'{}'));
   if(!Array.isArray(media.imagesAndVideos))throw Error('Case-study media inventory invalid');
   var images=media.imagesAndVideos.filter(function(x){return x&&x.type==='image'&&x.url;});
-  common.push('Use only the structured evidence below as authority for facts about this project. Distinguish completed work from advice, unconfirmed tests and possible causes.');
-  common.push('Create a detailed chronological story with actual equipment, grades, products, coats, decisions, limitations and outcomes where evidenced. Omit undemonstrated claims.');
-  common.push('Use original image URLs exactly. Place useful project photographs by surrounding source text, captions, section and stage; if placement uncertain use a neutral description. Do not portray author portraits, product images or illustrations as project photographs.');
-  common.push('=== STRUCTURED PROJECT EVIDENCE ===',fields.filter(function(x,i){return i!==13&&String(v[i]||'').trim();}).map(function(x){return x+'\n'+v[fields.indexOf(x)];}).join('\n\n'));
-  common.push('=== SOURCE MEDIA CONTEXT ===',JSON.stringify(images.map(function(m){return {url:m.url,alt:m.alt||'',caption:m.originalCaption||'',section:m.sourceSection||'',nearby:m.nearbySourceText||'',stage:m.suggestedStage||'',confidence:m.placementConfidence||''};})));
+  // Reuse the tested single-pass media-aware case-study instructions.
+  common=[
+   'Create one outstanding UK homeowner-facing restoration case study, in clean article HTML only.',
+   'FACTUAL AUTHORITY: The supplied structured evidence is the sole project-specific factual record. Never use general technical guidance to invent work, observations, results or client quotations.',
+   'Clearly distinguish completed work, proposed work, recommendations, uncertainty and information not recorded. Never convert a recommended treatment into work performed.',
+   'Give the actual project a compelling, chronological narrative. Explain why decisions mattered. Retain concrete facts: abrasive grades, products, equipment, extraction, timings, counts of coatings, client requirements, what failed and genuine outcomes wherever documented.',
+   'Use technical matrix for material behaviour, safe advice and corrections; do not override recorded history or present outdated methods as universal recommendations.',
+   'Evidence Package and Evidence Relationships support factual fidelity when present; Evidence Coverage, Gaps and Status restrict certainty. Do not print internal metadata or evidence schema.',
+   'MEDIA PLACEMENT: The separate image inventory below contains actual source HTML URLs and description metadata, NOT independent visual verification. Never infer image contents from a URL alone.',
+   'Place every relevant, distinct project image near the paragraph or section supported by its original alt/caption, source section, and nearby text. Use original source order if equally relevant. Use the exact image URL, unchanged, as an HTML img src.',
+   'Do not invent captions, image descriptions, image URLs, or work-to-image relationships. If stage or description is uncertain, use a neutral caption, or omit the caption; do not assert that an image proves a specific method or outcome.',
+   'Photographs of unrelated branding, authors, repeated views or illustrations may be omitted if they do not serve the homeowner; do not replace them with invented photos. Include relevant source videos only if supported and safe to embed; never invent embed URLs.',
+   'Never silently drop a useful before/during/after photograph for brevity. Place captions conservatively, based on supplied source wording, and do not imply a photo was independently inspected.',
+   'Direct answer, British English, practical and readable, no fluff, padding, generic town history, SEO stuffing or lengthy disclaimers.',
+   'When urethane/polyurethane means a type of sealer in homeowner text, use film-forming sealer. Preserve distinct topical and impregnating terminology, sealer coat counts, and actual finishes.',
+   'Never mention or imply the prohibited UK building defect moisture diagnosis. Describe actual moisture and salt movement only when evidence supports it.',
+   'Return only full HTML.',
+   'POST ID '+a.id,'TITLE '+source.title,'MATERIAL '+source.material,'TYPE '+source.type,
+   '=== GLOBAL TECHNICAL SAFEGUARD ===',rule,
+   '=== APPROVED TECHNICAL MATRIX N:S ===',source.technical,
+   '=== STRUCTURED PROJECT EVIDENCE ===',fields.filter(function(x,i){return i!==13&&String(v[i]||'').trim();}).map(function(x){return '=== '+x+' ===\n'+v[fields.indexOf(x)];}).join('\n\n'),
+   '=== SOURCE IMAGE INVENTORY (URLS + CONTEXT, NOT VISUALLY VERIFIED) ===',
+   images.map(function(m,i){return JSON.stringify({imageNumber:i+1,url:m.url,alt:m.alt||'',originalCaption:m.originalCaption||'',sourceSection:m.sourceSection||'',nearbySourceText:m.nearbySourceText||'',nearbyTextBasis:m.nearbyTextBasis||'',suggestedStage:m.suggestedStage||'uncertain',placementConfidence:m.placementConfidence||'unconfirmed',sourceOrder:m.order||i+1});}).join('\n')||'(no indexed project images)',
+   '=== SOURCE MEDIA COMPLETENESS ===',JSON.stringify(media.mediaAudit||{}),
+   '=== UNPOPULATED FIELDS; DO NOT GUESS ===',fields.filter(function(x,i){return !String(v[i]||'').trim();}).join('; ')||'(none)'
+  ];
  }
  var prompt=common.join('\n\n');
  if(prompt.length>170000)throw Error('Prompt too large; stopped without truncating');
