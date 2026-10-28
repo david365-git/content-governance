@@ -157,12 +157,47 @@ function glb_runRequestedSol(postId){
  // Use existing tested Sol logic, which requires the preceding CI DONE mark.
  return glb_runSol(postId);
 }
+
+/** Fixed Abbey author and CTA HTML. Sol supplies only article-specific copy. */
+function glb_escapeHtml_(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function glb_appendAuthorCta_(html){
+ var text=String(html||'');
+ var marker=/<!--\s*ABBEY_AUTHOR_CTA\s*-->\s*<script[^>]*type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/i;
+ var match=marker.exec(text);
+ if(!match)throw Error('Author/CTA JSON marker missing. No article saved.');
+ var payload;
+ try{payload=JSON.parse(match[1]);}catch(e){throw Error('Invalid author/CTA JSON: '+e.message);}
+ var bio=String(payload.bio||'').trim(),summary=String(payload.ctaSummary||'').trim(),anchor=String(payload.ctaAnchor||'').trim();
+ if(!bio||!summary||!anchor||bio.length>900||summary.length>450||anchor.length>140)throw Error('Author/CTA text missing or excessive');
+ if(/<|>|https?:\/\//i.test(bio+' '+summary+' '+anchor))throw Error('Author/CTA values must be plain text');
+ var box='<div class="abbey-bio-box" style="border:1px solid #ddd;border-radius:8px;padding:16px;background:#f9f9f9;margin:24px 0;display:flex;gap:16px;align-items:flex-start">'+
+  '<div style="flex:0 0 80px"><img src="https://www.abbeyfloorcare.co.uk/wp-content/uploads/David_Allen.jpg" alt="David Allen, stone and tile restoration specialist" style="width:80px;height:auto;border-radius:6px" /></div>'+
+  '<div style="flex:1"><p style="margin:0 0 6px 0;font-weight:700">David Allen — <a href="https://maps.app.goo.gl/W8GSsZUiWoxYPQ1Y6" target="_blank" rel="noopener noreferrer">Abbey Floor Care</a></p>'+
+  '<p style="margin:0;font-size:0.95em;color:#444">'+glb_escapeHtml_(bio)+'</p></div></div>';
+ var footer='<footer class="abbey-article-cta"><p>'+glb_escapeHtml_(summary)+' <a href="/contact">'+glb_escapeHtml_(anchor)+'</a></p></footer>';
+ text=text.replace(marker,'').trim();
+ // Insert at end of article, not outside document/body.
+ var close=/<\/article\s*>/gi,m,last=null;
+ while((m=close.exec(text)))last={index:m.index};
+ if(!last)throw Error('Article closing tag missing; cannot safely append author and CTA');
+ return text.slice(0,last.index)+box+'\n'+footer+'\n'+text.slice(last.index);
+}
+
 function glb_buildSolPrompt_(a){
  if(typeof glc_getArticle_!=='function')throw Error('Missing Google Love article reader');
  var source=glc_getArticle_(a.id);
  if(!String(source.technical||'').trim()||String(source.technicalSource||'').indexOf('technical!')!==0)
   throw Error('Approved Technical Matrix N:S missing for '+a.id);
  var rule=glc_moistureRule_();
+ var authorInstruction=[
+  'AUTHOR AND CONTACT FOOTER REQUIRED: The article HTML must end with a separate machine-readable JSON data block directly after the closing </article> and before </body> if present. Do not write the finished author box or footer yourself.',
+  'Return this literal marker followed by a script element: <!-- ABBEY_AUTHOR_CTA --><script type="application/json">{"bio":"...","ctaSummary":"...","ctaAnchor":"..."}</script>',
+  'Supply plain-text JSON string values with valid JSON escaping; no HTML inside values.',
+  'bio: 2-3 natural sentences identifying David Allen of Abbey Floor Care, his more than 30 years of hands-on restoration experience, and experience relevant to THIS article material/topic. For case studies refer to the documented project methods only when his participation is supported; otherwise write about relevant professional experience without claiming he personally performed the job.',
+  'ctaSummary: one specific natural sentence explaining the article’s useful outcome or central homeowner benefit. For case studies use documented results, never invented outcomes.',
+  'ctaAnchor: concise invitation to contact Abbey Floor Care about the material and relevant service; e.g. Contact us to discuss professional travertine floor restoration. Do not invent free assessments, prices, guarantees or availability.',
+  'Keep the main article excellent and complete; author/CTA data is separate, not part of article prose.'
+ ];
  var common=[
   'Write one outstanding standalone UK homeowner-facing floor restoration article. Return clean HTML only.',
   'Use British English, direct helpful explanations, evidence-led practical expertise, excellent structure and no empty padding, town history or excessive SEO repetition.',
@@ -217,6 +252,7 @@ function glb_buildSolPrompt_(a){
    '=== UNPOPULATED FIELDS; DO NOT GUESS ===',fields.filter(function(x,i){return !String(v[i]||'').trim();}).join('; ')||'(none)'
   ];
  }
+ common=common.concat(authorInstruction);
  var prompt=common.join('\n\n');
  if(prompt.length>170000)throw Error('Prompt too large; stopped without truncating');
  return {prompt:prompt,media:a.type==='Case Study'?JSON.parse(String(glb_posts_().getRange(a.row,207).getDisplayValue()||'{}')):null};
@@ -233,7 +269,7 @@ function glb_runSol(postId){
  try{
   res=bc_sendPromptViaOpenAI(built.prompt,16000,'gpt-6.1-sol');
   if(!res||!res.success||res.truncated||!String(res.text||'').trim())throw Error('Sol returned no complete article');
-  var html=String(res.text).replace(/^\s*```(?:html)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
+  var html=glb_appendAuthorCta_(String(res.text).replace(/^\s*```(?:html)?\s*/i,'').replace(/\s*```\s*$/,'').trim());
   if(html.length>48000||!/<h[12]\b/i.test(html)||!/<p\b/i.test(html))throw Error('Sol returned invalid or oversized HTML');
   if(/\brising[\s-]+damp\b/i.test(html.replace(/<[^>]*>/g,' ')))throw Error('Prohibited moisture wording detected');
   var audit=a.type==='Case Study'?glse_mediaCheck_(html,{images:built.media.imagesAndVideos.filter(function(x){return x&&x.type==='image'&&x.url;})}):null;
