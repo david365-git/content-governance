@@ -258,3 +258,32 @@ function glb_openSidebar(){
  glb_setup_();
  SpreadsheetApp.getUi().showSidebar(HtmlService.createHtmlOutputFromFile('glb_BatchSidebar').setTitle('Content Intelligence → Google Love Sol'));
 }
+
+/** Direct operator-selected batch: no queue setup, retry decisions or state gating.
+ * Processes each supplied ID once per click. Existing stages are not changed.
+ */
+function glb_runDirectPost_(postId,phase){
+ var a=glb_lookup_(String(postId));
+ if(phase==='CI'){
+  glb_mark_(a.id,'CI RUNNING','Content Intelligence running');
+  var ci=runMasterContentIntelligenceBatchRow(a.row,a.material);
+  if(!ci||!ci.success){glb_mark_(a.id,'CI REVIEW',String(ci&&ci.message||'CI failed'));return {success:false,message:String(ci&&ci.message||'CI failed')};}
+  var sh=glb_posts_();
+  if(a.type==='Case Study'){
+   var h=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0],ix=h.indexOf('Evidence Status');
+   if(ix<0||String(sh.getRange(a.row,ix+1).getDisplayValue()).indexOf('SOURCE-QUOTED | sha256:')!==0)
+    return {success:false,message:'Case-study evidence extraction was not completed'};
+  }
+  var stamp=glb_stamp_(a.row,GLB_CI_HEADER),q=glb_queueState_(a.id);
+  q.sh.getRange(q.row,6).setValue(stamp);
+  glb_mark_(a.id,'CI DONE','Content Intelligence completed',Number(ci.cost||0),'CI');
+  return {success:true,stage:'CI DONE'};
+ }
+ if(phase==='SOL'){
+  // Allow user-directed execution after CI completes, irrespective of older queue status.
+  var state=glb_queueState_(a.id),current=String(state.values[4]||'');
+  if(current!=='CI DONE')return {success:false,message:'Content Intelligence has not completed for this run'};
+  return glb_runSol(a.id);
+ }
+ return {success:false,message:'Unknown phase'};
+}
