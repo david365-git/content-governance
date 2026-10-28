@@ -78,7 +78,7 @@ function advance(){
   if(phase==='CI')phase='SOL';
   else{index++;phase='CI';}
   render();advance();
- }).withFailureHandler(stopError).glb_runDirectPost_(id,phase);
+ }).withFailureHandler(stopError).glb_runDirectPost(id,phase);
 }
 setInterval(poll,5000);poll();
 </script></body></html>
