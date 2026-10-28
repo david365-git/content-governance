@@ -12,6 +12,7 @@ function onOpen(e) {
     .addItem('🧪 Google Love Model Comparison', 'glc_openComparisonSidebar')
     .addItem('📈 Google Love Sol Batch — Running & Progress', 'glc_openSol20Sidebar')
     .addItem('🧾 Google Love — Structured Evidence Test', 'glse_openSidebar')
+    .addItem('📋 Content Intelligence → Google Love Sol Batch', 'glb_openSidebar')
     .addItem('✂️ Restore lost NewHtml etc', 'restoreActiveRowFromSiteExport')
     .addItem('📋 Batch Build Authority Briefs', 'bc_batchBuildAuthorityBriefs')
     .addSeparator()
