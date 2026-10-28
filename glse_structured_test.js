@@ -8,7 +8,7 @@ var GLSE_FIELDS=['Project Location & Property','Observed Conditions','Client Req
 var GLSE_TAB='GL Structured Evidence Media Test';
 function glse_sheet_(){
  var ss=SpreadsheetApp.getActiveSpreadsheet(),s=ss.getSheetByName(GLSE_TAB);
- if(!s){s=ss.insertSheet(GLSE_TAB);s.appendRow(['Post ID','Status','Posts row','Populated fields','Missing fields','HTML','Model','Cost USD','Updated UTC','Message']);s.setFrozenRows(1);}
+ if(!s){s=ss.insertSheet(GLSE_TAB);s.appendRow(['Post ID','Status','Posts row','Populated fields','Missing fields','HTML','Model','Cost USD','Updated UTC','Message','Media audit JSON']);s.setFrozenRows(1);}
  return s;
 }
 function glse_now_(){return Utilities.formatDate(new Date(),'Etc/UTC',"yyyy-MM-dd'T'HH:mm:ss'Z'");}
@@ -61,9 +61,9 @@ function glse_saved_(id){
  for(var i=0;i<v.length;i++)if(v[i][0]===id)return {row:i+2,status:v[i][1]};
  return null;
 }
-function glse_write_(id,status,e,html,cost,msg){
+function glse_write_(id,status,e,html,cost,msg,mediaAudit){
  var s=glse_sheet_(),prev=glse_saved_(id),row=prev?prev.row:s.getLastRow()+1;
- s.getRange(row,1,1,10).setValues([[id,status,e.row,e.present.length,e.missing.join(' | '),String(html||''), 'gpt-6.1-sol',cost||0,glse_now_(),String(msg||'').slice(0,1500)]]);
+ s.getRange(row,1,1,11).setValues([[id,status,e.row,e.present.length,e.missing.join(' | '),String(html||''), 'gpt-6.1-sol',cost||0,glse_now_(),String(msg||'').slice(0,1500),mediaAudit?JSON.stringify(mediaAudit):'']]);
  return row;
 }
 function glse_overview(){
@@ -134,7 +134,7 @@ function glse_generateOne_(id){
     (check.missing.length?'Omitted source URLs: '+check.missing.join(' | ')+'. ':'')+
     (check.unexpected.length?'Unapproved image URLs: '+check.unexpected.join(' | ')+'. ':'')+
     'Independent editorial review pending.';
-  glse_write_(id,review?'DONE — MEDIA REVIEW':'DONE',e,html,Number(result.cost)||0,report);
+  glse_write_(id,review?'DONE — MEDIA REVIEW':'DONE',e,html,Number(result.cost)||0,report,check);
  }catch(err){
   glse_write_(id,'STOPPED — REVIEW',e,'',Number(result&&result.cost)||0,String(err.message||err));
   throw err;
