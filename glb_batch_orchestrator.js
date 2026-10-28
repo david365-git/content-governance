@@ -135,15 +135,19 @@ function glb_buildSolPrompt_(a){
   var sh=glb_posts_(),v=sh.getRange(a.row,194,1,16).getDisplayValues()[0];
   var fields=typeof GLSE_FIELDS!=='undefined'?GLSE_FIELDS:null;
   if(!fields||fields.length!==16)throw Error('Structured evidence schema missing');
-  var missing=fields.filter(function(h,i){return !String(v[i]||'').trim();});
-  if(missing.length)throw Error('Structured project evidence incomplete: '+missing.join(', '));
+  // The unchanged Content Intelligence extractor writes the first ten
+  // source-quoted categories, media GY and Evidence Status HA. Remaining
+  // auxiliary evidence fields are optional, not mandatory for new posts.
+  var required=fields.slice(0,10).concat([fields[13],fields[15]]);
+  var missing=required.filter(function(h){return !String(v[fields.indexOf(h)]||'').trim();});
+  if(missing.length)throw Error('Required extracted evidence incomplete: '+missing.join(', '));
   var media=JSON.parse(String(v[13]||'{}'));
   if(!Array.isArray(media.imagesAndVideos))throw Error('Case-study media inventory invalid');
   var images=media.imagesAndVideos.filter(function(x){return x&&x.type==='image'&&x.url;});
   common.push('Use only the structured evidence below as authority for facts about this project. Distinguish completed work from advice, unconfirmed tests and possible causes.');
   common.push('Create a detailed chronological story with actual equipment, grades, products, coats, decisions, limitations and outcomes where evidenced. Omit undemonstrated claims.');
   common.push('Use original image URLs exactly. Place useful project photographs by surrounding source text, captions, section and stage; if placement uncertain use a neutral description. Do not portray author portraits, product images or illustrations as project photographs.');
-  common.push('=== STRUCTURED PROJECT EVIDENCE ===',fields.filter(function(x,i){return i!==13;}).map(function(x){return x+'\n'+v[fields.indexOf(x)];}).join('\n\n'));
+  common.push('=== STRUCTURED PROJECT EVIDENCE ===',fields.filter(function(x,i){return i!==13&&String(v[i]||'').trim();}).map(function(x){return x+'\n'+v[fields.indexOf(x)];}).join('\n\n'));
   common.push('=== SOURCE MEDIA CONTEXT ===',JSON.stringify(images.map(function(m){return {url:m.url,alt:m.alt||'',caption:m.originalCaption||'',section:m.sourceSection||'',nearby:m.nearbySourceText||'',stage:m.suggestedStage||'',confidence:m.placementConfidence||''};})));
  }
  var prompt=common.join('\n\n');
