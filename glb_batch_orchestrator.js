@@ -115,6 +115,18 @@ function glb_runCI(postId){
   return {success:false,message:String(err.message||err)};
  }
 }
+/** Explicit operator reset after correcting CI input. Never resets a Sol attempt. */
+function glb_retryCI(postId){
+ var id=String(postId||''),q=glb_queueState_(id),state=String(q.values[4]||'');
+ if(state!=='CI REVIEW')throw Error('Only CI REVIEW can be retried; current state '+state);
+ var current=glb_lookup_(id);
+ if(current.row!==Number(q.values[1]))throw Error('Post row has moved; cannot reset');
+ if(q.values[6])throw Error('Sol completion already recorded; cannot reset CI');
+ q.sh.getRange(q.row,5).setValue('QUEUED');
+ q.sh.getRange(q.row,10).setValue('Operator requested a new full CI attempt after correcting source data. Earlier CI attempts may have incurred costs.');
+ q.sh.getRange(q.row,11).setValue(glb_utc_());
+ return {success:true,message:'Post '+id+' queued for another full Content Intelligence run.'};
+}
 function glb_buildSolPrompt_(a){
  if(typeof glc_getArticle_!=='function')throw Error('Missing Google Love article reader');
  var source=glc_getArticle_(a.id);
