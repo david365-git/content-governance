@@ -22,7 +22,8 @@ function glb_setup_(){
  // Keep sidebar polling read-only; initialise posts tracking headings only in glb_prepare.
 
  var ss=SpreadsheetApp.getActiveSpreadsheet(),s=ss.getSheetByName(GLB_SHEET);
- if(!s){s=ss.insertSheet(GLB_SHEET);s.getRange(1,1,1,GLB_QUEUE_HEADERS.length).setValues([GLB_QUEUE_HEADERS]);s.setFrozenRows(1);}
+ if(!s){s=ss.insertSheet(GLB_SHEET);}
+ if(s.getLastRow()<1){s.getRange(1,1,1,GLB_QUEUE_HEADERS.length).setValues([GLB_QUEUE_HEADERS]);s.setFrozenRows(1);}
  var h=s.getRange(1,1,1,GLB_QUEUE_HEADERS.length).getDisplayValues()[0];
  GLB_QUEUE_HEADERS.forEach(function(x,i){if(h[i]!==x)throw Error('Unexpected batch queue heading '+(i+1));});
  return s;
