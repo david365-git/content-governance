@@ -349,3 +349,48 @@ function glb_runDirectPost(postId,phase){
  }
  return {success:false,message:'Unknown phase'};
 }
+
+
+/** Run the original W5/W5C on the exact selected Post ID.
+ * The legacy stages use the active row; set and verify it for each call.
+ */
+function glb_runSeoStage(postId,phase){
+ var a=glb_lookup_(String(postId)),sh=glb_posts_(),ss=SpreadsheetApp.getActiveSpreadsheet();
+ if(phase!=='W5'&&phase!=='W5C')throw Error('Unknown SEO stage '+phase);
+ var q=glb_queueState_(a.id);
+ var state=String(q.values[4]||'');
+ if(phase==='W5'&&!/^(SOL DONE|SOL REVIEW)$/.test(state))
+  return {success:false,message:'W5 requires generated Sol HTML; queue state '+state};
+ if(phase==='W5C'&&state!=='W5 DONE')
+  return {success:false,message:'W5C requires W5 DONE; queue state '+state};
+ var headings=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
+ var htmlCol=headings.indexOf('New HTML')+1;
+ if(!htmlCol||!String(sh.getRange(a.row,htmlCol).getValue()||'').trim())
+  return {success:false,message:'New HTML missing for '+a.id};
+ // Avoid relying on whichever row the operator last selected in the browser.
+ ss.setActiveSheet(sh);
+ sh.setActiveRange(sh.getRange(a.row,1));
+ if(String(sh.getRange(a.row,4).getDisplayValue()).trim()!==a.id||
+    sh.getActiveRange().getRow()!==a.row)throw Error('Could not select correct Post ID row');
+ glb_mark_(a.id,phase+' RUNNING',phase+' running on posts row '+a.row);
+ try{
+  var result=phase==='W5'?bc_runW5Automated():generateSchemaForActiveRow();
+  if(!result||!result.success)throw Error(String(result&&result.message||phase+' failed'));
+  if(phase==='W5'){
+   var h=headings.indexOf('New H1')+1,d=headings.indexOf('New Meta Description')+1;
+   if(!h||!d||!String(sh.getRange(a.row,h).getDisplayValue()).trim()||
+     !String(sh.getRange(a.row,d).getDisplayValue()).trim())
+    throw Error('W5 reported success but H1/Meta was not saved');
+  }else{
+   if(!String(sh.getRange(a.row,92).getValue()||'').includes('application/ld+json'))
+    throw Error('W5C reported success but schema was not saved');
+  }
+  glb_mark_(a.id,phase==='W5'?'W5 DONE':'READY FOR IMAGE / W6',
+    phase==='W5'?'H1 and meta generated.':'Schema generated. Check featured image, then run W6.',
+    Number(result.cost||0));
+  return {success:true,status:phase==='W5'?'W5 DONE':'READY FOR IMAGE / W6',message:result.message||''};
+ }catch(e){
+  glb_mark_(a.id,phase+' REVIEW',String(e.message||e)+' — verify stage output before repeating.');
+  return {success:false,message:String(e.message||e)};
+ }
+}
