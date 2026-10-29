@@ -14,7 +14,7 @@ small{color:#777}.ok{color:#137333}.warn{color:#9b5700}.err{color:#b3261e}
 <p>Enter the Post IDs to process, separated by commas or new lines. Each Post ID runs the <b>existing full Content Intelligence</b> (including case-study and media extraction), then one Sol article generation. The finished HTML is saved in <b>posts → New HTML</b> for your original image, meta and schema windows.</p>
 <textarea id="ids" placeholder="5628&#10;11417&#10;6847"></textarea>
 <div><button id="run" onclick="runPosts()">Run Post IDs</button><button class="secondary" onclick="stopRun()">Stop after current stage</button></div>
-<div id="status">Ready.</div><div id="progressSummary">0 / 0 completed</div><div id="barOuter"><div id="barInner"></div></div><div id="counts"><span id="remaining">0 remaining</span><span id="blocked">0 require review</span></div><div id="current">Current: —</div><small>Post IDs run in the order entered. Keep this sidebar open during the batch. If a stage fails, the batch stops and displays the reason.</small>
+<div id="status">Ready.</div><div id="progressSummary">0 / 0 completed</div><div id="barOuter"><div id="barInner"></div></div><div id="counts"><span id="remaining">0 remaining</span><span id="blocked">0 require review</span></div><div id="current">Current: —</div><small>Post IDs run Content Intelligence, Sol, W5 H1/Meta and W5C Schema Builder in the order entered. Keep this sidebar open during the batch. If a stage fails, the batch stops and displays the reason.</small>
 <div id="grid"><table><thead><tr><th>Post ID</th><th>Stage</th><th>CI completed</th><th>Sol completed</th></tr></thead><tbody id="rows"></tbody></table></div>
 <div id="log"></div>
 <script>
@@ -66,19 +66,23 @@ function advance(){
  if(!active){busy=false;el('run').disabled=false;poll();return;}
  if(index>=items.length){
   active=false;busy=false;el('run').disabled=false;
-  show('FINISHED — Check results');log('All '+items.length+' Post IDs processed');poll();return;
+  show('FINISHED — Check featured images, then run W6');log('All '+items.length+' Post IDs processed through W5C');poll();return;
  }
- var id=items[index],step=phase==='CI'?'Content Intelligence':'Google Love Sol';
+ var id=items[index],step=({CI:'Content Intelligence',SOL:'Google Love Sol',W5:'W5 — H1 & Meta',W5C:'W5C — Schema Builder'})[phase];
  busy=true;show('RUNNING — '+id+' — '+step);el('current').textContent='RUNNING: '+id+' — '+step;
  log('Starting '+id+' — '+step);
- google.script.run.withSuccessHandler(function(r){
+ var runner=google.script.run.withSuccessHandler(function(r){
   busy=false;poll();
   if(!r||!r.success){stopError(new Error('Post '+id+': '+(r&&r.message||'stage failed')));return;}
   log(id+' — '+step+' completed');
   if(phase==='CI')phase='SOL';
+  else if(phase==='SOL')phase='W5';
+  else if(phase==='W5')phase='W5C';
   else{index++;phase='CI';}
   render();advance();
- }).withFailureHandler(stopError).glb_runDirectPost(id,phase);
+ }).withFailureHandler(stopError);
+ if(phase==='CI'||phase==='SOL')runner.glb_runDirectPost(id,phase);
+ else runner.glb_runSeoStage(id,phase);
 }
 setInterval(poll,5000);poll();
 </script></body></html>
