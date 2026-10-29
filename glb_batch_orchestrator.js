@@ -183,6 +183,28 @@ function glb_appendAuthorCta_(html){
  return text.slice(0,last.index)+box+'\n'+footer+'\n'+text.slice(last.index);
 }
 
+
+/** Convert Sol's complete HTML document to the publishing fragment.
+ * Keep introductory text and all article sections, images and CTA.
+ * The site's page template supplies the H1 and outer document structure.
+ */
+function glb_publishFragment_(html){
+ var t=String(html||'').trim();
+ t=t.replace(/<!doctype[^>]*>/gi,'');
+ t=t.replace(/<head\b[^>]*>[\s\S]*?<\/head\s*>/gi,'');
+ t=t.replace(/<\/?(?:html|body|article)\b[^>]*>/gi,'');
+ // Remove H1 even when Sol uses it outside a header.
+ t=t.replace(/<h1\b[^>]*>[\s\S]*?<\/h1\s*>/gi,'');
+ // The introductory header is a layout wrapper, not the published H1.
+ // Retain its introductory paragraphs and any other content inside.
+ t=t.replace(/<\/?header\b[^>]*>/gi,'');
+ t=t.trim();
+ if(/<!doctype|<\/?(?:html|body|article|head|h1)\b/i.test(t))throw Error('Publishing-fragment cleanup left a document wrapper or H1');
+ if(!/<p\b/i.test(t)||!/<h2\b/i.test(t))throw Error('Publishing fragment missing article body');
+ if(!/class="abbey-bio-box"/.test(t)||!/class="abbey-article-cta"/.test(t))throw Error('Publishing fragment missing author or CTA');
+ return t;
+}
+
 function glb_buildSolPrompt_(a){
  if(typeof glc_getArticle_!=='function')throw Error('Missing Google Love article reader');
  var source=glc_getArticle_(a.id);
@@ -269,7 +291,7 @@ function glb_runSol(postId){
  try{
   res=bc_sendPromptViaOpenAI(built.prompt,16000,'gpt-6.1-sol');
   if(!res||!res.success||res.truncated||!String(res.text||'').trim())throw Error('Sol returned no complete article');
-  var html=glb_appendAuthorCta_(String(res.text).replace(/^\s*```(?:html)?\s*/i,'').replace(/\s*```\s*$/,'').trim());
+  var html=glb_publishFragment_(glb_appendAuthorCta_(String(res.text).replace(/^\s*```(?:html)?\s*/i,'').replace(/\s*```\s*$/,'').trim()));
   if(html.length>48000||!/<h[12]\b/i.test(html)||!/<p\b/i.test(html))throw Error('Sol returned invalid or oversized HTML');
   if(/\brising[\s-]+damp\b/i.test(html.replace(/<[^>]*>/g,' ')))throw Error('Prohibited moisture wording detected');
   var audit=a.type==='Case Study'?glse_mediaCheck_(html.replace(/<div class="abbey-bio-box"[\s\S]*?(?=<footer class="abbey-article-cta")/i,''),{images:built.media.imagesAndVideos.filter(function(x){return x&&x.type==='image'&&x.url;})}):null;
