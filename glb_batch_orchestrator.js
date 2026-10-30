@@ -4,7 +4,6 @@
  * Queue and two completion timestamps are saved to Sheets.
  */
 var GLB_SHEET='Google Love Batch Queue';
-var GLB_CI_HEADER='Content Intelligence Completed — Date';
 var GLB_SOL_HEADER='Google Love Completed — Date';
 var GLB_QUEUE_HEADERS=['Post ID','Posts row','Title','Article Type','Status','CI completed UTC','Sol completed UTC','CI cost USD','Sol cost USD','Message','Updated UTC'];
 function glb_utc_(){return Utilities.formatDate(new Date(),'Etc/UTC',"yyyy-MM-dd'T'HH:mm:ss'Z'");}
@@ -57,7 +56,6 @@ function glb_prepare(postIds){
  var data=posts.getRange(2,2,Math.max(1,posts.getLastRow()-1),7).getDisplayValues();
  var byId={};data.forEach(function(r,i){var id=String(r[2]||'').trim();if(!id)return;if(byId[id])byId[id].duplicate=true;else byId[id]={id:id,row:i+2,title:r[0],material:r[5],type:r[6]};});
  var objects=ids.map(function(id){var x=byId[id];if(!x||x.duplicate)throw Error('Post ID missing or duplicated in posts: '+id);return x;});
- glb_col_(posts,GLB_CI_HEADER,true);
  glb_col_(posts,GLB_SOL_HEADER,true);
  var q=glb_setup_();
  var lock=LockService.getScriptLock();if(!lock.tryLock(15000))throw Error('Batch queue busy');
@@ -106,7 +104,7 @@ function glb_runCI(postId){
    if(idx<0||String(post.getRange(a.row,idx+1).getDisplayValue()).indexOf('SOURCE-QUOTED | sha256:')!==0)
     throw Error('Case-study extraction did not leave valid source-quoted evidence');
   }
-  var date=glb_stamp_(a.row,GLB_CI_HEADER);
+  var date=glb_utc_();
   x.sh.getRange(x.row,6).setValue(date);
   glb_mark_(id,'CI DONE','Full Content Intelligence successful, including case-study media extraction where applicable.',Number(result.cost)||0,'CI');
   return {success:true,cost:Number(result.cost)||0};
@@ -147,7 +145,7 @@ function glb_runRequestedCI(postId){
  try{
   var result=runMasterContentIntelligenceBatchRow(a.row,a.material);
   if(!result||!result.success)throw Error(result&&result.message||'Content Intelligence failed');
-  var date=glb_stamp_(a.row,GLB_CI_HEADER);
+  var date=glb_utc_();
   q.sh.getRange(q.row,6).setValue(date);
   glb_mark_(id,'CI DONE','Full Content Intelligence finished.',Number(result.cost)||0,'CI');
   return {success:true,postId:id,cost:Number(result.cost)||0};
@@ -345,7 +343,7 @@ function glb_runDirectPost(postId,phase){
    if(ix<0||String(sh.getRange(a.row,ix+1).getDisplayValue()).indexOf('SOURCE-QUOTED | sha256:')!==0)
     return {success:false,message:'Case-study evidence extraction was not completed'};
   }
-  var stamp=glb_stamp_(a.row,GLB_CI_HEADER),q=glb_queueState_(a.id);
+  var stamp=glb_utc_(),q=glb_queueState_(a.id);
   q.sh.getRange(q.row,6).setValue(stamp);
   glb_mark_(a.id,'CI DONE','Content Intelligence completed',Number(ci.cost||0),'CI');
   return {success:true,stage:'CI DONE'};
