@@ -278,7 +278,16 @@ function glb_buildSolPrompt_(a){
    '=== UNPOPULATED FIELDS; DO NOT GUESS ===',fields.filter(function(x,i){return !String(v[i]||'').trim();}).join('; ')||'(none)'
   ];
  }
- common=common.concat(authorInstruction);
+ // Shared editorial focus: improve practical distinctiveness without new stages or evidence loss.
+ var editorialFocus=[
+  'EDITORIAL PURPOSE: Identify the single main homeowner question or decision behind this article and answer it directly. Every major section should add a distinct useful explanation, practical check, choice, limitation or maintenance action relevant to that purpose.',
+  'TECHNICAL RELEVANCE: Explain material behaviour only as far as needed to understand the problem, choose a treatment, avoid damage or recognise realistic limitations. Do not repeat standard material explanations in multiple sections unless they support a genuinely different decision.',
+  'NO EMPTY COMPRESSION: Remove unnecessary repetition and generic filler, but do not shorten merely to meet a word target. Preserve important safety guidance, relevant examples, meaningful distinctions and specific practical detail.',
+  'ARTICLE-TYPE FOCUS: Buyer guides help readers compare options and trade-offs; diagnostic guides distinguish likely causes and next checks; method guides give a safe, usable sequence and boundaries; educational guides explain the question clearly; hub pages help readers navigate to the right next topic; geographic service pages address the actual service decision without generic location padding.',
+  'CASE-STUDY FOCUS: Connect each documented observed problem to the reason for the treatment selected and the result actually achieved. Preserve the real chronology, methods and evidence. Never invent a rationale, action or outcome to fill a narrative gap.',
+  'FINAL EDITORIAL PASS: Before returning HTML, remove sections that merely restate an earlier point, check that each section earns its place and that the homeowner can make the intended decision. Do not sacrifice factual fidelity or practical completeness.'
+ ];
+ common=common.concat(editorialFocus,authorInstruction);
  var prompt=common.join('\n\n');
  if(prompt.length>170000)throw Error('Prompt too large; stopped without truncating');
  return {prompt:prompt,media:a.type==='Case Study'?JSON.parse(String(glb_posts_().getRange(a.row,207).getDisplayValue()||'{}')):null};
