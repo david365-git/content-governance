@@ -1,0 +1,28 @@
+<!doctype html><html><head><base target="_top"><style>
+body{font:13px Arial,sans-serif;padding:12px;color:#202124}label{font-weight:bold;display:block;margin-top:13px}
+input,textarea{box-sizing:border-box;width:100%;padding:7px;border:1px solid #aaa;border-radius:4px;font:12px Consolas,monospace}textarea{height:130px;resize:vertical}
+button{border:1px solid #aab0b9;background:#fff;border-radius:4px;padding:7px;cursor:pointer;margin:3px 3px 3px 0}
+.primary{background:#1469b8;color:white;border-color:#1469b8}.actions{display:flex;flex-wrap:wrap;gap:2px}.help{color:#5f6368;font-size:12px}
+#msg{white-space:pre-wrap;margin:10px 0;font-weight:bold}#msg.error{color:#b3261e}#msg.ok{color:#137333}
+</style></head><body>
+<h3>Google Love Article Comparison</h3><label for="postId">Post ID</label><input id="postId" inputmode="numeric" placeholder="e.g. 43297">
+<button class="primary" id="load" onclick="loadPost()">Load Post ID</button><div id="msg" aria-live="polite"></div>
+<label for="siteHtml">Site-export HTML — original (read-only)</label><textarea id="siteHtml" readonly></textarea><div class="actions"><button onclick="copyField('siteHtml')">Copy original HTML</button></div>
+<label for="newHtml">New HTML — editable</label><textarea id="newHtml"></textarea><div class="actions"><button onclick="copyField('newHtml')">Copy New HTML</button><button onclick="pasteField('newHtml')">Paste from clipboard</button><button class="primary" onclick="saveField('newHtml')">Save New HTML to posts</button></div>
+<label for="imageUrl">Post featured Image — editable</label><textarea id="imageUrl" style="height:80px"></textarea><div class="actions"><button onclick="copyField('imageUrl')">Copy image URL</button><button onclick="pasteField('imageUrl')">Paste from clipboard</button><button class="primary" onclick="saveField('imageUrl')">Save image URL to posts</button></div>
+<hr><button class="primary" onclick="sendToEditor()">Send A + B to HTML Comparison Editor</button>
+<p class="help">Opens or reuses your local editor tab at 127.0.0.1:5000. Flask app must be running with the companion app.py update. Save edits to Google Sheets using the buttons above.</p>
+<script>
+const el=id=>document.getElementById(id);let loaded=null,baseline={};
+function message(s,err){const x=el('msg');x.textContent=s;x.className=err?'error':'ok'}
+function loadPost(){const id=el('postId').value.trim();if(!/^\d+$/.test(id)){message('Enter a numeric Post ID.',true);return;}
+message('Loading…');google.script.run.withSuccessHandler(d=>{loaded=d;baseline={newHtml:d.newHtml,imageUrl:d.imageUrl};el('siteHtml').value=d.siteHtml;el('newHtml').value=d.newHtml;el('imageUrl').value=d.imageUrl;message('Loaded Post ID '+id+'.');}).withFailureHandler(e=>message(e.message,true)).glc_compareLoad(id)}
+async function copyField(id){try{await navigator.clipboard.writeText(el(id).value);message('Copied '+id+'.')}catch(e){el(id).focus();el(id).select();message('Clipboard blocked: press Ctrl+C to copy the selected text.',true)}}
+async function pasteField(id){if(!loaded){message('Load a Post ID first.',true);return;}try{el(id).value=await navigator.clipboard.readText();message('Pasted into '+id+'. Click Save to write to posts.')}catch(e){el(id).focus();el(id).select();message('Browser blocked clipboard paste. Use Ctrl+A, then Ctrl+V in the selected field.',true)}}
+function saveField(id){if(!loaded){message('Load a Post ID first.',true);return;}const value=el(id).value;message('Saving '+id+'…');google.script.run.withSuccessHandler(r=>{baseline[id]=r.value;message(r.message)}).withFailureHandler(e=>message(e.message,true)).glc_compareSave(loaded.postId,id,value,baseline[id]);}
+function sendToEditor(){if(!loaded){message('Load a Post ID first.',true);return;}
+const form=document.createElement('form');form.method='POST';form.action='http://127.0.0.1:5000/import';form.target='htmlCompareEditor';
+for(const [key,value] of [['htmlA',el('siteHtml').value],['htmlB',el('newHtml').value]]){const f=document.createElement('textarea');f.name=key;f.value=value;f.style.display='none';form.appendChild(f)}
+document.body.appendChild(form);form.submit();form.remove();message('Sent Versions A and B to the local comparison editor. If no tab opens, check that Flask is running and allow pop-ups for Sheets.');}
+el('postId').addEventListener('keydown',e=>{if(e.key==='Enter')loadPost()});
+</script></body></html>
