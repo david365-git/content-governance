@@ -58,9 +58,13 @@ function glc_compareSave(postId,field,value,original){
   try{
     var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
     var r=glc_compareFindPostRow_(sh,glc_compareFindColumn_(sh,'Post ID'),id);
-    var cell=sh.getRange(r,glc_compareFindColumn_(sh,headings[field]));
+    var col=glc_compareFindColumn_(sh,headings[field]);
+    if(field==='newHtml'&&col!==98)throw new Error('Safety stop: New HTML is not in CT. Found column '+col+'.');
+    var cell=sh.getRange(r,col);
     if(String(cell.getValue()||'')!==original)throw new Error('This cell has changed since loading. Reload the Post ID before saving to avoid overwriting another edit.');
     cell.setValue(value);
-    return {success:true,row:r,value:value,message:headings[field]+' saved for Post ID '+id+'.'};
+    SpreadsheetApp.flush();
+    if(String(cell.getValue()||'')!==value)throw new Error('Save verification failed at '+cell.getA1Notation()+'.');
+    return {success:true,row:r,cell:cell.getA1Notation(),value:value,message:headings[field]+' saved and verified at posts!'+cell.getA1Notation()+' for Post ID '+id+'.'};
   }finally{lock.releaseLock();}
 }
