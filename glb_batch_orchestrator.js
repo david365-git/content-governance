@@ -5,6 +5,9 @@
  */
 var GLB_SHEET='Google Love Batch Queue';
 var GLB_SOL_HEADER='Google Love Completed — Date';
+var GLB_STONE_HEADER='Stone Type';
+function glb_typeFormula_(row){return '=IFERROR(XLOOKUP($A'+row+',posts!$D$2:$D,posts!$H$2:$H,""),"")';}
+function glb_stoneFormula_(row){return '=IFERROR(XLOOKUP($A'+row+',posts!$D$2:$D,posts!$G$2:$G,""),"")';}
 var GLB_QUEUE_HEADERS=['Post ID','Posts row','Title','Article Type','Status','CI completed UTC','Sol completed UTC','CI cost USD','Sol cost USD','Message','Updated UTC'];
 function glb_utc_(){return Utilities.formatDate(new Date(),'Etc/UTC',"yyyy-MM-dd'T'HH:mm:ss'Z'");}
 function glb_posts_(){var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');if(!sh)throw Error('posts worksheet missing');return sh;}
@@ -25,6 +28,9 @@ function glb_setup_(){
  if(s.getLastRow()<1){s.getRange(1,1,1,GLB_QUEUE_HEADERS.length).setValues([GLB_QUEUE_HEADERS]);s.setFrozenRows(1);}
  var h=s.getRange(1,1,1,GLB_QUEUE_HEADERS.length).getDisplayValues()[0];
  GLB_QUEUE_HEADERS.forEach(function(x,i){if(h[i]!==x)throw Error('Unexpected batch queue heading '+(i+1));});
+ var stone=String(s.getRange(1,12).getDisplayValue()||'');
+ if(stone&&stone!==GLB_STONE_HEADER)throw Error('Unexpected queue heading L: '+stone);
+ if(!stone)s.getRange(1,12).setValue(GLB_STONE_HEADER);
  return s;
 }
 function glb_lookup_(postId){
@@ -60,12 +66,42 @@ function glb_prepare(postIds){
  var q=glb_setup_();
  var lock=LockService.getScriptLock();if(!lock.tryLock(15000))throw Error('Batch queue busy');
  try{
-  var last=q.getLastRow(),existing=last>1?q.getRange(2,1,last-1,1).getDisplayValues():[];
-  var present={};existing.forEach(function(v){if(v[0])present[String(v[0])]=true;});
-  var added=objects.filter(function(x){return !present[x.id];}).map(function(x){return [x.id,x.row,x.title,x.type,'QUEUED','','',0,0,'',glb_utc_()];});
-  if(added.length)q.getRange(last+1,1,added.length,11).setValues(added);
+  var last=q.getLastRow(),existing=last>1?q.getRange(2,1,last-1,5).getDisplayValues():[];
+  var present={};existing.forEach(function(v,i){if(v[0])present[String(v[0])]={row:i+2,status:String(v[4]||'')};});
+  var newRows=objects.filter(function(x){return !present[x.id];});
+  var added=newRows.map(function(x,i){var r=last+i+1;return [x.id,x.row,x.title,glb_typeFormula_(r),'QUEUED','','',0,0,'',glb_utc_(),glb_stoneFormula_(r)];});
+  if(added.length)q.getRange(last+1,1,added.length,12).setValues(added);
+  objects.forEach(function(x){var rec=present[x.id];if(rec&&rec.status==='NOT STARTED')q.getRange(rec.row,5).setValue('QUEUED');});
  }finally{lock.releaseLock();}
  return {ids:ids,rows:glb_progress().filter(function(x){return seen[x.postId];})};
+}
+/** Refresh the overview without changing any existing processing status or cost. */
+function glb_refreshQueueOverview(){
+ var lock=LockService.getScriptLock();
+ if(!lock.tryLock(15000))throw Error('Batch queue busy');
+ try{
+  var p=glb_posts_(),q=glb_setup_(),data=p.getRange(2,2,p.getLastRow()-1,7).getDisplayValues();
+  var source={},duplicates={};
+  data.forEach(function(v,i){var id=String(v[2]||'').trim();if(!id)return;
+   if(source[id]){if(!duplicates[id])duplicates[id]=[source[id].row];duplicates[id].push(i+2);}
+   else source[id]={id:id,row:i+2,title:String(v[0]||'')};
+  });
+  var n=q.getLastRow(),old=n>1?q.getRange(2,1,n-1,1).getDisplayValues():[],present={};
+  old.forEach(function(v){if(v[0])present[String(v[0])]=true;});
+  var added=Object.keys(source).filter(function(id){return !present[id];}).map(function(id,i){
+   var a=source[id],r=n+i+1,duplicate=duplicates[id];
+   return [id,a.row,a.title,glb_typeFormula_(r),duplicate?'SOURCE DUPLICATE — REVIEW':'NOT STARTED','','','','',duplicate?'Duplicate Post ID in posts rows '+duplicate.join(', '):'','',glb_stoneFormula_(r)];
+  });
+  if(added.length)q.getRange(n+1,1,added.length,12).setValues(added);
+  var count=q.getLastRow()-1;
+  if(count){
+   var typ=[],stone=[];
+   for(var i=2;i<=count+1;i++){typ.push([glb_typeFormula_(i)]);stone.push([glb_stoneFormula_(i)]);}
+   q.getRange(2,4,count,1).setFormulas(typ);
+   q.getRange(2,12,count,1).setFormulas(stone);
+  }
+  return {tracked:count,added:added.length,duplicatePostIds:Object.keys(duplicates)};
+ }finally{lock.releaseLock();}
 }
 function glb_queueState_(id){
  var q=glb_setup_(),r=glb_findQueueRow_(q,String(id));
@@ -132,10 +168,11 @@ function glb_retryCI(postId){
 function glb_runRequestedPost(postId){
  var id=String(postId||'').trim(),a=glb_lookup_(id);
  var q=glb_setup_(),qr=glb_findQueueRow_(q,id);
- if(qr<2){q.appendRow([id,a.row,a.title,a.type,'QUEUED','','',0,0,'',glb_utc_()]);}
+ if(qr<2){var r=q.getLastRow()+1;q.getRange(r,1,1,12).setValues([[id,a.row,a.title,glb_typeFormula_(r),'QUEUED','','',0,0,'',glb_utc_(),glb_stoneFormula_(r)]]);}
  else{
   // A new user-initiated batch intentionally resets the listed item.
-  q.getRange(qr,2,1,10).setValues([[a.row,a.title,a.type,'QUEUED','','',0,0,'Requested again by operator',glb_utc_()]]);
+  q.getRange(qr,2,1,10).setValues([[a.row,a.title,glb_typeFormula_(qr),'QUEUED','','',0,0,'Requested again by operator',glb_utc_()]]);
+  q.getRange(qr,12).setFormula(glb_stoneFormula_(qr));
  }
  return {success:true,postId:id};
 }
