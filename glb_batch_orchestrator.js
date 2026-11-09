@@ -6,8 +6,8 @@
 var GLB_SHEET='Google Love Batch Queue';
 var GLB_SOL_HEADER='Google Love Completed — Date';
 var GLB_STONE_HEADER='Stone Type';
-function glb_typeFormula_(row){return '=IFERROR(XLOOKUP($A'+row+',posts!$D$2:$D,posts!$H$2:$H,""),"")';}
-function glb_stoneFormula_(row){return '=IFERROR(XLOOKUP($A'+row+',posts!$D$2:$D,posts!$G$2:$G,""),"")';}
+function glb_typeFormula_(row){return '=IFNA(XLOOKUP(VALUE($A'+row+'),posts!$D$2:$D,posts!$H$2:$H),IFNA(XLOOKUP($A'+row+',posts!$D$2:$D,posts!$H$2:$H),""))';}
+function glb_stoneFormula_(row){return '=IFNA(XLOOKUP(VALUE($A'+row+'),posts!$D$2:$D,posts!$G$2:$G),IFNA(XLOOKUP($A'+row+',posts!$D$2:$D,posts!$G$2:$G),""))';}
 var GLB_QUEUE_HEADERS=['Post ID','Posts row','Title','Article Type','Status','CI completed UTC','Sol completed UTC','CI cost USD','Sol cost USD','Message','Updated UTC'];
 function glb_utc_(){return Utilities.formatDate(new Date(),'Etc/UTC',"yyyy-MM-dd'T'HH:mm:ss'Z'");}
 function glb_posts_(){var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');if(!sh)throw Error('posts worksheet missing');return sh;}
