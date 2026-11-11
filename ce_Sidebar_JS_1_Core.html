@@ -873,8 +873,8 @@ window.acLoadDropdowns = function() {
       statusEl.textContent = 'Choose an image file from your computer first.';
       statusEl.className = 'status-bar fail'; return;
     }
-    if (['image/webp','image/jpeg','image/png'].indexOf(file.type) === -1 || file.size > 2*1024*1024) {
-      statusEl.textContent = 'Choose a WebP, JPEG or PNG image smaller than 2 MB.';
+    if (file.type !== 'image/webp' || file.size > 2*1024*1024) {
+      statusEl.textContent = 'Choose a WebP image smaller than 2 MB. Convert PNG or JPEG to WebP first.';
       statusEl.className = 'status-bar fail'; return;
     }
     var filename = document.getElementById('fi-filename').value.trim();
