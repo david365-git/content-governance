@@ -2997,47 +2997,53 @@ var filenameTopic =
       prompt:      p,
       filename:    filename,
       altText:     altText,
-      middleTitle: _middleTitle
+      middleTitle: _middleTitle,
+      postId: String(d["Post ID"] || "").trim()
     };
 
   } catch(e) {
-    return { success: false, message: "buildFeaturedImagePrompt error: " + e.message };
-  }
-}
-
-function saveFeaturedImageToSheet(url, filename, altText) {
+    return { success: false, message: "buildFefunction saveFeaturedImageToSheet(url, filename, altText, postId) {
   try {
-    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var id = String(postId == null ? "" : postId).trim();
+    var imageUrl = String(url || "").trim();
+    if (!id) return { success: false, message: "No Post ID captured. Generate the image prompt for this article first." };
+    if (!imageUrl) return { success: false, message: "WordPress image URL is required." };
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName("posts");
-    var row   = sheet.getActiveRange().getRow();
-    if (row < 2) return { success: false, message: "Select a data row first." };
+    if (!sheet) return { success: false, message: "posts sheet not found." };
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) return { success: false, message: "posts sheet has no data rows." };
 
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
-                       .map(function(h) { return String(h).trim(); });
+      .map(function(h) { return String(h).trim(); });
+    var required = ["Post ID", "Featured Image URL", "Featured Image Filename", "Featured Image Alt Text"];
+    var missing = required.filter(function(name) { return headers.indexOf(name) === -1; });
+    if (missing.length) return { success: false, message: "Missing columns in posts: " + missing.join(", ") };
 
-    var saved   = [];
-    var missing = [];
-
-    function writeCol(name, value) {
-      var idx = headers.indexOf(name);
-      if (idx === -1) { missing.push(name); return; }
-      var cell = sheet.getRange(row, idx + 1);
-      cell.setNumberFormat("@");
-      cell.setValue(value);
-      saved.push(name);
+    var idCol = headers.indexOf("Post ID") + 1;
+    var ids = sheet.getRange(2, idCol, lastRow - 1, 1).getDisplayValues();
+    var matches = [];
+    for (var i = 0; i < ids.length; i++) {
+      if (String(ids[i][0]).trim() === id) matches.push(i + 2);
     }
-
-    writeCol("Featured Image URL",      url);
-    writeCol("Featured Image Filename", filename);
-    writeCol("Featured Image Alt Text", altText);
-
-    var message = "Saved " + saved.length + " field(s) to row " + row + ".";
-    if (missing.length > 0) message += " Columns not found — add to posts sheet: " + missing.join(", ");
-
-    return { success: saved.length > 0 || missing.length > 0, message: message };
-
-  } catch(e) {
+    if (matches.length !== 1) {
+      return { success: false, message: matches.length ? "Duplicate Post ID " + id + " in posts sheet." : "Post ID " + id + " not found in posts sheet." };
+    }
+    var row = matches[0];
+    var values = [imageUrl, String(filename || "").trim(), String(altText || "").trim()];
+    var names = required.slice(1);
+    for (var j = 0; j < names.length; j++) {
+      var cell = sheet.getRange(row, headers.indexOf(names[j]) + 1);
+      cell.setNumberFormat("@");
+      cell.setValue(values[j]);
+    }
+    SpreadsheetApp.flush();
+    return { success: true, message: "Saved image URL, filename and alt text for Post ID " + id + " (row " + row + ").", postId: id, row: row };
+  } catch (e) {
     return { success: false, message: "saveFeaturedImageToSheet error: " + e.message };
+  }
+}eaturedImageToSheet error: " + e.message };
   }
 }
 function acBuildClassifyPrompt() {
