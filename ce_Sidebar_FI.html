@@ -57,10 +57,18 @@
         1. Attach a floor photograph to your ChatGPT message<br>
         2. Copy prompt → paste into ChatGPT with the photograph attached<br>
         3. Save generated image as the governed filename above (webp, 1270px, under 100kb)<br>
-        4. Upload to WordPress Media Library<br>
-        5. Copy the image URL from WordPress<br>
-        6. Paste URL below and click Save to Sheet
+        4. Choose the image from F:\\content-engine\\ (or another local folder)<br>
+        5. Click Upload to WordPress — the URL and sheet fields are saved automatically<br>
+        6. Alternatively, paste an existing WordPress URL below and click Save to Sheet
       </div>
+
+      <label class="section-label" style="margin-top:8px;">Choose Local Image</label>
+      <input type="file" id="fi-file" accept=".webp,.jpg,.jpeg,.png,image/webp,image/jpeg,image/png" style="width:100%;font-size:11px;" />
+      <div style="font-size:10px;color:#546e7a;margin-top:3px;">Browse to F:\\content-engine\\. The image will upload using its governed filename. WebP, JPEG or PNG; maximum 2 MB.</div>
+      <div class="btn-row" style="margin-top:6px;">
+        <button type="button" id="fi-upload-button" class="btn-push btn-full" onclick="window.fiUploadToWordPress()">Upload to WordPress &amp; Save to Sheet</button>
+      </div>
+      <div id="fi-upload-status" class="status-bar pending" style="margin-top:6px;display:none;"></div>
 
       <label class="section-label" style="margin-top:8px;">WordPress Image URL</label>
       <input type="text" id="fi-url" placeholder="Paste WordPress media URL here..." style="width:100%;font-size:11px;padding:4px;box-sizing:border-box;" />
