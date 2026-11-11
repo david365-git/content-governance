@@ -765,6 +765,13 @@ window.acLoadDropdowns = function() {
 
   window.acCommitSave = function(selected) {
     var statusEl = document.getElementById('ac-save-status');
+    if (!window.fiLoadedPostId) {
+      statusEl.style.display = 'block';
+      statusEl.textContent = 'Generate the image prompt for this article first to capture its Post ID.';
+      statusEl.className = 'status-bar fail';
+      return;
+    }
+
     statusEl.style.display = 'block';
     statusEl.textContent = 'Saving…';
     statusEl.className = 'status-bar pending';
@@ -794,7 +801,10 @@ window.acLoadDropdowns = function() {
 
   // ══ FEATURED IMAGE SYSTEM ══
 
+  window.fiLoadedPostId = null;
+
   window.fiGenerate = function() {
+    window.fiLoadedPostId = null;
     var statusEl = document.getElementById('fi-status');
     var customMiddleTitle = document.getElementById('fi-middle-title').value.trim();
     statusEl.textContent = 'Generating image prompt…';
@@ -807,6 +817,7 @@ window.acLoadDropdowns = function() {
           statusEl.className = 'status-bar fail';
           return;
         }
+        window.fiLoadedPostId = String(result.postId || '').trim();
         var finalTitle = customMiddleTitle || result.middleTitle || '';
       var finalPrompt = result.prompt.replace(
         /Middle title \(elegant dark serif\): .+/,
@@ -847,11 +858,10 @@ window.acLoadDropdowns = function() {
     statusEl.textContent = 'Saving…';
     statusEl.className = 'status-bar pending';
 
-    var customMiddleTitle = document.getElementById('fi-middle-title').value.trim();
     google.script.run
       .withSuccessHandler(function(result) {
         if (result && result.success) {
-          statusEl.textContent = 'Saved to sheet';
+          statusEl.textContent = result.message;
           statusEl.className = 'status-bar pass';
         } else {
           statusEl.textContent = 'Save failed: ' + (result ? result.message : 'Unknown error');
@@ -862,7 +872,7 @@ window.acLoadDropdowns = function() {
         statusEl.textContent = 'Save failed: ' + err.message;
         statusEl.className = 'status-bar fail';
       })
-      .saveFeaturedImageToSheet(url, filename, altText);
+      .saveFeaturedImageToSheet(url, filename, altText, window.fiLoadedPostId);
   };
 
   function copyField(fieldId, statusId, msg) {
