@@ -144,3 +144,42 @@ function ce_w6WordPressPublish(request) {
     return {success:false,message:String(e.message || e)};
   }
 }
+
+
+/**
+ * Single W6 action: publish first, then record the confirmed WordPress result.
+ * If a sheet write fails after publishing, report a PARTIAL result and do not
+ * invite another publish; the user can reconcile the record separately.
+ */
+function ce_w6DirectPublishAndRecord(request) {
+  var original = ce_getW6Data();
+  if (!original.success || !request ||
+      String(original.postId) !== String(request.postId)) {
+    return {success:false,published:false,message:'The selected post changed. Reload W6.'};
+  }
+  var result = ce_w6WordPressPublish(request);
+  if (!result.success) {
+    return {success:false,published:false,message:result.message};
+  }
+  var problems = [];
+  original.newPublishedDate = result.publishedDate;
+  original.newUpdatedDate = result.modifiedDate;
+  original.publicationAction = result.mode;
+  original.url = result.url || original.url;
+  var log = ce_updatePublicationLog(original);
+  if (!log.success) problems.push('Publication log: ' + log.message);
+  var exp = ce_updateSiteExport();
+  if (!exp.success) problems.push('site-export: ' + exp.message);
+  result.published = true;
+  result.logUpdated = !!log.success;
+  result.siteExportUpdated = !!exp.success;
+  if (problems.length) {
+    result.success = false;
+    result.message = 'WordPress WAS updated, but sheet recording needs attention. Do not publish again. ' +
+      problems.join(' | ');
+  } else {
+    result.message = 'WordPress updated and verified; publication log and site-export recorded. ' +
+      'Published date preserved. Featured image: ' + result.featuredImageAction + '.';
+  }
+  return result;
+}
