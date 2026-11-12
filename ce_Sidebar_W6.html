@@ -47,37 +47,37 @@
         <tr><td style="color:#5f6368">New Score</td><td id="w6RecallNew" style="color:#1e8e3e;font-weight:bold"></td></tr>
       </table>
 
-      <!-- New publication date input -->
-      <div class="step-label" style="margin-top:8px">New Publication Date</div>
-      <input type="datetime-local" id="w6NewDate"
-        style="width:100%;padding:5px;font-size:11px;border:1px solid #dadce0;border-radius:4px;box-sizing:border-box" />
-
-      <!-- WordPress export block -->
-      <div class="step-label" style="margin-top:8px">WordPress Export Block</div>
-      <textarea id="w6WpBlock" style="height:120px;font-size:8px;background:#f8f9fa" readonly></textarea>
-      <div class="btn-row" style="margin-top:4px">
-        <button style="background:#1a73e8;color:#fff" onclick="w6_copyForWordpress()">📋 Copy for WordPress</button>
-      </div>
-
-      <!-- Direct WordPress publishing: remains unavailable until bridge is installed. -->
-      <div class="step-label" style="margin-top:10px">Direct WordPress Publishing</div>
+      <!-- Simple W6 workflow. No date changes on ordinary updates. -->
+      <div class="step-label" style="margin-top:10px">Publish to WordPress</div>
       <div id="w6WpVerification" style="font-size:10px;color:#5f6368;margin:6px 0">
-        Verify the live WordPress post before making any changes.
+        Load row data, then verify the live post.
       </div>
       <div class="btn-row" style="margin-top:4px">
         <button style="background:#455a64;color:#fff" onclick="w6_verifyWordPress()">Verify WordPress Post</button>
-        <button id="w6DirectUpdateBtn" style="background:#2e7d32;color:#fff" onclick="w6_directUpdate()" disabled>Update Existing Post</button>
+        <button id="w6DirectUpdateBtn" style="background:#2e7d32;color:#fff" onclick="w6_directUpdate()" disabled>Update Post</button>
+        <button id="w6DirectRepublishBtn" style="background:#888;color:#fff" disabled title="Awaiting syndication verification">Republish Post — Not Yet Enabled</button>
       </div>
       <div style="font-size:10px;color:#7a4a00;margin-top:6px">
-        Republish is not enabled until the Fabritec syndication trigger has been checked.
-        Use the existing manual importer for republishing in the meantime.
+        Update retains the original publication date. Republish remains disabled until the syndication trigger is verified.
+      </div>
+      <div class="step-label" style="margin-top:9px">WordPress Result</div>
+      <div id="w6PublishResult" style="font-size:10px;white-space:pre-wrap">
+        The publication log and site-export will be updated automatically after a successful direct update.
       </div>
 
-      <!-- Publication log -->
-      <div class="btn-row" style="margin-top:8px">
-        <button style="background:#2e7d32;color:#fff" onclick="w6_updateLog()">✔ Update Publication Log</button>
-        <button style="background:#1565c0;color:#fff" onclick="w6_updateSiteExport()">↻ Update Site Export</button>
-      </div>
+      <!-- Manual fallback for existing WordPress importer -->
+      <details style="margin-top:10px">
+        <summary style="cursor:pointer;font-size:11px">Manual WordPress Export (Fallback)</summary>
+        <textarea id="w6WpBlock" style="height:120px;font-size:8px;background:#f8f9fa" readonly></textarea>
+        <div class="btn-row" style="margin-top:4px">
+          <button style="background:#1a73e8;color:#fff" onclick="w6_copyForWordpress()">Copy For WordPress</button>
+        </div>
+        <div class="btn-row" style="margin-top:8px">
+          <button onclick="w6_updateLog()">Update Publication Log Manually</button>
+          <button onclick="w6_updateSiteExport()">Update Site Export Manually</button>
+        </div>
+        <input type="datetime-local" id="w6NewDate" style="display:none"/>
+      </details>
 
     </div>
   </div>
@@ -92,6 +92,7 @@
     _w6VerifiedId = null;
     _w6DirectReceipt = null;
     document.getElementById('w6DirectUpdateBtn').disabled = true;
+    document.getElementById('w6PublishResult').textContent = 'The publication log and site-export will be updated automatically after a successful direct update.';
     setStatus('statusW6', 'running', 'Loading row data...', true);
     google.script.run
       .withSuccessHandler(function(res) {
@@ -140,7 +141,7 @@
         document.getElementById('w6WpBlock').value = wpBlock;
 
         document.getElementById('w6Summary').style.display = 'block';
-        setStatus('statusW6', 'done', '✔ Row data loaded — confirm new date then copy or log.');
+        setStatus('statusW6', 'done', 'Row data loaded — verify the WordPress post before updating.');
       })
       .withFailureHandler(function(e) {
         setStatus('statusW6', 'fail', '❌ ' + e.message);
@@ -182,9 +183,9 @@
     }
     var confirmed = window.confirm(
       'Update published Post ID ' + _w6Data.postId +
-      '?\\n\\nThis replaces its title, HTML, SEO fields and custom schema.' +
-      '\\nThe original publication date will be preserved.' +
-      '\\n\\nContinue?'
+      '?\\n\\nThis updates HTML, title, Yoast fields and schema.' +
+      '\\nFeatured image: ' + (_w6Data.featuredImageUrl ? 'set image from column EM' : 'keep current image') + '.' +
+      '\\nPublished date will be preserved.\\n\\nContinue?'
     );
     if (!confirmed) return;
     document.getElementById('w6DirectUpdateBtn').disabled = true;
@@ -192,10 +193,13 @@
     google.script.run
       .withSuccessHandler(function(res) {
         if (!res || !res.success) {
-          setStatus('statusW6','fail',(res && res.message) || 'WordPress update failed.');
+          var message = (res && res.message) || 'WordPress update failed.';
+          document.getElementById('w6PublishResult').textContent = message;
+          setStatus('statusW6','fail',message);
           return;
         }
         _w6DirectReceipt = res;
+        document.getElementById('w6PublishResult').textContent = res.message;
         _w6VerifiedId = null;
         document.getElementById('w6WpVerification').textContent =
           'Updated WordPress Post ' + res.postId +
@@ -206,12 +210,12 @@
           document.getElementById('w6NewDate').value =
             String(res.publishedDate).replace(' ','T').slice(0,16);
         }
-        setStatus('statusW6','done',res.message + ' Check the live page before logging.');
+        setStatus('statusW6','done',res.message);
       })
       .withFailureHandler(function(e) {
         setStatus('statusW6','fail','WordPress update could not be verified: '+e.message);
       })
-      .ce_w6WordPressPublish({postId:_w6Data.postId,mode:'update'});
+      .ce_w6DirectPublishAndRecord({postId:_w6Data.postId,mode:'update'});
   }
 
   function w6_copyForWordpress() {
