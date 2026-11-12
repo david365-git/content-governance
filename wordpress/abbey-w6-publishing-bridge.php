@@ -84,6 +84,36 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
             array('status' => 400));
     }
 
+    // Optional featured image URL supplied from posts column EM.
+    // Resolve it to an existing Media Library image BEFORE changing article content.
+    // Blank or omitted means leave featured_media exactly as it is.
+    $feature_action = 'unchanged';
+    $feature_id = null;
+    if ($request->has_param('featured_image_url')) {
+        $image_url = trim((string) $request->get_param('featured_image_url'));
+        if ($image_url !== '') {
+            $parsed_url = wp_parse_url($image_url);
+            $home_host = wp_parse_url(home_url(), PHP_URL_HOST);
+            if (!is_array($parsed_url) ||
+                strtolower((string) ($parsed_url['scheme'] ?? '')) !== 'https' ||
+                strtolower((string) ($parsed_url['host'] ?? '')) !== strtolower((string) $home_host) {
+                return new WP_Error('w6_image_domain',
+                    'Column EM must contain an HTTPS image URL on this WordPress website.',
+                    array('status' => 400));
+            }
+            $feature_id = absint(attachment_url_to_postid($image_url));
+            if (!$feature_id || get_post_type($feature_id) !== 'attachment' ||
+                !wp_attachment_is_image($feature_id)) {
+                return new WP_Error('w6_image_not_found',
+                    'Column EM image URL was not found as an image in the WordPress Media Library. No article changes made.',
+                    array('status' => 400));
+            }
+            if ((int) get_post_thumbnail_id($post_id) !== $feature_id) {
+                $feature_action = 'updated';
+            }
+        }
+    }
+
     // WordPress automatically advances post_modified; post_date is preserved.
     $updated_id = wp_update_post(wp_slash(array(
         'ID'           => $post_id,
@@ -99,6 +129,13 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
     update_post_meta($post_id, '_yoast_wpseo_metadesc', wp_slash($values['meta_description']));
     update_post_meta($post_id, '_yoast_wpseo_focuskw', wp_slash($values['focus_keyphrase']));
     update_post_meta($post_id, '_abbey_custom_schema', wp_slash($schema));
+    if ($feature_id !== null && $feature_action === 'updated') {
+        if (!set_post_thumbnail($post_id, $feature_id)) {
+            return new WP_Error('w6_feature_image_failed',
+                'Article saved but featured image could not be set. Check the post before retrying.',
+                array('status' => 500));
+        }
+    }
     clean_post_cache($post_id);
 
     $after = get_post($post_id);
@@ -113,6 +150,8 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
         'post_id' => $post_id,
         'published_date' => $after->post_date,
         'modified_date' => $after->post_modified,
-        'url' => get_permalink($post_id)
+        'url' => get_permalink($post_id),
+        'featured_image_action' => $feature_action,
+        'featured_image_url' => get_the_post_thumbnail_url($post_id, 'full') ?: ''
     ));
 }
