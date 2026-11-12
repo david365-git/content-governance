@@ -111,6 +111,17 @@ function ce_updatePublicationLog(data) {
     const logSheet = ss.getSheetByName("publication_log");
     if (!logSheet) throw new Error("publication_log sheet not found.");
 
+    // The publication log must not record an assumed date selected in the
+    // sidebar. Read the actual post date after the WordPress write instead.
+    const wpDateCheck = ce_w6WordPressPreflight({postId:data && data.postId});
+    if (!wpDateCheck.success ||
+        String(wpDateCheck.postId) !== String(data && data.postId) ||
+        !wpDateCheck.publishedDate) {
+      throw new Error("Live WordPress publication date not verified; log not written. " +
+        String(wpDateCheck.message || ""));
+    }
+    data.newPublishedDate = wpDateCheck.publishedDate;
+
     const lastCol = logSheet.getLastColumn();
     const headers = lastCol > 0 ? logSheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
 
