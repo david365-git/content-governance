@@ -226,11 +226,18 @@ function ce_updateSiteExport() {
       yoastKeyphrase = rawMetaDesc.substring(kpIdx + keyphraseMarker.length).trim();
     }
 
-    const today = Utilities.formatDate(
-      new Date(),
-      Session.getScriptTimeZone(),
-      "yyyy-MM-dd"
-    );
+    // Dates must come from the live WordPress post, never from the clock.
+    // An ordinary update retains Published Date; a republish changes it in WP.
+    const verifiedPost = ce_w6WordPressPreflight({postId: postId});
+    if (!verifiedPost.success ||
+        String(verifiedPost.postId) !== String(postId) ||
+        !verifiedPost.publishedDate || !verifiedPost.modifiedDate) {
+      return {success:false, message:
+        "Could not verify WordPress dates. site-export left unchanged: " +
+        String(verifiedPost.message || "Unknown verification error.")};
+    }
+    const publishedDate = verifiedPost.publishedDate;
+    const updatedDate = verifiedPost.modifiedDate;
 
     // Find matching row in site-export
     const exportData    = exportSh.getDataRange().getValues();
@@ -271,8 +278,8 @@ function ce_updateSiteExport() {
     }
 
     writeIfFound(expTitleIdx,     newH1);
-    writeIfFound(expPubDateIdx,   today);
-    writeIfFound(expUpdDateIdx,   today);
+    writeIfFound(expPubDateIdx,   publishedDate);
+    writeIfFound(expUpdDateIdx,   updatedDate);
     writeIfFound(expKpIdx,        yoastKeyphrase);
     writeIfFound(expMetaTitleIdx, newMetaTitle);
     writeIfFound(expMetaDescIdx,  newMetaDesc);
@@ -283,7 +290,7 @@ function ce_updateSiteExport() {
     SpreadsheetApp.flush();
 
     logPipelineResume("W6 — Site Export Updated", "");
-    return { success: true, message: "site-export updated for Post ID " + postId + "." };
+    return { success: true, message: "site-export updated for Post ID " + postId + " using verified WordPress dates (Published " + publishedDate + "; Updated " + updatedDate + ")." };
 
   } catch(e) {
     return { success: false, message: "ce_updateSiteExport error: " + e.message };
