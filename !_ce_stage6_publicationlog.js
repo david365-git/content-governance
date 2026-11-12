@@ -144,6 +144,16 @@ function ce_updatePublicationLog(data) {
       logSheet.getRange(1, 1, 1, cols.length).setValues([cols]);
     }
 
+    // Record the actual WordPress update date and action without rearranging
+    // any existing publication_log columns.
+    let currentHeaders = logSheet.getRange(1, 1, 1, logSheet.getLastColumn()).getValues()[0].map(String);
+    ["New Updated Date", "Publication Action"].forEach(function(h) {
+      if (currentHeaders.indexOf(h) === -1) {
+        const nextCol = logSheet.getLastColumn() + 1;
+        logSheet.getRange(1, nextCol).setValue(h);
+        currentHeaders.push(h);
+      }
+    });
     const now = new Date();
     const logDate = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm");
 
@@ -188,6 +198,11 @@ function ce_updatePublicationLog(data) {
       data.newSchema
     ];
 
+    // Existing 38 columns stay in place, with the two audit columns added.
+    while (newRow.length < currentHeaders.length) newRow.push("");
+    newRow[currentHeaders.indexOf("New Updated Date")] = wpDateCheck.modifiedDate;
+    newRow[currentHeaders.indexOf("Publication Action")] =
+      String(data.publicationAction || "manual");
     const lastRow = logSheet.getLastRow();
     logSheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
 
