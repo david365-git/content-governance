@@ -106,7 +106,13 @@ function ce_w6WordPressPublish(request) {
     var current = ce_w6WordPressPreflight({postId:postId});
     if (!current.success) throw new Error(current.message);
 
-    var result = ce_w6WpRequest_('post', '/wp-json/abbey/v1/w6-publish', {
+    // Optional EM image: only send the URL when populated.
+    // The WordPress bridge resolves and validates the Media Library attachment.
+    var imageUrl = String(data.featuredImageUrl || '').trim();
+    if (imageUrl && !/^https:\/\/[^\\s?#]+(?:\\?[^#\\s]*)?$/i.test(imageUrl)) {
+      throw new Error('Column EM must contain a valid HTTPS featured-image URL.');
+    }
+    var publishBody = {
       post_id: postId,
       mode: 'update',
       expected_date: current.publishedDate,
@@ -116,7 +122,9 @@ function ce_w6WordPressPublish(request) {
       meta_description: data.newMetaDesc,
       focus_keyphrase: data.yoastKeyphrase,
       schema: data.newSchema
-    });
+    };
+    if (imageUrl) publishBody.featured_image_url = imageUrl;
+    var result = ce_w6WpRequest_('post', '/wp-json/abbey/v1/w6-publish', publishBody);
     if (!result.success || Number(result.post_id) !== postId ||
         !result.published_date || !result.modified_date ||
         result.published_date !== current.publishedDate) {
@@ -127,7 +135,10 @@ function ce_w6WordPressPublish(request) {
       publishedDate:result.published_date,
       modifiedDate:result.modified_date,
       url:result.url || current.url,
-      message:'WordPress updated. Published Date retained. Verify page and then update the log.'
+      featuredImageUrl: result.featured_image_url || '',
+      featuredImageAction: result.featured_image_action || 'unchanged',
+      message:'WordPress updated. Published Date retained. Featured image: ' +
+        (result.featured_image_action || 'unchanged') + '. Verify page and then update the log.'
     };
   } catch (e) {
     return {success:false,message:String(e.message || e)};
