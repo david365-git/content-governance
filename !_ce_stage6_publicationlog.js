@@ -28,6 +28,9 @@ function ce_getW6Data() {
     const newHtml     = getPostVal("New HTML");
     const newSchema   = getPostVal("Schema (JSON-LD)");
     const locality    = getPostVal("Locality");
+    // EM is the governed featured-image URL column in the posts sheet.
+    // Blank means do not alter the WordPress featured image.
+    const featuredImageUrl = String(posts.getRange(row, 143).getDisplayValue() || "").trim(); // EM
 
     // Parse New Meta Description and Yoast Keyphrase
     const rawMetaDesc     = getPostVal("New Meta Description");
@@ -91,7 +94,7 @@ function ce_getW6Data() {
     return {
       success: true,
       postId, title, stoneType, articleType, locality, url,
-      newH1, newHtml, newMetaTitle, newMetaDesc, newSchema, yoastKeyphrase,
+      newH1, newHtml, newMetaTitle, newMetaDesc, newSchema, yoastKeyphrase, featuredImageUrl,
       oldTitle, oldDate, oldMetaTitle, oldMetaDesc, oldHtml, oldKeyphrase,
       pqc, intent, primaryTerm, entityStatus, driftStatus, rewriteStatus,
       clicks, impressions, position, recallScore, recallNotes, recallScorePrev, recallNotesPrev,
