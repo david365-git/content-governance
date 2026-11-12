@@ -1,5 +1,9 @@
 <?php
 /**
+ * Plugin Name: Abbey W6 Publishing Bridge
+ * Description: Authenticated update-only publishing endpoint for the Abbey Content Engine.
+ * Version: 0.1.0
+ * Requires PHP: 7.4
  * Abbey W6 Publishing Bridge — review/install as a standalone WordPress plugin.
  *
  * NOT DEPLOYED. Authenticated WordPress Application Password requests only.
