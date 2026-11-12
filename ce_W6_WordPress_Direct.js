@@ -109,7 +109,7 @@ function ce_w6WordPressPublish(request) {
     // Optional EM image: only send the URL when populated.
     // The WordPress bridge resolves and validates the Media Library attachment.
     var imageUrl = String(data.featuredImageUrl || '').trim();
-    if (imageUrl && !/^https:\/\/[^\\s?#]+(?:\\?[^#\\s]*)?$/i.test(imageUrl)) {
+    if (imageUrl && !/^https:\/\/[^\s?#]+(?:\?[^#\s]*)?$/i.test(imageUrl)) {
       throw new Error('Column EM must contain a valid HTTPS featured-image URL.');
     }
     var publishBody = {
