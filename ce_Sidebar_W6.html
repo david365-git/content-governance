@@ -21,6 +21,7 @@
         <tr><td style="color:#5f6368">Stone Type</td><td id="w6StoneType"></td></tr>
         <tr><td style="color:#5f6368">Article Type</td><td id="w6ArticleType"></td></tr>
         <tr><td style="color:#5f6368">URL</td><td id="w6Url" style="font-size:9px;word-break:break-all"></td></tr>
+        <tr><td style="color:#5f6368">Featured Image (EM)</td><td id="w6FeaturedImage" style="font-size:9px;word-break:break-all"></td></tr>
       </table>
 
       <div class="step-label" style="margin-top:8px">Old Values (from site-export)</div>
@@ -105,6 +106,7 @@
         document.getElementById('w6StoneType').textContent   = res.stoneType;
         document.getElementById('w6ArticleType').textContent = res.articleType;
         document.getElementById('w6Url').textContent         = res.url;
+        document.getElementById('w6FeaturedImage').textContent = res.featuredImageUrl || '(blank — keep existing WordPress image)';
 
         document.getElementById('w6OldTitle').textContent      = res.oldTitle;
         document.getElementById('w6OldDate').textContent       = res.oldDate;
