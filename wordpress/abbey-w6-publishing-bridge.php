@@ -70,7 +70,7 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
     // Existing importer writes one <script type="application/ld+json"> payload.
     // Validate that structure and reject any executable non-JSON script.
     $schema = trim($values['schema']);
-    if (!preg_match('~^<script\\s+type=["\\\']application/ld\\+json["\\\']\\s*>(.*?)</script>\\s*$~is', $schema, $m)) {
+    if (!preg_match('~^<script\\s+type="application/ld\\+json"\\s*>\\s*(.*?)\\s*</script>\\s*$~is', $schema, $m)) {
         return new WP_Error('w6_invalid_schema',
             'Schema must be one JSON-LD script block.', array('status' => 400));
     }
