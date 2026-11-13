@@ -2946,40 +2946,43 @@ var filenameTopic =
   }
 }
 
-function saveFeaturedImageToSheet(url, filename, altText) {
+function saveFeaturedImageToSheet(url, filename, altText, postId) {
   try {
-    var ss    = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("posts");
-    var row   = sheet.getActiveRange().getRow();
-    if (row < 2) return { success: false, message: "Select a data row first." };
-
-    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
-                       .map(function(h) { return String(h).trim(); });
-
-    var saved   = [];
-    var missing = [];
-
-    function writeCol(name, value) {
-      var idx = headers.indexOf(name);
-      if (idx === -1) { missing.push(name); return; }
-      var cell = sheet.getRange(row, idx + 1);
-      cell.setNumberFormat("@");
-      cell.setValue(value);
-      saved.push(name);
+    var id = String(postId == null ? "" : postId).trim();
+    var imageUrl = String(url || "").trim();
+    if (!id || !imageUrl) return { success:false, message:"Post ID and image URL are required. Generate the image prompt first." };
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("posts");
+    if (!sheet || sheet.getLastRow() < 2) return {success:false,message:"posts sheet not found or empty."};
+    var headers = sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0].map(function(v){return String(v).trim();});
+    var required = ["Post ID","Featured Image URL","Featured Image Filename","Featured Image Alt Text"];
+    var missing = required.filter(function(k){return headers.indexOf(k) === -1;});
+    if (missing.length) return {success:false,message:"Missing posts columns: "+missing.join(", ")};
+    var ids = sheet.getRange(2,headers.indexOf("Post ID")+1,sheet.getLastRow()-1,1).getDisplayValues();
+    var rows = [];
+    ids.forEach(function(v,i){if(String(v[0]).trim()===id)rows.push(i+2);});
+    if (rows.length!==1) return {success:false,message:rows.length?"Duplicate Post ID "+id:"Post ID "+id+" not found."};
+    var row=rows[0], values=[imageUrl,String(filename||"").trim(),String(altText||"").trim()];
+    required.slice(1).forEach(function(name,i){
+      var cell=sheet.getRange(row,headers.indexOf(name)+1);
+      cell.setNumberFormat("@");cell.setValue(values[i]);
+    });
+    SpreadsheetApp.flush();
+    // The exact Post ID and sheet row are passed to W5C. Never rely on the
+    // active row, which can change during a slow WordPress media upload.
+    var schemaResult = generateSchemaForActiveRow(row, id);
+    if (!schemaResult || !schemaResult.success) {
+      return {
+        success:false, imageSaved:true, schemaUpdated:false, postId:id, row:row,
+        message:"Image fields saved for Post ID "+id+", but W5C schema refresh failed: "+
+          String(schemaResult && schemaResult.message || "Unknown W5C error")+
+          ". Run W5C manually before publishing."
+      };
     }
-
-    writeCol("Featured Image URL",      url);
-    writeCol("Featured Image Filename", filename);
-    writeCol("Featured Image Alt Text", altText);
-
-    var message = "Saved " + saved.length + " field(s) to row " + row + ".";
-    if (missing.length > 0) message += " Columns not found — add to posts sheet: " + missing.join(", ");
-
-    return { success: saved.length > 0 || missing.length > 0, message: message };
-
-  } catch(e) {
-    return { success: false, message: "saveFeaturedImageToSheet error: " + e.message };
-  }
+    return {
+      success:true, imageSaved:true, schemaUpdated:true, postId:id,row:row,
+      message:"Saved 3 image fields and refreshed W5C schema for Post ID "+id+" (row "+row+")."
+    };
+  } catch(e) {return {success:false,message:"Featured image save error: "+e.message};}
 }
 function acBuildClassifyPrompt() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
