@@ -112,6 +112,28 @@ function ce_w6WordPressPublish(request) {
     if (imageUrl && !/^https:\/\/[^\s?#]+(?:\?[^#\s]*)?$/i.test(imageUrl)) {
       throw new Error('Column EM must contain a valid HTTPS featured-image URL.');
     }
+    // Fail closed if a saved featured image has not yet been reflected in W5C.
+    if (imageUrl) {
+      var rawSchema = String(data.newSchema || '').trim();
+      var bodyMatch = rawSchema.match(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/i);
+      var parsedSchema;
+      try { parsedSchema = JSON.parse(bodyMatch ? bodyMatch[1] : rawSchema); }
+      catch (schemaError) { throw new Error('W5C schema is invalid; rebuild before publishing.'); }
+      var nodes = Array.isArray(parsedSchema['@graph']) ? parsedSchema['@graph'] : [parsedSchema];
+      var matchingPrimaryImage = nodes.some(function(node) {
+        if (!node || !node['@type']) return false;
+        var types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+        if (!types.some(function(t) { return t === 'Article' || t === 'Service'; })) return false;
+        var images = Array.isArray(node.image) ? node.image : [node.image];
+        return images.some(function(img) {
+          return img === imageUrl || (img && typeof img === 'object' &&
+            (img.url === imageUrl || img.contentUrl === imageUrl));
+        });
+      });
+      if (!matchingPrimaryImage) {
+        throw new Error('Column EM and W5C schema image differ. Refresh W5C before publishing.');
+      }
+    }
     var publishBody = {
       post_id: postId,
       mode: 'update',
