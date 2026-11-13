@@ -374,7 +374,7 @@ function w5cValidateBuiltSchema(fullSchema) {
 /* ============================================================
    MAIN SCHEMA GENERATOR
 ============================================================ */
-function generateSchemaForActiveRow(targetRow, expectedPostId) {
+function generateSchemaForActiveRow(targetRow, expectedPostId, preserveFaqNodes) {
   try {
     const ss    = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName("posts");
@@ -750,6 +750,29 @@ function generateSchemaForActiveRow(targetRow, expectedPostId) {
 
     // ── Assemble graph ──
     const graphNodes = [ primaryEntityObj, breadcrumb, localBusiness ].concat(videoNodes);
+
+    // Media-triggered refresh must not discard FAQPage schema already stored
+    // on this post. Manual W5C retains its original deterministic behaviour.
+    if (preserveFaqNodes === true) {
+      const previousRaw = String(sheet.getRange(row, 92).getValue() || "").trim();
+      if (previousRaw) {
+        try {
+          const previousMatch = previousRaw.match(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/i);
+          const previousJson = JSON.parse(previousMatch ? previousMatch[1] : previousRaw);
+          const previousNodes = Array.isArray(previousJson["@graph"])
+            ? previousJson["@graph"] : [previousJson];
+          previousNodes.forEach(function(node) {
+            if (!node || !node["@type"]) return;
+            const types = Array.isArray(node["@type"]) ? node["@type"] : [node["@type"]];
+            if (types.indexOf("FAQPage") !== -1) graphNodes.push(node);
+          });
+        } catch (faqError) {
+          return {success:false,message:
+            "W5C did not overwrite the existing schema: its prior JSON-LD could not be parsed to preserve FAQPage nodes. " +
+            faqError.message};
+        }
+      }
+    }
     const graph = {
       "@context": "https://schema.org",
       "@graph":   graphNodes
