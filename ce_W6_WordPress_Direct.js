@@ -115,7 +115,7 @@ function ce_w6WordPressPublish(request) {
     // Fail closed if a saved featured image has not yet been reflected in W5C.
     if (imageUrl) {
       var rawSchema = String(data.newSchema || '').trim();
-      var bodyMatch = rawSchema.match(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/i);
+      var bodyMatch = rawSchema.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i);
       var parsedSchema;
       try { parsedSchema = JSON.parse(bodyMatch ? bodyMatch[1] : rawSchema); }
       catch (schemaError) { throw new Error('W5C schema is invalid; rebuild before publishing.'); }
