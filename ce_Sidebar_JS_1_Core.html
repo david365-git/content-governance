@@ -788,6 +788,7 @@ window.acLoadDropdowns = function() {
   // ══ FEATURED IMAGE SYSTEM ══
 
   window.fiGenerate = function() {
+    window.fiLoadedPostId = null;
     var statusEl = document.getElementById('fi-status');
     var customMiddleTitle = document.getElementById('fi-middle-title').value.trim();
     statusEl.textContent = 'Generating image prompt…';
@@ -800,6 +801,7 @@ window.acLoadDropdowns = function() {
           statusEl.className = 'status-bar fail';
           return;
         }
+        window.fiLoadedPostId = String(result.postId || '').trim();
         var finalTitle = customMiddleTitle || result.middleTitle || '';
       var finalPrompt = result.prompt.replace(
         /Middle title \(elegant dark serif\): .+/,
@@ -824,38 +826,82 @@ window.acLoadDropdowns = function() {
   };
 
   window.fiSaveToSheet = function() {
-    var url      = document.getElementById('fi-url').value.trim();
+    var url = document.getElementById('fi-url').value.trim();
     var filename = document.getElementById('fi-filename').value.trim();
-    var altText  = document.getElementById('fi-alttext').value.trim();
+    var altText = document.getElementById('fi-alttext').value.trim();
     var statusEl = document.getElementById('fi-save-status');
-
-    if (!url) {
-      statusEl.style.display = 'block';
-      statusEl.textContent = 'Paste the WordPress image URL first';
+    statusEl.style.display = 'block';
+    if (!window.fiLoadedPostId || !url) {
+      statusEl.textContent = 'Generate the image prompt and enter a WordPress image URL first.';
       statusEl.className = 'status-bar fail';
       return;
     }
-
-    statusEl.style.display = 'block';
     statusEl.textContent = 'Saving…';
     statusEl.className = 'status-bar pending';
-
-    var customMiddleTitle = document.getElementById('fi-middle-title').value.trim();
     google.script.run
       .withSuccessHandler(function(result) {
-        if (result && result.success) {
-          statusEl.textContent = 'Saved to sheet';
-          statusEl.className = 'status-bar pass';
-        } else {
-          statusEl.textContent = 'Save failed: ' + (result ? result.message : 'Unknown error');
-          statusEl.className = 'status-bar fail';
-        }
+        statusEl.textContent = (result && result.success ? result.message : 'Save failed: ' + (result ? result.message : 'Unknown error'));
+        statusEl.className = (result && result.success) ? 'status-bar pass' : 'status-bar fail';
       })
       .withFailureHandler(function(err) {
         statusEl.textContent = 'Save failed: ' + err.message;
         statusEl.className = 'status-bar fail';
-      })
-      .saveFeaturedImageToSheet(url, filename, altText);
+      }).saveFeaturedImageToSheet(url, filename, altText, window.fiLoadedPostId);
+  };
+
+  window.fiUploadToWordPress = function() {
+    var fileEl = document.getElementById('fi-file');
+    var file = fileEl.files && fileEl.files[0];
+    var statusEl = document.getElementById('fi-upload-status');
+    var button = document.getElementById('fi-upload-button');
+    statusEl.style.display = 'block';
+    if (window.fiUploading) return;
+    if (!window.fiLoadedPostId) {
+      statusEl.textContent = 'Generate the image prompt first to capture the Post ID.';
+      statusEl.className = 'status-bar fail'; return;
+    }
+    if (!file) {
+      statusEl.textContent = 'Choose an image file from your computer first.';
+      statusEl.className = 'status-bar fail'; return;
+    }
+    if (file.type !== 'image/webp' || file.size > 2*1024*1024) {
+      statusEl.textContent = 'Choose a WebP image smaller than 2 MB. Convert PNG or JPEG to WebP first.';
+      statusEl.className = 'status-bar fail'; return;
+    }
+    var filename = document.getElementById('fi-filename').value.trim();
+    var altText = document.getElementById('fi-alttext').value.trim();
+    if (!filename) {
+      statusEl.textContent = 'Generate the governed filename first.';
+      statusEl.className = 'status-bar fail'; return;
+    }
+    window.fiUploading = true; button.disabled = true;
+    statusEl.className = 'status-bar pending';
+    statusEl.textContent = 'Reading image…';
+    var reader = new FileReader();
+    reader.onerror = function() {
+      window.fiUploading = false; button.disabled = false;
+      statusEl.className = 'status-bar fail';
+      statusEl.textContent = 'Could not read the selected file.';
+    };
+    reader.onload = function() {
+      var data = String(reader.result || '').split(',')[1];
+      if (!data) { reader.onerror(); return; }
+      statusEl.textContent = 'Uploading image to WordPress…';
+      google.script.run.withSuccessHandler(function(result) {
+        window.fiUploading = false; button.disabled = false;
+        if (result && result.url) document.getElementById('fi-url').value = result.url;
+        statusEl.className = result && result.success ? 'status-bar pass' : 'status-bar fail';
+        statusEl.textContent = result ? result.message : 'Upload failed without a response.';
+      }).withFailureHandler(function(err) {
+        window.fiUploading = false; button.disabled = false;
+        statusEl.className = 'status-bar fail';
+        statusEl.textContent = 'Upload failed: ' + err.message;
+      }).ceFiUploadImageToWordPress({
+        postId: window.fiLoadedPostId,
+        filename: filename, altText: altText, mimeType: file.type, base64: data
+      });
+    };
+    reader.readAsDataURL(file);
   };
 
   function copyField(fieldId, statusId, msg) {
