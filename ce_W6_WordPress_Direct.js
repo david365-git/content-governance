@@ -190,7 +190,7 @@ function ce_w6DirectPublishAndRecord(request) {
   original.url = result.url || original.url;
   var log = ce_updatePublicationLog(original);
   if (!log.success) problems.push('Publication log: ' + log.message);
-  var exp = ce_updateSiteExport();
+  var exp = ce_updateSiteExport(result);
   if (!exp.success) problems.push('site-export: ' + exp.message);
   result.published = true;
   result.logUpdated = !!log.success;
