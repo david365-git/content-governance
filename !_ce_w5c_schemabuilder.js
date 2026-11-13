@@ -757,7 +757,7 @@ function generateSchemaForActiveRow(targetRow, expectedPostId, preserveFaqNodes)
       const previousRaw = String(sheet.getRange(row, 92).getValue() || "").trim();
       if (previousRaw) {
         try {
-          const previousMatch = previousRaw.match(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/i);
+          const previousMatch = previousRaw.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i);
           const previousJson = JSON.parse(previousMatch ? previousMatch[1] : previousRaw);
           const previousNodes = Array.isArray(previousJson["@graph"])
             ? previousJson["@graph"] : [previousJson];
