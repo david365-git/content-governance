@@ -2969,7 +2969,7 @@ function saveFeaturedImageToSheet(url, filename, altText, postId) {
     SpreadsheetApp.flush();
     // The exact Post ID and sheet row are passed to W5C. Never rely on the
     // active row, which can change during a slow WordPress media upload.
-    var schemaResult = generateSchemaForActiveRow(row, id);
+    var schemaResult = generateSchemaForActiveRow(row, id, true);
     if (!schemaResult || !schemaResult.success) {
       return {
         success:false, imageSaved:true, schemaUpdated:false, postId:id, row:row,
