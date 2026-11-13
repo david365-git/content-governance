@@ -96,7 +96,7 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
             $home_host = wp_parse_url(home_url(), PHP_URL_HOST);
             if (!is_array($parsed_url) ||
                 strtolower((string) ($parsed_url['scheme'] ?? '')) !== 'https' ||
-                strtolower((string) ($parsed_url['host'] ?? '')) !== strtolower((string) $home_host) {
+                strtolower((string) ($parsed_url['host'] ?? '')) !== strtolower((string) $home_host)) {
                 return new WP_Error('w6_image_domain',
                     'Column EM must contain an HTTPS image URL on this WordPress website.',
                     array('status' => 400));
