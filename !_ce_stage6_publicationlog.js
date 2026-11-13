@@ -220,7 +220,7 @@ function ce_updatePublicationLog(data) {
   }
 }
 
-function ce_updateSiteExport() {
+function ce_updateSiteExport(publishResult) {
   try {
     const ss       = SpreadsheetApp.getActiveSpreadsheet();
     const posts    = ss.getSheetByName("posts");
@@ -275,7 +275,10 @@ function ce_updateSiteExport() {
     const expIdIdx        = exportHeaders.indexOf("ID");
     const expTitleIdx     = exportHeaders.indexOf("Title");
     const expPubDateIdx   = exportHeaders.indexOf("Published Date");
-    const expUpdDateIdx   = exportHeaders.indexOf("Updated Date");
+    const expUpdDateIdx   = exportHeaders.indexOf("Last Updated Date") > -1
+      ? exportHeaders.indexOf("Last Updated Date")
+      : exportHeaders.indexOf("Updated Date");
+    const expImageIdx     = exportHeaders.indexOf("Featured Image URL");
     const expKpIdx        = exportHeaders.indexOf("Yoast Keyphrase");
     const expMetaTitleIdx = exportHeaders.indexOf("Meta Title");
     const expMetaDescIdx  = exportHeaders.indexOf("Meta Description");
@@ -315,6 +318,23 @@ function ce_updateSiteExport() {
     writeIfFound(expStoneIdx,     stoneType);
     writeIfFound(expSchemaIdx,    schema);
     writeIfFound(expHtmlIdx,      newHtml);
+    // Synchronise only when WordPress has confirmed the featured image.
+    // Blank EM: retain the existing site-export image unchanged.
+    if (publishResult && publishResult.success &&
+        String(publishResult.postId) === String(postId)) {
+      const requestedImage = getPostVal("Featured Image URL");
+      const confirmedImage = String(publishResult.featuredImageUrl || "").trim();
+      const action = String(publishResult.featuredImageAction || "");
+      if (requestedImage) {
+        if (!confirmedImage || !["updated", "unchanged"].includes(action)) {
+          return {success:false, message:"WordPress image was not confirmed; site-export image not synchronised."};
+        }
+        if (expImageIdx === -1) {
+          return {success:false, message:"Featured Image URL column missing in site-export."};
+        }
+        writeIfFound(expImageIdx, confirmedImage);
+      }
+    }
 
     SpreadsheetApp.flush();
 
