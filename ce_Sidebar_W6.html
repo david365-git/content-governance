@@ -183,9 +183,9 @@
     }
     var confirmed = window.confirm(
       'Update published Post ID ' + _w6Data.postId +
-      '?\\n\\nThis updates HTML, title, Yoast fields and schema.' +
-      '\\nFeatured image: ' + (_w6Data.featuredImageUrl ? 'set image from column EM' : 'keep current image') + '.' +
-      '\\nPublished date will be preserved.\\n\\nContinue?'
+      '?\n\nThis updates HTML, title, Yoast fields and schema.' +
+      '\nFeatured image: ' + (_w6Data.featuredImageUrl ? 'set image from column EM' : 'keep current image') + '.' +
+      '\nPublished date will be preserved.\n\nContinue?'
     );
     if (!confirmed) return;
     document.getElementById('w6DirectUpdateBtn').disabled = true;
