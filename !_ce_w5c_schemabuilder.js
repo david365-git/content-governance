@@ -374,16 +374,29 @@ function w5cValidateBuiltSchema(fullSchema) {
 /* ============================================================
    MAIN SCHEMA GENERATOR
 ============================================================ */
-function generateSchemaForActiveRow() {
+function generateSchemaForActiveRow(targetRow, expectedPostId) {
   try {
     const ss    = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName("posts");
-    const row   = sheet.getActiveRange().getRow();
-    if (row < 2) return { success: false, message: "ERROR: Select a data row first." };
+    // Manual W5C continues to use the active row. Media saves supply the exact
+    // saved row, so an intervening selection change cannot alter another post.
+    const row   = targetRow == null ? sheet.getActiveRange().getRow() : Number(targetRow);
+    if (!Number.isSafeInteger(row) || row < 2 || row > sheet.getLastRow()) {
+      return { success: false, message: "ERROR: Invalid posts row for W5C." };
+    }
 
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn())
                          .getValues()[0]
                          .map(function(h) { return String(h).trim(); });
+
+    if (expectedPostId != null) {
+      const idIndex = headers.indexOf("Post ID");
+      const actualId = idIndex < 0 ? "" :
+        String(sheet.getRange(row, idIndex + 1).getDisplayValue() || "").trim();
+      if (actualId !== String(expectedPostId).trim()) {
+        return {success:false,message:"ERROR: Post ID changed before W5C schema refresh."};
+      }
+    }
 
     // ── Core fields by column index ──
     const pageUrl     = String(sheet.getRange(row, 3).getValue()   || "").trim();
@@ -409,7 +422,10 @@ function generateSchemaForActiveRow() {
     const supportingEntities = colByHeader("Supporting Entities Core");
 
     // ── Featured image ──
-    let featuredImg = String(sheet.getRange(row, 85).getValue() || "").trim();
+    // Prefer the governed Featured Image URL written by Media > Save to Sheet
+    // (currently column EM); use the legacy column only as a fallback.
+    let featuredImg = colByHeader("Featured Image URL") ||
+      String(sheet.getRange(row, 85).getValue() || "").trim();
     if (!featuredImg) {
       const pageHtml  = String(sheet.getRange(row, 98).getValue() || "");
       const imgMatches = pageHtml.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi) || [];
