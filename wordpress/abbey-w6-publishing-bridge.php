@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Abbey W6 Publishing Bridge
  * Description: Authenticated update and guarded republish endpoint for the Abbey Content Engine.
- * Version: 0.2.1
+ * Version: 0.2.2
  * Requires PHP: 7.4
  * Abbey W6 Publishing Bridge — WPCode snippet #48276.
  *
@@ -11,6 +11,7 @@
  * UPDATE preserves publication date; REPUBLISH resets it with a 30-day safeguard.
  * Validated JSON-LD is saved in the AddFunc Head & Footer Code metabox (aFhfc_head_code).
  * WordPress republish may notify syndication hooks; external delivery must be checked separately.
+ * Align JSON-LD datePublished/dateModified with confirmed WordPress dates after save.
  */
 defined('ABSPATH') || exit;
 
@@ -166,6 +167,44 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
         return $updated_id;
     }
 
+    // Read the saved WordPress dates, not the sidebar/W5C draft dates.
+    // wp_update_post above is the only publication action; the meta writes
+    // below do not republish or reset the WordPress publication date.
+    $after = get_post($post_id);
+    if (!$after ||
+        ($mode === 'update' && $after->post_date !== str_replace('T', ' ', $expected)) ||
+        ($mode === 'republish' && $after->post_date === str_replace('T', ' ', $expected))) {
+        return new WP_Error('w6_post_write_inconsistent',
+            'WordPress saved the post but the publication date needs investigation.',
+            array('status' => 500));
+    }
+    $published_day = substr($after->post_date, 0, 10);
+    $modified_day  = substr($after->post_modified, 0, 10);
+    $set_dates = function (&$node) use ($published_day, $modified_day) {
+        if (!is_array($node)) return;
+        if (array_key_exists('datePublished', $node)) {
+            $node['datePublished'] = $published_day;
+        }
+        if (array_key_exists('dateModified', $node)) {
+            $node['dateModified'] = $modified_day;
+        }
+    };
+    $set_dates($decoded);
+    if (isset($decoded['@graph']) && is_array($decoded['@graph'])) {
+        foreach ($decoded['@graph'] as &$node) $set_dates($node);
+        unset($node);
+    }
+    $canonical_json = wp_json_encode(
+        $decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+    );
+    if (!is_string($canonical_json)) {
+        return new WP_Error('w6_schema_encode_failed',
+            'WordPress saved the article, but schema encoding failed. Do not publish again.',
+            array('status' => 500));
+    }
+    $schema = '<script type="application/ld+json">' . "\n" .
+        $canonical_json . "\n" . '</script>';
+
     update_post_meta($post_id, '_yoast_wpseo_title', wp_slash($values['meta_title']));
     update_post_meta($post_id, '_yoast_wpseo_metadesc', wp_slash($values['meta_description']));
     update_post_meta($post_id, '_yoast_wpseo_focuskw', wp_slash($values['focus_keyphrase']));
@@ -180,26 +219,19 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
                 array('status' => 500));
         }
     }
-    if (get_post_meta($post_id, 'aFhfc_head_code', true) !== $schema) {
+    if (get_post_meta($post_id, 'aFhfc_head_code', true) !== $schema ||
+        get_post_meta($post_id, '_abbey_custom_schema', true) !== $schema) {
         return new WP_Error('w6_header_code_not_saved',
             'Article saved but Head & Footer Code schema verification failed. Check the post before retrying.',
             array('status' => 500));
     }
     clean_post_cache($post_id);
 
-    $after = get_post($post_id);
-    if (!$after ||
-        ($mode === 'update' && $after->post_date !== str_replace('T', ' ', $expected)) ||
-        ($mode === 'republish' && $after->post_date === str_replace('T', ' ', $expected))) {
-        return new WP_Error('w6_post_write_inconsistent',
-            'WordPress saved the post but the publication date needs investigation.',
-            array('status' => 500));
-    }
-
     return rest_ensure_response(array(
         'success' => true,
         'post_id' => $post_id,
         'mode' => $mode,
+        'schema' => $schema,
         'published_date' => str_replace(' ', 'T', $after->post_date),
         'modified_date' => str_replace(' ', 'T', $after->post_modified),
         'url' => get_permalink($post_id),
