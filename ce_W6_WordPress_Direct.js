@@ -76,8 +76,8 @@ function ce_w6WordPressPreflight(request) {
 /**
  * Publish only after the matching row was loaded, and the user explicitly
  * confirmed UPDATE or REPUBLISH. Bridge validates WordPress write atomically.
- * IMPORTANT: REPUBLISH date resets require syndication verification before
- * production use. This implementation blocks republishing until enabled.
+ * Republish uses a separate guarded WordPress operation. Verify the external
+ * syndication event independently; a WordPress date change alone is not proof.
  */
 function ce_w6WordPressPublish(request) {
   try {
@@ -88,8 +88,9 @@ function ce_w6WordPressPublish(request) {
     if (Number(request.postId) !== postId) {
       throw new Error('Selected post changed. Reload W6.');
     }
-    if (request.mode === 'republish') {
-      throw new Error('Republish is disabled until Fabritec syndication trigger is verified.');
+    if (request.mode === 'republish' &&
+        (!request.verifiedPublishedDate || !request.verifiedModifiedDate)) {
+      throw new Error('Verify the live publication and modification dates before republishing.');
     }
     var data = ce_getW6Data();
     if (!data.success || Number(data.postId) !== postId) {
@@ -105,6 +106,11 @@ function ce_w6WordPressPublish(request) {
     // Preflight is repeated server-side immediately before the write.
     var current = ce_w6WordPressPreflight({postId:postId});
     if (!current.success) throw new Error(current.message);
+    if (request.mode === 'republish' &&
+        (current.publishedDate !== request.verifiedPublishedDate ||
+         current.modifiedDate !== request.verifiedModifiedDate)) {
+      throw new Error('WordPress post changed since the confirmation. Verify again before republishing.');
+    }
 
     // Optional EM image: only send the URL when populated.
     // The WordPress bridge resolves and validates the Media Library attachment.
@@ -136,7 +142,7 @@ function ce_w6WordPressPublish(request) {
     }
     var publishBody = {
       post_id: postId,
-      mode: 'update',
+      mode: request.mode,
       expected_date: current.publishedDate,
       title: data.newH1,
       html: data.newHtml,
@@ -145,22 +151,27 @@ function ce_w6WordPressPublish(request) {
       focus_keyphrase: data.yoastKeyphrase,
       schema: data.newSchema
     };
+    if (request.mode === 'republish') publishBody.expected_modified = current.modifiedDate;
     if (imageUrl) publishBody.featured_image_url = imageUrl;
     var result = ce_w6WpRequest_('post', '/wp-json/abbey/v1/w6-publish', publishBody);
     if (!result.success || Number(result.post_id) !== postId ||
         !result.published_date || !result.modified_date ||
-        result.published_date !== current.publishedDate) {
+        (request.mode === 'update'
+          ? result.published_date !== current.publishedDate
+          : result.published_date === current.publishedDate)) {
       throw new Error('WordPress response was not fully verified. Check the post before retrying.');
     }
     return {
-      success:true, postId:postId, mode:'update',
+      success:true, postId:postId, mode:request.mode,
       publishedDate:result.published_date,
       modifiedDate:result.modified_date,
       url:result.url || current.url,
       featuredImageUrl: result.featured_image_url || '',
       featuredImageAction: result.featured_image_action || 'unchanged',
-      message:'WordPress updated. Published Date retained. Featured image: ' +
-        (result.featured_image_action || 'unchanged') + '. Verify page and then update the log.'
+      message:'WordPress ' + (request.mode === 'republish' ? 'republished' : 'updated') +
+        '. ' + (request.mode === 'republish' ? 'Published Date advanced' : 'Published Date retained') +
+        '. Featured image: ' + (result.featured_image_action || 'unchanged') +
+        '. Syndication delivery requires separate verification.'
     };
   } catch (e) {
     return {success:false,message:String(e.message || e)};
@@ -200,8 +211,11 @@ function ce_w6DirectPublishAndRecord(request) {
     result.message = 'WordPress WAS updated, but sheet recording needs attention. Do not publish again. ' +
       problems.join(' | ');
   } else {
-    result.message = 'WordPress updated and verified; publication log and site-export recorded. ' +
-      'Published date preserved. Featured image: ' + result.featuredImageAction + '.';
+    result.message = 'WordPress ' + (result.mode === 'republish' ? 'republished' : 'updated') +
+      ' and verified; publication log and site-export recorded. ' +
+      (result.mode === 'republish' ? 'Published date advanced.' : 'Published date preserved.') +
+      ' Featured image: ' + result.featuredImageAction +
+      '. Verify syndication separately if republished.';
   }
   return result;
 }
