@@ -2,13 +2,13 @@
 /**
  * Plugin Name: Abbey W6 Publishing Bridge
  * Description: Authenticated update-only publishing endpoint for the Abbey Content Engine.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Requires PHP: 7.4
  * Abbey W6 Publishing Bridge — review/install as a standalone WordPress plugin.
  *
  * NOT DEPLOYED. Authenticated WordPress Application Password requests only.
  * Requires administrator and unfiltered_html capabilities.
- * Supports UPDATE only; REPUBLISH intentionally blocked pending syndication tests.
+ * UPDATE preserves publication date; REPUBLISH resets it with a 30-day safeguard.
  * Custom schema stays in _abbey_custom_schema, consumed by existing output rules.
  */
 defined('ABSPATH') || exit;
@@ -30,10 +30,9 @@ add_action('rest_api_init', function () {
 function abbey_w6_publish_post(WP_REST_Request $request) {
     $post_id = absint($request->get_param('post_id'));
     $mode = (string) $request->get_param('mode');
-    if ($mode !== 'update') {
-        return new WP_Error('w6_republish_disabled',
-            'Republish is disabled until its syndication behaviour is verified.',
-            array('status' => 400));
+    if (!in_array($mode, array('update', 'republish'), true)) {
+        return new WP_Error('w6_invalid_mode',
+            'Choose Update or Republish.', array('status' => 400));
     }
     $post = get_post($post_id);
     if (!$post || $post->post_type !== 'post' || $post->post_status !== 'publish') {
@@ -49,6 +48,27 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
         return new WP_Error('w6_date_conflict',
             'Post publication date changed since preflight. Reload the row.',
             array('status' => 409));
+    }
+
+    if ($mode === 'republish') {
+        // A second safeguard: do not republish recent or future-dated articles.
+        // This check is independent of the spreadsheet's grey highlighting.
+        $published_at = DateTimeImmutable::createFromFormat(
+            '!Y-m-d H:i:s', $post->post_date, wp_timezone());
+        $now_at = new DateTimeImmutable('now', wp_timezone());
+        if (!$published_at || $published_at > $now_at ||
+            ($now_at->getTimestamp() - $published_at->getTimestamp()) < 30 * DAY_IN_SECONDS) {
+            return new WP_Error('w6_recent_or_future_publication',
+                'Republish blocked: the publication date is within the last 30 days or scheduled in the future.',
+                array('status' => 409));
+        }
+        $expected_modified = (string) $request->get_param('expected_modified');
+        if (!$expected_modified ||
+            str_replace('T', ' ', $expected_modified) !== $post->post_modified) {
+            return new WP_Error('w6_modified_conflict',
+                'WordPress changed since verification. Verify the post again before republishing.',
+                array('status' => 409));
+        }
     }
 
     $fields = array('title','html','meta_title','meta_description','focus_keyphrase','schema');
@@ -117,13 +137,19 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
         }
     }
 
-    // WordPress automatically advances post_modified; post_date is preserved.
-    $updated_id = wp_update_post(wp_slash(array(
+    // Update leaves the publication date untouched. Republish explicitly
+    // advances the publication date through the normal WordPress post API.
+    $post_fields = array(
         'ID'           => $post_id,
         'post_title'   => $values['title'],
         'post_content' => $values['html'],
         'post_status'  => 'publish'
-    )), true);
+    );
+    if ($mode === 'republish') {
+        $post_fields['post_date'] = current_time('mysql');
+        $post_fields['post_date_gmt'] = get_gmt_from_date($post_fields['post_date']);
+    }
+    $updated_id = wp_update_post(wp_slash($post_fields), true);
     if (is_wp_error($updated_id)) {
         return $updated_id;
     }
@@ -142,7 +168,9 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
     clean_post_cache($post_id);
 
     $after = get_post($post_id);
-    if (!$after || $after->post_date !== str_replace('T', ' ', $expected)) {
+    if (!$after ||
+        ($mode === 'update' && $after->post_date !== str_replace('T', ' ', $expected)) ||
+        ($mode === 'republish' && $after->post_date === str_replace('T', ' ', $expected))) {
         return new WP_Error('w6_post_write_inconsistent',
             'WordPress saved the post but the publication date needs investigation.',
             array('status' => 500));
@@ -151,6 +179,7 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
     return rest_ensure_response(array(
         'success' => true,
         'post_id' => $post_id,
+        'mode' => $mode,
         'published_date' => str_replace(' ', 'T', $after->post_date),
         'modified_date' => str_replace(' ', 'T', $after->post_modified),
         'url' => get_permalink($post_id),
