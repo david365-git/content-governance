@@ -240,10 +240,10 @@
       return;
     }
     var entered = window.prompt(
-      'REPUBLISH Post ' + _w6Data.postId + '?\\n\\n' +
-      'This advances its publication date to the current WordPress time and may send it through your syndication network.\\n' +
-      'The existing HTML, title, metadata, schema and optional image will also be written.\\n\\n' +
-      'Articles published within 30 days or scheduled for the future are blocked.\\n' +
+      'REPUBLISH Post ' + _w6Data.postId + '?\n\n' +
+      'This advances its publication date to the current WordPress time and may send it through your syndication network.\n' +
+      'The existing HTML, title, metadata, schema and optional image will also be written.\n\n' +
+      'Articles published within 30 days or scheduled for the future are blocked.\n' +
       'Type the Post ID ' + _w6Data.postId + ' to continue:'
     );
     if (entered !== String(_w6Data.postId)) {
@@ -252,7 +252,7 @@
     }
     if (!window.confirm(
       'FINAL CONFIRMATION — REPUBLISH Post ' + _w6Data.postId +
-      '\\n\\nChange the live WordPress publication date now? This may trigger syndication.\\n\\nContinue?'
+      '\n\nChange the live WordPress publication date now? This may trigger syndication.\n\nContinue?'
     )) return;
     document.getElementById('w6DirectUpdateBtn').disabled = true;
     document.getElementById('w6DirectRepublishBtn').disabled = true;
