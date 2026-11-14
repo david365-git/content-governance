@@ -156,6 +156,7 @@ function ce_w6WordPressPublish(request) {
     var result = ce_w6WpRequest_('post', '/wp-json/abbey/v1/w6-publish', publishBody);
     if (!result.success || Number(result.post_id) !== postId ||
         !result.published_date || !result.modified_date ||
+        !result.schema || !String(result.schema).includes('"datePublished"') ||
         (request.mode === 'update'
           ? result.published_date !== current.publishedDate
           : result.published_date === current.publishedDate)) {
@@ -165,6 +166,7 @@ function ce_w6WordPressPublish(request) {
       success:true, postId:postId, mode:request.mode,
       publishedDate:result.published_date,
       modifiedDate:result.modified_date,
+      schema:result.schema,
       url:result.url || current.url,
       featuredImageUrl: result.featured_image_url || '',
       featuredImageAction: result.featured_image_action || 'unchanged',
@@ -178,6 +180,39 @@ function ce_w6WordPressPublish(request) {
   }
 }
 
+
+
+/**
+ * Keep the posts source Schema (JSON-LD) consistent with the canonical
+ * schema returned by WordPress, without running any WordPress write.
+ * Any failure is reported as a partial recording issue, not a publish failure.
+ */
+function ce_w6SaveConfirmedSchema_(postId, expectedSchema, confirmedSchema) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
+    if (!sheet) throw new Error('posts sheet missing.');
+    var row = sheet.getActiveRange().getRow();
+    if (row < 2) throw new Error('Select a posts data row.');
+    var h = sheet.getRange(1,1,1,sheet.getLastColumn()).getDisplayValues()[0];
+    var idCol = h.indexOf('Post ID') + 1;
+    var schemaCol = h.indexOf('Schema (JSON-LD)') + 1;
+    if (!idCol || !schemaCol) throw new Error('Post ID or Schema (JSON-LD) column missing.');
+    if (String(sheet.getRange(row,idCol).getValue()).trim() !== String(postId)) {
+      throw new Error('Active posts row changed; schema not overwritten.');
+    }
+    var cell = sheet.getRange(row,schemaCol);
+    var existing = String(cell.getValue() || '').trim();
+    if (existing !== String(expectedSchema || '').trim() &&
+        existing !== String(confirmedSchema || '').trim()) {
+      throw new Error('Schema source changed since publishing; manual reconciliation required.');
+    }
+    cell.setValue(String(confirmedSchema || ''));
+    SpreadsheetApp.flush();
+    return {success:true};
+  } catch (e) {
+    return {success:false,message:String(e.message || e)};
+  }
+}
 
 /**
  * Single W6 action: publish first, then record the confirmed WordPress result.
@@ -195,8 +230,11 @@ function ce_w6DirectPublishAndRecord(request) {
     return {success:false,published:false,message:result.message};
   }
   var problems = [];
+  var sourceSchema = original.newSchema;
   original.newPublishedDate = result.publishedDate;
   original.newUpdatedDate = result.modifiedDate;
+  // Log the canonical JSON-LD returned by WordPress after it has saved the post.
+  original.newSchema = result.schema;
   original.publicationAction = result.mode;
   original.url = result.url || original.url;
   var log = ce_updatePublicationLog(original);
@@ -206,6 +244,9 @@ function ce_w6DirectPublishAndRecord(request) {
   result.published = true;
   result.logUpdated = !!log.success;
   result.siteExportUpdated = !!exp.success;
+  var schemaSync = ce_w6SaveConfirmedSchema_(result.postId, sourceSchema, result.schema);
+  if (!schemaSync.success) problems.push('posts schema: ' + schemaSync.message);
+  result.postsSchemaUpdated = !!schemaSync.success;
   if (problems.length) {
     result.success = false;
     result.message = 'WordPress WAS updated, but sheet recording needs attention. Do not publish again. ' +
