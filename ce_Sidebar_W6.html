@@ -55,14 +55,14 @@
       <div class="btn-row" style="margin-top:4px">
         <button style="background:#455a64;color:#fff" onclick="w6_verifyWordPress()">Verify WordPress Post</button>
         <button id="w6DirectUpdateBtn" style="background:#2e7d32;color:#fff" onclick="w6_directUpdate()" disabled>Update Post</button>
-        <button id="w6DirectRepublishBtn" style="background:#888;color:#fff" disabled title="Awaiting syndication verification">Republish Post — Not Yet Enabled</button>
+        <button id="w6DirectRepublishBtn" style="background:#b06000;color:#fff" onclick="w6_directRepublish()" disabled>Republish Post</button>
       </div>
       <div style="font-size:10px;color:#7a4a00;margin-top:6px">
-        Update retains the original publication date. Republish remains disabled until the syndication trigger is verified.
+        Update preserves the original publication date. Republish advances it and may trigger syndication. Articles published within the past 30 days or scheduled for the future cannot be republished here. Confirm syndication delivery separately.
       </div>
       <div class="step-label" style="margin-top:9px">WordPress Result</div>
       <div id="w6PublishResult" style="font-size:10px;white-space:pre-wrap">
-        The publication log and site-export will be updated automatically after a successful direct update.
+        The publication log and site-export will be updated automatically after a successful direct action.
       </div>
 
       <!-- Manual fallback for existing WordPress importer -->
@@ -86,13 +86,19 @@
 <script>
   var _w6Data = null;
   var _w6VerifiedId = null;
+  var _w6VerifiedPublishedDate = null;
+  var _w6VerifiedModifiedDate = null;
   var _w6DirectReceipt = null;
 
   function w6_load() {
     _w6VerifiedId = null;
+    _w6VerifiedPublishedDate = null;
+    _w6VerifiedModifiedDate = null;
+    _w6Data = null;
     _w6DirectReceipt = null;
     document.getElementById('w6DirectUpdateBtn').disabled = true;
-    document.getElementById('w6PublishResult').textContent = 'The publication log and site-export will be updated automatically after a successful direct update.';
+    document.getElementById('w6DirectRepublishBtn').disabled = true;
+    document.getElementById('w6PublishResult').textContent = 'The publication log and site-export will be updated automatically after a successful direct action.';
     setStatus('statusW6', 'running', 'Loading row data...', true);
     google.script.run
       .withSuccessHandler(function(res) {
@@ -155,7 +161,10 @@
       return;
     }
     _w6VerifiedId = null;
+    _w6VerifiedPublishedDate = null;
+    _w6VerifiedModifiedDate = null;
     document.getElementById('w6DirectUpdateBtn').disabled = true;
+    document.getElementById('w6DirectRepublishBtn').disabled = true;
     setStatus('statusW6','running','Checking published WordPress post...',true);
     google.script.run
       .withSuccessHandler(function(res) {
@@ -164,10 +173,13 @@
           return;
         }
         _w6VerifiedId = String(res.postId);
+        _w6VerifiedPublishedDate = String(res.publishedDate || '');
+        _w6VerifiedModifiedDate = String(res.modifiedDate || '');
         document.getElementById('w6WpVerification').textContent =
           'Verified Post ' + res.postId + ' — Published: ' + res.publishedDate +
           ' — Last updated: ' + res.modifiedDate;
         document.getElementById('w6DirectUpdateBtn').disabled = false;
+        document.getElementById('w6DirectRepublishBtn').disabled = false;
         setStatus('statusW6','done','WordPress post verified. No changes made.');
       })
       .withFailureHandler(function(e) {
@@ -189,6 +201,7 @@
     );
     if (!confirmed) return;
     document.getElementById('w6DirectUpdateBtn').disabled = true;
+    document.getElementById('w6DirectRepublishBtn').disabled = true;
     setStatus('statusW6','running','Updating WordPress post...',true);
     google.script.run
       .withSuccessHandler(function(res) {
@@ -201,6 +214,8 @@
         _w6DirectReceipt = res;
         document.getElementById('w6PublishResult').textContent = res.message;
         _w6VerifiedId = null;
+        _w6VerifiedPublishedDate = null;
+        _w6VerifiedModifiedDate = null;
         document.getElementById('w6WpVerification').textContent =
           'Updated WordPress Post ' + res.postId +
           ' — Published: ' + res.publishedDate +
@@ -216,6 +231,66 @@
         setStatus('statusW6','fail','WordPress update could not be verified: '+e.message);
       })
       .ce_w6DirectPublishAndRecord({postId:_w6Data.postId,mode:'update'});
+  }
+
+  function w6_directRepublish() {
+    if (!_w6Data || String(_w6Data.postId) !== _w6VerifiedId ||
+        !_w6VerifiedPublishedDate || !_w6VerifiedModifiedDate) {
+      setStatus('statusW6','fail','Load the row and verify the live WordPress post first.');
+      return;
+    }
+    var entered = window.prompt(
+      'REPUBLISH Post ' + _w6Data.postId + '?\\n\\n' +
+      'This advances its publication date to the current WordPress time and may send it through your syndication network.\\n' +
+      'The existing HTML, title, metadata, schema and optional image will also be written.\\n\\n' +
+      'Articles published within 30 days or scheduled for the future are blocked.\\n' +
+      'Type the Post ID ' + _w6Data.postId + ' to continue:'
+    );
+    if (entered !== String(_w6Data.postId)) {
+      if (entered !== null) setStatus('statusW6','fail','Republish cancelled: Post ID did not match.');
+      return;
+    }
+    if (!window.confirm(
+      'FINAL CONFIRMATION — REPUBLISH Post ' + _w6Data.postId +
+      '\\n\\nChange the live WordPress publication date now? This may trigger syndication.\\n\\nContinue?'
+    )) return;
+    document.getElementById('w6DirectUpdateBtn').disabled = true;
+    document.getElementById('w6DirectRepublishBtn').disabled = true;
+    setStatus('statusW6','running','Republishing WordPress post...',true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        var message = (res && res.message) || 'WordPress republish could not be verified.';
+        document.getElementById('w6PublishResult').textContent = message;
+        if (!res || !res.success) {
+          setStatus('statusW6','fail',message);
+          return;
+        }
+        _w6DirectReceipt = res;
+        _w6VerifiedId = null;
+        _w6VerifiedPublishedDate = null;
+        _w6VerifiedModifiedDate = null;
+        document.getElementById('w6WpVerification').textContent =
+          'Republished WordPress Post ' + res.postId +
+          ' — Published: ' + res.publishedDate +
+          ' — Last updated: ' + res.modifiedDate;
+        if (res.publishedDate) {
+          document.getElementById('w6NewDate').value =
+            String(res.publishedDate).replace(' ','T').slice(0,16);
+        }
+        setStatus('statusW6','done',message);
+      })
+      .withFailureHandler(function(e) {
+        var message = 'WordPress republish could not be verified: ' + e.message +
+          '. Check the live post before trying again.';
+        document.getElementById('w6PublishResult').textContent = message;
+        setStatus('statusW6','fail',message);
+      })
+      .ce_w6DirectPublishAndRecord({
+        postId: _w6Data.postId,
+        mode: 'republish',
+        verifiedPublishedDate: _w6VerifiedPublishedDate,
+        verifiedModifiedDate: _w6VerifiedModifiedDate
+      });
   }
 
   function w6_copyForWordpress() {
