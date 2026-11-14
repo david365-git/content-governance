@@ -41,8 +41,11 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
             'Expected an existing published WordPress post.',
             array('status' => 400));
     }
+    // REST API date uses ISO "T"; WP_Post::post_date uses a space.
+    // Compare only equivalent site-local timestamps, never change post_date.
     $expected = (string) $request->get_param('expected_date');
-    if (!$expected || $expected !== $post->post_date) {
+    if (!preg_match('/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$/D', $expected) ||
+        str_replace('T', ' ', $expected) !== $post->post_date) {
         return new WP_Error('w6_date_conflict',
             'Post publication date changed since preflight. Reload the row.',
             array('status' => 409));
@@ -148,7 +151,7 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
     return rest_ensure_response(array(
         'success' => true,
         'post_id' => $post_id,
-        'published_date' => $after->post_date,
+        'published_date' => str_replace(' ', 'T', $after->post_date),
         'modified_date' => $after->post_modified,
         'url' => get_permalink($post_id),
         'featured_image_action' => $feature_action,
