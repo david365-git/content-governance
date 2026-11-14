@@ -156,7 +156,7 @@ function ce_w6WordPressPublish(request) {
     var result = ce_w6WpRequest_('post', '/wp-json/abbey/v1/w6-publish', publishBody);
     if (!result.success || Number(result.post_id) !== postId ||
         !result.published_date || !result.modified_date ||
-        !result.schema || !String(result.schema).includes('"datePublished"') ||
+        !result.schema ||
         (request.mode === 'update'
           ? result.published_date !== current.publishedDate
           : result.published_date === current.publishedDate)) {
