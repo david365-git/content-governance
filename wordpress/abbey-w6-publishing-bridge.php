@@ -4,12 +4,13 @@
  * Description: Authenticated update-only publishing endpoint for the Abbey Content Engine.
  * Version: 0.2.0
  * Requires PHP: 7.4
- * Abbey W6 Publishing Bridge — review/install as a standalone WordPress plugin.
+ * Abbey W6 Publishing Bridge — WPCode snippet #48276.
  *
- * NOT DEPLOYED. Authenticated WordPress Application Password requests only.
+ * Authenticated WordPress Application Password requests only.
  * Requires administrator and unfiltered_html capabilities.
  * UPDATE preserves publication date; REPUBLISH resets it with a 30-day safeguard.
  * Custom schema stays in _abbey_custom_schema, consumed by existing output rules.
+ * WordPress republish may notify syndication hooks; external delivery must be checked separately.
  */
 defined('ABSPATH') || exit;
 
