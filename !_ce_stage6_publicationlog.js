@@ -28,6 +28,9 @@ function ce_getW6Data() {
     const newHtml     = getPostVal("New HTML");
     const newSchema   = getPostVal("Schema (JSON-LD)");
     const locality    = getPostVal("Locality");
+    // EM is the governed featured-image URL column in the posts sheet.
+    // Blank means do not alter the WordPress featured image.
+    const featuredImageUrl = String(posts.getRange(row, 143).getDisplayValue() || "").trim(); // EM
 
     // Parse New Meta Description and Yoast Keyphrase
     const rawMetaDesc     = getPostVal("New Meta Description");
@@ -91,7 +94,7 @@ function ce_getW6Data() {
     return {
       success: true,
       postId, title, stoneType, articleType, locality, url,
-      newH1, newHtml, newMetaTitle, newMetaDesc, newSchema, yoastKeyphrase,
+      newH1, newHtml, newMetaTitle, newMetaDesc, newSchema, yoastKeyphrase, featuredImageUrl,
       oldTitle, oldDate, oldMetaTitle, oldMetaDesc, oldHtml, oldKeyphrase,
       pqc, intent, primaryTerm, entityStatus, driftStatus, rewriteStatus,
       clicks, impressions, position, recallScore, recallNotes, recallScorePrev, recallNotesPrev,
@@ -110,6 +113,17 @@ function ce_updatePublicationLog(data) {
     const ss      = SpreadsheetApp.getActiveSpreadsheet();
     const logSheet = ss.getSheetByName("publication_log");
     if (!logSheet) throw new Error("publication_log sheet not found.");
+
+    // The publication log must not record an assumed date selected in the
+    // sidebar. Read the actual post date after the WordPress write instead.
+    const wpDateCheck = ce_w6WordPressPreflight({postId:data && data.postId});
+    if (!wpDateCheck.success ||
+        String(wpDateCheck.postId) !== String(data && data.postId) ||
+        !wpDateCheck.publishedDate) {
+      throw new Error("Live WordPress publication date not verified; log not written. " +
+        String(wpDateCheck.message || ""));
+    }
+    data.newPublishedDate = wpDateCheck.publishedDate;
 
     const lastCol = logSheet.getLastColumn();
     const headers = lastCol > 0 ? logSheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
@@ -130,6 +144,16 @@ function ce_updatePublicationLog(data) {
       logSheet.getRange(1, 1, 1, cols.length).setValues([cols]);
     }
 
+    // Record the actual WordPress update date and action without rearranging
+    // any existing publication_log columns.
+    let currentHeaders = logSheet.getRange(1, 1, 1, logSheet.getLastColumn()).getValues()[0].map(String);
+    ["New Updated Date", "Publication Action"].forEach(function(h) {
+      if (currentHeaders.indexOf(h) === -1) {
+        const nextCol = logSheet.getLastColumn() + 1;
+        logSheet.getRange(1, nextCol).setValue(h);
+        currentHeaders.push(h);
+      }
+    });
     const now = new Date();
     const logDate = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm");
 
@@ -174,6 +198,11 @@ function ce_updatePublicationLog(data) {
       data.newSchema
     ];
 
+    // Existing 38 columns stay in place, with the two audit columns added.
+    while (newRow.length < currentHeaders.length) newRow.push("");
+    newRow[currentHeaders.indexOf("New Updated Date")] = wpDateCheck.modifiedDate;
+    newRow[currentHeaders.indexOf("Publication Action")] =
+      String(data.publicationAction || "manual");
     const lastRow = logSheet.getLastRow();
     logSheet.getRange(lastRow + 1, 1, 1, newRow.length).setValues([newRow]);
 
@@ -191,7 +220,7 @@ function ce_updatePublicationLog(data) {
   }
 }
 
-function ce_updateSiteExport() {
+function ce_updateSiteExport(publishResult) {
   try {
     const ss       = SpreadsheetApp.getActiveSpreadsheet();
     const posts    = ss.getSheetByName("posts");
@@ -226,11 +255,18 @@ function ce_updateSiteExport() {
       yoastKeyphrase = rawMetaDesc.substring(kpIdx + keyphraseMarker.length).trim();
     }
 
-    const today = Utilities.formatDate(
-      new Date(),
-      Session.getScriptTimeZone(),
-      "yyyy-MM-dd"
-    );
+    // Dates must come from the live WordPress post, never from the clock.
+    // An ordinary update retains Published Date; a republish changes it in WP.
+    const verifiedPost = ce_w6WordPressPreflight({postId: postId});
+    if (!verifiedPost.success ||
+        String(verifiedPost.postId) !== String(postId) ||
+        !verifiedPost.publishedDate || !verifiedPost.modifiedDate) {
+      return {success:false, message:
+        "Could not verify WordPress dates. site-export left unchanged: " +
+        String(verifiedPost.message || "Unknown verification error.")};
+    }
+    const publishedDate = verifiedPost.publishedDate;
+    const updatedDate = verifiedPost.modifiedDate;
 
     // Find matching row in site-export
     const exportData    = exportSh.getDataRange().getValues();
@@ -239,7 +275,10 @@ function ce_updateSiteExport() {
     const expIdIdx        = exportHeaders.indexOf("ID");
     const expTitleIdx     = exportHeaders.indexOf("Title");
     const expPubDateIdx   = exportHeaders.indexOf("Published Date");
-    const expUpdDateIdx   = exportHeaders.indexOf("Updated Date");
+    const expUpdDateIdx   = exportHeaders.indexOf("Last Updated Date") > -1
+      ? exportHeaders.indexOf("Last Updated Date")
+      : exportHeaders.indexOf("Updated Date");
+    const expImageIdx     = exportHeaders.indexOf("Featured Image URL");
     const expKpIdx        = exportHeaders.indexOf("Yoast Keyphrase");
     const expMetaTitleIdx = exportHeaders.indexOf("Meta Title");
     const expMetaDescIdx  = exportHeaders.indexOf("Meta Description");
@@ -271,19 +310,36 @@ function ce_updateSiteExport() {
     }
 
     writeIfFound(expTitleIdx,     newH1);
-    writeIfFound(expPubDateIdx,   today);
-    writeIfFound(expUpdDateIdx,   today);
+    writeIfFound(expPubDateIdx,   publishedDate);
+    writeIfFound(expUpdDateIdx,   updatedDate);
     writeIfFound(expKpIdx,        yoastKeyphrase);
     writeIfFound(expMetaTitleIdx, newMetaTitle);
     writeIfFound(expMetaDescIdx,  newMetaDesc);
     writeIfFound(expStoneIdx,     stoneType);
     writeIfFound(expSchemaIdx,    schema);
     writeIfFound(expHtmlIdx,      newHtml);
+    // Synchronise only when WordPress has confirmed the featured image.
+    // Blank EM: retain the existing site-export image unchanged.
+    if (publishResult && publishResult.success &&
+        String(publishResult.postId) === String(postId)) {
+      const requestedImage = getPostVal("Featured Image URL");
+      const confirmedImage = String(publishResult.featuredImageUrl || "").trim();
+      const action = String(publishResult.featuredImageAction || "");
+      if (requestedImage) {
+        if (!confirmedImage || !["updated", "unchanged"].includes(action)) {
+          return {success:false, message:"WordPress image was not confirmed; site-export image not synchronised."};
+        }
+        if (expImageIdx === -1) {
+          return {success:false, message:"Featured Image URL column missing in site-export."};
+        }
+        writeIfFound(expImageIdx, confirmedImage);
+      }
+    }
 
     SpreadsheetApp.flush();
 
     logPipelineResume("W6 — Site Export Updated", "");
-    return { success: true, message: "site-export updated for Post ID " + postId + "." };
+    return { success: true, message: "site-export updated for Post ID " + postId + " using verified WordPress dates (Published " + publishedDate + "; Updated " + updatedDate + ")." };
 
   } catch(e) {
     return { success: false, message: "ce_updateSiteExport error: " + e.message };
