@@ -44,7 +44,7 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
     // REST API date uses ISO "T"; WP_Post::post_date uses a space.
     // Compare only equivalent site-local timestamps, never change post_date.
     $expected = (string) $request->get_param('expected_date');
-    if (!preg_match('/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$/D', $expected) ||
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/D', $expected) ||
         str_replace('T', ' ', $expected) !== $post->post_date) {
         return new WP_Error('w6_date_conflict',
             'Post publication date changed since preflight. Reload the row.',
