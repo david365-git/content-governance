@@ -241,7 +241,11 @@ function ce_updateSiteExport(publishResult) {
     const newH1     = getPostVal("New H1");
     const newMetaTitle = getPostVal("New Meta Title");
     const newHtml   = getPostVal("New HTML");
-    const schema    = getPostVal("Schema (JSON-LD)");
+    // The WordPress bridge returns schema dates corrected after the post save.
+    // Site-export must store the confirmed version, not the original W5C input.
+    const schema    = publishResult && publishResult.schema
+      ? String(publishResult.schema)
+      : getPostVal("Schema (JSON-LD)");
     const stoneType = getPostVal("Stone Type");
 
     // Parse New Meta Description and Yoast Keyphrase
