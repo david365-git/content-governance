@@ -2,14 +2,14 @@
 /**
  * Plugin Name: Abbey W6 Publishing Bridge
  * Description: Authenticated update and guarded republish endpoint for the Abbey Content Engine.
- * Version: 0.2.0
+ * Version: 0.2.1
  * Requires PHP: 7.4
  * Abbey W6 Publishing Bridge — WPCode snippet #48276.
  *
  * Authenticated WordPress Application Password requests only.
  * Requires administrator and unfiltered_html capabilities.
  * UPDATE preserves publication date; REPUBLISH resets it with a 30-day safeguard.
- * Custom schema stays in _abbey_custom_schema, consumed by existing output rules.
+ * Validated JSON-LD is saved in the AddFunc Head & Footer Code metabox (aFhfc_head_code).
  * WordPress republish may notify syndication hooks; external delivery must be checked separately.
  */
 defined('ABSPATH') || exit;
@@ -108,6 +108,17 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
             array('status' => 400));
     }
 
+    // The active AddFunc plugin renders 'aFhfc_head_code' into wp_head().
+    // Never silently replace another script or arbitrary header markup.
+    $existing_head = trim((string) get_post_meta($post_id, 'aFhfc_head_code', true));
+    if ($existing_head !== '' &&
+        !preg_match('~^<script\\s+type="application/ld\\+json"\\s*>\\s*(.*?)\\s*</script>\\s*$~is',
+            $existing_head)) {
+        return new WP_Error('w6_header_code_conflict',
+            'Existing Head & Footer Code contains material other than one JSON-LD script. Review it manually; no article changes made.',
+            array('status' => 409));
+    }
+
     // Optional featured image URL supplied from posts column EM.
     // Resolve it to an existing Media Library image BEFORE changing article content.
     // Blank or omitted means leave featured_media exactly as it is.
@@ -158,13 +169,21 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
     update_post_meta($post_id, '_yoast_wpseo_title', wp_slash($values['meta_title']));
     update_post_meta($post_id, '_yoast_wpseo_metadesc', wp_slash($values['meta_description']));
     update_post_meta($post_id, '_yoast_wpseo_focuskw', wp_slash($values['focus_keyphrase']));
+    // Legacy custom field is kept for compatibility, but AddFunc reads the
+    // public Head box from aFhfc_head_code, not _abbey_custom_schema.
     update_post_meta($post_id, '_abbey_custom_schema', wp_slash($schema));
+    update_post_meta($post_id, 'aFhfc_head_code', wp_slash($schema));
     if ($feature_id !== null && $feature_action === 'updated') {
         if (!set_post_thumbnail($post_id, $feature_id)) {
             return new WP_Error('w6_feature_image_failed',
                 'Article saved but featured image could not be set. Check the post before retrying.',
                 array('status' => 500));
         }
+    }
+    if (get_post_meta($post_id, 'aFhfc_head_code', true) !== $schema) {
+        return new WP_Error('w6_header_code_not_saved',
+            'Article saved but Head & Footer Code schema verification failed. Check the post before retrying.',
+            array('status' => 500));
     }
     clean_post_cache($post_id);
 
