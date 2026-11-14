@@ -142,7 +142,7 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
     clean_post_cache($post_id);
 
     $after = get_post($post_id);
-    if (!$after || $after->post_date !== $expected) {
+    if (!$after || $after->post_date !== str_replace('T', ' ', $expected)) {
         return new WP_Error('w6_post_write_inconsistent',
             'WordPress saved the post but the publication date needs investigation.',
             array('status' => 500));
@@ -152,7 +152,7 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
         'success' => true,
         'post_id' => $post_id,
         'published_date' => str_replace(' ', 'T', $after->post_date),
-        'modified_date' => $after->post_modified,
+        'modified_date' => str_replace(' ', 'T', $after->post_modified),
         'url' => get_permalink($post_id),
         'featured_image_action' => $feature_action,
         'featured_image_url' => get_the_post_thumbnail_url($post_id, 'full') ?: ''
