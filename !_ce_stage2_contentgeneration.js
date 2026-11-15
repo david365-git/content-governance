@@ -1888,8 +1888,8 @@ function getMetaPrompt() {
     "- Must read naturally in UK English\n" +
     "- TITLE PURPOSE (Hard Lock): The Meta Title must accurately identify the page's main subject and match the H1's central meaning.\n" +
     "  A specific factual detail is welcome, but a curiosity hook must never be manufactured.\n" +
-    "- Build the click-driving angle around ONE of the following, whichever is genuinely supported by\n" +
-    "  the Page Context, Article Content, Problem Angle, Authority Brief or Competitor SERP Context:\n" +
+    "- OPTIONAL editorial detail: when a genuine decision or project distinction is central to the article,\n" +
+    "  it may be used naturally, but do not introduce a hook merely to differentiate the result:\n" +
     "  * a visible problem the homeowner recognises\n" +
     "  * a decision they are unsure about\n" +
     "  * a meaningful limitation or trade-off\n" +
@@ -1904,7 +1904,7 @@ function getMetaPrompt() {
     "- Also reject generic modifiers that add no useful reason to click, including:\n" +
     "  'professional', 'quality', 'trusted', 'local', 'reliable', 'specialist service',\n" +
     "  'services', 'solutions', 'experts', 'expert', 'guide', 'overview', 'tips', 'hub'.\n" +
-    "- Strong patterns may include natural phrases such as:\n" +
+    "- Only if the article is genuinely structured around the relevant decision or diagnostic finding, possible patterns include:\n" +
     "  'What Can Actually Be Repaired',\n" +
     "  'Repair or Replace?',\n" +
     "  'Why the Damage Keeps Returning',\n" +
@@ -1914,9 +1914,8 @@ function getMetaPrompt() {
     "- Do not manufacture drama. No fake urgency, fear, exaggeration, guarantees or unsupported claims.\n" +
     "- Do not use empty clickbait such as 'You Won't Believe', 'Shocking', 'Secret', 'Amazing',\n" +
     "  'Game-Changing', 'Must See' or similar tabloid phrasing.\n" +
-    "- Use the COMPETITOR SERP CONTEXT above to avoid repeating the dominant title pattern.\n" +
-    "  If competitors are mostly using plain service + location titles, deliberately choose a more\n" +
-    "  useful problem-, decision-, consequence- or distinction-led angle that this article supports.\n" +
+    "- Competitor SERP context may inform natural search phrasing but never override the article's real purpose.\n" +
+    "  Do not force a problem-, consequence- or decision-led angle to be different from competitors.\n" +
     "- Word order must follow natural English syntax\n" +
     "- NEAR ME RULE (Hard Lock): Never use the phrase 'near me' in the Meta Title.\n" +
     "  Replace with the location name where available, or use the core phrase without the modifier.\n" +
