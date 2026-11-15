@@ -3095,124 +3095,131 @@ function acBuildClassifyPrompt() {
 }
 function fiSuggestTitlePrompt() {
   try {
-
     var d = getActiveRowDataMap();
+    var material = String(d["Stone Type"] || "").trim();
+    var articleType = String(d["Article Type"] || "").trim();
+    var locality = String(d["Locality"] || d["Location"] || "").trim();
+    var h1 = String(d["New H1"] || "").trim();
+    var pst = String(d["Primary Search Term"] || "").trim();
+    var problemAngle = String(d["Problem Angle"] || "").trim();
+    var storyDir = String(d["ac_narrative_archetype"] || "").trim();
+    var entryCondition = String(d["ac_entry_condition"] || "").trim();
+    var constraint = String(d["ac_constraint"] || "").trim();
+    var resultType = String(d["ac_result_type"] || "").trim();
 
-    var material       = String(d["Stone Type"]             || "").trim();
-    var articleType    = String(d["Article Type"]           || "").trim();
-    var locality       = String(d["Locality"]               || "").trim();
-    var h1             = String(d["New H1"]                 || "").trim();
-    var pst            = String(d["Primary Search Term"]     || "").trim();
-    var problemAngle   = String(d["Problem Angle"]           || "").trim();
-    var authorityBrief = String(d["Authority Brief"]         || "").trim();
-
-    var storyDir       = String(d["ac_narrative_archetype"] || "").trim();
-    var entryCondition = String(d["ac_entry_condition"]     || "").trim();
-    var matBehaviour   = String(d["ac_material_behaviour"]   || "").trim();
-    var constraint     = String(d["ac_constraint"]           || "").trim();
-    var resultType     = String(d["ac_result_type"]          || "").trim();
-
-
-    var prompt =
-      "FEATURED IMAGE EDITORIAL TITLE GENERATION\n\n" +
-
-      "ROLE:\n" +
-      "You are a senior UK editorial art director creating short cover lines for a specialist stone and tile restoration website.\n\n" +
-
-      "TASK:\n" +
-      "Create five genuinely different middle-title options for the featured image.\n\n" +
-
-      "The title must express the DISTINCTIVE TENSION, QUESTION, SURPRISE, DECISION or CONSEQUENCE at the heart of this specific article.\n" +
-      "Do not simply describe the floor, repeat the H1, name the article type, or produce generic restoration language.\n\n" +
-
-      "TITLE RULES:\n" +
-      "- 4 to 7 words maximum.\n" +
-      "- The reader must immediately understand the main subject of the article from the title alone.\n" +
-      "- Keep the core material, problem or decision recognisable — do not hide the topic behind vague editorial wording.\n" +
-      "- Editorial magazine-cover style, but clarity comes before cleverness.\n" +
-      "- Specific to THIS article, not reusable across unrelated floor articles.\n" +
-      "- Create curiosity without becoming clickbait.\n" +
-      "- Prefer a clear problem, question, contrast, cause or consequence.\n" +
-      "- Plain natural British English.\n" +
-      "- No SEO keyword stuffing.\n" +
-      "- Do not use the words 'guide', 'restoration', 'professional', 'expert', 'solution' or 'transformation' unless genuinely essential.\n" +
-      "- Do not use vague phrases such as 'Real Work On Real Floors', 'When Cleaning Stops Helping', 'What Happens Next', 'A Floor Reborn', 'Restoring The Beauty', or similar stock wording.\n" +
-      "- No quotation marks.\n" +
-      "- No punctuation at the end.\n\n" +
-
-      "VARIATION RULE:\n" +
-      "The five options must use five different editorial angles:\n" +
-      "1. A hidden cause or discovery.\n" +
-      "2. A visual or material contrast.\n" +
-      "3. A consequence or risk.\n" +
-      "4. A homeowner question or doubt.\n" +
-      "5. A surprising or counter-intuitive insight.\n\n" +
-
-      "ARTICLE DETAILS:\n" +
-      "Material: " + material + "\n" +
-      "Article type: " + articleType + "\n";
-
-    if (locality) {
-      prompt += "Location: " + locality + "\n";
+    // Evidence is quoted from the original source article. H1/search terms
+    // are context only and must not override what the project records say.
+    var evidence = "";
+    if (articleType === "Case Study") {
+      var columns = [
+        ["Original project/location", "Project Location & Property", 2],
+        ["Observed condition", "Observed Conditions", 3],
+        ["Client requirements", "Client Requirements & Restoration Objectives", 3],
+        ["Work actually carried out", "Restoration Methods", 5],
+        ["Recorded result", "Project Results", 3]
+      ];
+      var found = 0;
+      var entries = [];
+      columns.forEach(function(col) {
+        var raw = String(d[col[1]] || "").trim();
+        if (!raw || raw === "[]") return;
+        var facts;
+        try { facts = JSON.parse(raw); } catch (err) { return; }
+        if (!Array.isArray(facts)) return;
+        var bullets = facts.slice(0, col[2]).map(function(item) {
+          if (!item || typeof item !== "object") return "";
+          var fact = String(item.fact || "").trim().slice(0, 240);
+          var quote = String(item.quote || "").trim().slice(0, 210);
+          return fact ? "- " + fact +
+            (quote ? " [original wording: " + quote + "]" : "") : "";
+        }).filter(Boolean);
+        if (bullets.length) {
+          found += bullets.length;
+          entries.push(col[0] + ":\n" + bullets.join("\n"));
+        }
+      });
+      if (found) evidence = entries.join("\n");
     }
 
-    if (h1) {
-      prompt += "H1: " + h1 + "\n";
-    }
+    // Use a little of the article itself to reveal the actual story, but
+    // do not rely on the H1 or an SEO phrase as the evidence source.
+    var html = String(d["Humanised HTML"] || d["New HTML"] || "");
+    var paragraphs = (html.match(/<p(?:\s[^>]*)?>[\s\S]*?<\/p>/gi) || [])
+      .slice(0, 3).map(function(p) {
+        return p.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+      }).filter(Boolean);
+    var articleOpening = paragraphs.join(" ").slice(0, 1300);
 
-    if (pst) {
-      prompt += "Primary search term: " + pst + "\n";
-    }
+    var prompt = [
+      "FEATURED IMAGE EDITORIAL TITLE GENERATION",
+      "",
+      "ROLE:",
+      "You are a UK editorial art director writing short, accurate cover lines for a specialist stone and tile care website.",
+      "",
+      "TASK:",
+      "Write five DIFFERENT middle-title options that faithfully represent the MAIN STORY of this specific article.",
+      "First decide privately what the page is principally about using the evidence below.",
+      "The heading, SEO term and technical methods are context, NOT permission to invent a new problem.",
+      "",
+      "STORY-FAITHFULNESS RULES:",
+      "- For a case study, weigh the customer's reason for commissioning the work, the actual starting condition, the work undertaken and the documented result.",
+      "- Do NOT turn a product-removal step or old coating residue into the supposed cause of the client's difficulty unless the source explicitly establishes that causal relationship.",
+      "- Do NOT infer excessive application, neglect, damage, hidden defects or a client's mistake from the fact that a treatment was used.",
+      "- Give the central project story prominence. A secondary method can be mentioned, but must not dominate the set of five titles.",
+      "- Every title must be true of the article as a whole, not merely a true fact mentioned somewhere in it.",
+      "- If a hidden cause, risk, surprising discovery or contrast is not in the evidence, DO NOT invent one for variety.",
+      "- If the recorded reason was that the client could no longer comfortably maintain the floor, acknowledge that human story rather than replace it with a coating diagnosis.",
+      "",
+      "TITLE RULES:",
+      "- Four to seven words per title.",
+      "- The main material or flooring subject must be recognisable without the H1.",
+      "- Use plain natural British English, with clarity before cleverness.",
+      "- Be specific to this case study where the evidence allows.",
+      "- Avoid SEO keyword strings, generic praise, cliched magazine language and contrived questions.",
+      "- Do not use guide, restoration, professional, expert, solution or transformation unless essential.",
+      "- No quotation marks or final punctuation.",
+      "",
+      "FIVE DISTINCTIVE EDITORIAL APPROACHES:",
+      "1. The client's real need or reason for the project (only if documented).",
+      "2. The project's defining starting condition (without inventing a cause).",
+      "3. The main treatment or practical intervention actually performed.",
+      "4. The recorded finish or result, without exaggerating before-and-after claims.",
+      "5. A different truthful aspect of this specific job, such as the maintenance handover, sequencing, or a documented constraint.",
+      "These are evidence categories, NOT an instruction to manufacture a risk, discovery or dramatic contrast.",
+      "Do not return five variations of the same coating, problem or process.",
+      "",
+      "ARTICLE DETAILS:",
+      "Material: " + material,
+      "Article type: " + articleType
+    ].join("\n") + "\n";
+    if (locality) prompt += "Location: " + locality + "\n";
+    if (h1) prompt += "Current H1 (context only): " + h1 + "\n";
+    if (pst) prompt += "Primary search term (context only): " + pst + "\n";
+    if (problemAngle) prompt += "Problem angle (unverified unless supported below): " + problemAngle + "\n";
+    if (storyDir) prompt += "Narrative direction (context): " + storyDir + "\n";
+    if (entryCondition) prompt += "Entry condition (context): " + entryCondition + "\n";
+    if (constraint) prompt += "Constraint (context): " + constraint + "\n";
+    if (resultType) prompt += "Outcome label (context): " + resultType + "\n";
+    if (evidence) prompt += "\nORIGINAL CASE-STUDY EVIDENCE:\n" + evidence + "\n";
+    if (articleOpening) prompt += "\nARTICLE OPENING:\n" + articleOpening + "\n";
 
-    if (problemAngle) {
-      prompt += "Problem angle: " + problemAngle + "\n";
-    }
+    prompt += [
+      "",
+      "FINAL CHECK:",
+      "For each option, identify privately which case-study fact supports it.",
+      "Reject any title that would make a reader expect a wax-buildup diagnosis, damage, risk or dramatic discovery when none is established.",
+      "Reject generic cover lines that could fit many unrelated projects, and revise any near-duplicate.",
+      "The five should give GENUINELY DIFFERENT truthful views of the SAME article.",
+      "",
+      "OUTPUT:",
+      "Return only five titles, one per line, numbered 1 to 5."
+    ].join("\n");
 
-    if (authorityBrief) {
-      prompt += "Authority brief: " + authorityBrief + "\n";
-    }
-
-    if (storyDir) {
-      prompt += "Narrative direction: " + storyDir + "\n";
-    }
-
-    if (entryCondition) {
-      prompt += "Entry condition: " + entryCondition + "\n";
-    }
-
-    if (matBehaviour) {
-      prompt += "Material behaviour: " + matBehaviour + "\n";
-    }
-
-    if (constraint) {
-      prompt += "Governing constraint: " + constraint + "\n";
-    }
-
-    if (resultType) {
-      prompt += "Outcome: " + resultType + "\n";
-    }
-
-    prompt +=
-      "\nFINAL CHECK:\n" +
-      "Before returning the titles, reject any option that could plausibly be reused unchanged on several unrelated stone or tile articles.\n\n" +
-
-      "OUTPUT:\n" +
-      "Return only five title options, one per line, numbered 1 to 5.";
-
-    return {
-      prompt: prompt
-    };
-
+    return {prompt:prompt};
   } catch(e) {
-
-    return {
-      error:
-        "fiSuggestTitlePrompt error: " +
-        e.message
-    };
+    return {error:"fiSuggestTitlePrompt error: " + e.message};
   }
 }
-
 
 function saveW2BHtmlToSheet(html) {
   try {
