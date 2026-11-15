@@ -1633,7 +1633,9 @@ function getMetaPrompt() {
       "using the task and constraint named above.\n\n"
     : "--- GROUNDING STEP (Hard Lock — complete before writing anything) ---\n" +
       "Identify the central subject and purpose of the page before selecting the title angle.\n" +
-      "For a Case Study, weigh the recorded homeowner request, observed starting condition, intervention and outcome together. The most dramatic technical operation is not automatically the main problem.\n" +
+      "For a Case Study, identify WHY the project was commissioned (if the source says), WHAT condition was observed, WHAT was done and WHAT outcome was recorded.\n" +
+      "Choose an H1 and Meta Title that foreground the reason and project purpose, not automatically whichever technical operation is easiest to name.\n" +
+      "Old residues or coatings may be documented and relevant, but their removal does not by itself prove buildup caused the homeowner's difficulty.\n" +
       "Removing old finishes, residues or damage does NOT establish who caused them or why they arose. Do not invent a cause or homeowner mistake from a treatment step.\n" +
       "Keep the H1, Meta Title and Meta Description aligned with the same representative evidenced story.\n" +
       "Accuracy and search intent take priority over curiosity, tension and clever wording.\n\n";
@@ -1838,6 +1840,9 @@ function getMetaPrompt() {
     "- Prefer roughly 20-70 characters, but use more when needed for accurate, natural identification; do not pad for length\n" +
     "- Must name the material (" + material + ")\n" +
     "- Lead with the actual topic, primary search intent and material; a symptom or contrast is optional, not mandatory\n" +
+    (articleType === "Case Study"
+      ? "- CASE STUDY STORY PRIORITY: Consider the documented client reason, project purpose, starting condition and finished result. Do not frame one treatment step as the original problem unless supported.\n"
+      : "") +
     (isMethodGuideType
       ? "- METHOD GUIDE OVERRIDE (Hard Lock): For this article type, symptom-led or counterintuitive framing is\n" +
         "  permitted only AFTER the core task from the Page-Purpose Lock above is explicit in the H1. The H1 must\n" +
@@ -1925,7 +1930,7 @@ function getMetaPrompt() {
     "- EXACTLY 140-160 characters — count every character before outputting\n" +
     "- Exactly two sentences — a full stop ends sentence one, sentence two ends the description\n" +
     "- SENTENCE ONE RULES:\n" +
-    "  * States the core problem of this specific page as established fact\n" +
+    "  * States the actual starting condition, client need or central purpose of this page as established in the article\n" +
     "  * Must be specific to THIS article — not a generic stone care statement\n" +
     "  * Must use correct grammar — '" + materialLower + " floors have surface damage'\n" +
     "    not '" + materialLower + " floors are surface damage'\n" +
@@ -1939,7 +1944,7 @@ function getMetaPrompt() {
     "  * Must NOT open with a question\n" +
     "  * Must NOT use a connector word as the first word\n" +
     "- SENTENCE TWO RULES:\n" +
-    "  * Must state what WILL HAPPEN TO THE FLOOR — not what the reader will do,\n" +
+    "  * States a DISTINCT evidenced intervention or result — not a repetition of sentence one; focus on what happened to the floor, not what the reader will do,\n" +
     "    understand, learn, or choose\n" +
     "  * Must describe a concrete physical outcome — clarity restored, finish recovered,\n" +
     "    surface stabilised, maintenance simplified\n" +
@@ -1995,7 +2000,7 @@ function getMetaPrompt() {
 
     "--- META DESCRIPTION CONSTRUCTION METHOD ---\n" +
     "Build it in this exact sequence:\n" +
-    "Step 1: Write sentence one — the problem stated as fact (aim for 70-85 characters)\n" +
+    "Step 1: Write sentence one — the documented client need or starting condition (aim for 70-85 characters)\n" +
     "Step 2: Write sentence two — a concrete outcome that happens to the floor\n" +
     "        (aim for 65-80 characters)\n" +
     "Step 3: Count total characters. If under 140 — expand the shorter sentence.\n" +
@@ -2007,8 +2012,8 @@ function getMetaPrompt() {
     "--- QUALITY TARGET ---\n" +
     "The H1 must clearly identify the page and its main evidenced subject; a hook is optional.\n" +
     "The Meta Title must read like a real phrase — not assembled from keywords.\n" +
-    "The Meta Description first sentence states the problem as established fact.\n" +
-    "The Meta Description second sentence names a concrete outcome for the floor.\n" +
+    "The Meta Description first sentence states the actual client need, starting condition or purpose.\n" +
+    "The Meta Description second sentence adds a separate, concrete and evidenced outcome for the floor.\n" +
     "The Yoast Keyphrase must be the phrase a homeowner would actually search —\n" +
     "short, specific, lowercase, and present in the H1, Meta Title, and Meta Description.\n\n" +
 
@@ -2039,9 +2044,9 @@ function getMetaPrompt() {
     "7.  Count Meta Description characters. If not 140-160 — rewrite.\n" +
     "8.  Verify Meta Description has exactly two sentences. If not — rewrite.\n" +
     "9.  Verify sentence one does not open with a prohibited opener. If it does — rewrite.\n" +
-    "10. Verify sentence one uses correct grammar — floors have/show damage,\n" +
+    "10. Verify sentence one accurately conveys a documented client need, purpose or condition without implying an invented diagnosis; floors have/show damage,\n" +
     "    not floors are damage. If wrong — rewrite.\n" +
-    "11. Verify sentence two states a concrete floor outcome — not a reader action.\n" +
+    "11. Verify sentence two states a concrete floor outcome — not a reader action or repetition of the same coating condition.\n" +
     "    If vague or reader-led — rewrite.\n" +
     "12. Verify sentence two does not begin with a connector word. If it does — rewrite.\n" +
     "13. Verify Meta Description uses sentence case — no mid-sentence capitals on\n" +
