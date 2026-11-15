@@ -8201,8 +8201,8 @@ function bc_runW5Automated() {
         cost:Number(response && response.cost || 0)
       };
       var raw = String(response.text || "")
-        .replace(/^`(?:json)?\s*/i, "")
-        .replace(/\s*`$/i, "").trim();
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/i, "").trim();
       var parsed;
       try {parsed = JSON.parse(raw);} catch(e) {
         return {success:false,issue:"W5 H1/meta validator returned invalid JSON.",
@@ -8388,11 +8388,11 @@ function bc_runW5Automated() {
 
       "Correct ONLY the four requested fields so every failure above is resolved.\n\n" +
 
-      "For the Meta Title, do not merely add a generic curiosity phrase.\n" +
+      "For the H1 and Meta Title, prioritise the actual topic, search intent and accurate project context.\n" +
 
-      "The title must communicate a concrete problem, decision, consequence, limitation, contrast or uncertainty that THIS page actually resolves.\n" +
+      "Both headings must express the principal page subject and agree with each other.\n" +
 
-      "A phrase that could be attached unchanged to many unrelated service pages is not a meaningful CTR hook.\n\n" +
+      "A descriptive title is valid when accurate; never invent or exaggerate an issue to add a hook.\n\n" +
 
       "Do not include analysis, reasoning, notes, markdown or explanation.\n\n" +
 
@@ -8579,7 +8579,7 @@ function bc_runW5Automated() {
 
       "\n\nREPAIR RULES:\n" +
 
-      "- H1 must be 40-60 characters.\n" +
+      "- Prefer H1 length 20-70 characters; allow longer for clarity (15-100 absolute sanity range).\n" +
 
       "- Meta Title must be no more than 60 characters.\n" +
 
@@ -8587,11 +8587,11 @@ function bc_runW5Automated() {
 
       "- Abbey Floor Care is optional if branding prevents a useful title within 60 characters.\n" +
 
-      "- Meta Title must contain a concrete informational tension supported by this page.\n" +
+      "- Meta Title must identify the central page topic and align semantically with the H1.\n" +
 
-      "- The reader should be able to tell what specific problem, decision, consequence, contrast, limitation or uncertainty the page resolves.\n" +
+      "- The reader should recognise the page's actual material, intent, and case-study topic without added drama.\n" +
 
-      "- Do not substitute a vague curiosity phrase merely to make the title sound interesting.\n" +
+      "- Curiosity is optional. Never invent a cause or overstate a secondary coating-removal step.\n" +
 
       "- Do not invent facts, drama, urgency, risk or unsupported claims.\n" +
 
@@ -8765,7 +8765,7 @@ function bc_runW5Automated() {
     success: true,
 
     message:
-      "W5 complete — H1, CTR-focused Meta Title, Meta Description and Yoast Keyphrase saved.",
+      "W5 complete — topic-aligned H1, Meta Title, Meta Description and Yoast Keyphrase saved.",
 
     h1:
       fields.h1,
