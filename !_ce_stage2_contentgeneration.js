@@ -1786,7 +1786,7 @@ function getMetaPrompt() {
       var top = parsedLines.slice(0, 10).map(function(p) { return p.line; }).join("\n");
       return "GSC REAL SEARCHER QUERIES (use these to identify emotional entry points and natural language):\n" +
              "These are the actual phrases real homeowners have used to find this page or pages like it.\n" +
-             "Use this language to inform the H1 tension, meta title phrasing, and meta description specificity.\n" +
+             "Use this language to understand search intent and natural phrasing, without inventing a more dramatic project condition.\n" +
              "Do NOT copy these phrases verbatim — use them to understand what the homeowner is worried about.\n\n" +
              top + "\n\n";
     })() +
@@ -1818,7 +1818,7 @@ function getMetaPrompt() {
     "Identify the dominant emotional concern in those queries — what is the homeowner worried about?\n" +
     "Use searcher concerns to understand intent, but do not substitute them for the actual subject or verified scope of this article.\n" +
     "The H1 must tell the reader clearly what this specific page covers.\n" +
-    "The Meta Title must read like a phrase a person would actually say — not a keyword string assembled for a crawler.\n" +
+    "The Meta Title must read naturally and agree with the H1 — not a keyword string assembled for a crawler.\n" +
     "The Meta Description second sentence must give a specific reason to click — what will the reader understand\n" +
     "or be able to do after reading this article that they could not before?\n\n" +
     "--- AI CITATION OPTIMISATION ---\n" +
@@ -1900,9 +1900,9 @@ function getMetaPrompt() {
     "- TARGET 50-60 characters. Never exceed 60 characters.\n" +
     "- Must contain the primary search term or a natural close variant\n" +
     "- BRAND RULE: Include 'Abbey Floor Care' only when the complete title can still contain\n" +
-    "  the search intent, required location and a meaningful CTR-driving angle within 60 characters.\n" +
-    "  If the brand forces removal of the useful click-driving angle, OMIT the brand.\n" +
-    "  Search intent + location + useful reason to click take priority over branding.\n" +
+    "  the search intent, required location and a meaningful factual distinction within 60 characters.\n" +
+    "  If the brand forces removal of a useful topic detail, OMIT the brand.\n" +
+    "  Search intent + location + factual clarity take priority over branding.\n" +
     "  Never shorten the brand to 'Abbey' merely to make it fit.\n" +
     "- Must read naturally in UK English\n" +
     "- TITLE PURPOSE (Hard Lock): The Meta Title must accurately identify the page's main subject and match the H1's central meaning.\n" +
@@ -1916,7 +1916,7 @@ function getMetaPrompt() {
     "  * a repair-versus-replacement distinction\n" +
     "  * an unexpected or counterintuitive fact\n" +
     "  * a specific 'what actually matters' distinction\n" +
-    "- Prefer tension, contrast or useful specificity over generic service wording.\n" +
+    "- Prefer useful factual specificity over generic service wording; tension is optional.\n" +
     "- The title must set an accurate expectation of the content the visitor will find.\n" +
     "- Distinctiveness test: prefer a supported case-specific detail when one adds clarity.\n" +
     "  A concise service + location title may be valid when it accurately represents this page; never invent a defect merely to make the title less ordinary.\n" +
