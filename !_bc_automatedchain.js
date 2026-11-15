@@ -8199,6 +8199,39 @@ function bc_runW5Automated() {
           "Meta Description must contain exactly two sentences."
         );
       }
+
+      // Detect repeated substantive three-word claims (e.g. a coating
+      // condition repeated in both sentences). This is a quality check,
+      // not a forbidden-word list or a material-specific rule.
+      var descriptionWords = fields.description.toLowerCase()
+        .replace(/([a-z])[-–—]([a-z])/g, "$1 $2")
+        .match(/[a-z0-9]+/g) || [];
+      var seenTriples = {};
+      var repeatedTriple = "";
+      var fillerWords = {
+        the:1, a:1, an:1, and:1, for:1, with:1, from:1, after:1,
+        before:1, this:1, that:1, in:1, on:1, of:1, to:1, it:1,
+        was:1, is:1, are:1, were:1, had:1, has:1, have:1
+      };
+      for (var wi = 0; wi <= descriptionWords.length - 3; wi++) {
+        var triple = descriptionWords.slice(wi, wi + 3);
+        var significant = triple.filter(function(t) {
+          return t.length > 2 && !fillerWords[t];
+        });
+        if (significant.length < 2) continue;
+        var phrase = triple.join(" ");
+        if (seenTriples[phrase]) {
+          repeatedTriple = phrase;
+          break;
+        }
+        seenTriples[phrase] = true;
+      }
+      if (repeatedTriple) {
+        issues.push(
+          "Meta Description repeats the same substantive phrase: '" +
+          repeatedTriple + "'. Use the second sentence for a different, evidenced project outcome."
+        );
+      }
     }
 
 
@@ -8269,7 +8302,10 @@ function bc_runW5Automated() {
       var d = getActiveRowDataMap();
       var h1 = String(fields.h1 || "").trim();
       var title = String(fields.title || "").trim();
-      if (!h1 || !title) return {success:false,issue:"H1 or Meta Title missing.",cost:0};
+      var description = String(fields.description || "").trim();
+      if (!h1 || !title || !description) return {
+        success:false,issue:"H1, Meta Title or Meta Description missing.",cost:0
+      };
       var html = String(d["Humanised HTML"] || d["New HTML"] || "");
       var p = html.match(/<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/i);
       var intro = (p ? p[1] : html.slice(0, 1800))
@@ -8281,9 +8317,10 @@ function bc_runW5Automated() {
       var caseEvidence = typeof ce_w5EditorialEvidenceContext_ === "function"
         ? ce_w5EditorialEvidenceContext_(d) : "";
       var prompt = [
-        "W5 EDITORIAL ALIGNMENT CHECK — H1 AND META TITLE",
+        "W5 EDITORIAL ALIGNMENT CHECK — H1, META TITLE AND DESCRIPTION",
         "H1: " + h1,
         "Meta Title: " + title,
+        "Meta Description: " + description,
         "Article Type: " + String(d["Article Type"] || ""),
         "Primary Search Term: " + String(d["Primary Search Term"] || d["Primary Query Cluster Owned"] || ""),
         "Material: " + String(d["Stone Type"] || ""),
@@ -8292,17 +8329,26 @@ function bc_runW5Automated() {
         "ARTICLE OPENING: " + intro,
         "ARTICLE HEADINGS: " + headings,
         caseEvidence,
-        "Decide whether both H1 and Meta Title correctly represent this page's PRIMARY subject",
-        "and search intent and align with each other. They need not use identical words.",
-        "A clear, specific service + location headline may PASS even without curiosity or tension.",
-        "For a case study, identify the main story from the recorded client request, observed",
-        "condition, treatments and project results; do not prioritise one operation merely because",
-        "it makes a more dramatic title. Reject unsupported diagnoses and causal claims.",
-        "FAIL if either title exaggerates an incidental condition, asserts an unsupported cause,",
-        "conflicts with the page's actual topic, or substantially diverges from the other.",
-        "Do NOT demand a curiosity hook or fail an accurate plain-language description.",
-        "Do not rewrite either title. Return JSON only:",
-        '{"pass":true,"reason":"brief evidence-based explanation"}'
+        "FIRST identify the main article promise from the source and opening paragraph,",
+        "distinguishing (a) reason the client needed work, (b) condition actually observed,",
+        "(c) technique used, and (d) recorded result. Never assume (c) caused (a).",
+        "For a case study, give the client request and central project purpose weight",
+        "when judging what deserves headline prominence; a minor operation may be mentioned",
+        "but must not dominate both headings simply because it is concrete.",
+        "Judge ALL THREE fields, independently and together:",
+        "H1: Does it identify the actual principal subject, not merely a secondary process?",
+        "META TITLE: Does it convey the same core promise accurately and naturally?",
+        "META DESCRIPTION: Does it accurately state a starting condition and a distinct",
+        "project intervention/outcome WITHOUT circular wording, repeated key phrases,",
+        "duplicated location references or an unsupported cause?",
+        "An evidenced old coating or residue is not automatically evidence of",
+        "excessive coating application, homeowner misuse or a coating-caused problem.",
+        "Prefer an informative, descriptive heading over manufactured curiosity.",
+        "FAIL whenever any field misrepresents narrative importance or the description",
+        "merely repeats keywords instead of adding a specific factual result.",
+        "Do not fail an accurate service-and-location headline for lacking a hook.",
+        "Do not rewrite fields. Return JSON only with all booleans explicit:",
+        '{"pass":true,"h1_faithful":true,"title_faithful":true,"description_faithful":true,"central_story_correct":true,"reason":"cite the central story and explain why each field represents it"}'
       ].join("\n");
       var response = bc_sendPromptViaOpenAI(prompt, 1100);
       if (!response || !response.success) return {
@@ -8317,10 +8363,15 @@ function bc_runW5Automated() {
         return {success:false,issue:"W5 H1/meta validator returned invalid JSON.",
           cost:Number(response.cost || 0)};
       }
-      if (parsed.pass !== true) return {
+      if (parsed.pass !== true ||
+          parsed.h1_faithful !== true ||
+          parsed.title_faithful !== true ||
+          parsed.description_faithful !== true ||
+          parsed.central_story_correct !== true ||
+          !String(parsed.reason || "").trim()) return {
         success:false,
-        issue:"H1/meta topic or evidence alignment failed: " +
-          String(parsed.reason || "Unsupported or unrepresentative editorial angle."),
+        issue:"W5 H1/meta/description editorial review failed: " +
+          String(parsed.reason || "Incomplete or unsupported evidence-based judgement."),
         cost:Number(response.cost || 0)
       };
       return {success:true,cost:Number(response.cost || 0)};
@@ -8499,8 +8550,10 @@ function bc_runW5Automated() {
 
       "For the H1 and Meta Title, prioritise the actual topic, search intent and accurate project context.\n" +
 
-      "Both headings must express the principal page subject and agree with each other.\n" +
+      "All three fields must express the principal page subject and agree on the actual client/project story.\n" +
 
+      "For a case study, distinguish the client request from the condition, the treatment step and the outcome. Do not turn an incidental technique into the reason for the project.\n" +
+      "The second Meta Description sentence must add an evidenced result, not repeat the same key phrase or place name.\n" +
       "A descriptive title is valid when accurate; never invent or exaggerate an issue to add a hook.\n\n" +
 
       "Do not include analysis, reasoning, notes, markdown or explanation.\n\n" +
@@ -8701,6 +8754,8 @@ function bc_runW5Automated() {
       "- The reader should recognise the page's actual material, intent, and case-study topic without added drama.\n" +
 
       "- Curiosity is optional. Never invent a cause or overstate any secondary treatment step.\n" +
+      "- In case studies, weigh the client's actual reason for commissioning the work alongside the recorded condition, method and outcome.\n" +
+      "- In Meta Description, use the second sentence for new, evidenced information, not repetitions of the first.\n" +
 
       "- Do not invent facts, drama, urgency, risk or unsupported claims.\n" +
 
