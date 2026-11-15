@@ -1634,7 +1634,7 @@ function getMetaPrompt() {
     : "--- GROUNDING STEP (Hard Lock — complete before writing anything) ---\n" +
       "Identify the central subject and purpose of the page before selecting the title angle.\n" +
       "For a Case Study, weigh the recorded homeowner request, observed starting condition, intervention and outcome together. The most dramatic technical operation is not automatically the main problem.\n" +
-      "Removal of multiple old coatings does NOT establish that homeowners applied excessive wax or caused the problem. Do not invent a cause from a treatment step.\n" +
+      "Removing old finishes, residues or damage does NOT establish who caused them or why they arose. Do not invent a cause or homeowner mistake from a treatment step.\n" +
       "Keep the H1, Meta Title and Meta Description aligned with the same representative evidenced story.\n" +
       "Accuracy and search intent take priority over curiosity, tension and clever wording.\n\n";
 
