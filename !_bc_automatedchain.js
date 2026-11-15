@@ -8700,7 +8700,7 @@ function bc_runW5Automated() {
 
       "- The reader should recognise the page's actual material, intent, and case-study topic without added drama.\n" +
 
-      "- Curiosity is optional. Never invent a cause or overstate a secondary coating-removal step.\n" +
+      "- Curiosity is optional. Never invent a cause or overstate any secondary treatment step.\n" +
 
       "- Do not invent facts, drama, urgency, risk or unsupported claims.\n" +
 
