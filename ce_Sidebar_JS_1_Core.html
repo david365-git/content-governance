@@ -813,6 +813,11 @@ window.acLoadDropdowns = function() {
       if (!customMiddleTitle && result.middleTitle) {
         document.getElementById('fi-middle-title').value = result.middleTitle;
       }
+        var uploadStatus = document.getElementById('fi-upload-status');
+        if (uploadStatus) {
+          uploadStatus.textContent = '';
+          uploadStatus.style.display = 'none';
+        }
         document.getElementById('fi-output-block').style.display = 'block';
         document.getElementById('fi-save-status').style.display  = 'none';
         statusEl.textContent = 'Prompt ready — copy and paste into ChatGPT';
@@ -903,6 +908,10 @@ window.acLoadDropdowns = function() {
     var filenameEl = document.getElementById('fi-filename');
     var filename = filenameEl.value.trim() || String(file.name || '').trim();
     var altText = document.getElementById('fi-alttext').value.trim();
+    if (!altText) {
+      statusEl.textContent = 'Enter descriptive alt text for this image before uploading.';
+      statusEl.className = 'status-bar fail'; return;
+    }
     if (!/^[a-z0-9][a-z0-9-]*\.webp$/i.test(filename)) {
       statusEl.textContent = 'The selected image needs a governed filename containing only letters, numbers and hyphens, ending .webp.';
       statusEl.className = 'status-bar fail'; return;
