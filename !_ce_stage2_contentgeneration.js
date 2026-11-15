@@ -1655,12 +1655,12 @@ function getMetaPrompt() {
       "Every field you write below must preserve this central task and constraint. If a candidate H1, Meta Title, or\n" +
       "Meta Description could apply to a different task on the same material, it has failed this step — rewrite it\n" +
       "using the task and constraint named above.\n\n"
-    : "--- GROUNDING STEP (Hard Lock — complete before writing anything) ---\\n" +
-      "Identify the central subject and purpose of the page before selecting the title angle.\\n" +
-      "For a Case Study, weigh the recorded homeowner request, observed starting condition, intervention and outcome together. The most dramatic technical operation is not automatically the main problem.\\n" +
-      "Removal of multiple old coatings does NOT establish that homeowners applied excessive wax or caused the problem. Do not invent a cause from a treatment step.\\n" +
-      "Keep the H1, Meta Title and Meta Description aligned with the same representative evidenced story.\\n" +
-      "Accuracy and search intent take priority over curiosity, tension and clever wording.\\n\\n";
+    : "--- GROUNDING STEP (Hard Lock — complete before writing anything) ---\n" +
+      "Identify the central subject and purpose of the page before selecting the title angle.\n" +
+      "For a Case Study, weigh the recorded homeowner request, observed starting condition, intervention and outcome together. The most dramatic technical operation is not automatically the main problem.\n" +
+      "Removal of multiple old coatings does NOT establish that homeowners applied excessive wax or caused the problem. Do not invent a cause from a treatment step.\n" +
+      "Keep the H1, Meta Title and Meta Description aligned with the same representative evidenced story.\n" +
+      "Accuracy and search intent take priority over curiosity, tension and clever wording.\n\n";
 
   const methodGuidePurposeCheck = isMethodGuideType
     ? "19. PURPOSE-LOSS TEST (Method Guide): After drafting each field, ask — could a reader identify from\n" +
