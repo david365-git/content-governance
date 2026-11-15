@@ -8024,16 +8024,11 @@ function bc_runW5Automated() {
 
     if (fields.h1) {
 
-      if (
-        fields.h1.length < 40 ||
-        fields.h1.length > 60
-      ) {
-
-        issues.push(
-          "H1 is " +
-          fields.h1.length +
-          " characters; required range is 40-60."
-        );
+      // 20–70 is a preferred length, not a mandatory SEO limit.
+      // Reject only extreme outputs, retaining room for natural wording.
+      if (fields.h1.length < 15 || fields.h1.length > 100) {
+        issues.push("H1 length " + fields.h1.length +
+          " is outside the 15–100 safety range (20–70 preferred).");
       }
     }
 
@@ -8056,100 +8051,7 @@ function bc_runW5Automated() {
       }
 
 
-      var rowData =
-        getActiveRowDataMap();
-
-
-      var primaryTerm =
-        String(
-          rowData["Primary Search Term"] ||
-          rowData["Primary Query Cluster Owned"] ||
-          ""
-        )
-          .toLowerCase()
-          .replace(/\bnear me\b/g, "")
-          .replace(/[^a-z0-9\s]/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
-
-
-      var location =
-        String(
-          rowData["Locality"] ||
-          rowData["Location"] ||
-          ""
-        )
-          .toLowerCase()
-          .trim();
-
-
-      var titleCore =
-        fields.title
-          .toLowerCase()
-          .replace(
-            /abbey floor care/g,
-            ""
-          )
-          .replace(
-            /[|–—:-]/g,
-            " "
-          )
-          .replace(
-            /[^a-z0-9\s]/g,
-            " "
-          )
-          .replace(
-            /\s+/g,
-            " "
-          )
-          .trim();
-
-
-      if (location) {
-
-        var escapedLocation =
-          location.replace(
-            /[.*+?^${}()|[\]\\]/g,
-            "\\$&"
-          );
-
-
-        titleCore =
-          titleCore
-            .replace(
-              new RegExp(
-                "\\b" +
-                escapedLocation +
-                "\\b",
-                "gi"
-              ),
-              ""
-            )
-            .replace(
-              /\s+/g,
-              " "
-            )
-            .trim();
-      }
-
-
-      /*
-       * Basic deterministic protection against
-       * service/search-term + location titles.
-       *
-       * The semantic check below makes the final
-       * linguistic judgement.
-       */
-
-      if (
-        primaryTerm &&
-        titleCore === primaryTerm
-      ) {
-
-        issues.push(
-          "Meta Title is effectively only the search term/location and has no distinct CTR-driving angle."
-        );
-      }
+      // Accurate service + locality meta titles do not require a CTR hook.
     }
 
 
@@ -8250,278 +8152,71 @@ function bc_runW5Automated() {
 
 
   /*
-   * =========================================================
-   * SEMANTIC META TITLE QUALITY CHECK
-   *
-   * This deliberately does NOT use a blacklist of phrases.
-   * It judges whether the title contains a concrete,
-   * page-specific informational tension.
-   * =========================================================
+   * H1 + Meta Title alignment replaces the old CTR-hook-only review.
+   * A descriptive, accurate heading is allowed without editorial tension.
    */
-
-  function validateW5TitleSemantically(fields) {
-
+  function validateW5HeadingAlignmentSemantically(fields) {
     try {
-
-      var d =
-        getActiveRowDataMap();
-
-
-      var title =
-        String(
-          fields.title || ""
-        ).trim();
-
-
-      if (!title) {
-
-        return {
-          success: false,
-          issue:
-            "Meta Title is missing.",
-          cost: 0
-        };
-      }
-
-
-      var primaryTerm =
-        String(
-          d["Primary Search Term"] ||
-          d["Primary Query Cluster Owned"] ||
-          ""
-        ).trim();
-
-
-      var location =
-        String(
-          d["Locality"] ||
-          d["Location"] ||
-          ""
-        ).trim();
-
-
-      var problemAngle =
-        String(
-          d["Problem Angle"] ||
-          ""
-        ).trim();
-
-
-      var authorityBrief =
-        String(
-          d["Authority Brief"] ||
-          ""
-        ).trim();
-
-
-      var competitorNotes =
-        String(
-          d["Competitor SERP Notes"] ||
-          ""
-        ).trim();
-
-
-      var semanticPrompt =
-        "W5 META TITLE QUALITY CHECK\n\n" +
-
-        "Evaluate the Meta Title linguistically and semantically.\n" +
-        "Do NOT judge it by matching against a blacklist of phrases.\n\n" +
-
-        "META TITLE:\n" +
-        title +
-        "\n\n" +
-
-        "PAGE CONTEXT:\n" +
-
-        "Primary Search Term: " +
-        primaryTerm +
-        "\n" +
-
-        (
-          location
-            ? "Location: " +
-              location +
-              "\n"
-            : ""
-        ) +
-
-        (
-          problemAngle
-            ? "Problem Angle: " +
-              problemAngle +
-              "\n"
-            : ""
-        ) +
-
-        (
-          authorityBrief
-            ? "Authority Brief:\n" +
-              authorityBrief.substring(
-                0,
-                1600
-              ) +
-              "\n"
-            : ""
-        ) +
-
-        (
-          competitorNotes
-            ? "Competitor SERP Context:\n" +
-              competitorNotes.substring(
-                0,
-                1200
-              ) +
-              "\n"
-            : ""
-        ) +
-
-        "\nQUALITY TEST:\n" +
-
-        "PASS only if the title gives the searcher a specific and concrete reason to click.\n\n" +
-
-        "A strong title should express at least one meaningful form of informational tension supported by this page:\n" +
-
-        "- a real decision the homeowner needs to make\n" +
-        "- a recognisable problem\n" +
-        "- a consequence that matters\n" +
-        "- a limitation or boundary\n" +
-        "- a useful contrast between choices or outcomes\n" +
-        "- a specific uncertainty the article resolves\n" +
-        "- a counterintuitive fact genuinely supported by the page\n\n" +
-
-        "FAIL if the supposed hook is semantically vague.\n" +
-
-        "A vague hook could be attached to many unrelated pages without materially changing its meaning.\n\n" +
-
-        "Do not fail or pass a title merely because it contains words such as 'what', 'why', 'when', 'works', 'lasts' or 'matters'.\n" +
-
-        "Judge what those words MEAN in this specific title.\n\n" +
-
-        "Ask this decisive question:\n" +
-
-        "After reading this title, does the searcher know WHAT specific uncertainty, problem, consequence, distinction or decision the article will resolve?\n\n" +
-
-        "If the answer is no, FAIL.\n\n" +
-
-        "Also FAIL if the title is essentially just a service/search phrase plus location with decorative wording added that contributes no concrete meaning.\n\n" +
-
-        "Do not require Abbey Floor Care in the title.\n" +
-
-        "Do not reward exaggerated clickbait.\n" +
-
-        "Do not require emotional language.\n" +
-
-        "Do not invent a better title.\n\n" +
-
-        "Return JSON only:\n" +
-
-        '{"pass":true,"reason":"brief linguistic reason"}';
-
-
-      var semanticResult =
-        bc_sendPromptViaOpenAI(
-          semanticPrompt,
-          900
-        );
-
-
-      if (
-        !semanticResult ||
-        !semanticResult.success
-      ) {
-
-        return {
-          success: false,
-          issue:
-            "Meta Title semantic validation could not be completed.",
-          cost:
-            Number(
-              semanticResult &&
-              semanticResult.cost
-                ? semanticResult.cost
-                : 0
-            )
-        };
-      }
-
-
-      var raw =
-        String(
-          semanticResult.text || ""
-        )
-          .replace(
-            /^```(?:json)?\s*/i,
-            ""
-          )
-          .replace(
-            /\s*```$/i,
-            ""
-          )
-          .trim();
-
-
+      var d = getActiveRowDataMap();
+      var h1 = String(fields.h1 || "").trim();
+      var title = String(fields.title || "").trim();
+      if (!h1 || !title) return {success:false,issue:"H1 or Meta Title missing.",cost:0};
+      var html = String(d["Humanised HTML"] || d["New HTML"] || "");
+      var p = html.match(/<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/i);
+      var intro = (p ? p[1] : html.slice(0, 1800))
+        .replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 900);
+      var headings = (html.match(/<h2[^>]*>[\s\S]*?<\/h2>/gi) || [])
+        .slice(0, 10).map(function(t) {
+          return t.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+        }).join(" | ").slice(0, 1000);
+      var caseEvidence = typeof ce_w5EditorialEvidenceContext_ === "function"
+        ? ce_w5EditorialEvidenceContext_(d) : "";
+      var prompt = [
+        "W5 EDITORIAL ALIGNMENT CHECK — H1 AND META TITLE",
+        "H1: " + h1,
+        "Meta Title: " + title,
+        "Article Type: " + String(d["Article Type"] || ""),
+        "Primary Search Term: " + String(d["Primary Search Term"] || d["Primary Query Cluster Owned"] || ""),
+        "Material: " + String(d["Stone Type"] || ""),
+        "Location: " + String(d["Locality"] || d["Location"] || ""),
+        "Rewrite Brief: " + String(d["Page Rewrite Brief"] || "").slice(0, 900),
+        "ARTICLE OPENING: " + intro,
+        "ARTICLE HEADINGS: " + headings,
+        caseEvidence,
+        "Decide whether both H1 and Meta Title correctly represent this page's PRIMARY subject",
+        "and search intent and align with each other. They need not use identical words.",
+        "A clear, specific service + location headline may PASS even without curiosity or tension.",
+        "For a case study, identify the main story from the recorded client request, observed",
+        "condition, treatments and project results; do not prioritise one operation merely because",
+        "it makes a more dramatic title. Reject unsupported diagnoses and causal claims.",
+        "FAIL if either title exaggerates an incidental condition, asserts an unsupported cause,",
+        "conflicts with the page's actual topic, or substantially diverges from the other.",
+        "Do NOT demand a curiosity hook or fail an accurate plain-language description.",
+        "Do not rewrite either title. Return JSON only:",
+        '{"pass":true,"reason":"brief evidence-based explanation"}'
+      ].join("\n");
+      var response = bc_sendPromptViaOpenAI(prompt, 1100);
+      if (!response || !response.success) return {
+        success:false,issue:"W5 H1/meta alignment review unavailable.",
+        cost:Number(response && response.cost || 0)
+      };
+      var raw = String(response.text || "")
+        .replace(/^`(?:json)?\s*/i, "")
+        .replace(/\s*`$/i, "").trim();
       var parsed;
-
-
-      try {
-
-        parsed =
-          JSON.parse(
-            raw
-          );
-
-      } catch (e) {
-
-        return {
-          success: false,
-          issue:
-            "Meta Title semantic validator returned invalid JSON.",
-          cost:
-            Number(
-              semanticResult.cost || 0
-            )
-        };
+      try {parsed = JSON.parse(raw);} catch(e) {
+        return {success:false,issue:"W5 H1/meta validator returned invalid JSON.",
+          cost:Number(response.cost || 0)};
       }
-
-
-      if (
-        parsed.pass !== true
-      ) {
-
-        return {
-          success: false,
-          issue:
-            "Meta Title lacks a specific CTR-driving informational tension: " +
-            String(
-              parsed.reason ||
-              "the title is too vague."
-            ),
-          cost:
-            Number(
-              semanticResult.cost || 0
-            )
-        };
-      }
-
-
-      return {
-        success: true,
-        cost:
-          Number(
-            semanticResult.cost || 0
-          )
+      if (parsed.pass !== true) return {
+        success:false,
+        issue:"H1/meta topic or evidence alignment failed: " +
+          String(parsed.reason || "Unsupported or unrepresentative editorial angle."),
+        cost:Number(response.cost || 0)
       };
-
-
-    } catch (e) {
-
-      return {
-        success: false,
-        issue:
-          "Meta Title semantic validation error: " +
-          e.toString(),
-        cost: 0
-      };
+      return {success:true,cost:Number(response.cost || 0)};
+    } catch(e) {
+      return {success:false,issue:"W5 H1/meta alignment error: " + String(e),cost:0};
     }
   }
 
@@ -8552,7 +8247,7 @@ function bc_runW5Automated() {
 
 
     var semantic =
-      validateW5TitleSemantically(
+      validateW5HeadingAlignmentSemantically(
         fields
       );
 
