@@ -31,6 +31,14 @@ function glb_setup_(){
  var stone=String(s.getRange(1,12).getDisplayValue()||'');
  if(stone&&stone!==GLB_STONE_HEADER)throw Error('Unexpected queue heading L: '+stone);
  if(!stone)s.getRange(1,12).setValue(GLB_STONE_HEADER);
+ // The overview includes three operator-formatted WordPress metadata columns.
+ // Never overwrite unexpected user columns during a full refresh.
+ var metaHeaders=['Published Date (WordPress)','Last Updated Date (WordPress)','Post URL'];
+ metaHeaders.forEach(function(h,i){
+  var col=i+13,actual=String(s.getRange(1,col).getDisplayValue()||'').trim();
+  if(actual&&actual!==h)throw Error('Unexpected queue heading '+col+': '+actual);
+  if(!actual)s.getRange(1,col).setValue(h);
+ });
  return s;
 }
 function glb_lookup_(postId){
@@ -187,7 +195,10 @@ function glb_refreshQueueOverview(){
         missing.push('posts row absent for '+id);
       }
       // Do not overwrite prior CI/Sol workflow state or cost (columns E:K).
-      if(!byId[id]){record[4]='NOT STARTED';}
+      if(!byId[id]){
+        record[4]=duplicates[id]?'SOURCE DUPLICATE — REVIEW':'NOT STARTED';
+        if(duplicates[id])record[9]='Duplicate Post ID in posts rows '+duplicates[id].join(', ');
+      }
       if(wp){
         record[12]=wp.published;
         record[13]=wp.modified;
