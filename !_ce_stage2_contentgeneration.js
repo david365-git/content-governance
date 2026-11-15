@@ -1534,6 +1534,34 @@ function filterAuthorityBriefForMeta(rawBrief) {
   return text.trim();
 }
 
+function ce_w5EditorialEvidenceContext_(d) {
+  if (String(d["Article Type"] || "").trim() !== "Case Study") return "";
+  var groups = [
+    ["Project", "Project Location & Property", 2],
+    ["Observed condition", "Observed Conditions", 3],
+    ["Client request", "Client Requirements & Restoration Objectives", 3],
+    ["Work undertaken", "Restoration Methods", 3],
+    ["Recorded result", "Project Results", 3]
+  ];
+  var lines = ["--- CASE STUDY SOURCE-QUOTED EVIDENCE ---",
+    "These claims are quoted from the source article, not independently authenticated.",
+    "Select the main project story rather than treating a secondary operation as the primary problem."];
+  groups.forEach(function(g) {
+    var source = String(d[g[1]] || "").trim();
+    if (!source || source === "[]") return;
+    var facts;
+    try { facts = JSON.parse(source); } catch(e) { return; }
+    if (!Array.isArray(facts)) return;
+    var rendered = facts.slice(0, g[2]).map(function(item) {
+      if (!item || typeof item !== "object") return "";
+      var fact = String(item.fact || "").trim().slice(0, 240);
+      var quote = String(item.quote || "").trim().slice(0, 230);
+      return fact ? "- " + fact + (quote ? " [source: " + quote + "]" : "") : "";
+    }).filter(Boolean);
+    if (rendered.length) lines.push(g[0] + ":\n" + rendered.join("\n"));
+  });
+  return lines.length > 3 ? lines.join("\n") + "\n\n" : "";
+}
 function getMetaPrompt() {
   const ss        = SpreadsheetApp.getActiveSpreadsheet();
   const sheet     = ss.getSheetByName("posts");
@@ -1551,6 +1579,7 @@ function getMetaPrompt() {
   const problemAngle   = String(d["Problem Angle"]               || "").trim();
   const authorityBrief = String(d["Authority Brief"]             || "").trim();
   const competitorSerpNotes = String(d["Competitor SERP Notes"]  || "").trim();
+  const caseStudyEvidence = ce_w5EditorialEvidenceContext_(d);
 
   const systemLabels  = ["marble hub","travertine hub","limestone hub","slate hub",
                          "terrazzo hub","victorian hub","sandstone hub","quartzite hub",
@@ -1603,9 +1632,11 @@ function getMetaPrompt() {
       "Meta Description could apply to a different task on the same material, it has failed this step — rewrite it\n" +
       "using the task and constraint named above.\n\n"
     : "--- GROUNDING STEP (Hard Lock — complete before writing anything) ---\n" +
-      "Before writing any field, write one internal sentence (do not include it in your output) stating what is UNIQUE about this specific page — not what the material generally involves, but what actually happened on THIS floor, in THIS location, with THIS specific problem.\n" +
-      "Use only facts drawn from the ARTICLE CONTENT above — the specific coating brand, the specific defect, the specific outcome.\n" +
-      "Every field you write below must trace back to this grounding sentence. If a candidate H1, Meta Title, or Meta Description could apply to any other article about the same material, it has failed the grounding step — discard it and rewrite using a more specific detail from the article content.\n\n";
+      "Identify the central subject and purpose of the page before selecting the title angle.\n" +
+      "For a Case Study, weigh the recorded homeowner request, observed starting condition, intervention and outcome together. The most dramatic technical operation is not automatically the main problem.\n" +
+      "Removal of multiple old coatings does NOT establish that homeowners applied excessive wax or caused the problem. Do not invent a cause from a treatment step.\n" +
+      "Keep the H1, Meta Title and Meta Description aligned with the same representative evidenced story.\n" +
+      "Accuracy and search intent take priority over curiosity, tension and clever wording.\n\n";
 
   const methodGuidePurposeCheck = isMethodGuideType
     ? "19. PURPOSE-LOSS TEST (Method Guide): After drafting each field, ask — could a reader identify from\n" +
@@ -1630,7 +1661,10 @@ function getMetaPrompt() {
         .join("\n");
 
       if (headerText || h2Text) {
-        articleHtml = (headerText ? "INTRO:\n" + headerText + "\n\n" : "") +
+        var firstPara = rawHtml.match(/<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/i);
+        var intro = firstPara ? firstPara[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 900) : "";
+        articleHtml = (intro ? "OPENING PARAGRAPH:\n" + intro + "\n\n" : "") +
+                      (headerText ? "HEADER:\n" + headerText + "\n\n" : "") +
                       (h2Text     ? "SECTION HEADINGS:\n" + h2Text   : "");
       } else {
         articleHtml = rawHtml.substring(0, 2000);
@@ -1728,7 +1762,7 @@ function getMetaPrompt() {
       var top = parsedLines.slice(0, 10).map(function(p) { return p.line; }).join("\n");
       return "GSC REAL SEARCHER QUERIES (use these to identify emotional entry points and natural language):\n" +
              "These are the actual phrases real homeowners have used to find this page or pages like it.\n" +
-             "Use this language to inform the H1 tension, meta title phrasing, and meta description specificity.\n" +
+             "Use this language to understand search intent and natural phrasing, without inventing a more dramatic project condition.\n" +
              "Do NOT copy these phrases verbatim — use them to understand what the homeowner is worried about.\n\n" +
              top + "\n\n";
     })() +
@@ -1741,6 +1775,7 @@ function getMetaPrompt() {
         "This is a qualitative snapshot, not exhaustive data — weigh it alongside the other rules, not above them.\n\n" +
         competitorSerpNotes + "\n\n"
       : "") +
+    (caseStudyEvidence ? caseStudyEvidence : "") +
     (articleHtml
       ? "--- ARTICLE CONTENT ---\n" +
         "Use the intro and section headings below to inform tone, angle, and specificity.\n" +
@@ -1751,14 +1786,15 @@ function getMetaPrompt() {
     "--- VOICE & TONE ---\n" +
     "Write as a knowledgeable professional speaking directly to a frustrated homeowner.\n" +
     "The tone is authoritative but plainspoken — no corporate language, no marketing superlatives.\n" +
+    "Clear subject identification matters more than an editorial hook.\n" +
     "The H1 should sound like something a specialist would say to a client, not a page title.\n" +
     "The Meta Description should read like the opening of an expert explanation — not an advert.\n\n" +
     "--- GSC LANGUAGE SIGNAL (apply before writing any field) ---\n" +
     "If GSC Real Searcher Queries are provided above, read them before writing anything.\n" +
     "Identify the dominant emotional concern in those queries — what is the homeowner worried about?\n" +
-    "That emotional concern must be the entry point for the H1 and the first sentence of the Meta Description.\n" +
-    "The H1 must create recognition — the homeowner should read it and think 'that is exactly my situation'.\n" +
-    "The Meta Title must read like a phrase a person would actually say — not a keyword string assembled for a crawler.\n" +
+    "Use searcher concerns to understand intent, but do not substitute them for the actual subject or verified scope of this article.\n" +
+    "The H1 must tell the reader clearly what this specific page covers.\n" +
+    "The Meta Title must read naturally and agree with the H1 — not a keyword string assembled for a crawler.\n" +
     "The Meta Description second sentence must give a specific reason to click — what will the reader understand\n" +
     "or be able to do after reading this article that they could not before?\n\n" +
     "--- AI CITATION OPTIMISATION ---\n" +
@@ -1799,9 +1835,9 @@ function getMetaPrompt() {
     "H1:\n" +
     "- CAPITALISATION: Title Case — first letter of EVERY word capitalised — no exceptions\n" +
     "- Write fresh — do not copy any heading from the article content above\n" +
-    "- EXACTLY 40-60 characters — count every character before outputting\n" +
+    "- Prefer roughly 20-70 characters, but use more when needed for accurate, natural identification; do not pad for length\n" +
     "- Must name the material (" + material + ")\n" +
-    "- Lead with the user's symptom or problem, OR use a counterintuitive framing\n" +
+    "- Lead with the actual topic, primary search intent and material; a symptom or contrast is optional, not mandatory\n" +
     (isMethodGuideType
       ? "- METHOD GUIDE OVERRIDE (Hard Lock): For this article type, symptom-led or counterintuitive framing is\n" +
         "  permitted only AFTER the core task from the Page-Purpose Lock above is explicit in the H1. The H1 must\n" +
@@ -1809,7 +1845,7 @@ function getMetaPrompt() {
       : "") +
     "- Specific and concrete — no generic labels like 'Guide', 'Overview', 'Diagnosis'\n" +
     "- No verb forms ending in '-ing' as the first word\n" +
-    "- Must create curiosity or tension — avoid obvious or predictable phrasing\n" +
+    "- Curiosity or tension is optional and must never overstate an incidental condition or imply an unrecorded cause\n" +
     "- Prohibited patterns: 'looks dull after cleaning', 'everything you need to know',\n" +
     "  'the complete guide', 'marks still visible', 'still visible after'\n" +
     "- No question marks unless the question is genuinely surprising or counterintuitive\n" +
@@ -1840,13 +1876,13 @@ function getMetaPrompt() {
     "- TARGET 50-60 characters. Never exceed 60 characters.\n" +
     "- Must contain the primary search term or a natural close variant\n" +
     "- BRAND RULE: Include 'Abbey Floor Care' only when the complete title can still contain\n" +
-    "  the search intent, required location and a meaningful CTR-driving angle within 60 characters.\n" +
-    "  If the brand forces removal of the useful click-driving angle, OMIT the brand.\n" +
-    "  Search intent + location + useful reason to click take priority over branding.\n" +
+    "  the search intent, required location and a meaningful factual distinction within 60 characters.\n" +
+    "  If the brand forces removal of a useful topic detail, OMIT the brand.\n" +
+    "  Search intent + location + factual clarity take priority over branding.\n" +
     "  Never shorten the brand to 'Abbey' merely to make it fit.\n" +
     "- Must read naturally in UK English\n" +
-    "- CTR PURPOSE (Hard Lock): The Meta Title is not merely a label for the service or article.\n" +
-    "  It must give the searcher a reason to choose this result over otherwise similar SERP results.\n" +
+    "- TITLE PURPOSE (Hard Lock): The Meta Title must accurately identify the page's main subject and match the H1's central meaning.\n" +
+    "  A specific factual detail is welcome, but a curiosity hook must never be manufactured.\n" +
     "- Build the click-driving angle around ONE of the following, whichever is genuinely supported by\n" +
     "  the Page Context, Article Content, Problem Angle, Authority Brief or Competitor SERP Context:\n" +
     "  * a visible problem the homeowner recognises\n" +
@@ -1856,11 +1892,10 @@ function getMetaPrompt() {
     "  * a repair-versus-replacement distinction\n" +
     "  * an unexpected or counterintuitive fact\n" +
     "  * a specific 'what actually matters' distinction\n" +
-    "- Prefer tension, contrast or useful specificity over generic service wording.\n" +
-    "- The title must make an implicit promise that the page resolves a real uncertainty.\n" +
-    "- BORING TITLE TEST (Hard Lock): Reject any candidate that is essentially only:\n" +
-    "  [service] + [location] + [brand].\n" +
-    "  Example to reject: 'Ceramic Tile Repair West End Edinburgh | Abbey Floor Care'.\n" +
+    "- Prefer useful factual specificity over generic service wording; tension is optional.\n" +
+    "- The title must set an accurate expectation of the content the visitor will find.\n" +
+    "- Distinctiveness test: prefer a supported case-specific detail when one adds clarity.\n" +
+    "  A concise service + location title may be valid when it accurately represents this page; never invent a defect merely to make the title less ordinary.\n" +
     "- Also reject generic modifiers that add no useful reason to click, including:\n" +
     "  'professional', 'quality', 'trusted', 'local', 'reliable', 'specialist service',\n" +
     "  'services', 'solutions', 'experts', 'expert', 'guide', 'overview', 'tips', 'hub'.\n" +
@@ -1970,7 +2005,7 @@ function getMetaPrompt() {
     "Step 6: Verify no mid-sentence capitalisation of stone or service nouns.\n\n" +
 
     "--- QUALITY TARGET ---\n" +
-    "The H1 must be specific, surprising, or tension-creating — not a label for the page.\n" +
+    "The H1 must clearly identify the page and its main evidenced subject; a hook is optional.\n" +
     "The Meta Title must read like a real phrase — not assembled from keywords.\n" +
     "The Meta Description first sentence states the problem as established fact.\n" +
     "The Meta Description second sentence names a concrete outcome for the floor.\n" +
@@ -1990,16 +2025,14 @@ function getMetaPrompt() {
     "— Meta Description must be sentence case only.\n\n" +
 
     "--- SELF-CHECK BEFORE OUTPUTTING ---\n" +
-    "1.  Count H1 characters. If not 40-60 — rewrite.\n" +
+    "1.  Prefer 20-70 H1 characters; if longer, keep only wording needed for clear search intent and factual scope.\n" +
     "2.  Verify H1 is Title Case — every word capitalised including short words.\n" +
     "    If any word is lowercase — rewrite the entire H1.\n" +
     "3.  Count Meta Title characters. If over 60 — rewrite. Aim for 50-60 where possible.\n" +
     "4.  Verify Meta Title is Title Case with preposition exceptions. If not — rewrite.\n" +
     "5.  Verify Meta Title word order follows natural English syntax. If inverted — rewrite.\n" +
-    "6.  BORING TITLE TEST: Does the Meta Title amount to little more than service + location + brand?\n" +
-    "    If yes — REJECT it and rewrite with a supported problem, decision, consequence,\n" +
-    "    limitation, contrast or 'what actually matters' angle.\n" +
-    "    The title must give a searcher a concrete reason to choose this result over a generic competitor listing.\n" +
+    "6.  TOPIC ALIGNMENT: Do H1 and Meta Title describe the same central page subject and intent?\n" +
+    "    If either elevates a secondary restoration step into a misleading diagnosis, rewrite it.\n" +
     "7.  Verify Meta Title contains no prohibited or empty promotional words. If it does — rewrite.\n" +
     "8.  Verify the CTR angle is genuinely supported by the article, Problem Angle, Authority Brief\n" +
     "    or Competitor SERP Context. If the angle is invented, exaggerated or unsupported — rewrite.\n" +
@@ -2101,7 +2134,7 @@ function getMetaPrompt() {
     "Do not show your self-check work in the output — only the four final fields below, after every check has passed silently.\n\n" +
 
     "--- OUTPUT FORMAT (EXACT LABELS, ALL FOUR ON CONSECUTIVE LINES) ---\n" +
-    "Before outputting, verify each field traces back to the grounding sentence — the specific fact that makes this page different from any other article on the same material.\n" +
+    "Before outputting, verify that H1 and Meta Title agree on the main page subject and do not exaggerate a secondary detail.\n" +
     "New H1: [value]\n" +
     "New Meta Title: [value]\n" +
     "New Meta Description: [value]\n" +
