@@ -12,15 +12,15 @@ function w2cUploadImageToWordPress(payload) {
     return { success: false, message: 'Missing image upload payload.' };
   }
   var props = PropertiesService.getScriptProperties();
-  var site = String(props.getProperty('W2C_WP_SITE_URL') || '').trim().replace(/\\/+$/, '');
+  var site = String(props.getProperty('W2C_WP_SITE_URL') || '').trim().replace(/\/+$/, '');
   var user = String(props.getProperty('W2C_WP_USERNAME') || '').trim();
   var pass = String(props.getProperty('W2C_WP_APP_PASSWORD') || '').trim();
-  if (!/^https:\/\/[^\\s/]+(?:\/[^?#]*)?$/i.test(site) || !user || !pass) {
+  if (!/^https:\/\/[^\s/]+(?:\/[^?#]*)?$/i.test(site) || !user || !pass) {
     return { success: false, message: 'WordPress upload is not configured. Set W2C_WP_SITE_URL, W2C_WP_USERNAME and W2C_WP_APP_PASSWORD in Apps Script Script Properties.' };
   }
 
   var name = String(payload.name || '').replace(/^.*[\\/]/, '').trim();
-  var match = name.match(/\\.(webp|png|jpe?g|gif|avif)$/i);
+  var match = name.match(/\.(webp|png|jpe?g|gif|avif)$/i);
   if (!match) return { success: false, message: 'Unsupported image type: ' + name };
   var ext = match[1].toLowerCase();
   var mime = ({webp:'image/webp',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',avif:'image/avif'})[ext];
@@ -67,8 +67,8 @@ function w2cUploadImageToWordPress(payload) {
   // Prevent inserting a non-WordPress or unrelated image URL.
   var expectedHost = site.match(/^https:\/\/([^/]+)/i)[1].toLowerCase();
   var actualHost = (url.match(/^https:\/\/([^/]+)/i) || [,''])[1].toLowerCase();
-  if (actualHost !== expectedHost && actualHost !== expectedHost.replace(/^www\\./, '') &&
-      actualHost.replace(/^www\\./, '') !== expectedHost.replace(/^www\\./, '')) {
+  if (actualHost !== expectedHost && actualHost !== expectedHost.replace(/^www\./, '') &&
+      actualHost.replace(/^www\./, '') !== expectedHost.replace(/^www\./, '')) {
     return { success: false, message: 'WordPress returned an unexpected media host. Media ID: ' + data.id + '. Check the WordPress media settings before inserting the URL.' };
   }
 
