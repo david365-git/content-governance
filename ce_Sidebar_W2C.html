@@ -550,10 +550,18 @@ function w2cBuildMediaEntryControls(html) {
 
         replacementText +
 
-        '<div style="font-size:11px;margin-bottom:5px;">' +
+        '<div style="font-size:11px;margin-bottom:6px;">' +
           '<strong>Suggested slug:</strong> ' +
-          w2cEscapeHtml(slug) +
+          '<span id="w2cSlug_' + imageNumber + '">' +
+            w2cEscapeHtml(slug) +
+          '</span>' +
         '</div>' +
+
+        '<button type="button" class="btn-copy" ' +
+          'id="w2cCopySlug_' + imageNumber + '" ' +
+          'style="background:#558b2f;color:#fff;margin-bottom:10px;">' +
+          'Copy Slug' +
+        '</button>' +
 
         '<div style="font-size:11px;margin-bottom:5px;">' +
           '<strong>Media type:</strong> ' +
@@ -609,6 +617,21 @@ function w2cBuildMediaEntryControls(html) {
           'Copy Generator Prompt' +
         '</button>' +
 
+        '<div style="margin-bottom:12px;">' +
+          '<label for="w2cFile_' + imageNumber + '" ' +
+            'style="font-size:11px;font-weight:700;display:block;margin-bottom:5px;">' +
+            'LOCAL IMAGE FILE:' +
+          '</label>' +
+          '<input type="file" id="w2cFile_' + imageNumber + '" ' +
+            'accept="image/*,.webp,.png,.jpg,.jpeg,.gif,.avif" ' +
+            'style="max-width:100%;font-size:11px;">' +
+          '<div id="w2cFileStatus_' + imageNumber + '" ' +
+            'style="font-size:11px;color:#666;margin-top:5px;" ' +
+            'role="status" aria-live="polite">' +
+            'No file selected — file stays local until upload is implemented.' +
+          '</div>' +
+        '</div>' +
+
         '<label style="' +
           'font-size:11px;' +
           'font-weight:700;' +
@@ -636,10 +659,86 @@ function w2cBuildMediaEntryControls(html) {
           '">' ;
 
       container.appendChild(card);
+
+      // Keep controls scoped to this image; never infer files from slug.
+      var slugButton = document.getElementById('w2cCopySlug_' + imageNumber);
+      slugButton.addEventListener('click', (function(number, value) {
+        return function() { w2cCopySuggestedSlug(number, value); };
+      })(imageNumber, slug));
+
+      var fileInput = document.getElementById('w2cFile_' + imageNumber);
+      fileInput.addEventListener('change', (function(number) {
+        return function() { w2cShowSelectedLocalFile(number); };
+      })(imageNumber));
     }
   );
 }
 
+
+/* ============================================================
+   W2C — COPY SLUG / SELECT LOCAL IMAGE (STAGE 3)
+   Selection is browser-local; it does not upload or save files.
+============================================================ */
+
+function w2cCopySuggestedSlug(imageNumber, slug) {
+  if (!slug) {
+    alert('No suggested slug is available for image ' + imageNumber + '.');
+    return;
+  }
+
+  var success = function() {
+    document.getElementById('statusW2C').innerText =
+      '✔ Image ' + imageNumber + ' suggested slug copied.';
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(slug).then(success).catch(function() {
+      w2cCopySuggestedSlugFallback(slug, success);
+    });
+  } else {
+    w2cCopySuggestedSlugFallback(slug, success);
+  }
+}
+
+function w2cCopySuggestedSlugFallback(slug, success) {
+  var helper = document.createElement('textarea');
+  helper.value = slug;
+  helper.setAttribute('readonly', '');
+  helper.style.cssText = 'position:fixed;left:-9999px;top:0;';
+  document.body.appendChild(helper);
+  helper.select();
+  var copied = false;
+  try { copied = document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(helper);
+  if (copied) success();
+  else alert('Unable to copy automatically. Please select and copy the slug.');
+}
+
+function w2cShowSelectedLocalFile(imageNumber) {
+  var input = document.getElementById('w2cFile_' + imageNumber);
+  var status = document.getElementById('w2cFileStatus_' + imageNumber);
+  if (!input || !status) return;
+
+  var file = input.files && input.files[0];
+  if (!file) {
+    status.textContent = 'No file selected — file stays local until upload is implemented.';
+    return;
+  }
+
+  var isImage = file.type.indexOf('image/') === 0 ||
+    /\.(webp|png|jpe?g|gif|avif)$/i.test(file.name);
+  if (!isImage) {
+    input.value = '';
+    status.textContent = 'Please choose an image file (WebP, PNG, JPEG, GIF or AVIF).';
+    status.style.color = '#b71c1c';
+    return;
+  }
+
+  status.style.color = '#2e7d32';
+  status.textContent = '✔ Selected: ' + file.name +
+    ' (' + (file.size / (1024 * 1024)).toFixed(2) +
+    ' MB). Not uploaded yet.';
+}
 
 /* ============================================================
    EXTRACT A FIELD FROM A PLACEHOLDER
