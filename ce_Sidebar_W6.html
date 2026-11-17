@@ -213,6 +213,14 @@
         if (!res || !res.success) {
           var message = (res && res.message) || 'WordPress update failed.';
           document.getElementById('w6PublishResult').textContent = message;
+          if (res && res.retryBlocked) {
+            _w6VerifiedId = null;
+            _w6VerifiedStatus = null;
+            _w6VerifiedPublishedDate = null;
+            _w6VerifiedModifiedDate = null;
+            document.getElementById('w6WpVerification').textContent =
+              'Write result uncertain. Re-verify WordPress; do NOT repeat Update.';
+          }
           setStatus('statusW6','fail',message);
           return;
         }
@@ -268,6 +276,16 @@
         var message = (res && res.message) || 'WordPress republish could not be verified.';
         document.getElementById('w6PublishResult').textContent = message;
         if (!res || !res.success) {
+          if (res && res.retryBlocked) {
+            _w6VerifiedId = null;
+            _w6VerifiedStatus = null;
+            _w6VerifiedPublishedDate = null;
+            _w6VerifiedModifiedDate = null;
+            document.getElementById('w6WpVerification').textContent =
+              res.published
+                ? 'Post ' + res.postId + ' is PUBLIC after an uncertain write. DO NOT REPUBLISH.'
+                : 'Write result uncertain. DO NOT REPUBLISH without reconciliation.';
+          }
           setStatus('statusW6','fail',message);
           return;
         }
