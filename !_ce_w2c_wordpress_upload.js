@@ -2,9 +2,9 @@
    W2C — WORDPRESS MEDIA UPLOAD
    Dedicated W2C upload endpoint. Does not create or publish posts.
    Required Apps Script Script Properties:
-   W2C_WP_SITE_URL  e.g. https://www.abbeyfloorcare.co.uk
-   W2C_WP_USERNAME  WordPress username with upload_files permission
-   W2C_WP_APP_PASSWORD  WordPress Application Password
+   CE_WP_MEDIA_SITE_URL  e.g. https://www.abbeyfloorcare.co.uk
+   CE_WP_MEDIA_USERNAME  WordPress username with upload_files permission
+   CE_WP_MEDIA_APP_PASSWORD  WordPress Application Password
 ============================================================ */
 
 function w2cUploadImageToWordPress(payload) {
@@ -12,11 +12,11 @@ function w2cUploadImageToWordPress(payload) {
     return { success: false, message: 'Missing image upload payload.' };
   }
   var props = PropertiesService.getScriptProperties();
-  var site = String(props.getProperty('W2C_WP_SITE_URL') || '').trim().replace(/\/+$/, '');
-  var user = String(props.getProperty('W2C_WP_USERNAME') || '').trim();
-  var pass = String(props.getProperty('W2C_WP_APP_PASSWORD') || '').trim();
+  var site = String(props.getProperty('CE_WP_MEDIA_SITE_URL') || '').trim().replace(/\/+$/, '');
+  var user = String(props.getProperty('CE_WP_MEDIA_USERNAME') || '').trim();
+  var pass = String(props.getProperty('CE_WP_MEDIA_APP_PASSWORD') || '').trim();
   if (!/^https:\/\/[^\s/]+(?:\/[^?#]*)?$/i.test(site) || !user || !pass) {
-    return { success: false, message: 'WordPress upload is not configured. Set W2C_WP_SITE_URL, W2C_WP_USERNAME and W2C_WP_APP_PASSWORD in Apps Script Script Properties.' };
+    return { success: false, message: 'WordPress upload is not configured. Set CE_WP_MEDIA_SITE_URL, CE_WP_MEDIA_USERNAME and CE_WP_MEDIA_APP_PASSWORD in Apps Script Script Properties.' };
   }
 
   var name = String(payload.name || '').replace(/^.*[\\/]/, '').trim();
