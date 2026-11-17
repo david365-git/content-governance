@@ -73,6 +73,79 @@ function ce_w6WordPressPreflight(request) {
   }
 }
 
+
+/**
+ * Recovery after an uncertain WordPress write. Standard read-only REST only:
+ * no additional publish, no sheet write, and no claim that schema was saved.
+ */
+function ce_w6ReadBackAfterError_(postId, mode, before, intended, originalError) {
+  var reason = String(originalError && (originalError.message || originalError) || 'Unknown WordPress error');
+  var base = {
+    success:false, postId:postId, mode:mode, published:false,
+    partial:true, retryBlocked:true, recoveryCheck:'unavailable',
+    message:'W6 WordPress request returned an uncertain result: ' + reason +
+      '. DO NOT RETRY. Check WordPress before taking another publishing action.'
+  };
+  try {
+    var live = ce_w6WpRequest_('get',
+      '/wp-json/wp/v2/posts/' + postId +
+      '?context=edit&_fields=id,status,date,modified,link,title,content,meta,featured_media');
+    if (Number(live.id) !== postId) throw new Error('WordPress returned a different post ID.');
+    var liveDate = String(live.date || '');
+    var oldDate = String(before.publishedDate || '');
+    var liveStatus = String(live.status || '');
+    var oldStatus = String(before.status || '');
+    var changed = liveDate !== oldDate || liveStatus !== oldStatus;
+    var title = live.title && live.title.raw;
+    var html = live.content && live.content.raw;
+    var checks = {
+      status:liveStatus, publicationDate:liveDate,
+      titleMatches:typeof title === 'string' ? title === String(intended.newH1 || '') : null,
+      htmlMatches:typeof html === 'string' ? html === String(intended.newHtml || '') : null
+    };
+    if (live.meta && typeof live.meta === 'object') {
+      var meta = live.meta;
+      checks.metaTitleMatches = typeof meta._yoast_wpseo_title === 'string'
+        ? meta._yoast_wpseo_title === String(intended.newMetaTitle || '') : null;
+      checks.metaDescriptionMatches = typeof meta._yoast_wpseo_metadesc === 'string'
+        ? meta._yoast_wpseo_metadesc === String(intended.newMetaDesc || '') : null;
+      checks.focusKeyphraseMatches = typeof meta._yoast_wpseo_focuskw === 'string'
+        ? meta._yoast_wpseo_focuskw === String(intended.yoastKeyphrase || '') : null;
+    }
+    base.publishedDate = liveDate;
+    base.modifiedDate = String(live.modified || '');
+    base.status = liveStatus;
+    base.url = String(live.link || '');
+    base.checks = checks;
+    base.recoveryCheck = 'read_only_complete';
+    base.published = mode === 'republish' && liveStatus === 'publish' && changed;
+    var mismatch = Object.keys(checks).filter(function(k) {
+      return /Matches$/.test(k) && checks[k] === false;
+    });
+    if (base.published) {
+      base.message = 'WORDPRESS IS ALREADY PUBLISHED (Post ' + postId +
+        ', date ' + liveDate + '). The W6 request failed before a verified receipt. ' +
+        'Title/HTML/metadata/schema may be incomplete; sheet records were NOT written by W6. ' +
+        (mismatch.length ? 'Differences detected: ' + mismatch.join(', ') + '. ' : '') +
+        'DO NOT REPUBLISH. Review and reconcile the live post. Original error: ' + reason;
+    } else if (changed) {
+      base.message = 'WORDPRESS CHANGED DURING A FAILED W6 REQUEST (Post ' + postId +
+        ', status ' + liveStatus + ', date ' + liveDate + '). ' +
+        'Publication or update completion is NOT confirmed. Sheet records were NOT written. ' +
+        'DO NOT RETRY. Review the live post. Original error: ' + reason;
+    } else {
+      base.message = 'WordPress status/date are unchanged for Post ' + postId +
+        ' after the W6 error. This does NOT establish that content or metadata were unchanged. ' +
+        'No publication-log/site-export changes were written. DO NOT RETRY until the live post is checked. ' +
+        'Original error: ' + reason;
+    }
+  } catch (readError) {
+    base.message += ' Read-only recovery check also failed: ' +
+      String(readError.message || readError) + '.';
+  }
+  return base;
+}
+
 /**
  * Publish only after the matching row was loaded, and the user explicitly
  * confirmed UPDATE or REPUBLISH. Bridge validates WordPress write atomically.
@@ -158,17 +231,24 @@ function ce_w6WordPressPublish(request) {
     };
     if (request.mode === 'republish') publishBody.expected_modified = current.modifiedDate;
     if (imageUrl) publishBody.featured_image_url = imageUrl;
-    var result = ce_w6WpRequest_('post', '/wp-json/abbey/v1/w6-publish', publishBody);
-    if (!result.success || Number(result.post_id) !== postId ||
-        !result.published_date || !result.modified_date ||
-        !result.status ||
-        (request.mode === 'update' && result.status !== current.status) ||
-        (request.mode === 'republish' && result.status !== 'publish') ||
-        !result.schema ||
-        (request.mode === 'update'
-          ? result.published_date !== current.publishedDate
-          : result.published_date === current.publishedDate)) {
-      throw new Error('WordPress response was not fully verified. Check the post before retrying.');
+    // After submitting a write, any transport, HTTP or receipt-validation
+    // failure is potentially a PARTIAL write. Read back; never retry automatically.
+    var result;
+    try {
+      result = ce_w6WpRequest_('post', '/wp-json/abbey/v1/w6-publish', publishBody);
+      if (!result.success || Number(result.post_id) !== postId ||
+          !result.published_date || !result.modified_date ||
+          !result.status ||
+          (request.mode === 'update' && result.status !== current.status) ||
+          (request.mode === 'republish' && result.status !== 'publish') ||
+          !result.schema ||
+          (request.mode === 'update'
+            ? result.published_date !== current.publishedDate
+            : result.published_date === current.publishedDate)) {
+        throw new Error('WordPress response did not verify all required fields.');
+      }
+    } catch (writeError) {
+      return ce_w6ReadBackAfterError_(postId, request.mode, current, data, writeError);
     }
     return {
       success:true, postId:postId, mode:request.mode,
@@ -237,7 +317,9 @@ function ce_w6DirectPublishAndRecord(request) {
   }
   var result = ce_w6WordPressPublish(request);
   if (!result.success) {
-    return {success:false,published:false,message:result.message};
+    // Preserve recovery evidence and do not attempt publication-log writes
+    // without the bridge's canonical schema and confirmed success receipt.
+    return Object.assign({success:false}, result);
   }
   var problems = [];
   var sourceSchema = original.newSchema;
