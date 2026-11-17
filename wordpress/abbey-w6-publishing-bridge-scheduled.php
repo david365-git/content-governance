@@ -60,7 +60,7 @@ function abbey_w6_publish_post(WP_REST_Request $request) {
     }
 
     if ($mode === 'republish') {
-        // A second safeguard: do not republish recent or future-dated articles.
+        // Safeguard: recent published posts cannot be republished. Scheduled posts can be published now.
         // This check is independent of the spreadsheet's grey highlighting.
         $published_at = DateTimeImmutable::createFromFormat(
             '!Y-m-d H:i:s', $post->post_date, wp_timezone());
