@@ -58,7 +58,7 @@
         <button id="w6DirectRepublishBtn" style="background:#b06000;color:#fff" onclick="w6_directRepublish()" disabled>Republish Post</button>
       </div>
       <div style="font-size:10px;color:#7a4a00;margin-top:6px">
-        Update preserves the original publication date. Republish advances it and may trigger syndication. Articles published within the past 30 days or scheduled for the future cannot be republished here. Confirm syndication delivery separately.
+        Update preserves the current status and publication date (including a future schedule). Republish publishes a scheduled post immediately, or advances the date of an eligible published post. Published posts from the past 30 days remain protected. Confirm syndication delivery separately.
       </div>
       <div class="step-label" style="margin-top:9px">WordPress Result</div>
       <div id="w6PublishResult" style="font-size:10px;white-space:pre-wrap">
@@ -86,12 +86,14 @@
 <script>
   var _w6Data = null;
   var _w6VerifiedId = null;
+  var _w6VerifiedStatus = null;
   var _w6VerifiedPublishedDate = null;
   var _w6VerifiedModifiedDate = null;
   var _w6DirectReceipt = null;
 
   function w6_load() {
     _w6VerifiedId = null;
+    _w6VerifiedStatus = null;
     _w6VerifiedPublishedDate = null;
     _w6VerifiedModifiedDate = null;
     _w6Data = null;
@@ -161,11 +163,12 @@
       return;
     }
     _w6VerifiedId = null;
+    _w6VerifiedStatus = null;
     _w6VerifiedPublishedDate = null;
     _w6VerifiedModifiedDate = null;
     document.getElementById('w6DirectUpdateBtn').disabled = true;
     document.getElementById('w6DirectRepublishBtn').disabled = true;
-    setStatus('statusW6','running','Checking published WordPress post...',true);
+    setStatus('statusW6','running','Checking WordPress post (published or scheduled)...',true);
     google.script.run
       .withSuccessHandler(function(res) {
         if (!res || !res.success) {
@@ -173,10 +176,12 @@
           return;
         }
         _w6VerifiedId = String(res.postId);
+        _w6VerifiedStatus = String(res.status || '');
         _w6VerifiedPublishedDate = String(res.publishedDate || '');
         _w6VerifiedModifiedDate = String(res.modifiedDate || '');
         document.getElementById('w6WpVerification').textContent =
-          'Verified Post ' + res.postId + ' — Published: ' + res.publishedDate +
+          'Verified Post ' + res.postId + ' — Status: ' + (res.status === 'future' ? 'Scheduled' : 'Published') +
+           ' — ' + (res.status === 'future' ? 'Scheduled for: ' : 'Published: ') + res.publishedDate +
           ' — Last updated: ' + res.modifiedDate;
         document.getElementById('w6DirectUpdateBtn').disabled = false;
         document.getElementById('w6DirectRepublishBtn').disabled = false;
@@ -194,10 +199,10 @@
       return;
     }
     var confirmed = window.confirm(
-      'Update published Post ID ' + _w6Data.postId +
+      'Update ' + (_w6VerifiedStatus === 'future' ? 'SCHEDULED' : 'published') + ' Post ID ' + _w6Data.postId +
       '?\n\nThis updates HTML, title, Yoast fields and schema.' +
       '\nFeatured image: ' + (_w6Data.featuredImageUrl ? 'set image from column EM' : 'keep current image') + '.' +
-      '\nPublished date will be preserved.\n\nContinue?'
+      '\n' + (_w6VerifiedStatus === 'future' ? 'Scheduled publication date and future status will be preserved.' : 'Published date will be preserved.') + '\n\nContinue?'
     );
     if (!confirmed) return;
     document.getElementById('w6DirectUpdateBtn').disabled = true;
@@ -214,6 +219,7 @@
         _w6DirectReceipt = res;
         document.getElementById('w6PublishResult').textContent = res.message;
         _w6VerifiedId = null;
+        _w6VerifiedStatus = null;
         _w6VerifiedPublishedDate = null;
         _w6VerifiedModifiedDate = null;
         document.getElementById('w6WpVerification').textContent =
@@ -230,7 +236,7 @@
       .withFailureHandler(function(e) {
         setStatus('statusW6','fail','WordPress update could not be verified: '+e.message);
       })
-      .ce_w6DirectPublishAndRecord({postId:_w6Data.postId,mode:'update'});
+      .ce_w6DirectPublishAndRecord({postId:_w6Data.postId,mode:'update',verifiedStatus:_w6VerifiedStatus});
   }
 
   function w6_directRepublish() {
@@ -240,10 +246,10 @@
       return;
     }
     var entered = window.prompt(
-      'REPUBLISH Post ' + _w6Data.postId + '?\n\n' +
+      (_w6VerifiedStatus === 'future' ? 'PUBLISH SCHEDULED POST NOW ' : 'REPUBLISH Post ') + _w6Data.postId + '?\n\n' +
       'This advances its publication date to the current WordPress time and may send it through your syndication network.\n' +
       'The existing HTML, title, metadata, schema and optional image will also be written.\n\n' +
-      'Articles published within 30 days or scheduled for the future are blocked.\n' +
+      'Articles already published within 30 days are blocked. Scheduled posts may be published now.\n' +
       'Type the Post ID ' + _w6Data.postId + ' to continue:'
     );
     if (entered !== String(_w6Data.postId)) {
@@ -251,8 +257,8 @@
       return;
     }
     if (!window.confirm(
-      'FINAL CONFIRMATION — REPUBLISH Post ' + _w6Data.postId +
-      '\n\nChange the live WordPress publication date now? This may trigger syndication.\n\nContinue?'
+      'FINAL CONFIRMATION — ' + (_w6VerifiedStatus === 'future' ? 'PUBLISH NOW' : 'REPUBLISH') + ' Post ' + _w6Data.postId +
+      '\n\n' + (_w6VerifiedStatus === 'future' ? 'Remove the future schedule and make this article PUBLIC NOW?' : 'Change the live WordPress publication date now?') + ' This may trigger syndication.\n\nContinue?'
     )) return;
     document.getElementById('w6DirectUpdateBtn').disabled = true;
     document.getElementById('w6DirectRepublishBtn').disabled = true;
@@ -267,6 +273,7 @@
         }
         _w6DirectReceipt = res;
         _w6VerifiedId = null;
+        _w6VerifiedStatus = null;
         _w6VerifiedPublishedDate = null;
         _w6VerifiedModifiedDate = null;
         document.getElementById('w6WpVerification').textContent =
@@ -288,6 +295,7 @@
       .ce_w6DirectPublishAndRecord({
         postId: _w6Data.postId,
         mode: 'republish',
+        verifiedStatus: _w6VerifiedStatus,
         verifiedPublishedDate: _w6VerifiedPublishedDate,
         verifiedModifiedDate: _w6VerifiedModifiedDate
       });
