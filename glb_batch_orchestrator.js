@@ -91,9 +91,9 @@ function glb_prepare(postIds){
  * not text. Sort is by current WordPress publication date (most recent first),
  * then modification date, without treating an ordinary edit as republication.
  *
- * Published WordPress metadata is collected in small REST batches before any
+ * Published and scheduled WordPress metadata are collected in small REST batches before any
  * Sheet rows are written. Failed REST reads stop with the existing queue intact.
- * Missing/nonpublic post IDs retain their prior queue dates and are reported.
+ * Unavailable post IDs retain their prior queue dates and are reported.
  */
 function glb_wpDate_(value) {
   if (Object.prototype.toString.call(value)==='[object Date]') {
@@ -111,18 +111,19 @@ function glb_wpDate_(value) {
   return null;
 }
 function glb_wpPublishedMetadata_(ids) {
-  var base=String(PropertiesService.getScriptProperties()
-    .getProperty('CE_WP_MEDIA_SITE_URL')||'https://www.abbeyfloorcare.co.uk')
-    .trim().replace(/\/+$/,'');
-  if (!/^https:\/\/[^/]+$/i.test(base)) throw Error('Invalid WordPress site URL for queue refresh.');
+  // Use the already-configured W6 Application Password so scheduled (future)
+  // posts are included. Public REST requests silently omit those posts.
+  var settings=ce_w6WpSettings_();
   var result={},batchSize=60;
   for(var i=0;i<ids.length;i+=batchSize){
     var batch=ids.slice(i,i+batchSize);
     if(!batch.length)continue;
-    var endpoint=base+'/wp-json/wp/v2/posts?include='+
-      encodeURIComponent(batch.join(','))+'&per_page=100&orderby=include&_fields='+
+    var endpoint=settings.site+'/wp-json/wp/v2/posts?include='+
+      encodeURIComponent(batch.join(','))+'&per_page=100&orderby=include'+
+      '&context=edit&status=publish%2Cfuture&_fields='+
       encodeURIComponent('id,date,modified,link,status');
     var response=UrlFetchApp.fetch(endpoint,{method:'get',
+      headers:{Authorization:settings.authorization,Accept:'application/json'},
       followRedirects:true,muteHttpExceptions:true});
     var code=response.getResponseCode();
     if(code!==200) throw Error('WordPress queue refresh failed (HTTP '+code+
@@ -179,7 +180,7 @@ function glb_refreshQueueOverview(){
     var allIds=oldIds.concat(addIds);
 
     // Fetch WordPress source of truth BEFORE writing any Sheet cells.
-    // The public posts endpoint does not expose drafts or private posts.
+    // The authenticated endpoint includes publish and future; other statuses are not refreshed.
     var live=glb_wpPublishedMetadata_(allIds);
     var missing=[];
     var records=allIds.map(function(id,index){
