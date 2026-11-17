@@ -36,6 +36,18 @@ function buildImageSuggestionPrompt(sourceKey) {
   const d     = getActiveRowDataMap();
 
   const articleType = String(d["Article Type"] || "General").trim();
+  const material = String(d["Stone Type"] || "").trim();
+
+  // Use the same governed material specification as earlier content stages.
+  // Do not silently generate media when the material is unknown or the
+  // technical reference is unavailable.
+  if (!material) {
+    return { success: false, message: "W2C technical preflight: Stone Type is missing." };
+  }
+  const technicalMatrix = String(getTechnicalMatrix(material) || "").trim();
+  if (!technicalMatrix) {
+    return { success: false, message: "W2C technical preflight: No Technical Matrix reference found for " + material + "." };
+  }
 
   const source = getW2CSourceColumn(sourceKey);
   const html = String(sheet.getRange(row, source.col).getValue() || "").trim();
@@ -270,7 +282,19 @@ function buildImageSuggestionPrompt(sourceKey) {
 
     "ROLE: Senior UK SEO, editorial and visual-content strategist for a professional stone and tile restoration website.\n\n" +
 
-    "ARTICLE TYPE: " + articleType + "\n\n" +
+    "ARTICLE TYPE: " + articleType + "\n" +
+    "GOVERNED MATERIAL: " + material + "\n\n" +
+
+    "TECHNICAL ACCURACY — IMAGE PLANNING HARD LOCK:\n" +
+    "Use the material-specific Technical Matrix below as the authority for visual concepts, surface construction, treatment limitations and material behaviour. Do not turn uncertainty into visual evidence.\n" +
+    "Do not introduce invented cross-sections, equipment settings, product chemistry, precise dimensions, testing instruments, slider specifications, measurements, health/safety claims or universal treatment outcomes.\n" +
+    "Distinguish visually confirmed observations from possible mechanisms; label conceptual diagrams as illustrative where appropriate. Avoid unsupported project-specific before/after evidence.\n" +
+    "Where article wording appears technically uncertain or conflicts with the Technical Matrix, do not illustrate it as fact. Omit the proposed media and leave the issue for separate human content review; W2C must not silently rewrite the article.\n" +
+    "Only return a media recommendation if it can be explained without breaching the Technical Matrix.\n\n" +
+
+    "--- TECHNICAL SPECIFICATION MATRIX (GOVERNING REFERENCE) ---\n" +
+    technicalMatrix + "\n" +
+    "--- END TECHNICAL SPECIFICATION MATRIX ---\n\n" +
 
         "TARGET:\n" +
     "Evaluate every H2 section and recommend media only where the visual provides distinct educational, diagnostic or practical value. There is no minimum, maximum or one-image-per-H2 requirement.\n\n" +
