@@ -1,0 +1,252 @@
+/**
+ * Plugin Name: Abbey W6 Publishing Bridge
+ * Description: Authenticated update and guarded republish endpoint for the Abbey Content Engine.
+ * Version: 0.2.2
+ * Requires PHP: 7.4
+ * Abbey W6 Publishing Bridge ÔÇö WPCode snippet #48276.
+ *
+ * Authenticated WordPress Application Password requests only.
+ * Requires administrator and unfiltered_html capabilities.
+ * UPDATE preserves scheduled/published status and date; REPUBLISH publishes scheduled posts now or resets published date with a 30-day safeguard.
+ * Validated JSON-LD is saved in the AddFunc Head & Footer Code metabox (aFhfc_head_code).
+ * WordPress republish may notify syndication hooks; external delivery must be checked separately.
+ * Align JSON-LD datePublished/dateModified with confirmed WordPress dates after save.
+ */
+defined('ABSPATH') || exit;
+
+add_action('rest_api_init', function () {
+    register_rest_route('abbey/v1', '/w6-publish', array(
+        'methods' => WP_REST_Server::CREATABLE,
+        'callback' => 'abbey_w6_publish_post',
+        'permission_callback' => function (WP_REST_Request $request) {
+            $post_id = absint($request->get_param('post_id'));
+            return $post_id > 0
+                && current_user_can('manage_options')
+                && current_user_can('edit_post', $post_id)
+                && current_user_can('unfiltered_html');
+        }
+    ));
+});
+
+function abbey_w6_publish_post(WP_REST_Request $request) {
+    $post_id = absint($request->get_param('post_id'));
+    $mode = (string) $request->get_param('mode');
+    if (!in_array($mode, array('update', 'republish'), true)) {
+        return new WP_Error('w6_invalid_mode',
+            'Choose Update or Republish.', array('status' => 400));
+    }
+    $post = get_post($post_id);
+    if (!$post || $post->post_type !== 'post' || !in_array($post->post_status, array('publish', 'future'), true)) {
+        return new WP_Error('w6_post_not_found',
+            'Expected an existing published or scheduled WordPress post.',
+            array('status' => 400));
+    }
+    // Status is checked on every write to prevent stale verification from changing a scheduled post.
+    $expected_status = (string) $request->get_param('expected_status');
+    if (!in_array($expected_status, array('publish', 'future'), true) ||
+        $expected_status !== $post->post_status) {
+        return new WP_Error('w6_status_conflict',
+            'Post status changed since verification. Verify the post again.',
+            array('status' => 409));
+    }
+    // REST API date uses ISO "T"; WP_Post::post_date uses a space.
+    // Compare only equivalent site-local timestamps, never change post_date.
+    $expected = (string) $request->get_param('expected_date');
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/D', $expected) ||
+        str_replace('T', ' ', $expected) !== $post->post_date) {
+        return new WP_Error('w6_date_conflict',
+            'Post publication date changed since preflight. Reload the row.',
+            array('status' => 409));
+    }
+
+    if ($mode === 'republish') {
+        // A second safeguard: do not republish recent or future-dated articles.
+        // This check is independent of the spreadsheet's grey highlighting.
+        $published_at = DateTimeImmutable::createFromFormat(
+            '!Y-m-d H:i:s', $post->post_date, wp_timezone());
+        $now_at = new DateTimeImmutable('now', wp_timezone());
+        if (!$published_at || ($post->post_status === 'publish' &&
+            ($published_at > $now_at ||
+             ($now_at->getTimestamp() - $published_at->getTimestamp()) < 30 * DAY_IN_SECONDS))) {
+            return new WP_Error('w6_recent_or_future_publication',
+                'Republish blocked: this already-published article is less than 30 days old.',
+                array('status' => 409));
+        }
+        $expected_modified = (string) $request->get_param('expected_modified');
+        if (!$expected_modified ||
+            str_replace('T', ' ', $expected_modified) !== $post->post_modified) {
+            return new WP_Error('w6_modified_conflict',
+                'WordPress changed since verification. Verify the post again before republishing.',
+                array('status' => 409));
+        }
+    }
+
+    $fields = array('title','html','meta_title','meta_description','focus_keyphrase','schema');
+    $values = array();
+    foreach ($fields as $key) {
+        $value = $request->get_param($key);
+        if (!is_string($value)) {
+            return new WP_Error('w6_missing_field',
+                'Missing text field: ' . $key, array('status' => 400));
+        }
+        $values[$key] = $value;
+    }
+    if (trim($values['title']) === '' || trim($values['html']) === '') {
+        return new WP_Error('w6_empty_content',
+            'Title and HTML must not be empty.', array('status' => 400));
+    }
+    if (strlen($values['html']) > 1500000) {
+        return new WP_Error('w6_content_too_large',
+            'HTML exceeds the allowed size.', array('status' => 400));
+    }
+
+    // Existing importer writes one <script type="application/ld+json"> payload.
+    // Validate that structure and reject any executable non-JSON script.
+    $schema = trim($values['schema']);
+    if (!preg_match('~^<script\\s+type="application/ld\\+json"\\s*>\\s*(.*?)\\s*</script>\\s*$~is', $schema, $m)) {
+        return new WP_Error('w6_invalid_schema',
+            'Schema must be one JSON-LD script block.', array('status' => 400));
+    }
+    $decoded = json_decode($m[1], true);
+    if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)
+        || !isset($decoded['@context'])
+        || $decoded['@context'] !== 'https://schema.org'
+        || (!isset($decoded['@graph']) && !isset($decoded['@type']))) {
+        return new WP_Error('w6_invalid_schema_json',
+            'Schema must contain valid schema.org JSON-LD.',
+            array('status' => 400));
+    }
+
+    // The active AddFunc plugin renders 'aFhfc_head_code' into wp_head().
+    // Never silently replace another script or arbitrary header markup.
+    $existing_head = trim((string) get_post_meta($post_id, 'aFhfc_head_code', true));
+    if ($existing_head !== '' &&
+        !preg_match('~^<script\\s+type="application/ld\\+json"\\s*>\\s*(.*?)\\s*</script>\\s*$~is',
+            $existing_head)) {
+        return new WP_Error('w6_header_code_conflict',
+            'Existing Head & Footer Code contains material other than one JSON-LD script. Review it manually; no article changes made.',
+            array('status' => 409));
+    }
+
+    // Optional featured image URL supplied from posts column EM.
+    // Resolve it to an existing Media Library image BEFORE changing article content.
+    // Blank or omitted means leave featured_media exactly as it is.
+    $feature_action = 'unchanged';
+    $feature_id = null;
+    if ($request->has_param('featured_image_url')) {
+        $image_url = trim((string) $request->get_param('featured_image_url'));
+        if ($image_url !== '') {
+            $parsed_url = wp_parse_url($image_url);
+            $home_host = wp_parse_url(home_url(), PHP_URL_HOST);
+            if (!is_array($parsed_url) ||
+                strtolower((string) ($parsed_url['scheme'] ?? '')) !== 'https' ||
+                strtolower((string) ($parsed_url['host'] ?? '')) !== strtolower((string) $home_host)) {
+                return new WP_Error('w6_image_domain',
+                    'Column EM must contain an HTTPS image URL on this WordPress website.',
+                    array('status' => 400));
+            }
+            $feature_id = absint(attachment_url_to_postid($image_url));
+            if (!$feature_id || get_post_type($feature_id) !== 'attachment' ||
+                !wp_attachment_is_image($feature_id)) {
+                return new WP_Error('w6_image_not_found',
+                    'Column EM image URL was not found as an image in the WordPress Media Library. No article changes made.',
+                    array('status' => 400));
+            }
+            if ((int) get_post_thumbnail_id($post_id) !== $feature_id) {
+                $feature_action = 'updated';
+            }
+        }
+    }
+
+    // Update leaves the publication date untouched. Republish explicitly
+    // advances the publication date through the normal WordPress post API.
+    $post_fields = array(
+        'ID'           => $post_id,
+        'post_title'   => $values['title'],
+        'post_content' => $values['html'],
+        'post_status'  => ($mode === 'update' ? $post->post_status : 'publish')
+    );
+    if ($mode === 'republish') {
+        $post_fields['post_date'] = current_time('mysql');
+        $post_fields['post_date_gmt'] = get_gmt_from_date($post_fields['post_date']);
+    }
+    $updated_id = wp_update_post(wp_slash($post_fields), true);
+    if (is_wp_error($updated_id)) {
+        return $updated_id;
+    }
+
+    // Read the saved WordPress dates, not the sidebar/W5C draft dates.
+    // wp_update_post above is the only publication action; the meta writes
+    // below do not republish or reset the WordPress publication date.
+    $after = get_post($post_id);
+    if (!$after ||
+        ($mode === 'update' && ($after->post_date !== str_replace('T', ' ', $expected) ||
+                               $after->post_status !== $expected_status)) ||
+        ($mode === 'republish' && ($after->post_date === str_replace('T', ' ', $expected) ||
+                                  $after->post_status !== 'publish'))) {
+        return new WP_Error('w6_post_write_inconsistent',
+            'WordPress saved the post but the publication date needs investigation.',
+            array('status' => 500));
+    }
+    $published_day = substr($after->post_date, 0, 10);
+    $modified_day  = substr($after->post_modified, 0, 10);
+    $set_dates = function (&$node) use ($published_day, $modified_day) {
+        if (!is_array($node)) return;
+        if (array_key_exists('datePublished', $node)) {
+            $node['datePublished'] = $published_day;
+        }
+        if (array_key_exists('dateModified', $node)) {
+            $node['dateModified'] = $modified_day;
+        }
+    };
+    $set_dates($decoded);
+    if (isset($decoded['@graph']) && is_array($decoded['@graph'])) {
+        foreach ($decoded['@graph'] as &$node) $set_dates($node);
+        unset($node);
+    }
+    $canonical_json = wp_json_encode(
+        $decoded, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+    );
+    if (!is_string($canonical_json)) {
+        return new WP_Error('w6_schema_encode_failed',
+            'WordPress saved the article, but schema encoding failed. Do not publish again.',
+            array('status' => 500));
+    }
+    $schema = '<script type="application/ld+json">' . "\n" .
+        $canonical_json . "\n" . '</script>';
+
+    update_post_meta($post_id, '_yoast_wpseo_title', wp_slash($values['meta_title']));
+    update_post_meta($post_id, '_yoast_wpseo_metadesc', wp_slash($values['meta_description']));
+    update_post_meta($post_id, '_yoast_wpseo_focuskw', wp_slash($values['focus_keyphrase']));
+    // Legacy custom field is kept for compatibility, but AddFunc reads the
+    // public Head box from aFhfc_head_code, not _abbey_custom_schema.
+    update_post_meta($post_id, '_abbey_custom_schema', wp_slash($schema));
+    update_post_meta($post_id, 'aFhfc_head_code', wp_slash($schema));
+    if ($feature_id !== null && $feature_action === 'updated') {
+        if (!set_post_thumbnail($post_id, $feature_id)) {
+            return new WP_Error('w6_feature_image_failed',
+                'Article saved but featured image could not be set. Check the post before retrying.',
+                array('status' => 500));
+        }
+    }
+    if (get_post_meta($post_id, 'aFhfc_head_code', true) !== $schema ||
+        get_post_meta($post_id, '_abbey_custom_schema', true) !== $schema) {
+        return new WP_Error('w6_header_code_not_saved',
+            'Article saved but Head & Footer Code schema verification failed. Check the post before retrying.',
+            array('status' => 500));
+    }
+    clean_post_cache($post_id);
+
+    return rest_ensure_response(array(
+        'success' => true,
+        'post_id' => $post_id,
+        'mode' => $mode,
+        'status' => $after->post_status,
+        'schema' => $schema,
+        'published_date' => str_replace(' ', 'T', $after->post_date),
+        'modified_date' => str_replace(' ', 'T', $after->post_modified),
+        'url' => get_permalink($post_id),
+        'featured_image_action' => $feature_action,
+        'featured_image_url' => get_the_post_thumbnail_url($post_id, 'full') ?: ''
+    ));
+}
