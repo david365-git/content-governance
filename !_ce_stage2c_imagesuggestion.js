@@ -308,8 +308,12 @@ function buildImageSuggestionPrompt(sourceKey) {
     "H2 COVERAGE RULE:\n" +
     "Assess every H2, but do not require a recommendation for every H2. Consider relevant H3 subsections when a focused visual would be more useful there. Skip sections already adequately explained by text or existing media. Recommend replacement only when the available metadata provides a clear reason; existing images must be reviewed visually by the human editor.\n\n" +
 
-    "PRIORITY:\n" +
-    "Evaluate all sections for visual value, but return recommendations only for the selected sections. Fewer useful images are preferable to repetitive or decorative images.\n\n" +
+    "SECTION-BY-SECTION EDUCATIONAL VALUE REVIEW:\n" +
+    "First assess each H2 and its relevant H3 subsections individually against the article's main reader question, before choosing the final images.\n" +
+    "For each section, ask whether a visual would materially improve recognition of a symptom, understanding of a mechanism, comparison of options, safe decision-making or a practical workflow.\n" +
+    "Then consider all worthwhile candidates together: remove redundant or purely decorative concepts, but do not drop distinct useful visuals simply because several have already been selected.\n" +
+    "Do not stop at the first three or any other number. Select all and only the images whose educational benefit justifies them; a zero-image outcome is valid.\n" +
+    "Return only the selected recommendations in the existing JSON format, without adding a report or changing the output schema.\n\n" +
 
     "AVAILABLE MEDIA TYPES:\n" +
     "- Real Photograph\n" +
