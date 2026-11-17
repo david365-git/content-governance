@@ -104,6 +104,19 @@
 
       </div>
 
+      <div style="margin-top:12px;">
+        <button type="button" class="btn-generate" id="w2cUploadAllBtn"
+          onclick="w2cUploadAllSelectedImages()"
+          style="width:100%;background:#1565c0;color:#fff;padding:9px;">
+          ⬆ Upload All Selected Images to WordPress
+        </button>
+        <div id="w2cUploadAllResult" role="status" aria-live="polite"
+          style="font-size:11px;margin-top:7px;color:#555;">
+          Select local image files above, then upload them here.
+          Successful uploads will fill their matching WordPress URL boxes.
+        </div>
+      </div>
+
     </div>
 
 
@@ -738,6 +751,112 @@ function w2cShowSelectedLocalFile(imageNumber) {
   status.textContent = '✔ Selected: ' + file.name +
     ' (' + (file.size / (1024 * 1024)).toFixed(2) +
     ' MB). Not uploaded yet.';
+}
+
+/* ============================================================
+   W2C — UPLOAD ALL SELECTED IMAGES TO WORDPRESS
+   Uploads one by one; no automatic article publication.
+   Successful image URLs stay in their corresponding URL fields.
+============================================================ */
+
+var w2cBulkUploadRunning = false;
+
+function w2cUploadAllSelectedImages() {
+  if (w2cBulkUploadRunning) return;
+
+  var entries = [];
+  var inputs = document.querySelectorAll('#w2cMediaEntries input[type="file"][id^="w2cFile_"]');
+  inputs.forEach(function(input) {
+    var number = Number(input.id.replace('w2cFile_', ''));
+    var urlInput = document.getElementById('w2cUrl_' + number);
+    var file = input.files && input.files[0];
+    // Never replace manually supplied or successfully uploaded URLs.
+    if (file && urlInput && !urlInput.value.trim()) {
+      entries.push({ number: number, file: file });
+    }
+  });
+
+  var result = document.getElementById('w2cUploadAllResult');
+  if (!entries.length) {
+    result.textContent = 'No pending selected files. Choose an image file for an empty URL box.';
+    return;
+  }
+
+  var btn = document.getElementById('w2cUploadAllBtn');
+  w2cBulkUploadRunning = true;
+  btn.disabled = true;
+  var completed = 0, failed = 0, index = 0;
+
+  function finish() {
+    w2cBulkUploadRunning = false;
+    btn.disabled = false;
+    result.textContent = 'Upload finished: ' + completed + ' succeeded, ' + failed +
+      ' failed. Successful URLs are populated below. Retry failures using this button.';
+    result.style.color = failed ? '#b45309' : '#2e7d32';
+  }
+
+  function next() {
+    if (index >= entries.length) return finish();
+    var entry = entries[index++];
+    var n = entry.number, file = entry.file;
+    var status = document.getElementById('w2cFileStatus_' + n);
+    status.textContent = 'Uploading image ' + index + ' of ' + entries.length + ': ' + file.name;
+    status.style.color = '#1565c0';
+    result.textContent = 'Uploading ' + index + ' of ' + entries.length + '…';
+
+    if (file.size > 8 * 1024 * 1024) {
+      failed++;
+      status.style.color = '#b71c1c';
+      status.textContent = 'Upload failed: file exceeds 8 MB.';
+      return next();
+    }
+
+    var reader = new FileReader();
+    reader.onerror = function() {
+      failed++;
+      status.style.color = '#b71c1c';
+      status.textContent = 'Upload failed: could not read the local file.';
+      next();
+    };
+    reader.onload = function() {
+      var base64 = String(reader.result || '').split(',')[1] || '';
+      var wrapper = document.createElement('div');
+      wrapper.innerHTML = document.getElementById('w2cCurrentHtml').value;
+      var blocks = wrapper.querySelectorAll('.w2c-media-placeholder');
+      var block = blocks[n - 1];
+      var blockText = block ? (block.textContent || '') : '';
+      var payload = {
+        name: file.name,
+        base64: base64,
+        alt: w2cExtractPlaceholderField(blockText, 'Alt text:'),
+        caption: w2cExtractPlaceholderField(blockText, 'Caption:')
+      };
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.success && res.url) {
+            document.getElementById('w2cUrl_' + n).value = res.url;
+            completed++;
+            status.style.color = res.message && res.message.indexOf('but') >= 0 ? '#b45309' : '#2e7d32';
+            status.textContent = '✔ Image ' + n + ' uploaded. ' + (res.message || '');
+          } else {
+            failed++;
+            status.style.color = '#b71c1c';
+            status.textContent = 'Upload failed: ' + ((res && res.message) || 'Unknown error.');
+          }
+          next();
+        })
+        .withFailureHandler(function(err) {
+          failed++;
+          status.style.color = '#b71c1c';
+          status.textContent = 'Upload failed: ' + (err && err.message ? err.message : 'Server error.');
+          next();
+        })
+        .w2cUploadImageToWordPress(payload);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  next();
 }
 
 /* ============================================================
