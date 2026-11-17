@@ -437,8 +437,8 @@ function saveW2CSuggestionsToImageLibrary() {
     return { success: false, message: "Invalid JSON in column FK — " + e.toString() };
   }
 
-  if (!Array.isArray(suggestions) || suggestions.length === 0) {
-    return { success: false, message: "No suggestions found in column FK JSON." };
+  if (!Array.isArray(suggestions)) {
+    return { success: false, message: "Column FK must contain a JSON array." };
   }
 
   // Get Image Library sheet
@@ -454,6 +454,15 @@ function saveW2CSuggestionsToImageLibrary() {
         libSheet.deleteRow(r + 2);
       }
     }
+  }
+
+  // An empty result is valid: no new media justified. Previous
+  // suggestions for this Post ID have already been cleared above.
+  if (suggestions.length === 0) {
+    return {
+      success: true,
+      message: "No additional or replacement media justified; Image Library suggestions cleared for Post ID " + postId + "."
+    };
   }
 
   // Write new rows — prepend Post ID to slug, include H2 Heading
