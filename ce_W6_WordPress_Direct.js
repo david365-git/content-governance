@@ -62,12 +62,12 @@ function ce_w6WordPressPreflight(request) {
     }
     var post = ce_w6WpRequest_('get',
       '/wp-json/wp/v2/posts/' + postId + '?context=edit&_fields=id,status,link,date,date_gmt,modified,modified_gmt,title');
-    if (Number(post.id) !== postId || post.status !== 'publish') {
-      throw new Error('WordPress did not confirm an existing published post.');
+    if (Number(post.id) !== postId || !['publish','future'].includes(post.status)) {
+      throw new Error('WordPress did not confirm an existing published or scheduled post.');
     }
     return {success:true, postId:postId, title:post.title && post.title.raw || '',
-      url:post.link, publishedDate:post.date, modifiedDate:post.modified,
-      message:'WordPress post verified. No changes made.'};
+      url:post.link, status:post.status, publishedDate:post.date, modifiedDate:post.modified,
+      message:'WordPress ' + (post.status === 'future' ? 'scheduled' : 'published') + ' post verified. No changes made.'};
   } catch (e) {
     return {success:false,message:String(e.message || e)};
   }
@@ -106,6 +106,10 @@ function ce_w6WordPressPublish(request) {
     // Preflight is repeated server-side immediately before the write.
     var current = ce_w6WordPressPreflight({postId:postId});
     if (!current.success) throw new Error(current.message);
+    if (!['publish','future'].includes(current.status)) throw new Error('WordPress post status is not eligible.');
+    if (request.verifiedStatus && request.verifiedStatus !== current.status) {
+      throw new Error('WordPress post status changed since verification. Verify again.');
+    }
     if (request.mode === 'republish' &&
         (current.publishedDate !== request.verifiedPublishedDate ||
          current.modifiedDate !== request.verifiedModifiedDate)) {
@@ -144,6 +148,7 @@ function ce_w6WordPressPublish(request) {
       post_id: postId,
       mode: request.mode,
       expected_date: current.publishedDate,
+      expected_status: current.status,
       title: data.newH1,
       html: data.newHtml,
       meta_title: data.newMetaTitle,
@@ -156,6 +161,9 @@ function ce_w6WordPressPublish(request) {
     var result = ce_w6WpRequest_('post', '/wp-json/abbey/v1/w6-publish', publishBody);
     if (!result.success || Number(result.post_id) !== postId ||
         !result.published_date || !result.modified_date ||
+        !result.status ||
+        (request.mode === 'update' && result.status !== current.status) ||
+        (request.mode === 'republish' && result.status !== 'publish') ||
         !result.schema ||
         (request.mode === 'update'
           ? result.published_date !== current.publishedDate
@@ -166,12 +174,14 @@ function ce_w6WordPressPublish(request) {
       success:true, postId:postId, mode:request.mode,
       publishedDate:result.published_date,
       modifiedDate:result.modified_date,
+      previousStatus:current.status,
+      status:result.status,
       schema:result.schema,
       url:result.url || current.url,
       featuredImageUrl: result.featured_image_url || '',
       featuredImageAction: result.featured_image_action || 'unchanged',
-      message:'WordPress ' + (request.mode === 'republish' ? 'republished' : 'updated') +
-        '. ' + (request.mode === 'republish' ? 'Published Date advanced' : 'Published Date retained') +
+      message:'WordPress ' + (request.mode === 'republish' ? (current.status === 'future' ? 'scheduled post published now' : 'republished') : 'updated') +
+        '. ' + (request.mode === 'republish' ? 'Published date set to now' : 'Publication/scheduled date and status retained') +
         '. Featured image: ' + (result.featured_image_action || 'unchanged') +
         '. Syndication delivery requires separate verification.'
     };
@@ -252,9 +262,9 @@ function ce_w6DirectPublishAndRecord(request) {
     result.message = 'WordPress WAS updated, but sheet recording needs attention. Do not publish again. ' +
       problems.join(' | ');
   } else {
-    result.message = 'WordPress ' + (result.mode === 'republish' ? 'republished' : 'updated') +
+    result.message = 'WordPress ' + (result.mode === 'republish' ? (result.previousStatus === 'future' ? 'scheduled post published now' : 'republished') : 'updated') +
       ' and verified; publication log and site-export recorded. ' +
-      (result.mode === 'republish' ? 'Published date advanced.' : 'Published date preserved.') +
+      (result.mode === 'republish' ? 'Published date set to now.' : 'Publication/scheduled date and status preserved.') +
       ' Featured image: ' + result.featuredImageAction +
       '. Verify syndication separately if republished.';
   }
