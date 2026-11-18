@@ -30,5 +30,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Verify Python safety tools compile
+        run: python -m compileall -q control
       - name: Verify changes are recorded and protected
         run: python control/release_gate.py --mode review
