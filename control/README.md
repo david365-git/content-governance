@@ -1,12 +1,12 @@
 # Content Engine — Master Control (foundation)
 
-**Status: FOUNDATION / NOT APPROVED FOR DEPLOYMENT.**
+**Status: LIVE-BASED MASTER BASELINE APPROVED; PRODUCTION DEPLOYMENT NOT YET APPROVED.**
 
-This folder is a starting point for consolidating the Content Engine. It has NOT merged the deployed 17 November code into GitHub `main`. Do not run `clasp push` from this branch.
+This folder records the verified consolidation of the last working Content Engine against a 18 November live Apps Script pull. Source approval means the files may become the authoritative GitHub `main`; it does NOT permit a live Apps Script deployment from this branch.
 
 ## What is in this folder
 
-- `MASTER_SCRIPT_REGISTER.csv`: 193 source/configuration file entries from the **GitHub main tree at the time of inventory**. Labels are provisional and approval is marked TO REVIEW. It does not yet represent a verified live deployment.
+- `MASTER_SCRIPT_REGISTER.csv`: 197 candidate source/configuration entries (196 actual Apps Script files plus local `.clasp.json`). These are approved as the source-control baseline after exact comparison with the verified 196-file live backup. This does not certify runtime behaviour or approve a live release.
 - `audit_content_engine.py`: a **read-only** check for missing/new script files, missing menu functions, and selected critical functionality. It deliberately does not modify files or connect to WordPress, Google Sheets, or Apps Script.
 
 ## The single-source-of-truth rule
@@ -100,3 +100,13 @@ python control/backup_live_apps_script.py --deployment-folder /f/clasp-downloads
 Output is created under `F:\clasp-downloads\ce-control-reports\live-backups`, outside Git and deployment sources. A backup counts as successful only after **PASS**, with file count and verified ZIP. If it blocks, inspect the reported cause; **never** substitute a different Script ID or force-push.
 
 A successful backup is necessary but **not sufficient** to deploy: approved main version, reliable post-deploy readback, rollback planning and runtime smoke tests are still outstanding.
+
+## Guarded deployment command (prepared but NOT authorised for production yet)
+
+`control/controlled_deploy.py` defaults to a read-only explanation; it does nothing without `--execute`, an exact approved `main` commit, the correct project ID, and a deliberate confirmation phrase. Its intended live sequence is: formal release checks, a **new** isolated verified live backup, exact allowed-difference comparison, one upload from a clean staging directory, independent live download, and exact Git-to-live comparison. A failed upload or readback blocks and does not automatically retry or roll back.
+
+`control/test_deploy_safety.py` checks that the command refuses unsafe invocation. GitHub Actions runs this alongside the other release checks.
+
+**The live release is still BLOCKED**: the formal release gate deliberately has an unimplemented-live-smoke-test block. The final upload/readback process must be tested on a safe test project or using a mocked clasp environment, including interrupted uploads and failed readbacks, before releasing to production. A green GitHub check alone does not authorize deployment.
+
+The separate original developer working tree and its uncommitted changes must never be overwritten by a cleanup or merge.
