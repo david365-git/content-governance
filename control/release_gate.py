@@ -123,6 +123,14 @@ def main():
             if name.endswith(".js") and run([node, "--check", str(root / name)], root).returncode:
                 errors.append(name)
         check("JavaScript syntax", not errors, errors if errors else "all checked")
+    lock_check = run([sys.executable, str(root / "control" / "check_source_version_lock.py")], root)
+    check("Every changed script is recorded in source version lock",
+          lock_check.returncode == 0,
+          lock_check.stdout.strip().splitlines()[-1] if lock_check.stdout.strip() else lock_check.stderr.strip())
+    if node:
+        stop_test = run([node, str(root / "control" / "test_google_love_stop.cjs")], root)
+        check("Google Love stop finishes current article", stop_test.returncode == 0,
+              stop_test.stdout.strip()[-400:] if stop_test.returncode == 0 else (stop_test.stderr or stop_test.stdout)[-1200:])
     if args.mode == "release":
         check("Deployment/readback workflow tested", False,
               "not yet implemented: production release intentionally disabled")
