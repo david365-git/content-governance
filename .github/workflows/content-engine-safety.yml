@@ -34,3 +34,5 @@ jobs:
         run: python -c "import ast,pathlib; [ast.parse(p.read_text(encoding='utf-8-sig'),filename=str(p)) for p in pathlib.Path('control').glob('*.py')]"
       - name: Verify changes are recorded and protected
         run: python control/release_gate.py --mode review
+      - name: Verify deployment refuses unsafe attempts
+        run: python control/test_deploy_safety.py
