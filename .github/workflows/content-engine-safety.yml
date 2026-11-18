@@ -38,3 +38,7 @@ jobs:
         run: python control/test_deploy_safety.py
       - name: Simulate full release and failed releases without live calls
         run: python control/test_full_release_simulation.py
+      - name: Verify isolated backup ZIP and refusal on wrong project
+        run: python control/test_backup_safety.py
+      - name: Verify independent readback detects source mismatches
+        run: python control/test_readback_verifier.py
