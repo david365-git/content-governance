@@ -81,7 +81,8 @@ def main():
     try:
         if script_id(root / ".clasp.json") != script_id(source / ".clasp.json"):
             raise RuntimeError("Master and last-successful deployment Script IDs differ")
-        if not shutil.which("clasp"):
+        clasp = shutil.which("clasp")
+        if not clasp:
             raise RuntimeError("clasp not available")
         branch = run(["git", "branch", "--show-current"], root, "Check Git branch")
         if branch != "main":
@@ -138,12 +139,12 @@ def main():
         record["status"] = "UPLOAD_ATTEMPTED"
         (output / "release-record.json").write_text(
             json.dumps(record, indent=2) + "\n", encoding="utf-8")
-        run(["clasp", "push", "--force"], staging, "Upload approved source ONCE", release_log)
+        run([clasp, "push", "--force"], staging, "Upload approved source ONCE", release_log)
 
         readback = output / "readback"
         readback.mkdir()
         shutil.copy2(staging / ".clasp.json", readback / ".clasp.json")
-        run(["clasp", "pull"], readback, "Pull independent live readback", release_log)
+        run([clasp, "pull"], readback, "Pull independent live readback", release_log)
         run([sys.executable, str(root / "control" / "verify_live_readback.py"),
              "--readback", str(readback), "--approved-commit", sha], root,
             "Verify exact live source readback", release_log)
