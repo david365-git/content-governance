@@ -49,7 +49,7 @@ def main():
         manifest = json.loads((backup / "manifest.json").read_text(encoding="utf-8-sig"))
     except (OSError, ValueError) as exc:
         return error("Backup/config could not be read: " + str(exc))
-    if master_cfg.get("scriptId") != live_cfg.get("scriptId"):
+    if not master_cfg.get("scriptId") or master_cfg.get("scriptId") != live_cfg.get("scriptId"):
         return error("The proposed master and live backup refer to DIFFERENT Apps Script projects")
     live = files(backup)
     proposed = files(root)
@@ -63,8 +63,8 @@ def main():
     changes = {p for p in live if live[p] != proposed[p]}
     print("Live files:", len(live), "| Master files:", len(proposed))
     print("Exact changes proposed:", ", ".join(sorted(changes)) if changes else "(none)")
-    if changes != EXPECTED:
-        return error("Unexpected changed files; expected exactly the two reviewed differences")
+    if changes not in (EXPECTED, set()):
+        return error("Unexpected changed files; only the two reviewed differences or an exact match are allowed")
     status = subprocess.run(["git", "status", "--porcelain=v1", "-uall"],
                             cwd=root, capture_output=True, text=True)
     if status.returncode or status.stdout.strip():
