@@ -61,3 +61,28 @@ It produces `SUMMARY.json`, `source_comparison.csv`, `capability_comparison.csv`
 The per-file hashes show exact content matches and differences. They cannot tell us which changed code is preferable, and the capability checks are preliminary string-presence checks only. We must inspect and test the conflicting changes before choosing a consolidated baseline.
 
 Do not mistake a 196-file `clasp push` for evidence that all 196 files contain the right features.
+
+## Automatic checks in GitHub (added 18 November 2026)
+
+The workflow `.github/workflows/content-engine-safety.yml` runs automatically for pull requests to `main`, pushes on `main`, and updates to `consolidation/**` or `feature/**` branches.
+
+It invokes `python control/release_gate.py --mode review`. The gate checks:
+- a clean checked-out repository and a matching Master Script Register,
+- protected functions, menus and sidebar action references,
+- syntax of all JavaScript source files,
+- `control/SOURCE_VERSION_LOCK.csv` — the recorded exact Git blob versions of every source file,
+- `control/test_google_love_stop.cjs` — a simulated stop during each article stage without running paid calls.
+
+When **a script changes**, its entry in the version lock must be updated to the new Git blob SHA, and the related capability/test must be reviewed. Updating the SHA only proves that the change is recorded, NOT that the change is correct. Review and further tests remain necessary for new behaviours.
+
+**Important limitation:** GitHub Actions report checks, but do not necessarily prevent someone from merging or pushing. An administrator must configure a branch ruleset or protection for `main` requiring the **Master Register and protected features** status check and restricting direct pushes. Branch protection could not be inspected through the available GitHub connection. Until that is set, this workflow provides visibility and failure reporting, not an enforced block on every possible push.
+
+This is not yet a deployment command. `--mode release` is deliberately blocked until a proper backup, approval, deployment and live readback process is created and tested.
+
+### Test locally
+
+```bash
+python control/release_gate.py --mode review
+```
+
+If the automatic GitHub check fails, read its job log and fix the source or control record before requesting approval. Never make a fake function, suppress a failing test, or change a version lock solely to turn a failure green.
