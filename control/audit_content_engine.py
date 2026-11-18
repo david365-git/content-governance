@@ -10,7 +10,8 @@ import json
 import re
 from pathlib import Path
 
-APP_SUFFIXES = {".js", ".html", ".gs"}
+APP_SUFFIXES = {".js", ".html", ".gs", ".json"}
+KNOWN_UNRESOLVED_MENU = {("Open selected row in viewer sheet", "openSelectedRowInViewerSheet")}
 CAPABILITIES = [
     # (name, source file, required literal)
     ("Row Analysis menu", "!_menu.js", 'ui.createMenu("🚀 Row Analysis")'),
@@ -40,7 +41,7 @@ def main():
         records = list(csv.DictReader(f))
     registered = {r["File"] for r in records}
     existing = {p.name for p in root.iterdir() if p.is_file() and p.suffix in APP_SUFFIXES}
-    missing = sorted(p for p in registered if p.endswith(tuple(APP_SUFFIXES)) and p not in existing)
+    missing = sorted(p for p in registered if p not in existing)
     new = sorted(existing - registered)
     text = {}
     for name in existing:
@@ -52,7 +53,7 @@ def main():
     unresolved = [(label, fn) for label, fn in menu_entries if fn not in functions]
     capabilities = [(label, filename, needle, needle in text.get(filename, "")) for label, filename, needle in CAPABILITIES]
     print(f"Read-only audit of {root}")
-    print(f"Master register entries: {len(registered)} | Root script files: {len(existing)}")
+    print(f"Master register entries: {len(registered)} | Root source/config files: {len(existing)}")
     print(f"Menu entries: {len(menu_entries)} | Referenced functions not found: {len(unresolved)}")
     for label, file, _, ok in capabilities:
         print(("PASS" if ok else "MISSING") + f": {label} [{file}]")
@@ -60,16 +61,23 @@ def main():
     if new: print("UNREGISTERED SCRIPT FILES:", ", ".join(new))
     if unresolved:
         print("MENU FUNCTIONS NOT FOUND (review possible dynamic definitions):")
-        for label, fn in unresolved: print(f"  {label} -> {fn}")
+        for label, fn in unresolved:
+            marker = "KNOWN, UNRESOLVED — RELEASE BLOCKER" if (label, fn) in KNOWN_UNRESOLVED_MENU else "NEW, UNRESOLVED — RELEASE BLOCKER"
+            print(f"  {label} -> {fn} [{marker}]")
     report = {
         "root": str(root), "registered": len(registered), "script_files": len(existing),
         "missing_files": missing, "unregistered_files": new,
         "unresolved_menu_functions": unresolved,
+        "known_unresolved_menu_functions": [x for x in unresolved if x in KNOWN_UNRESOLVED_MENU],
         "capabilities_missing": [name for name,_,_,ok in capabilities if not ok]
     }
     print("Summary:", json.dumps(report, ensure_ascii=False))
-    if missing or new or unresolved or report["capabilities_missing"]:
+    if missing or new or report["capabilities_missing"] or any(x not in KNOWN_UNRESOLVED_MENU for x in unresolved):
+        print("BLOCKED: unexpected missing files, menu targets or protected checks.")
         raise SystemExit(1)
+    if unresolved:
+        print("REVIEW REQUIRED: known historical missing menu target remains unresolved. Release NOT approved.")
+        raise SystemExit(2)
     print("PASS: Preliminary static inventory checks.")
     print("NOTE: Static checks are not behavioural tests or proof of safe deployment.")
 
