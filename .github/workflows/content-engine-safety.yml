@@ -1,0 +1,34 @@
+name: Content Engine safety checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - main
+      - 'consolidation/**'
+      - 'feature/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Master Register and protected features
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read repository source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify changes are recorded and protected
+        run: python control/release_gate.py --mode review
