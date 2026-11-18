@@ -11,7 +11,7 @@ from pathlib import Path
 
 FUNCTION_DECL = re.compile(r"\bfunction\s+([A-Za-z_$][\w$]*)\s*\(")
 ASSIGNMENT_DECL = re.compile(r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\s*\(|(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>)")
-HANDLER = re.compile(r"\bon(?:click|change|submit|input)\s*=\s*([\"'])(.*?)\2", re.I | re.S)
+HANDLER = re.compile(r"\bon(?:click|change|submit|input)\s*=\s*([\"'])(.*?)\1", re.I | re.S)
 HANDLER_FUNC = re.compile(r"^\s*(?:return\s+)?([A-Za-z_$][\w$]*)\s*\(")
 SERVER_CALL_LINE = re.compile(r"^\s*\.\s*([A-Za-z_$][\w$]*)\s*\(", re.M)
 SERVER_DIRECT = re.compile(r"\bgoogle\s*\.\s*script\s*\.\s*run\s*\.\s*([A-Za-z_$][\w$]*)\s*\(")
