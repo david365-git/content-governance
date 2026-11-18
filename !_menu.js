@@ -64,6 +64,7 @@ function onOpen(e) {
     .addItem("🔀 Sort Full Sheet By Stone Type", "openStoneTypeSidebar")
     .addItem("Show All Rows (Clear Stone Filter)", "showAllStoneRows")
     .addSeparator()
+    .addItem('Open selected row in viewer sheet', 'openSelectedRowInViewerSheet')
     .addItem('🎨 Map Colored Sheet Index', 'generateColoredSheetList')
     .addItem('⚠️ Search gs files for hard coded columns', 'auditHardcodedColumns')
     .addSeparator()
