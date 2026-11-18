@@ -40,6 +40,7 @@ class IndependentReadback(unittest.TestCase):
             (directory / "appsscript.json").write_text('{"timeZone":"Europe/London"}\n',
                                                         encoding="utf-8")
         git(self.root, "init", "-q")
+        git(self.root, "config", "core.autocrlf", "false")
         git(self.root, "config", "user.email", "test@example.invalid")
         git(self.root, "config", "user.name", "Test")
         git(self.root, "add", ".clasp.json", "sample.js", "appsscript.json")
