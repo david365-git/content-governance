@@ -37,15 +37,23 @@ def main():
     server_defs = set()
     for p in scripts:
         server_defs.update(all_defs(p.read_text(encoding="utf-8-sig", errors="replace")))
+    # Includes must be in the entrypoint template, not merely somewhere on disk.
+    entry = root / "ce_Sidebar_Main.html"
+    entry_text = entry.read_text(encoding="utf-8-sig", errors="replace") if entry.is_file() else ""
+    def included(name):
+        return bool(re.search(r"<\\?!=\\s*include\\s*\\(\\s*['\\\"]" + re.escape(name) + r"['\\\"]\\s*\\)\\s*;?\\s*\\?>", entry_text))
     shared_html_defs = set()
     for shared in html_files:
-        shared_html_defs.update(all_defs(shared.read_text(encoding="utf-8-sig", errors="replace")))
+        if included(shared.stem):
+            shared_html_defs.update(all_defs(shared.read_text(encoding="utf-8-sig", errors="replace")))
     summaries = []
     for filename in TARGETS:
         p = root / filename
         if not p.exists():
             print("NOT PRESENT:", filename, "(review whether this sidebar is expected)")
             continue
+        if filename.startswith("ce_Sidebar_") and not included(p.stem):
+            print("  REVIEW: Sidebar not included in main entrypoint:", filename)
         content = p.read_text(encoding="utf-8-sig", errors="replace")
         local_defs = all_defs(content)
         inline_handlers = []
