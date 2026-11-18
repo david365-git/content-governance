@@ -107,6 +107,10 @@ A successful backup is necessary but **not sufficient** to deploy: approved main
 
 `control/test_deploy_safety.py` checks that the command refuses unsafe invocation. GitHub Actions runs this alongside the other release checks.
 
-**The live release is still BLOCKED**: the formal release gate deliberately has an unimplemented-live-smoke-test block. The final upload/readback process must be tested on a safe test project or using a mocked clasp environment, including interrupted uploads and failed readbacks, before releasing to production. A green GitHub check alone does not authorize deployment.
+**Production changes require separate, explicit owner authorisation.** The release gate now runs offline simulations for backup ZIP verification, wrong Script ID refusal, preflight failure, exactly one upload, failed readback and per-file Git-to-live parity. These tests do not prove live Apps Script behaviour. A real release is followed by an operator UI smoke test; if it fails, stop and preserve the backup before considering a separately authorised recovery. A green GitHub check alone never authorises a deployment.
 
 The separate original developer working tree and its uncommitted changes must never be overwritten by a cleanup or merge.
+
+## Formal release check
+
+On a clean, up-to-date `main` checkout, `python control/release_gate.py --mode release` verifies the master inventory, protected features and the offline release safety tests. It does **not** deploy. The opt-in `control/controlled_deploy.py` repeats it, takes another verified live backup and stops immediately on any mismatch. Only a separate, explicitly authorised `--execute` can attempt a production upload. Do not run it on a consolidation branch or an unapproved development copy.

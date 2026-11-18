@@ -17,6 +17,8 @@ jobs:
   validate:
     name: Master Register and protected features
     runs-on: ubuntu-latest
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - name: Read repository source
         uses: actions/checkout@v4
@@ -42,3 +44,6 @@ jobs:
         run: python control/test_backup_safety.py
       - name: Verify independent readback detects source mismatches
         run: python control/test_readback_verifier.py
+      - name: Verify official main meets the formal release gate (no deployment)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: python control/release_gate.py --mode release
