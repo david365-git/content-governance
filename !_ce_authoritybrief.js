@@ -138,24 +138,10 @@ function buildAuthorityBrief(targetRow) {
     brief += "SEMANTIC FINGERPRINT DEPLOYMENT RULES\n";
     brief += "------------------------------------------------------------\n";
     brief += "For each Core Entity listed above:\n";
-    brief += "1. Create ONE dedicated focused paragraph explaining the entity mechanism\n";
-    brief += "2. Use the COMPLETE semantic fingerprint vocabulary for that entity\n";
-    brief += "3. Deploy all fingerprint terms as a cluster within 150 words\n";
-    brief += "4. Do NOT scatter 2-3 terms across multiple sections\n";
-    brief += "5. Show how the entity connects to the reader's observed problem\n";
-    brief += "\n";
-    brief += "ENTITY NAME REPETITION LIMIT (CRITICAL):\n";
-    brief += "- Entity names may appear 1-2 times MAXIMUM in the entire article\n";
-    brief += "- ALL other references use semantic fingerprint vocabulary instead\n";
-    brief += "- Example: 'Efflorescence' appears once; all other references use:\n";
-    brief += "  'white crystalline deposits', 'salt migration', 'dissolved minerals'\n";
-    brief += "\n";
-    brief += "VOCABULARY DISTRIBUTION PATTERN (MULTINOMIAL SCORING):\n";
-    brief += "Target 8-12 instances of semantic fingerprint vocabulary per Core Entity:\n";
-    brief += "- Opening section: 2-3 instances\n";
-    brief += "- Main content sections: 3-5 instances\n";
-    brief += "- Conclusion/outcome sections: 2-3 instances\n";
-    brief += "Distribution strengthens topical authority through term frequency signals.\n";
+    brief += "Explain each relevant Core Entity where it helps the reader understand the material, condition, treatment or outcome.\n";
+    brief += "Describe genuine relationships and mechanisms in natural homeowner-friendly language.\n";
+    brief += "Use entity names and their accurate alternatives as often as clarity requires, without quotas or forced synonyms.\n";
+    brief += "Do not force every related term, a dedicated paragraph, or a fixed distribution of terms into the article.\n";
     brief += "------------------------------------------------------------\n";
     brief += "\n";
     
@@ -232,7 +218,7 @@ function buildAuthorityBrief(targetRow) {
     brief += "NEW ENTITY DISCOVERY:\n";
     brief += "If you identify a technical entity during article generation that is NOT in the\n";
     brief += "provided TSM entity list but IS material-specific and technically accurate:\n";
-    brief += "- Use it with proper semantic fingerprint vocabulary (8-12 surrounding technical terms)\n";
+    brief += "- Use only the accurate supporting terminology needed to explain this relationship clearly.\n";
     brief += "- Ensure it describes THIS material's specific behaviour, not generic flooring\n";
     brief += "- The entity will be reviewed and added to the TSM during post-generation audit\n";
     brief += "\n";
@@ -372,7 +358,7 @@ function buildAuthorityBrief(targetRow) {
     brief += "- Above 75 words: Exceeds Google's featured snippet display threshold\n";
     brief += "- Target sweet spot: 55-65 words\n";
     brief += "\n";
-    brief += "HIGH-IDF TERM DENSITY: 8-12 technical terms (mandatory)\n";
+    brief += "Use only the material-specific terminology needed for a clear, accurate answer.\n";
     brief += "High-IDF terms are material-specific technical vocabulary that distinguish\n";
     brief += "expert content from generic advice. Examples per material:\n";
     brief += "\n";
@@ -404,7 +390,7 @@ function buildAuthorityBrief(targetRow) {
     brief += "VALIDATION CHECKLIST:\n";
     brief += "Before moving past the Summary Box, confirm:\n";
     brief += "□ Word count between 45-75 (use word counter)\n";
-    brief += "□ 8-12 material-specific technical terms present\n";
+    brief += "□ Relevant technical terms are accurate, useful and naturally explained\n";
     brief += "□ Problem + Cause + Solution all included\n";
     brief += "□ No generic flooring language ('looks dirty', 'needs cleaning', 'lasts longer')\n";
     brief += "□ Reads as complete standalone answer (could be extracted as featured snippet)\n";
@@ -514,7 +500,7 @@ function pushAuthorityBriefToSheet(brief, targetRow) {
    Codes: WHY | ID | FIX | PREVENT | CHOOSE | LOCAL | PROVE | DECIDE
 ============================================================ */
 
-var ANGLE_DEFINITIONS = {
+var AUTHORITY_ANGLE_DEFINITIONS = {
   "WHY":     { label: "Material Explanation", readerQ: "Why is this happening to my floor?", articleTypes: ["Hub Page","Educational Guide"], openingTemplate: "explains why [PROBLEM] occurs at material level, so you understand what you are actually dealing with" },
   "ID":      { label: "Diagnosis",            readerQ: "Which specific condition do I have?", articleTypes: ["Diagnostic Guide"], openingTemplate: "helps you identify which specific condition is causing [PROBLEM], so you choose the right solution" },
   "FIX":     { label: "Method / Process",     readerQ: "How is this professionally corrected?", articleTypes: ["Method Guide","Service Page"], openingTemplate: "explains how [PROBLEM] is professionally corrected, stage by stage" },
@@ -526,7 +512,7 @@ var ANGLE_DEFINITIONS = {
 };
 
 function buildProblemAngleStatement(angleCode, primaryProblem, locality) {
-  var def = ANGLE_DEFINITIONS[angleCode];
+  var def = AUTHORITY_ANGLE_DEFINITIONS[angleCode];
   if (!def) return "";
   var problem = primaryProblem || "this problem";
   var loc     = locality || "your area";
@@ -629,151 +615,22 @@ function getAuthorityBrief() {
 
 function autoRunAuthorityBrief(targetRow) {
   try {
-    console.log("AUTO W1 STARTED");
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName("posts");
-
-    if (!sheet) {
-      return { success: false, message: "Posts sheet not found." };
-    }
-
-    var row = targetRow || SpreadsheetApp.getActiveRange().getRow();
-    console.log("ACTIVE ROW: " + row);
-    if (row < 2) {
-      return { success: false, message: "Select a data row first." };
-    }
-
-    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn())
-                       .getValues()[0]
-                       .map(function(h) { return String(h).trim(); });
-
-    function getValue(name) {
-      var idx = headers.indexOf(name);
-      if (idx === -1) return "";
-      return String(sheet.getRange(row, idx + 1).getValue() || "").trim();
-    }
-
-    // ----------------------------------------------------------
-    // 1. ENSURE A PROBLEM ANGLE EXISTS
-    // ----------------------------------------------------------
+    if (!sheet) return {success:false,message:"Posts sheet not found."};
+    var row = Number(targetRow || sheet.getActiveRange().getRow());
+    if (row < 2) return {success:false,message:"Select a data row first."};
     var angleResult = autoAssignProblemAngle(row);
-
-    if (!angleResult.success) {
-     function autoRunAuthorityBrief(targetRow) {
-  try {
-    console.log("AUTO W1 STARTED");
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("posts");
-
-    if (!sheet) {
-      return { success: false, message: "Posts sheet not found." };
-    }
-
-    var row = targetRow || SpreadsheetApp.getActiveRange().getRow();
-    console.log("ACTIVE ROW: " + row);
-    if (row < 2) {
-      return { success: false, message: "Select a data row first." };
-    }
-
-    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn())
-                       .getValues()[0]
-                       .map(function(h) { return String(h).trim(); });
-
-    function getValue(name) {
-      var idx = headers.indexOf(name);
-      if (idx === -1) return "";
-      return String(sheet.getRange(row, idx + 1).getValue() || "").trim();
-    }
-
-    // ----------------------------------------------------------
-    // 1. ENSURE A PROBLEM ANGLE EXISTS
-    // ----------------------------------------------------------
-    var angleResult = autoAssignProblemAngle(row);
-
-    if (!angleResult.success) {
-      return {
-        success:false,
-        message:"W-1 stopped — Problem Angle could not be assigned: " + angleResult.message
-      };
-    }
-
-    // ----------------------------------------------------------
-    // 2. BUILD AUTHORITY BRIEF
-    // ----------------------------------------------------------
+    if (!angleResult || !angleResult.success) return {success:false,message:"W-1 stopped — Problem Angle could not be assigned: " + String(angleResult && angleResult.message || "Unknown error")};
     var buildResult = buildAuthorityBrief(row);
-
-    if (!buildResult.success) {
-      return {
-        success: false,
-        message: "W-1 stopped — Authority Brief could not be built: " +
-                 buildResult.message
-      };
-    }
-
-    // ----------------------------------------------------------
-    // 3. SAVE AUTHORITY BRIEF
-    // ----------------------------------------------------------
+    if (!buildResult || !buildResult.success) return {success:false,message:"W-1 stopped — Authority Brief could not be built: " + String(buildResult && buildResult.message || "Unknown error")};
     var saveResult = pushAuthorityBriefToSheet(buildResult.brief, row);
-
-    if (!saveResult.success) {
-      return {
-        success: false,
-        message: "W-1 stopped — Authority Brief could not be saved: " +
-                 saveResult.message
-      };
-    }
-
-    return {
-      success: true,
-      message: "W-1 complete — Problem Angle confirmed and Authority Brief saved."
-    };
-
+    if (!saveResult || !saveResult.success) return {success:false,message:"W-1 stopped — Authority Brief could not be saved: " + String(saveResult && saveResult.message || "Unknown error")};
+    return {success:true,review:!!angleResult.review,
+      message:angleResult.review ? "W-1 complete with Problem Angle REVIEW — " + angleResult.message :
+      "W-1 complete — Problem Angle confirmed and Authority Brief saved."};
   } catch (e) {
-    return {
-      success: false,
-      message: "Automated W-1 error: " + e.toString()
-    };
-  }
-}
-
-    }
-
-    // ----------------------------------------------------------
-    // 2. BUILD AUTHORITY BRIEF
-    // ----------------------------------------------------------
-    var buildResult = buildAuthorityBrief(row);
-
-    if (!buildResult.success) {
-      return {
-        success: false,
-        message: "W-1 stopped — Authority Brief could not be built: " +
-                 buildResult.message
-      };
-    }
-
-    // ----------------------------------------------------------
-    // 3. SAVE AUTHORITY BRIEF
-    // ----------------------------------------------------------
-    var saveResult = pushAuthorityBriefToSheet(buildResult.brief, row);
-
-    if (!saveResult.success) {
-      return {
-        success: false,
-        message: "W-1 stopped — Authority Brief could not be saved: " +
-                 saveResult.message
-      };
-    }
-
-    return {
-      success: true,
-      message: "W-1 complete — Problem Angle confirmed and Authority Brief saved."
-    };
-
-  } catch (e) {
-    return {
-      success: false,
-      message: "Automated W-1 error: " + e.toString()
-    };
+    return {success:false,message:"Automated W-1 error: " + String(e)};
   }
 }
 

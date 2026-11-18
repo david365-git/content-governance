@@ -38,7 +38,8 @@ function buildHumanisationPrompt(w2bHtml) {
       return { success: false, message: 'ERROR: No humanisation prompt found in prompts sheet D42.' };
     }
 
-    const combined = humanisePrompt + '\n\n---\n\n' + w2bHtml.trim();
+    const mediaRule = '\n\nHARD EXCLUSION: Humanise only article paragraphs. Do not edit, delete, add or move images, alt text, captions, videos, links, or their HTML. Keep each of these elements exactly as supplied.\n';
+    const combined = humanisePrompt + mediaRule + '\n\n---\n\n' + w2bHtml.trim();
 
     return {
       success: true,
@@ -90,7 +91,7 @@ function saveHumanisedHtml(html) {
     // Save to Column CZ (104) — humanised HTML audit copy
     const cell = sheet.getRange(row, 104);
     cell.setNumberFormat('@');
-    cell.setValue(html.trim());
+    cell.setValue(bc_governLinksAtStage_(html.trim(), sheet, row));
 
     logPipelineResume("W3 — Humanised HTML", "");
     return {

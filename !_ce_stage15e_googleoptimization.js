@@ -88,7 +88,7 @@ function buildStage15EPrompt() {
   CRITICAL INSTRUCTION:
   You will receive a section plan below.
   DO NOT output the section plan.
-  DO NOT output H2 headings, word budgets, content briefs, TSM requirements, or internal links.
+  DO NOT output H2 headings, depth guidance, content briefs, TSM requirements, or internal links.
   ONLY output optimization instructions in VALID JSON format.
 
   GOVERNANCE PRESERVATION GATE — HARD LOCK
@@ -297,7 +297,7 @@ function buildStage15EPrompt() {
 
   ❌ DO NOT suggest new entity names or technical terminology
   ❌ DO NOT add academic or scientific language  
-  ❌ DO NOT include H2 headings, TSM requirements, word budgets, content briefs in your output
+  ❌ DO NOT include H2 headings, TSM requirements, depth guidance, content briefs in your output
   ❌ DO NOT include images, entities, or internal links in your output
   ❌ DO NOT include markdown code fences (\`\`\`json) around your JSON
   ❌ DO NOT include any preamble or explanation text

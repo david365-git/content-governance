@@ -73,13 +73,8 @@ const existingStructure = String(d["Current Headings"] || "").trim();
 
     // If Strategy marks this section "N", remove both
     // the section and its associated word budget.
-    if (
-      secondaryIntents.includes(
-        "N — " + req.name
-      )
-    ) {
-      return false;
-    }
+    if (String(req.priority || '').toLowerCase() === 'required') return true;
+    if (secondaryIntents.includes("N — " + req.name)) return false;
 
     return true;
   });
@@ -112,22 +107,21 @@ const existingStructure = String(d["Current Headings"] || "").trim();
     onPageExpectations = "(No on-page expectations defined for this article type.)";
   }
 
-  const tierWordCount =
-    tsmData.reduce(function(total, req) {
-      return total + Number(req.wordCount || 0);
-    }, 0);
-
-  // Build TSM block using the NEW FILTERED DATA
+  const tierWordCount = null; // NEW matrix has no word budgets.
   let tsmBlock = '';
-  tsmData.forEach(function(req, index) {
-    const minWords = req.wordCount;
-    const maxWords = Math.round(minWords * 1.2);
-    // Note: We use index+1 to keep the numbering clean for the LLM
-    tsmBlock += 'Order ' + (index + 1) + ': ' + req.name +
-                ' (' + minWords + '–' + maxWords + ' words)\n';
+  tsmData.forEach(function(req) {
+    tsmBlock += 'Order ' + req.order + ': ' + req.name +
+      ' | ' + req.priority + ' | Depth: ' + req.depth +
+      ' | Applies: ' + req.whenApplicable + '\n' +
+      'Guidance: ' + req.guidance + '\n' +
+      'Protect: ' + req.evidence + '\n' +
+      'Safety: ' + req.safeguards + '\n';
   });
 
+  const globalGovernance = ce_getNewTierGlobalGovernanceBlock_();
   const prompt = `
+${globalGovernance}
+
 STAGE 1.5A — STRUCTURE AUDIT & MAPPING
 
 MATERIAL: ${material}
@@ -136,7 +130,7 @@ TIER: ${tierLabel}
 PRIMARY ENTITY: ${primaryEntity}
 LOCALITY: ${locality || "(not supplied)"}
 PARENT AREA: ${parentArea || "(not supplied)"}
-MINIMUM WORD BUDGET: ${tierWordCount} words
+DEPTH GOVERNANCE: No numeric minimums or ceilings; preserve verified evidence.
 COMM FLAG: ${commFlag}
 GEOCTA FLAG: ${geoctaFlag}
 
@@ -146,7 +140,7 @@ Format: AUDIT CHECK [N]: FAIL — [one sentence reason]
 A FAIL result with no reason is not permitted.
 
 --- CASE STUDY STRUCTURE — NO FAQ (OVERRIDES PRESERVATION OF EXISTING HEADINGS) ---
-For Case Studies, NEVER create or retain a Frequently Asked Questions / FAQ / Questions About This Project section, regardless of existing HTML headings, previous structures, TSM interpretation or SEO requests. Do not turn an FAQ into another disguised Q&A section. Integrate any genuinely new, source-supported detail into its natural chronological project section instead. The four Tier 4 coverage requirements remain Project Context, Problem & Intervention, Measurable Outcome and Maintenance Handover & Escalation; no FAQ is required. Remove old FAQ headings from the proposed structure, even if earlier instructions say to preserve existing useful headings.
+For Case Studies, NEVER create or retain a Frequently Asked Questions / FAQ / Questions About This Project section, regardless of existing HTML headings, previous structures, TSM interpretation or SEO requests. Do not turn an FAQ into another disguised Q&A section. Integrate any genuinely new, source-supported detail into its natural chronological project section instead. Use the NEW Case Study Required coverage functions; no FAQ is required. Remove old FAQ headings from the proposed structure, even if earlier instructions say to preserve existing useful headings.
 
 --- AUDIT CHECKS ---
 Run the following 11 checks on the content structure:
@@ -155,9 +149,7 @@ AUDIT CHECK 1 — ARTICLE TYPE CLASSIFICATION
 Verify the article type matches the structural expectations below.
 AUDIT CHECK 1: PASS / FAIL
 
-AUDIT CHECK 2 — TIER WORD BUDGET RANGE
-Minimum word budget for ${tierLabel} is ${tierWordCount} words. 
-AUDIT CHECK 2: PASS / FAIL
+AUDIT CHECK 2 — SOURCE EVIDENCE PRESERVATION\nPreserve verified discoveries, practical decisions, historic and local context when source-supported; no fabricated evidence.\nAUDIT CHECK 2: PASS / FAIL
 
 AUDIT CHECK 3 — TSM REQUIREMENT COVERAGE
 Count the number of TSM structural requirements listed below.
@@ -172,13 +164,11 @@ If the project problem or challenge is only described in the opening introductio
 
 Do not add this H2 if an existing H2 already clearly introduces the project problem.
 
-For all other article types, retain the existing TSM section-count interpretation unless another article-type rule explicitly states otherwise.
+For all article types, map Required coverage naturally and include Conditional coverage only where relevant.
 
-AUDIT CHECK 3: ${tsmData.length} TSM requirements must be covered
+AUDIT CHECK 3: Required NEW matrix functions must be covered; Conditional functions only when applicable
 
-AUDIT CHECK 4 — WORD BUDGET DISTRIBUTION
-Each section has a governed word range defined below.
-AUDIT CHECK 4: PASS / FAIL
+AUDIT CHECK 4 — REQUIRED VS CONDITIONAL COVERAGE\nRequired functions must be covered; Conditional functions only when supported by the brief, source or material. Do not pad.\nAUDIT CHECK 4: PASS / FAIL
 
 AUDIT CHECK 5 — COMM FLAG VALIDATION
 COMM: ${commFlag}
@@ -195,15 +185,15 @@ AUDIT CHECK 8 — ARTICLE TYPE EXPECTATIONS
 Validate only against the block below.
 AUDIT CHECK 8: PASS / FAIL
 
-AUDIT CHECK 9 — TSM ORDER COVERAGE
+AUDIT CHECK 9 — REQUIRED FUNCTION COVERAGE
 
 For Case Study, Method Guide, Diagnostic Guide and Educational Guide articles:
-Verify every TSM Order from 1 to ${tsmData.length} is covered at least once across the mapped sections.
+Verify every Required function is covered at least once, with relevant Conditional functions included when supported.
 A TSM Order MAY appear on more than one section where separate reader-facing sections genuinely contribute to the same coverage role.
 Do not treat repeated use of an Order as duplication when those sections cover distinct parts of that requirement.
 
 For all other article types:
-Verify every TSM Order from 1 to ${tsmData.length} appears exactly once across the mapped sections — no Order missing and no Order duplicated.
+Verify every Required function is covered. Include Conditional functions when relevant; distinct article sections may support the same Order.
 
 Sections do NOT need to appear in numerical TSM Order sequence where a different narrative sequence better serves the reader.
 
@@ -221,13 +211,13 @@ PASS if:
 
 FAIL only if the proposed structure omits a required TSM coverage area, contains unnecessary or duplicate sections, or leaves the project story confused or out of sequence.
 
-For all other article types, retain the existing rule that section count must match the TSM requirement count unless another article-type rule explicitly states otherwise.
+For all article types, section count need not equal the number of coverage functions. Avoid unnecessary sections.
 
 Do NOT count the header block. Do NOT count HUB-INTRO if present.
 AUDIT CHECK 10: PASS / FAIL
 
-AUDIT CHECK 11 — WORD BUDGET TOTAL
-Total must fall within: ${tierWordCount}–${Math.round(tierWordCount * 1.2)} words.
+AUDIT CHECK 11 — FACTUAL COMPLETENESS
+Verify important source facts, practical treatment decisions and realistic outcomes are retained. No numeric limits.
 AUDIT CHECK 11: PASS / FAIL
 
 --- ARTICLE TYPE EXPECTATIONS ---
@@ -299,7 +289,7 @@ Choose the section sequence that best tells the real project story clearly and c
 
 Every required TSM coverage role must be represented, but TSM Orders do NOT need a one-to-one relationship with article sections.
 ` : `
-Map every TSM Order below to a section. Every TSM Order must appear exactly once across the mapped sections — none may be omitted or duplicated.
+Map every Required function to appropriate article coverage; include Conditional functions when relevant, and allow multiple sections to share an Order when it improves clarity.
 
 SECTION ORDER (Content-Driven — Soft Lock): You do not need to map TSM Orders sequentially (1, 2, 3...). Choose the narrative sequence that best serves the reader's understanding for THIS specific article — for example, leading with the most urgent symptom, or grouping related causes together, even if that means Order 3 appears before Order 1. Every TSM Order must still be covered exactly once; only the SEQUENCE in which they appear as sections is flexible.
 `}
@@ -310,18 +300,11 @@ Use this exact format:
 HUB-INTRO: id="hub-intro" | H2="None" | CONTENT="One orienting sentence and a quick-links navigation list only"
 
 Then output the section mapping using this format:
-SECTION 1: Order [N] — [Requirement Name] — [min]–[max] words
+SECTION 1: Order [N] — [Requirement Name] — [Required/Conditional] — [Light/Standard/Deep]
 
 For Case Study, Method Guide, Diagnostic Guide and Educational Guide articles, the same Order [N] may appear on more than one SECTION where several genuine reader-facing sections collectively satisfy that TSM coverage role.
 
-WORD BUDGET SPLIT — HARD LOCK:
-When one TSM Order is represented by more than one SECTION, SPLIT that Order's governed word range across those sections.
-The combined minimums of all sections carrying that Order must equal the governed minimum for that Order.
-The combined maximums of all sections carrying that Order must equal the governed maximum for that Order.
-Do NOT give each repeated section a fresh independent allowance.
-Example: if an Order is governed at 350–420 words and appears across five sections, those five section ranges together must total exactly 350–420 words. Always use the CURRENT TSM REQUIREMENTS above, never example figures.
-
-Do not duplicate an Order merely to increase section count. Repeat an Order only where the article genuinely needs separate sections for distinct parts of that coverage area.
+NEW MATRIX LENGTH RULE: Do not assign or split numerical word-count budgets. Cover all Required functions and applicable Conditional functions.\n\nDo not duplicate an Order merely to increase section count. Repeat an Order only where the article genuinely needs separate sections for distinct parts of that coverage area.
 
 HEADING HIERARCHY — HARD LOCK:
 For every numbered SECTION, assign either H2 or H3.
@@ -344,15 +327,18 @@ Do NOT use H3 for:
 - maintenance handover;
 - any section that should stand independently for the reader.
 
+For Case Studies, use an H2 for each independent chapter of the actual job: discovery, homeowner objective where substantial, condition/diagnosis, overall treatment, result and aftercare where sufficiently distinct. Use H3 only for a clearly subordinate step within that chapter, such as extraction beneath cleaning; do not assign an H3 merely to vary heading levels or satisfy a structure quota.
+Where a proposed H3 cannot be named together with its parent H2 without changing subject, make it an H2 or incorporate its genuine detail into the appropriate existing stage. Do not invent extra headings, sections or facts to make the outline symmetrical.
+
 Never begin the article structure with H3.
 Never place an H3 after another H3 unless both clearly belong to the same most recent H2 parent.
 Preserve an existing H3 where it still functions as a genuine sub-process.
 If an existing heading is H2 but is clearly only a subordinate sub-process of the preceding H2, it may be demoted to H3.
 
 For every mapped section, include the heading level and a concise working topic using this exact pattern:
-SECTION 1: Order [N] — [Requirement Name] — [min]–[max] words — H2: [working section topic]
+SECTION 1: Order [N] — [Requirement Name] — [Required/Conditional] — [Depth] — H2: [working section topic]
 or:
-SECTION 2: Order [N] — [Requirement Name] — [min]–[max] words — H3: [working sub-process topic]
+SECTION 2: Order [N] — [Requirement Name] — [Required/Conditional] — [Depth] — H3: [working sub-process topic]
 ...
 
 --- OUTPUT INSTRUCTION ---
@@ -369,51 +355,24 @@ Last line: "Stage 1.5A complete. Waiting for Stage 1.5B."
  * Prevents an AI's self-reported PASS from approving stale figures.
  */
 function bc_validateStage15ASectionBudgets_(output) {
+  // Retained function name for existing callers; NEW matrix validates
+  // required coverage instead of obsolete numeric word-count budgets.
   var d = getActiveRowDataMap();
-  var material = String(d["Stone Type"] || "").trim();
   var articleType = String(d["Article Type"] || "").trim();
-  var tierMap = {
-    "hub page":"Tier 1","educational guide":"Tier 1",
-    "method guide":"Tier 2","service page":"Tier 2","geo service page":"Tier 2",
-    "diagnostic guide":"Tier 3","buyer guide":"Tier 3","faq spoke":"Tier 3",
-    "case study":"Tier 4"
-  };
-  var tier = tierMap[articleType.toLowerCase()];
-  if (!tier) return {success:false,message:"Unknown article type for budget validation: "+articleType};
-  var requirements = getTierStructuralRequirements(material,tier,articleType) || [];
-  var secondary = String(d["Secondary Intent Decisions"] || "");
-  requirements = requirements.filter(function(req) {
-    return !secondary.includes("N — " + req.name);
-  });
-  if (!requirements.length) return {success:false,message:"No TSM budgets to validate"};
-  var expected = requirements.map(function(req) {
-    var min = Number(req.wordCount);
-    return {name:req.name,min:min,max:Math.round(min*1.2)};
-  });
-  var actual = expected.map(function(){return {min:0,max:0,count:0};});
+  var requirements = getTierStructuralRequirements(
+    String(d["Stone Type"] || ""), "", articleType
+  );
+  if (!requirements.length) {
+    return {success:false,message:"No NEW matrix coverage for "+articleType};
+  }
   var text = String(output || "");
-  var sections = text.split(/\r?\n/).filter(function(line){return /^SECTION\s+\d+\s*:/i.test(line.trim());});
-  if (!sections.length) return {success:false,message:"No numbered SECTION lines found in Stage 1.5A output"};
-  var errors = [];
-  sections.forEach(function(line){
-    var m=line.match(/^SECTION\s+\d+\s*:\s*Order\s+(\d+)\s+[^\n]*?\s+[—-]\s*(\d+)\s*[–-]\s*(\d+)\s+words\b/i);
-    if(!m){errors.push("Unparseable SECTION word range: "+line.slice(0,130));return;}
-    var order=Number(m[1]), min=Number(m[2]), max=Number(m[3]);
-    if(order<1||order>expected.length){errors.push("Unexpected TSM Order "+order);return;}
-    actual[order-1].min+=min;actual[order-1].max+=max;actual[order-1].count++;
-    if(min>max)errors.push("Reversed word range for Order "+order);
-  });
-  expected.forEach(function(e,i){
-    if(actual[i].min!==e.min||actual[i].max!==e.max)
-      errors.push("Order "+(i+1)+" ("+e.name+") requires "+e.min+"–"+e.max+
-        " words across all sections, but output totals "+actual[i].min+"–"+actual[i].max);
-  });
-  var minTotal=expected.reduce(function(n,e){return n+e.min},0);
-  var maxTotal=expected.reduce(function(n,e){return n+e.max},0);
-  var actualMin=actual.reduce(function(n,e){return n+e.min},0);
-  var actualMax=actual.reduce(function(n,e){return n+e.max},0);
-  if(actualMin!==minTotal||actualMax!==maxTotal)
-    errors.push("Total must be "+minTotal+"–"+maxTotal+" words, got "+actualMin+"–"+actualMax);
-  return errors.length?{success:false,message:"Stage 1.5A budget validation FAILED: "+errors.join("; ")}
-                      :{success:true,message:"Stage 1.5A numeric budget validation PASS"};
+  var mapped = Array.from(text.matchAll(/SECTION\s+\d+\s*:\s*Order\s+(\d+)/gi))
+    .map(m => Number(m[1]));
+  if (!mapped.length) return {success:false,message:"No mapped SECTION orders found"};
+  var missing = requirements.filter(req =>
+    req.priority.toLowerCase() === "required" && mapped.indexOf(req.order) < 0
+  );
+  return missing.length
+    ? {success:false,message:"Required NEW matrix functions missing: "+missing.map(x=>x.name).join(", ")}
+    : {success:true,message:"NEW matrix required function coverage PASS"};
 }

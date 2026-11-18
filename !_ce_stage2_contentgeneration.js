@@ -85,30 +85,8 @@ RULE 2 — DEFECT COMPLETION:
 Name no defect without all three elements present before the next paragraph:
 (1) What it is. (2) What the homeowner sees. (3) What is done about it.
 
-RULE 3 — PROCESS SECTION DEPTH:
-This rule applies ONLY to sections explicitly covering a process intervention in 
-Educational Guides, Method Guides, and Diagnostic Guides — NOT Case Studies.
-
-Process sections require three body paragraphs minimum before any figure or link.
-Para 1: homeowner symptom. Para 2: mechanism and correction. Para 3: outcome.
-Surface finish section must use the distinction framing specified in the Stone-Specific Prompt Rules block below.
-
-EXEMPT FROM RULE 3 — do NOT apply the three-paragraph minimum to:
-— Case Studies (governed by H3 narrative structure rules from Content Governance instead)
-— Hub routing sections (sections whose purpose is directing readers to other pages)
-— Comparison sections (sections contrasting two conditions or finish types)
-— Diagnostic threshold sections (sections giving the reader a self-check)
-— Any section with a word budget of 120-180 words — the three-paragraph minimum 
-   cannot be satisfied within this budget alongside figures and links
-   
-For exempt sections: write the minimum prose needed to serve the reader's purpose
-within the governed word budget. Do not pad to satisfy a paragraph count.
-
-FOR CASE STUDIES SPECIFICALLY: Use H3 subheadings to structure narrative sections 
-longer than 300 words as specified in Content Governance H3 Usage Rules.
-H3s are structural markers, not paragraph replacements — they organize the narrative 
-into digestible phases (Initial Condition → Process → Outcome) without counting 
-toward paragraph minimums.
+RULE 3 — PURPOSEFUL PROCESS SECTION DEPTH:
+For Method, Educational and Diagnostic Guides, explain the observed problem, relevant mechanism, suitable action and realistic outcome only to the extent appropriate to the NEW matrix. Do not impose paragraph counts or numeric length minima. For Case Studies, preserve each documented project stage and use H3 only for genuine subordinate parts of the approved section structure. Never add filler to meet a quota.
 
 RULE 4 — HUB-INTRO (hub pages only):
 One orienting sentence maximum before the navigation list.
@@ -168,28 +146,10 @@ ROUTING SECTION EXEMPTION: For sections whose sole purpose is routing the reader
 ============================================================ */
 
 function buildTotalWordCountTargetBlock(articleType) {
-  try {
-    var ceiling = getTierWordCountCeiling(articleType);
-    if (!ceiling) return "";
-
-    var total = ceiling.total;
-    var minTarget = ceiling.minTarget;
-    var maxTarget = ceiling.maxTarget;
-
-    return "------------------------------------------------------------\n" +
-      "TOTAL ARTICLE LENGTH TARGET (Hard Lock — this is a CEILING, not a floor)\n" +
-      "------------------------------------------------------------\n" +
-      "Article Type: " + articleType + "\n" +
-      "The governed section word budgets from the Tier Structural Coverage Matrix sum to " + total + " words for this article type.\n" +
-      "TARGET TOTAL LENGTH: " + minTarget + "-" + maxTarget + " words.\n" +
-      "Writing beyond " + maxTarget + " words is a failure of this rule.\n" +
-      "BEFORE YOU FINALISE OUTPUT: count your draft's approximate total length. If it exceeds " + maxTarget + " words, do not simply stop or cut the final section short. Instead, revisit every section and identify content that can be tightened — a warning or condition restated in more than one section, an elaboration that repeats an earlier point, a paragraph that could state the same fact more directly. Shorten those areas, then re-total before producing your final output.\n" +
-      "Do not add extra explanatory paragraphs, restate a warning or condition already covered elsewhere in the article, or expand a section beyond its governed word budget to create a feeling of thoroughness.\n" +
-      "If competitor pages for this search term average far fewer words than this target, that is not licence to go below the Tier Matrix per-section floors — it is a signal that this niche rewards concision, so do not treat the total target above as something to fill.\n" +
-      "------------------------------------------------------------";
-  } catch(e) {
-    return "";
-  }
+  return "NEW TIER MATRIX LENGTH RULE: No fixed article or section word-count ceilings or floors. " +
+    "Preserve all verified project details, client concerns, discoveries, decisions and results. " +
+    "Cover Required functions and applicable Conditional functions; remove repetition only, " +
+    "never omit meaningful evidence to hit an arbitrary length.";
 }
 
 function getStage2BData() {
@@ -332,6 +292,14 @@ ${govRow[7]}
     // Extraction failed — proceed without list
   }
 
+  // Original links are evidence for writing, not approved destinations.
+  // W1.5D (CX) is the only link-selection authority.
+  var originalLinkBlock = '';
+  try {
+  } catch (linkErr) {
+    Logger.log('W2B: original editorial link inventory unavailable: ' + linkErr.message);
+  }
+
   // Build figBlock from extracted URLs
   var figBlock = "";
   var suggestionBlock = "";
@@ -379,7 +347,7 @@ OUTPUT: HTML body content only.
 Do not output a tab-delimited row. Do not output column data. Do not number columns.
 Your entire output must be the revised HTML body — nothing before it, nothing after it.
 
-${w1aOutput ? '--- STAGE 1A CORE ---\n' + w1aOutput + '\n\n' : ''}${w1aAuthBrief ? w1aAuthBrief + '\n\n' : ''}${w1aGovFields ? w1aGovFields + '\n\n' : ''}${w1aMatBehav ? w1aMatBehav + '\n\n' : ''}${w1aTsm ? w1aTsm + '\n\n' : ''}${w1aSemantic ? w1aSemantic + '\n\n' : ''}${w1aSiloMap ? w1aSiloMap + '\n\n' : ''}${w1aHtml ? '--- ORIGINAL HTML ---\n' + w1aHtml + '\n\n' : ''}${w1bOutput ? '--- STAGE 1B STRUCTURAL RULES ---\n' + w1bOutput + '\n\n' : ''}${w1cOutput ? '--- STAGE 1C PARAGRAPH RULES ---\n' + w1cOutput + '\n\n' : ''}${w1dOutput ? '--- STAGE 1D OUTPUT QUALITY RULES ---\n' + w1dOutput + '\n\n' : ''}--- STAGE 2A PRE-WRITE RULES ---
+${w1aOutput ? '--- STAGE 1A CORE ---\n' + w1aOutput + '\n\n' : ''}${w1aAuthBrief ? w1aAuthBrief + '\n\n' : ''}${w1aGovFields ? w1aGovFields + '\n\n' : ''}${w1aMatBehav ? w1aMatBehav + '\n\n' : ''}${w1aTsm ? w1aTsm + '\n\n' : ''}${w1aSemantic ? w1aSemantic + '\n\n' : ''}${w1aSiloMap ? w1aSiloMap + '\n\n' : ''}${w1aHtml ? '--- ORIGINAL HTML ---\n' + w1aHtml + '\n\n' : ''}${originalLinkBlock}${w1bOutput ? '--- STAGE 1B STRUCTURAL RULES ---\n' + w1bOutput + '\n\n' : ''}${w1cOutput ? '--- STAGE 1C PARAGRAPH RULES ---\n' + w1cOutput + '\n\n' : ''}${w1dOutput ? '--- STAGE 1D OUTPUT QUALITY RULES ---\n' + w1dOutput + '\n\n' : ''}--- STAGE 2A PRE-WRITE RULES ---
 ${stage2AContent}
 
 ${governanceBlock}
@@ -395,15 +363,34 @@ READER-FACING LANGUAGE GATE — ALL ARTICLE TYPES:
 Treat observed search queries, keyword clusters, SEO labels, and "near me" as planning metadata, not prose to reproduce. Never write "near me" in the header, headings, paragraphs, captions, bio or footer unless quoting it is an essential, documented subject of the article. Do not write "this case study proves", "became a documented requirement", or similarly artificial meta-commentary. Begin with the actual subject, project event, condition, or reader decision in natural UK English. Keep accurate town names where appropriate; do not splice keyword strings into sentences.
 DOCUMENTED-ACTION VS GENERAL-KNOWLEDGE GATE — ALL ARTICLE TYPES:
 The original source and any separately confirmed project notes establish what happened on a specific job. Material references and general professional knowledge can explain mechanisms, risks and common practice, but must NEVER be converted into assertions that I/we inspected, measured, distinguished, diagnosed, selected, tested, checked, extracted, advised or decided something on that job unless the source records it. Reasonable trade judgement is permitted: briefly explain why a documented material, filler colour or process would ordinarily suit its application, where the explanation is technically sound and does not imply an additional unrecorded test, conversation or decision. For example, colour-compatible filler is a sensible reason for using documented red and black fillers; do not invent a precise colour-match test or claim the client requested those colours. Distinguish ordinary professional rationale from unsupported project-specific events. Where a mechanism is useful but unrecorded, write it as general material behaviour, clearly separate from the narrated project events.
-CASE STUDY PRECEDENCE: Project facts must come from original HTML or confirmed notes. Next follow governed structure, then general material explanation, then writing clarity, and only then SEO, locality, authority and vocabulary. Lower-priority rules never authorize invented site-specific tests, causes, actions, property details or professional reasoning.
+CASE STUDY PRECEDENCE: Project facts must come from the extracted ten-column evidence record or confirmed owner corrections; original HTML is not an alternative project fact source. Next follow governed structure, then general material explanation, then writing clarity, and only then SEO, locality, authority and vocabulary. Lower-priority rules never authorize invented site-specific tests, causes, actions, property details or professional reasoning.
 FINAL SOURCE-FAITHFULNESS AND NATURALNESS CHECK:
-Before returning the article, compare every first-person claim and every claimed job-specific cause, assessment, intention and product-selection reason against ORIGINAL HTML or confirmed notes. Remove or reframe invented events, diagnoses or results without losing verified steps. Do not unnecessarily delete harmless, accurate trade-knowledge explanations or reasonable professional rationale for documented work. Check the complete HTML for literal "near me" in reader-facing text and replace artificial SEO phrasing with natural UK homeowner language. Prioritise documented experience over generic explanations within the existing word budget; do not add sections or expand the budget.
+Before returning the article, compare every first-person claim and every claimed job-specific cause, assessment, intention and product-selection reason against ORIGINAL HTML or confirmed notes. Remove or reframe invented events, diagnoses or results without losing verified steps. Do not unnecessarily delete harmless, accurate trade-knowledge explanations or reasonable professional rationale for documented work. Check the complete HTML for literal "near me" in reader-facing text and replace artificial SEO phrasing with natural UK homeowner language. Prioritise documented experience over generic explanations without imposing an old word budget; preserve approved section structure.
 The first paragraph of a Case Study section can open with an actual project event rather than an invented generic homeowner symptom. A practical Method Guide may open with its process step; a Buyer Guide with a decision. Use the governed section and article type, not forced symptom framing.
-CASE STUDY DRAFT LENGTH AND MATERIAL DISCIPLINE — OVERRIDES GENERIC DEPTH, SEO AND PARAGRAPH RULES:
-For every Case Study, use the approved section Word Budgets as editorial targets, not arbitrary hard ceilings. Exceed a section target only when needed to retain distinct, documented project evidence or useful specific technical reasoning; never exceed it merely to add repetition, filler, generic SEO commentary or boilerplate. First allocate the essential original-project facts, chronology, client requests and outcomes; only then add the shortest useful material explanation if space remains. Do not add extra paragraphs, generic comparisons, repeated finish descriptions, keyword variants or general advice merely to satisfy an authority, entity, mechanism-depth, suggested-image or paragraph-count instruction. Where rules compete, the approved per-section budget and original evidence win. For Tier 4 Case Studies the present planning target is 720–864 words; a longer article is acceptable where substantive original evidence genuinely requires it. Keep header, captions and footer concise. Before outputting HTML, assess each section for duplicated points and remove padding; do not delete important documented facts simply to hit a number.
-For cement-matrix Terrazzo Case Studies, describe the floor as marble chips in a Portland cement matrix unless the original article specifies other aggregate or binder. The material-specific construction rule applies in EVERY section, including inserted boilerplate, polishing explanations, captions and linked-service descriptions. Never add a generic survey of alternative aggregates or synthetic versus cement-based binders in this specific case study. Do not add alternate terrazzo types just to appear comprehensive.
+CASE STUDY LENGTH AND MATERIAL DISCIPLINE — OVERRIDES LEGACY NUMERIC TARGETS:
+Let the documented job evidence, the NEW Tier Structural Coverage Matrix and homeowner usefulness determine section depth and overall length. There are no numeric word targets, section budgets or paragraph quotas. Preserve distinct observations, decisions, methods, client requirements and outcomes before adding concise, clearly general explanation. Do not add repeated descriptions, generic SEO content or filler. Do not remove real project details to meet a length target.
+For cement-matrix Terrazzo Case Studies, describe the floor as marble chips in a Portland cement matrix unless the extracted project evidence specifies other aggregate or binder. The material-specific construction rule applies in EVERY section, including inserted boilerplate, polishing explanations, captions and linked-service descriptions. Never add a generic survey of alternative aggregates or synthetic versus cement-based binders in this specific case study. Do not add alternate terrazzo types just to appear comprehensive.
 CASE STUDY NO-FAQ RULE — OVERRIDES OUTDATED SECTION PLANS:
 Never create a dedicated FAQ, Frequently Asked Questions, Questions About This Project, or disguised Q&A section for a Case Study. Such sections repeat the project methods, results or aftercare and are not part of the desired case-study format. Where a supplied 1.5A–1.5E plan still contains a final FAQ section, omit that section and do not substitute another summary/Q&A section; preserve its genuinely unique documented facts, if any, in the appropriate earlier project section. Do not fabricate extra content to replace the removed FAQ.
+CASE STUDY FIRST-DRAFT EVIDENCE RETENTION — BEFORE GENERATING HTML:
+PROJECT EVIDENCE PRESERVATION — STRICT:
+Treat the original project account and source-quoted evidence ledger as the authority for what actually happened. Retain every materially useful and distinct documented observation, including NEGATIVE findings (what was NOT present), inspection considerations, decisions not to use an intervention, the reason for local repair versus replacement, and genuine limitations. When the original says a possibility was considered, describe it as considered, not found. A blank ledger field is not evidence that something did not happen; where the original and ledger disagree, do not quietly invent a resolution.
+Before outputting, verify that the revised narrative has NOT dropped a negative finding or trade decision that materially explains the job. Include it naturally in the relevant section once, without making the prose longer merely to fill sections. Never convert an inferred restoration objective into a customer quote, request or wish; say "the aim was..." unless the original confirms what the homeowner asked for. Do not invent site inspections, consistent-light photographic comparisons, low-angle viewing, moisture-path features or personal handover conversations.
+PLAIN ENGLISH — HOMEOWNER READABILITY:
+Write short, natural sentences that a UK homeowner would recognise as a tradesperson explaining their work. Replace abstract phrases such as "the layout to read properly again", "visual continuity", "surface response" and "vapour pressure release path" with what was actually seen or done. Example: say "The tiles looked dull, and the pattern was difficult to see" rather than "the muted colour meant the homeowner wanted the layout to read properly again". Do not add that the homeowner wanted anything unless that wish is recorded. Use technical terms only when they explain a real treatment or safety decision, and explain them simply. Reject sentences that sound like artificial SEO or AI narration even when grammatically correct.\nPLAIN-ENGLISH FINAL PASS — MANDATORY BEFORE RETURNING HTML:\nRead every paragraph as if explaining the completed job to a homeowner. Remove abstract or invented-sounding wording and say what the specialist actually saw, did, decided or achieved. Prefer "kept the original tile pattern" to "maintained believable geometric continuity"; prefer "used less water and removed the dirty water promptly" to "managed capillary moisture cycling and vapour-pressure release pathways". Do not use "the layout reads", "remained believable", "surface response", "visual narrative", "capillary moisture cycling", "evaporation cycle" or "vapour pressure release path" merely to sound technical. If water management matters, explain the real action: controlled washing, thorough rinsing and wet-vacuum extraction. Preserve exact genuine trade methods and necessary safety information; simplify their explanation rather than deleting important evidence. Do not narrate an unverified homeowner wish, performed test or treatment as fact. Cut generic local-geography fillers, repeated diagnoses and sentences that explain the article rather than the floor. Every sentence should help a homeowner understand this job in plain UK English.\n
+Use the source-quoted GL–GU project ledger and ORIGINAL HTML together. Before writing, identify each DISTINCT documented observation or action and its correct narrative location; keep its essential meaning at least once. Do not discard a useful concrete detail merely to avoid repeated background explanation. Especially preserve documented homeowner-observed symptoms and their recurrence (e.g. marks returning after ordinary cleaning), actual contaminants such as old wax/coatings where recorded, repairs actually completed, extraction/rinsing/drying/sealing, observed result and relevant limitations. Distinguish a recorded possibility (possible adhesive or substrate condition) from a confirmed diagnosis.
+Preserve a material-specific safety caution when relevant to actual methods or aftercare, but never add a blanket treatment ban or claim that a particular chemical was used on this job without evidence. For acid-sensitive or vulnerable floors, explain why an unassessed acid treatment is unsafe for the installed tile, grout, sealer and finish.
+Do not turn general material knowledge (tile porosity, possible batch variation, damp-proof construction, sealer breathability) into a measured or confirmed site finding. Do not invent who saw the floor first, what the client said, who performed extra tests, or specific advice personally given without recorded or author-confirmed evidence.
+LINK AUTHORITY: Use only links explicitly approved in the W1.5D final plan (CX). Original links are not automatically authorised. W2B may not independently select or add internal destinations, including Contact. Preserve existing project video title/caption and descriptive image alt text unless the provided source clearly supports a more accurate replacement.
+UNVERIFIED MATERIAL EXPLANATIONS: Keep general observations about historic tile batches, density, absorption and age explicitly general. Do not use them to explain the particular job's appearance, movement or treatment response unless the original project evidence or confirmed notes support that causal link. Describe what was visibly observed separately from possible mechanisms.
+AFTERCARE ATTRIBUTION: Distinguish ordinary sound homeowner maintenance guidance from a conversation documented on this job. Write general advice directly (for example, 'For ongoing care, remove grit before damp mopping'), without saying 'I recommended', 'I told the homeowner' or similar unless that communication is verified in the original or confirmed notes. Do not remove useful aftercare advice merely because the source does not record a conversation.
+BEFORE ACCEPTING THE W2B DRAFT — EVIDENCE COVERAGE AUDIT:
+Read each of the ten source-quoted evidence categories and compare each materially useful documented fact with the proposed finished article, not just the source article. Mark it internally as RETAINED (same practical meaning), COMBINED (preserved once naturally) or OMITTED. Every OMITTED significant factual point must be restored in the appropriate existing section before returning HTML. Check specifically for negative findings, actual inspection scope versus findings, customer words versus inferred aims, repair alternatives rejected, observed outcomes and limitations. Do not turn source-listed possible conditions into on-site findings. Unimportant repeated background and duplicate phrases need not survive. No added section, keyword stuffing, checklist output or invented bridging story is allowed.
+Before final output, compare the finished draft to the original and ledger for LOST facts, UNSUPPORTED added specifics and LOST useful media/link descriptions. Correct these internally in the same generation response; do not output a checklist or make another AI call.
+
+CASE STUDY NON-REPETITION AND PROJECT DETAIL GATE:
+Every governed section must make a distinct contribution: an observed condition, customer objective, professional decision, treatment step or actual outcome. Do not repeat the same general explanation of fired-clay properties, acid risk, moisture or residue in several sections unless the later mention explains a genuinely different project-stage decision. Revisit real floor conditions when needed for the job chronology. Preserve distinctive original observations, repair steps, pattern/border details, verified local setting and W1.5D-approved links where they help the reader; never pad history or add link quotas. Do not assert inferred damp-proof conditions as inspected facts. Do not invent homeowner reactions or undocumented tests. Do not remove author-confirmed experience merely because older prose omitted it; require explicit confirmation for new job-specific claims.
+
 CASE STUDY SOURCE-EVIDENCE GATE — MANDATORY BEFORE WRITING OR SAVING:
 Use ORIGINAL HTML and explicitly supplied project notes as the only evidence of what happened on this job. Before drafting, privately classify each planned statement as (A) documented project fact, (B) general technical explanation that does not claim it occurred or was measured on this job, or (C) unsupported project assumption. Write A and relevant, clearly general B; discard C. Do not print the classifications or a ledger in the HTML.
 LOCATION FACTS: Mention the supplied town and actual documented room only. Do not infer the property's age, period style, housing mix, layout, hallway traffic pattern, household activity or mechanism of wear from the locality. An observed worn surface is not proof of a specific cause.
@@ -422,7 +409,7 @@ Keep useful material/process detail, authentic client decisions and realistic li
 CASE STUDY OPENING AND MATERIAL-SPECIFICITY CHECK — HARD LOCK:
 In a Case Study, open the <header> with the actual documented discovery, client request or visible starting condition. Describe the real project immediately; do not start with "A [town] homeowner seeking...", "This case study...", a service-keyword phrase or general claims about what restoration can achieve. Keep the location natural and secondary to the event.
 When describing the composition of a floor in a Case Study, use the known or governed material type relevant to THAT project, not a catalogue of unrelated binders or aggregates. For a historic UK cementitious terrazzo floor with no alternative composition documented, describe marble chips in a Portland cement matrix; if original evidence specifies shells, glass, another aggregate or binder, use that instead. Do not add general material definitions that introduce alternative chip types or binder systems unrelated to the documented floor. Do not imply that the binder was laboratory-tested or independently verified.
-Before returning HTML, check that the header describes a documented event, and remove irrelevant broad material-type lists from the case study. Apply these requirements within existing approved headings and word budgets.
+Before returning HTML, check that the header describes a documented event, and remove irrelevant broad material-type lists from the case study. Apply these requirements within approved headings, without numeric word budgets.
 CASE STUDY SOURCE-FIDELITY OVERRIDE — HIGHER PRIORITY THAN GENERIC PARAGRAPH FORMULAS:
 For Case Studies, compare ORIGINAL HTML against the final planned sections before drafting. Preserve documented client requests (including desired finish, décor or use), actual contractor discussions and cautions, agreed treatment decisions, relevant work chronology and client responses. Integrate them naturally into the appropriate sections in the original speaker's I/we perspective; never fabricate quotes or conversations. If the section brief omits a documented client decision, recover it from ORIGINAL HTML without changing the approved headings, section count or budgets. Prefer original project-specific evidence over generic material explanation when space is tight. Before returning HTML, recheck ORIGINAL HTML for consequential client requests, contractor advice and decisions and restore any omitted items within the governed word budget.
 For Case Studies, this override supersedes any later requirement that every section or paragraph must open with a symptom, use a fixed problem/cause/mechanism/implication sequence, or contain a set number of explanatory paragraphs. Project chronology, client decisions and first-hand work may lead a paragraph. All other article types retain their existing paragraph rules.
@@ -492,30 +479,28 @@ HEADING AND SECTION COMPLETENESS — NON-NEGOTIABLE HARD LOCK:
 Use the FINAL Stage 1.5D approved section plan, including its 1.5C enrichments, as an exact ordered checklist.
 For every numbered SECTION in that plan, output exactly one corresponding <section id="section-N"> element, in order from 1 to the final section. Never merge, skip, combine, renumber, or silently discard sections, even when two adjacent sections share a TSM requirement.
 Inside each numbered section, reproduce its approved Heading H2 or Heading H3 EXACTLY, using the correct <h2> or <h3> tag. Do not paraphrase, shorten, re-capitalise, promote H3 to H2, or replace approved headings with more creative variations. H3 sections remain independent numbered <section> blocks.
-A heading listed in the plan as H3 is not permission to absorb it into the preceding H2 section. Content briefs and word budgets belong to their own numbered section only.
+A heading listed in the plan as H3 is not permission to absorb it into the preceding H2 section. Content briefs belong to their own numbered section; no numerical word budgets apply.
 Before returning HTML, internally compare your output against EVERY numbered section in the final plan: exact number of sections; contiguous IDs; exact heading text; exact H2/H3 levels; correct order; no unplanned numbered sections. Repair any mismatch in your own draft before responding.
-If output length is constrained, preserve complete section structure and heading accuracy rather than dropping later sections. Never return a partial article as if complete.
+Preserve complete section structure, heading accuracy and documented facts; never omit later sections to save words. Never return a partial article as if complete.
 ------------------------------------------------------------
 THE APPROVED STAGE 1.5B SECTION PLAN IS THE STRUCTURAL AUTHORITY.
-Each section has a governed word range: a minimum floor and a maximum ceiling (1.2x the minimum).
-Write to the depth the content requires — but stay within the range.
-Do not pad to hit the minimum. Do not exceed the maximum.
-Do not carry overflow into the next section.
+The NEW matrix has no section word-count floor or ceiling. Cover the approved section's task to the depth needed while preserving every relevant source-supported fact and avoiding repetition.
 ------------------------------------------------------------
 ${figBlock}
 ${suggestionBlock}
-WORD BUDGET (Governed Range):
-Each section has a minimum and maximum word count from the Stage 1.5B approved plan.
-For Case Studies, treat the range as an editorial target: preserve distinctive, documented facts and cut repetition before considering extra length. For other article types, follow the governed range.
+DEPTH RULE: Light means concise, Standard means practical context, Deep means supported explanation where needed. These are not word or paragraph quotas.
 ------------------------------------------------------------
 ${buildTotalWordCountTargetBlock(articleType)}
 AUTHORITY SIGNALS (Hard Lock — apply to every article):
-1. SPECIFICITY: In Case Studies, name only grit numbers documented in ORIGINAL HTML; do not impose a standard grit sequence. For other article types, include useful grit examples only when relevant, correctly qualified and within the governed word budget.
+1. SPECIFICITY: In Case Studies, name only grit numbers documented in ORIGINAL HTML; do not impose a standard grit sequence. For other article types, include useful grit examples only when relevant, correctly qualified and consistent with the evidence.
 2. UK CONTEXT: In Case Studies, include only documented property and locality details. For other articles, include relevant UK context without asserting invented project-specific details.
 3. MECHANISM DEPTH: For Case Studies explain a cause only if documented in the original. Otherwise describe observations, and keep any useful material science explicitly general. Technical reference notes are not evidence of this job.
 4. OUTCOME PRECISION: State specific outcomes in measurable terms — satin finish, consistent reflective plane, uniform matte appearance — not vague claims.
 5. SCOPE BOUNDARIES: Name what honing cannot do as precisely as what it can do. This signals expertise and builds trust.
 ------------------------------------------------------------
+MATERIAL SAFETY BACKSTOP — apply even if the Technical Matrix lookup is absent:
+Distinguish glazed ceramic and dense porcelain faces from potentially porous cementitious grout. Do not recommend stone-style grinding or honing for glazed ceramic or factory-finished porcelain. Never assume sealing is needed on a non-porous tile face; assess the actual absorbent material, joints, previous treatment and finish. Do not recommend acidic cleaners without establishing the deposit, surface, grout and treatment compatibility. Choose material-compatible agitation, rinsing, extraction and moisture control. If material-specific safety data is absent, do not invent a treatment specification; flag the gap for review.
+${ce_getNewTierGlobalGovernanceBlock_()}
 ${buildStonePromptRulesBlock(d["Stone Type"] || "stone")}
 ${buildSemanticFingerprintBlock(d["Stone Type"] || "stone")}
 ${buildRecoveryBlueprintInjectionBlock(bc_getRecoveryBlueprintEntities())}
@@ -523,32 +508,13 @@ ${buildSerpValidationChecklistBlock(bc_getSerpValidationEntities())}
 ${buildTfidfVocabularyBlock(bc_getTfidfTerms())}
 ${buildRecallGapBlock(bc_getRecallGapTerms())}
 ${buildCompetitorVocabBlock(bc_getCompetitorVocabGap(), bc_getCompetitorWordCount())}
-DIAGNOSTIC IMAGE CAPTIONS (Hard Lock):
-Every image caption must function as a diagnostic tool — not a description of what is shown.
-The reader is scanning to identify whether the image matches their problem.
-A caption that only names or describes the image fails. A caption that connects the image to the reader's situation passes.
+PROJECT MEDIA EVIDENCE — ALT TEXT, FIGCAPTIONS AND VIDEO CAPTIONS:
+Describe what the actual image or video visibly shows, or what a verified source caption explicitly identifies. Name the material, visible condition and restoration stage when supported.
+For guides, brief diagnostic meaning may be added ONLY when the visible symptom supports it, phrased conditionally when causes are uncertain.
+Do not turn a photograph into evidence of unseen tests, recovered slurry, moisture control, sealer chemistry, protection performance, client satisfaction or later outcomes.
+Do not change an existing project's video overview caption into an unrelated technical claim. Keep image URLs, iframe URLs, media identity and relevant accessibility text. Never invent what a media asset shows when its appearance is unknown.
+A clear descriptive caption is valid; do not force every caption into a diagnostic claim or fixed pattern. Avoid repeated generic captions.
 
-DIAGNOSTIC CAPTION PATTERNS (use any of these — vary across the article):
-  - Reader recognition: "[Visible condition] may indicate [reader-relevant meaning]"
-  - Named condition: "This is [condition] — [one sentence on what it means for the reader]"
-  - Direct observation: "[Visible feature] is consistent with [condition or cause]"
-  - Practical interpretation: "[What the image shows] helps distinguish [condition A] from [condition B]"
-  - Observation led: "Dark patches like these indicate..."
-  - Stage based: "Floors at this stage need..."
-  - Pattern recognition: "Hallways showing this pattern have..."
-
-WRONG — purely descriptive (fails):
-  "Acid etching leaves dull patches where the marble surface has been chemically damaged."
-  "Old sealers and adhesives being removed from an original tile floor."
-  "Coating removal in progress on the Minton tile floor."
-
-CORRECT — diagnostic (passes):
-  "A dull pale mark that remains after cleaning may indicate etching rather than dirt."
-  "This is coating removal — softened residue must be extracted, not spread around."
-  "Floors at this stage need controlled extraction before sealing can begin."
-
-VARIATION RULE: No two captions in the same article may open with the same pattern.
-Vary the diagnostic approach across the four or five images — do not repeat the same opener.
 ------------------------------------------------------------
 OUTCOME STATEMENTS (Hard Lock — honest full range):
 Professional restoration outcomes must be stated accurately — not defensively.
@@ -704,10 +670,6 @@ function buildRecoveryBlueprintInjectionBlock(entities) {
     block += "PRIORITY ENTITIES (must appear — anchor co-occurrence targets):\n";
     block += entities.priority.join(", ") + "\n";
     block += "Rule: Each priority entity MUST appear explicitly by name at least once.\n";
-    block += "Surround each with its full semantic fingerprint vocabulary as specified above.\n";
-    block += "PROXIMITY RULE: When the entity name appears, at least 3 of its fingerprint terms MUST appear within 2-3 sentences of the entity name.\n";
-    block += "Do not place fingerprint terms in a different paragraph from the entity name.\n";
-    block += "Distribute fingerprint terms naturally in the sentences immediately surrounding the entity name — not clustered after it.\n\n";
     block += "CAUSAL CHAIN RULE (Hard Lock — applies to all Priority Entities):\n";
     block += "When two or more Priority Entities appear in the same section, you MUST state the mechanical relationship between them.\n";
     block += "Do not treat entities as isolated topics. Show how one entity creates the condition for another to act.\n";
@@ -721,7 +683,6 @@ function buildRecoveryBlueprintInjectionBlock(entities) {
     block += "SUPPORTING ENTITIES (use where contextually relevant):\n";
     block += entities.supporting.join(", ") + "\n";
     block += "Rule: Include where the section topic naturally supports it. Do not force.\n";
-    block += "PROXIMITY RULE: When a supporting entity name appears, at least 2 of its fingerprint terms MUST appear within 2-3 sentences of the entity name.\n\n";
   }
 
   if (entities.peripheral && entities.peripheral.length > 0) {
@@ -788,16 +749,7 @@ function buildStage2BPart3A(d) {
       : "Section 1 begins AFTER the header and MUST have its own <section> tag and H2 heading.\n" +
         "Structure: <header>...</header> then <section id=\"section-1\"><h2>...</h2>...</section>\n") +
     "------------------------------------------------------------\n" +
-    (String(d["Feeds Hub"] || "").trim() && 
- String(d["Feeds Hub"]).trim() !== String(d["URL"] || "").trim()
-  ? "HUB LINK (Hard Lock — mandatory):\n" +
-    "This article MUST contain at least one link to the hub page.\n" +
-    "Hub URL: " + String(d["Feeds Hub"]).trim() + "\n" +
-    "Use the full hub URL above directly in your href — do not use placeholders.\n" +
-    "Place the hub link naturally within the body content — not in the footer.\n" +
-    "A missing hub link is a Check 2 audit failure that will block push to sheet.\n" +
-    "------------------------------------------------------------\n"
-  : "") +
+    "HUB DESTINATION AND PLACEMENT: Use only the approved W1.5D (CX) section assignment. Do not introduce a hub link independently.\n" +
     "INTERNAL LINK POSITIONING (Hard Lock — Contextual Placement):\n" +
     "Internal links must appear at the point where the reader's need for the linked content is highest.\n" +
     "This is the moment the reader has recognised their specific problem and needs to know more.\n" +
@@ -807,9 +759,9 @@ function buildStage2BPart3A(d) {
     "WRONG: 'Further detail on this topic is available in [link].' — standalone signpost at section end.\n" +
     "------------------------------------------------------------\n" +
     "INTERNAL LINK GOVERNANCE (Hard Lock):\n" +
-    "Use ONLY internal-link destinations explicitly assigned in the approved Stage 1.5D section plan, plus the governed Feeds Hub URL where required.\n" +
-    "Do NOT invent, select or add additional links from the Stage 1A silo map during article generation.\n" +
-    "If a section plan says 'Internal link: None', do not add an internal link to that section unless it is the separately governed hub link.\n" +
+    "Only URLs explicitly approved and placed by W1.5D (CX) may be used. Neither the original source HTML nor the silo map gives separate permission to insert internal anchors.\n" +
+    "Do NOT independently retain source-article links, including in Case Studies. An original link must first be approved by W1.5D in CX.\n" +
+    "If CX states 'Internal link: None', do not add an internal anchor unless CX separately assigns Contact to that section.\n" +
     "When an Internal link URL is assigned to a section, it MUST appear as a real <a href=\"[exact governed URL]\">descriptive anchor text</a> link within that section.\n" +
     "Never write phrases such as 'this guide', 'this comparison', 'this diagnosis' or 'this service' as though they reference another page unless the phrase contains the governed <a href> link.\n" +
     "Do not substitute a different local, service, hub or sibling URL for the governed destination.\n" +
@@ -908,7 +860,7 @@ function buildStage2BPart3A(d) {
     "------------------------------------------------------------\n" +
     "FOOTER FORMAT (Hard Lock — use exactly this structure):\n" +
     "<footer>\n" +
-    "<p>[One sentence outcome statement.] <a href=\"/contact\">Contact us to arrange a no-obligation " + stLower + " floor assessment.</a></p>\n" +
+    "<p>[One sentence outcome statement and a plain-text invitation to contact us.]</p>\n" +
     "</footer>\n" +
     "------------------------------------------------------------\n\n" +
     "CRITICAL: Do not begin writing until next input received.\n" +
@@ -954,19 +906,26 @@ function buildStage2BPart3B(d) {
     Logger.log('W2B: Could not read optimization JSON from Column CY: ' + optErr.message);
     // Continue without optimization data
   }
+  if (!String(sectionPlan || '').trim()) {
+    throw new Error('W2B blocked: approved W1.5D section plan in CX is missing.');
+  }
   if (sectionPlan) {
     var lines = sectionPlan.split(/\n/);
     var sections = [];
     var current = null;
     lines.forEach(function(line) {
-      var secMatch = line.match(/^SECTION\s+(\d+):\s*(?:Heading\s+(H\d):\s*)?(.+)/i);
+      var secMatch = line.match(/^SECTION\s+(\d+):\s*Heading\s+(H[23]):\s*(\S[^\r\n]*?)\s*$/i);
+        if (/^SECTION\s+\d+\s*:/i.test(line) && !secMatch) {
+          throw new Error('W2B blocked: malformed approved section heading: ' + line.slice(0, 160));
+        }
       if (secMatch) {
         if (current) sections.push(current);
         current = {
+          number: Number(secMatch[1]),
           title: secMatch[3].trim(),
-          headingLevel: secMatch[2] ? secMatch[2].toUpperCase() : "H2",
+          headingLevel: secMatch[2].toUpperCase(),
           id: "",
-          budget: "", 
+          depth: "", 
           brief: "", 
           visualPattern: "",
           images: "",
@@ -978,8 +937,8 @@ function buildStage2BPart3B(d) {
         var idMatch = line.match(/id="?([^"\s]+)"?/i) || line.match(/id:\s*([^\s]+)/i);
         if (idMatch) current.id = idMatch[1].trim();
         
-        var budgetMatch = line.match(/Word Budget:\s*(\d+)/i) || line.match(/(\d+)\s*words?/i);
-        if (budgetMatch) current.budget = budgetMatch[1];
+        var depthMatch = line.match(/^Depth:\s*(Light|Standard|Deep)/i);
+        if (depthMatch) current.depth = depthMatch[1];
         
         var briefMatch = line.match(/Content Brief:\s*(.+)/i);
         if (briefMatch) current.brief = briefMatch[1].trim();
@@ -1004,6 +963,27 @@ function buildStage2BPart3B(d) {
       }
     });
     if (current) sections.push(current);
+
+    // Fail closed if the governed W1.5C/W1.5D plan is incomplete.
+    var seenSectionIds = {};
+    var handoffProblems = [];
+    sections.forEach(function(sec, idx) {
+      var expectedId = "section-" + (idx + 1);
+      var id = String(sec.id || expectedId).trim();
+      if (sec.number !== idx + 1) handoffProblems.push("section numbering gap or duplicate at " + sec.number);
+      if (id !== expectedId) handoffProblems.push("incorrect section id " + id + ", expected " + expectedId);
+      if (seenSectionIds[id]) handoffProblems.push("duplicate section id " + id);
+      seenSectionIds[id] = true;
+      if (!sec.title || !/^H[23]$/i.test(sec.headingLevel)) {
+        handoffProblems.push("invalid heading in section " + (idx + 1));
+      }
+      if (!sec.brief) handoffProblems.push("missing content brief in section " + (idx + 1));
+      if (!sec.tsmRequirement) handoffProblems.push("missing governance role in section " + (idx + 1));
+      if (!sec.depth) handoffProblems.push("missing NEW matrix depth in section " + (idx + 1));
+    });
+    if (handoffProblems.length) {
+      throw new Error("W2B section plan handoff validation failed: " + handoffProblems.join("; "));
+    }
 
     // Merge optimization data from Column CY JSON into sections
     if (optimizationData && optimizationData.sections) {
@@ -1044,20 +1024,20 @@ function buildStage2BPart3B(d) {
       
       sections.forEach(function(s, i) {
         var tsmReq = String(s.tsmRequirement || "").toLowerCase();
-        var wordBudgetNum = parseInt(s.budget) || 0;
+        // Legacy numerical section budgets are intentionally ignored.
         var processTerms = /honing|polishing|sealing|stripping|re-grouting|recolouring|burnishing/;
-        var isProcess = processTerms.test(tsmReq) && wordBudgetNum > 180;
+        var isProcess = processTerms.test(tsmReq);
         
         sectionBlock += "SECTION " + (i + 1) + ":\n";
         sectionBlock += "  HEADING TAG: <" + (s.headingLevel || "h2").toLowerCase() + "> (use this exact tag level — not h3, not h1)\n";
         sectionBlock += "  H2 (COPY EXACTLY — DO NOT CHANGE): " + s.title + "\n";
         sectionBlock += "  id: \"" + (s.id || "section-" + (i+1)) + "\"\n";
         
-        if (s.budget) {
-          const minBudget = s.budget;
-          const maxBudget = Math.round(s.budget * 1.5);
-          sectionBlock += "  WORD BUDGET: " + minBudget + "–" + maxBudget + " words. Stay within range.\n";
-        }
+        sectionBlock += "  GOVERNED DEPTH: " + s.depth + ". " +
+          (s.depth.toLowerCase() === 'light' ? 'Explain concisely.' :
+           s.depth.toLowerCase() === 'deep' ? 'Provide full evidence-supported explanation where relevant.' :
+           'Give practical explanation with sufficient supporting detail.') +
+          " No numerical word limits; protect original project evidence.\n";
         
         if (s.brief) {
           sectionBlock += "  CONTENT BRIEF: " + s.brief + "\n";
@@ -1072,7 +1052,7 @@ function buildStage2BPart3B(d) {
                           "  Technical mechanism explanation belongs in Section 2.\n" +
                           "  Professional judgement and process rationale belongs in Section 3.\n" +
                           "  A Section 1 that front-loads all technical authority is a governance failure.\n" +
-                          "  Write Section 1 to the word budget only — do not expand beyond it.\n";
+                          "  Write Section 1 to the depth needed for its documented purpose; preserve relevant evidence.\n";
         }
         
         if (s.visualPattern && s.visualPattern !== "None") {
@@ -1127,16 +1107,17 @@ function buildStage2BPart3B(d) {
         }
         
         if (s.internalLink && s.internalLink !== "None") {
+        var approvedUrls = String(s.internalLink).match(/https?:\/\/[^\s;,<>]+/g) || [];
+        sectionBlock += "  W1.5D-GOVERNED INTERNAL LINKS — HARD LOCK:\n";
+        approvedUrls.forEach(function(url) {
+          sectionBlock += "  Insert ONE contextual <a> anchor in THIS section with exact href: " + url + "\n";
+        });
         sectionBlock +=
-          "  INTERNAL LINK — HARD LOCK:\n" +
-          "  You MUST include this exact governed URL in this section:\n" +
-          "  " + s.internalLink + "\n" +
-          "  Use it as the href value of a normal contextual <a> link inside a paragraph.\n" +
-          "  Copy the URL EXACTLY — do not shorten it, alter it, replace it, or omit it.\n" +
-          "  A missing governed internal URL is a CRITICAL AUDIT FAILURE.\n";
+          "  Each URL above is a SEPARATE approved link (hub navigation may have several).\n" +
+          "  Never combine URLs into one href and never invent an extra destination.\n";
       }
-        
-        if (s.videos && s.videos !== "None") {
+
+              if (s.videos && s.videos !== "None") {
           sectionBlock += "  VIDEO (CRITICAL): You MUST embed this video in this section.\n" +
                           "  Exact iframe src: " + s.videos + "\n" +
                           "  Use this EXACT format:\n" +
@@ -1149,7 +1130,7 @@ function buildStage2BPart3B(d) {
         }
         
         if (isProcess) {
-          sectionBlock += "  PROCESS SECTION: Minimum 3 paragraphs before any <figure>. Para 1: symptom. Para 2: mechanism. Para 3: outcome.\n";
+          sectionBlock += "  PROCESS SECTION: Follow the approved content brief and documented work sequence. Explain why steps matter where relevant; do not invent steps or impose paragraph quotas.\n";
         }
         
         sectionBlock += "\n";
@@ -2333,8 +2314,8 @@ function buildCompetitorVocabBlock(vocabTerms, wordCount) {
   if (wordCount) {
     block += "COMPETITOR AVERAGE WORD COUNT: " + wordCount + " words\n";
     block += "Competitor average: " + wordCount + " words.\n";
-    block += "RULE: The Tier Structural Coverage Matrix word budgets per section are the minimum floor — never go below them.\n";
-    block += "The competitor average is a ceiling guide only — write toward it where content depth justifies it.\n";
+    block += "Competitor word counts are context only, never a floor, target or ceiling.\n";
+    block += "Preserve relevant original evidence and answer the homeowner's question fully without padding.\n";
     block += "Do NOT pad sections to reach this number. Do NOT cut governed content to stay below it.\n\n";
   }
 

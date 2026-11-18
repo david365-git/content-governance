@@ -294,7 +294,7 @@ ${siloMap}
 
 --- INTERNAL LINKING DATA ---
 1. Use the full URL from the Silo Map for all href values — no placeholders.
-2. Integrate 5-8 relevant links from the Silo Map naturally.
+2. Preserve relevant original Case Study links first; retain mandatory approved section-plan links. Add Silo Map links only when useful and permitted by the approved plan. Do not impose a minimum or maximum link count.
 3. Anchor text MUST match the intent of the target Role.
 
 --- UK LOCALISATION DATA ---
@@ -302,9 +302,8 @@ ${siloMap}
 2. ${ukLocalisation}
 
 --- SECTION CONTENT GOVERNANCE ---
-1. Primary Entity Focus: 80% of the word count must serve the PRIMARY ENTITY: ${primaryEntity}.
-2. Peripheral Summarisation: Sections that do not strengthen the Primary Entity are limited to
-   maximum 300 words. Summarise principles and use the full URL from the Silo Map to link to the designated authority page.
+1. Keep the article centred on the PRIMARY ENTITY: ${primaryEntity}, its relevant relationships and the reader's purpose without a percentage quota.
+2. Discuss adjacent subjects only where useful; link to a relevant authority page when appropriate, without a word-count cap.
 
 --- ORIGINAL HTML ---
 ${originalHTML}
@@ -335,12 +334,10 @@ Your entire response must be exactly: "Stage 1B structural rules received."
 Nothing else.
 
 --- RULE 1: H2 SUBHEADINGS (Hard Lock) ---
-Every H2 must name the primary entity or mechanism explicitly.
-Framing constructions that open with "Where…", "When…", "How to…" without the material
-or process name present are prohibited. The stone type, defect name, or intervention
-method must appear in the heading itself.
-❌ WRONG: "Where DIY Filling Has Limits"
-✅ CORRECT: "Cementitious Grout: Appropriate Use Cases and Limits"
+Every H2 must accurately communicate its section's subject in natural UK English.
+Name the material, condition or method when it improves clarity; do not force
+the primary entity into every heading or ban natural question headings.
+Choose specificity and reader usefulness over a mechanical naming pattern.
 
 --- RULE 2: H2 AND ID MAPPING (Hard Lock) ---
 Every section id value, H2 heading text, and section content subject must all describe
@@ -401,38 +398,12 @@ Your entire response must be exactly: "Stage 1C paragraph rules received."
 Nothing else.
 
 --- RULE 5: PARAGRAPH ARCHITECTURE (Hard Lock) ---
-Generate each paragraph by writing the topic sentence first. The semantic payload —
-the named entity or mechanism being discussed — must appear in the first clause of the
-first sentence. Each paragraph's opening sentence must be able to stand alone as a
-complete, indexable statement of the point that follows.
-
-ACTIVE VOICE REQUIREMENT (Hard Lock):
-The subject of each sentence must perform the action, not receive it. Do not use passive
-constructions ("was needed", "was applied", "was removed", "is treated", "was chosen").
-Rewrite passive sentences so a named or implied active agent performs the verb.
-❌ WRONG: "Controlled alkaline cleaning was needed because residue had built up."
-✅ CORRECT: "Technicians applied controlled alkaline cleaning because residue had built up."
-❌ WRONG: "The old sealer was stripped using a solvent-based remover."
-✅ CORRECT: "A solvent-based remover stripped the old sealer."
-This rule applies within the third-person voice already required by the Article Type
-Control Lock — it does not authorise first-person "we" language.
-
-Prohibited opening constructions:
-"In…", "For…", "If…", "When…", "There are…", "It is…", "One of…", "Many…", "This is…"
-
-If the topic sentence opens with any prohibited construction — discard it and rewrite
-before continuing to the supporting sentences.
-
-FRAMING VERB PROHIBITION: The first verb must state what the entity does, causes,
-prevents, or produces — not introduce it. Prohibited first verbs:
-explains, explains why, are explained, describes, refers to, presents, discusses,
-covers, addresses, outlines, details, shows, illustrates, highlights, demonstrates,
-demonstrate, appear in, appear across, can be seen in, documents, reveals.
-
-❌ WRONG: "Travertine floor behaviour explains why this defect appears frequently."
-✅ CORRECT: "Travertine's natural cavity structure spreads residue from tile pits into grout lines."
-❌ WRONG: "Domestic steam cleaning presents additional risks for travertine grout."
-✅ CORRECT: "Domestic steam cleaning forces liquified soil deeper into grout pores because it heats without extracting."
+Write paragraphs with a clear purpose and natural progression. Name the relevant
+material, condition or treatment when it improves understanding, not according to
+a fixed first-clause formula. Prefer active voice when clearer, but use natural
+passive voice when the treatment or result matters more than the actor.
+Vary sentence openings. Preserve documented professional voice and article-type
+requirements. Avoid repetitive meta-commentary and unsupported technical claims.
 
 INTERNAL LINK SIGNPOSTING PROHIBITION:
 Passive signposting constructions are prohibited as paragraph openers:
@@ -621,7 +592,7 @@ Section 1 must NOT preview, name, or rule out any intervention method, technique
 Prohibited in Section 1: any sentence stating what will NOT be done (e.g. "this was not a job for flattening, grinding or changing the surface"), any sentence naming the chosen remedy category, any sentence explaining why a technique is appropriate.
 That reasoning belongs in Section 2 (Problem & Intervention), where the technique choice and its justification are documented.
 SELF-CHECK BEFORE OUTPUT: Before finalising Section 1, scan every sentence for words describing what was or was not done to correct the floor (flatten, grind, strip, hone, seal, apply, remove, treat). Any such sentence must be deleted from Section 1 or moved to Section 2.
-WORD COUNT SELF-CHECK: Before finalising Section 1, count the total words in Section 1 including all H3 sub-blocks but excluding any commercial product table. If the count exceeds the WORD BUDGET maximum specified in the approved section plan, cut content — do not carry it forward as extra length. Prioritise cutting supporting detail over cutting the core problem description.
+SECTION 1 COMPLETENESS CHECK: Cover the documented entry condition and homeowner problem clearly. Avoid repetition, but do not remove original project evidence to meet a word limit; the NEW matrix has no numeric section budgets.
 
 --- RULE 14: NAMED DEFECT COMPLETION (Hard Lock) ---
 Every technical defect named in the article must be explained to completion.
@@ -803,7 +774,7 @@ function saveW1AOutput() {
   var originalHTML = "";
   for (var i = 1; i < exportData.length; i++) {
     if (String(exportData[i][idIndex]) === String(postID)) {
-      originalHTML = cleanHtmlForLLM(String(exportData[i][htmlIndex] || ""));
+      originalHTML = cleanHtmlForLLM(normaliseOriginalHtmlInternalUrls(String(exportData[i][htmlIndex] || "")));
       break;
     }
   }
@@ -855,12 +826,11 @@ function saveW1AOutput() {
     "1. Use British English exclusively (e.g., Specialist, Metres, Taps, Splashback).\n" +
     "2. " + ukLocal + "\n\n" +
     "--- SECTION CONTENT GOVERNANCE ---\n" +
-    "1. Primary Entity Focus: 80% of the word count must serve the PRIMARY ENTITY: " + primaryEntity + ".\n" +
-    "2. Peripheral Summarisation: Sections that do not strengthen the Primary Entity are limited to\n" +
-    "   maximum 300 words. Summarise principles and use the full URL from the Silo Map to link to the designated authority page.\n\n" +
+    "1. Primary Entity Focus: Keep the article centred on the PRIMARY ENTITY: " + primaryEntity + ", its relevant relationships and reader intent; do not impose a word-percentage quota.\n" +
+    "2. Peripheral Summarisation: Explain adjacent topics only when they help the reader. Avoid unnecessary digressions; link to the relevant authority page when useful, without a fixed word limit.\n\n" +
     "--- INTERNAL LINKING DATA ---\n" +
     "1. Use the full URL from the Silo Map for all href values — no placeholders.\n" +
-    "2. Integrate 5-8 relevant links from the Silo Map naturally.\n" +
+    "2. Preserve relevant original Case Study links first; retain mandatory approved section-plan links. Add Silo Map links only when useful and permitted by the approved plan. Do not impose a minimum or maximum link count.\n" +
     "3. Anchor text MUST match the intent of the target Role.";
 
   // Column FA (157) — Authority Brief

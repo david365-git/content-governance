@@ -28,6 +28,7 @@ function buildW8EAnalysisPrompt() {
   const schema = getVal(colSchema);
   const pst    = getVal(colPst);
   const serpNotes = getVal(colSerp);
+  const approvedLinkPlan = String(getVal('CX') || '').trim();
 
   if (!html) {
     return { success: false, message: "ERROR: New HTML (CT) is empty for this row." };
@@ -50,6 +51,18 @@ ${schema}
 Article HTML:
 ${html}
 
+APPROVED INTERNAL LINK PLAN (COLUMN CX — SOURCE OF TRUTH):
+${approvedLinkPlan || 'No approved CX link plan available. Do not propose new internal destinations.'}
+
+MANDATORY LINK GOVERNANCE:
+- CX owns the approved internal-link destination AND section assignment. Never replace a CX URL with a similar article, inferred URL or a different project.
+- Assess internal links by their actual section IDs (section-1, section-2, etc.) against CX SECTION N Internal link entries. Contact link uses the CX Contact link instruction.
+- A missing CX-approved link in its assigned section is a missing-link finding; quote that exact URL and specify that exact section.
+- A plain-text reference to another article does NOT justify a new link if CX assigns no destination to that section. Do not propose a duplicate link in a second section merely to link every mention.
+- If wording names a different destination from the approved CX URL (e.g. Victorian vs Edwardian), do NOT relabel or substitute the destination. Flag the wording as NEEDS AUTHOR INPUT when its intended referent is uncertain; otherwise suggest a text-only correction without changing the CX link plan.
+- Any AUTO-FIXABLE link recommendation must use only the exact CX-approved URL in the exact CX-approved section, once. Never infer a URL from an article name.
+- If a link already appears once in its assigned section, treat it as satisfied; no extra anchor is required elsewhere.
+
 Assess against these sections. For every point, give a PASS/FAIL/PARTIAL and one sentence of concrete evidence quoted or paraphrased from the actual article — not a generic statement. If you cannot find evidence, say "not present" rather than inferring.
 
 1. GOOGLE AUTHORITY SIGNALS
@@ -61,7 +74,7 @@ Assess against these sections. For every point, give a PASS/FAIL/PARTIAL and one
 2. SILO RECOVERY CHECK
 - Silo Identity Signal: would a reader know which material silo this belongs to from the first 100 words?
 - Internal Link Architecture: links to a silo hub or sibling articles (name them if present)?
-- Missing Link References: identify any sentence that clearly refers readers to another guide, comparison, diagnosis or service but is written as plain text with no <a href> link. Treat this as PARTIAL and include an AUTO-FIXABLE action where the correct governed destination can be identified from the article or supplied context.
+- Missing Link References: identify any sentence that clearly refers readers to another guide, comparison, diagnosis or service but is written as plain text with no <a href> link. Treat this as PARTIAL only when CX assigns an approved destination to that exact section and it is missing there. Do not suggest another link for an unlinked mention outside its CX-assigned section.
 - Link Intent Match: check whether each internal link destination matches the purpose and audience of the sentence containing it. Flag a highly local service-page link used inside a broad or national informational article where that destination creates an obvious intent mismatch.
 - Locality Mismatch: do not assume a local service link is wrong merely because it is local. Flag it only where the article itself is broader in scope and a more appropriate governed hub, sibling guide or general service destination is available.
 - PST/Scope Alignment: does the body content match the stated Primary Search Term and scope?
@@ -77,8 +90,11 @@ Assess against these sections. For every point, give a PASS/FAIL/PARTIAL and one
 - Immediate Value: core answer without excessive scrolling?
 - Actionable Takeaways: clear and specific to this material/defect?
 
+MEDIA EVIDENCE CONSTRAINT:
+Image/video captions and alt text must describe visible content or a stage explicitly documented by the original project. Do not recommend or automatically add claims that media proves unseen sealing efficacy, moisture tests, extraction performance or customer reactions. Keep project media URLs and identities stable. When media visibility is unknown, do not infer content from surrounding SEO prose.
+
 5. FINAL ACTION LIST
-Every PARTIAL or FAIL verdict from sections 1-4 above MUST have a corresponding entry here — do not leave any PARTIAL or FAIL unaddressed. List the specific text edits, link additions, or heading changes needed, each tied to which section flagged it. For any item that requires adding new content (not just editing existing text), you must also state: (a) the exact location in the article where it should be inserted (e.g. "after the second paragraph", "immediately below the H2 'Common Causes'"), and (b) example draft text the author can adapt, written in the article's own voice and specific to the material and defect discussed — not a generic placeholder.
+A genuine FAIL must receive a specific required action. For PARTIAL findings, recommend a change only if it materially improves accuracy, homeowner understanding, search intent or governance. Minor editorial improvements may be noted as [OPTIONAL], but must not trigger automatic rewriting. Do not manufacture fixes merely to populate the action list. List the specific text edits, link additions, or heading changes needed, each tied to which section flagged it. For any item that requires adding new content (not just editing existing text), you must also state: (a) the exact location in the article where it should be inserted (e.g. "after the second paragraph", "immediately below the H2 'Common Causes'"), and (b) example draft text the author can adapt, written in the article's own voice and specific to the material and defect discussed — not a generic placeholder.
 
 Tag every item as either AUTO-FIXABLE or NEEDS AUTHOR INPUT, using this test: if the fix is a self-contained text edit, rewording, or addition that does not depend on facts only the author knows (e.g. title tag wording, meta description, snippet block, keyphrase punctuation, softening an absolute claim), tag it AUTO-FIXABLE. If the fix requires a specific fact, date, or first-hand detail only the author can supply (e.g. a real first-person observation, a genuine review date, a specific project detail), tag it NEEDS AUTHOR INPUT — and in these cases the example draft text is a starting point for the author to correct, not text to be applied as-is.
 
@@ -97,6 +113,7 @@ function buildW8EAutoFixPrompt() {
 
   const analysis = sh.getRange('FZ' + row).getValue();
   const html     = sh.getRange('CT' + row).getValue();
+  const approvedLinkPlan = String(sh.getRange('CX' + row).getValue() || '').trim();
 
   if (!analysis) {
     return { success: false, message: "ERROR: No W8E analysis saved yet (column FZ is empty). Run W8E Analysis first." };
@@ -119,7 +136,11 @@ function buildW8EAutoFixPrompt() {
 
     For each fix below, return ONLY the exact original fragment being replaced (OLD) and its exact replacement (NEW). Each OLD fragment must be copied verbatim from the article HTML below — exact characters, exact tags — so it can be located by an automated find-and-replace. Each OLD fragment must be unique within the article (include enough surrounding text to make it unique if needed).
 
-    Do not touch anything not listed in the fixes below.
+    Do not touch anything not listed in the fixes below.\n\n    INTERNAL LINK HARD LOCK: Column CX is the only authority for internal-link destinations and assigned sections. The exact approved plan is supplied below. Do not change, invent, duplicate, move, or replace internal-link destinations. An auto-fix involving a link may add only the exact CX-approved URL in the exact assigned section; skip any analysis recommendation that conflicts with CX, even when labelled AUTO-FIXABLE.\n\n    APPROVED CX LINK PLAN:\n    ${approvedLinkPlan || 'None — do not propose internal link changes.'}
+
+    MEDIA SAFETY LOCK: If a listed change affects img alt, figcaption, video iframe or video caption, preserve existing src/href/iframe URLs and all media element structure. Use only visible or explicitly documented content. Never make unseen treatment, test, protection, extraction or homeowner-reaction claims. If the required replacement cannot be supported by the given article and caption evidence, do not return that fix. A descriptive caption is acceptable; diagnosis is not mandatory.
+
+    PROJECT FACTS LOCK: Do not add job-specific actions, tests, observations or client statements beyond documented article facts or explicitly supplied author confirmations. Preserve real project steps and useful existing links. Avoid duplicating cross-section material warnings just to support search intent.
 
     Return ONLY a JSON array, no markdown fences, no preamble, in this exact format:
     [
@@ -214,13 +235,43 @@ function applyW8EAutoFix(rawJson) {
       return;
     }
 
+    if (fieldKey === 'html') {
+      // Keep AI-generated link substitutions within the CX-approved URL set.
+      var cxText = String(sh.getRange('CX' + row).getValue() || '');
+      var approved = (cxText.match(/^\s*(?:Internal link|Contact link):\s*\S+/gmi) || [])
+        .map(function(line) {
+          return line.replace(/^\s*(?:Internal link|Contact link):\s*/i, '').trim();
+        })
+        .filter(function(url) { return url && !/^None$/i.test(url); });
+      function localHrefs(fragment) {
+        return (String(fragment || '').match(/<a\b[^>]*href\s*=\s*["'][^"']+["']/gi) || [])
+          .map(function(tag) { return tag.match(/href\s*=\s*["']([^"']+)/i)[1]; })
+          .filter(function(url) {
+            return /^\//.test(url) || /^https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk\//i.test(url);
+          });
+      }
+      function linkKey(url) {
+        return String(url).trim().replace(/#.*$/, '').replace(/\?.*$/, '')
+          .replace(/\/+$/, '').replace(/^https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk/i, '');
+      }
+      var oldLinks = localHrefs(oldText).map(linkKey);
+      var addedLinks = localHrefs(newText).map(linkKey).filter(function(url) {
+        return oldLinks.indexOf(url) === -1;
+      });
+      var allowedLinks = approved.map(linkKey);
+      if (addedLinks.some(function(url) { return allowedLinks.indexOf(url) === -1; })) {
+        failed.push(label + ' — new internal URL is not approved in CX');
+        return;
+      }
+    }
+
     cache[col] = current.replace(oldText, newText);
     touchedCols[col] = true;
     applied.push(label + ' (' + fieldKey + ')');
   });
 
   Object.keys(touchedCols).forEach(function(col) {
-    sh.getRange(col + row).setValue(cache[col]);
+    sh.getRange(col + row).setValue(col === 'CT' ? bc_governLinksAtStage_(cache[col], sh, row) : cache[col]);
   });
 
   if (applied.length > 0 && typeof logPipelineResume === 'function') {

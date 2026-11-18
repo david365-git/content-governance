@@ -481,14 +481,8 @@ function buildSemanticFingerprintBlock(material) {
     block += "------------------------------------------------------------\n";
     block += "LSI ENTITY TRANSLATION RULE (Hard Lock — Semantic Fingerprint)\n";
     block += "------------------------------------------------------------\n";
-    block += "Each governed entity MUST be surrounded by its required semantic vocabulary.\n";
-    block += "Entity name appears 1-2x explicitly across the entire article.\n";
-    block += "All other references use semantic fingerprint vocabulary.\n\n";
-    block += "DISTRIBUTION PATTERN:\n";
-    block += "- Opening section: 2-3 fingerprint instances\n";
-    block += "- Main content: 3-5 fingerprint instances\n";
-    block += "- Conclusion: 2-3 fingerprint instances\n";
-    block += "- Target: 8-12 total fingerprint term instances per entity across article\n\n";
+    block += "Use governed entities and relevant attributes naturally where they help explain the article subject.\n";
+    block += "Describe accurate relationships without entity-frequency targets or forced synonyms.\n\n";
     block += "GOVERNED ENTITIES FOR THIS MATERIAL (" + material + "):\n\n";
 
     // Get Recovery Blueprint entities for priority ordering
@@ -519,7 +513,7 @@ function buildSemanticFingerprintBlock(material) {
       var tier = priorityEntities.indexOf(e) > -1 ? " [PRIORITY]" :
                  supportingEntities.indexOf(e) > -1 ? " [SUPPORTING]" : "";
       block += "ENTITY: " + e.name + tier + "\n";
-      block += "REQUIRED VOCABULARY: " + e.fingerprint + "\n\n";
+      block += "RELEVANT VOCABULARY (use where accurate): " + e.fingerprint + "\n\n";
     }
 
     block += "CRITICAL RULES:\n";
@@ -527,7 +521,7 @@ function buildSemanticFingerprintBlock(material) {
     block += "- Capitalize only if proper noun or sentence start\n";
     block += "- Use fingerprint vocabulary naturally — no keyword stuffing\n";
     block += "- Fingerprint terms should appear throughout the article, not clustered in one section\n";
-    block += "- Every governed entity in the Recovery Blueprint MUST use its fingerprint vocabulary\n";
+    block += "- Use supporting vocabulary when accurate and relevant to the article's purpose.\n";
     block += "- COMMA LIST PROHIBITION (Hard Lock): Never place fingerprint vocabulary terms in a\n";
     block += "  comma-separated list with no verb between items. A sentence reading\n";
     block += "  'term1, term2, term3, term4, term5 help explain...' is a CRITICAL FAILURE.\n";
@@ -806,18 +800,28 @@ function bc_getRelevantTechnicalMatrixExcerpt_(material, context, maxChars, arti
       parts.push({column:"MNOPQR"[i],paragraph,score:overlap + (preferred.includes(i) ? 3 : 0),index:j});
     });
   }
+  // Mandatory restoration constraints must not compete with relevance scoring or its character budget.
+  // Match firm, material-specific instructions; retain the full paragraph for context and qualifications.
+  const hardRule = /\b(?:must(?:\s+not)?|never|do\s+not|should\s+always|cannot|can't|not\s+(?:offered|a\s+service|recommended|suitable|permitted)|only\s+(?:as\s+a\s+last\s+resort|after\s+professional\s+cleaning)|required\s+before)\b/i;
+  const materialRule = /\b(?:grout|sealer|seal(?:ing)?|acid|alkaline|bleach|damp|moisture|DPM|coating|glaz(?:e|ed)|polish|hone|grind|scratch|lippage|stone|tile|silicone|repair|restore|efflorescence|abrasiv|slip|surface|dust)\b/i;
+  const mandatory = parts.filter(p => hardRule.test(p.paragraph) && materialRule.test(p.paragraph));
+  const mandatoryKeys = new Set(mandatory.map(p => p.column + "\\u0000" + p.index));
   parts.sort((a,b) => b.score-a.score || a.column.localeCompare(b.column) || a.index-b.index);
   const chosen = [];
   let length = 0;
   for (const part of parts) {
+    if (mandatoryKeys.has(part.column + "\\u0000" + part.index)) continue; // always supplied separately
     if (part.score < 2 && chosen.length) continue;
     if (length + part.paragraph.length + 2 > budget) continue;
     chosen.push(part);
     length += part.paragraph.length + 2;
   }
   chosen.sort((a,b) => a.column.localeCompare(b.column) || a.index-b.index);
+  mandatory.sort((a,b) => a.column.localeCompare(b.column) || a.index-b.index);
   return "LIVE APPROVED TECHNICAL REFERENCE — general knowledge only, never evidence of project actions:\n" +
     chosen.map(p => "[" + p.column + "] " + p.paragraph).join("\n\n") +
+    "\n\n[M:R — REQUIRED MATERIAL RULES; NOT SUBJECT TO RELEVANCE BUDGET]\n" +
+    mandatory.map(p => "[" + p.column + "] " + p.paragraph).join("\n\n") +
     "\n\n[S — REQUIRED TECHNICAL SAFEGUARDS]\n" + safeguards +
     "\nEND LIVE APPROVED TECHNICAL REFERENCE";
 }
@@ -2127,143 +2131,80 @@ function openBuildContentEnginePromptFromActiveRowChatGPTSidebar() {
 /**
  * Get TSM requirements for a specific tier and article type
  */
+/**
+ * NEW matrix adapter. The editorial matrix is keyed by Article Type rather than Tier.
+ * No numeric word allocation is returned: old callers must not treat zero as a quota.
+ */
 function getTierStructuralRequirements(material, tierLabel, articleType) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const tsmSheet = ss.getSheetByName("Tier Structural Coverage Matrix");
-  if (!tsmSheet) return [];
-
-  const data = tsmSheet.getDataRange().getValues();
-  const headers = data[0];
-
-  const tierCol = headers.indexOf("Tier");
-  const labelCol = headers.indexOf("Label");
-  const reqCol = headers.indexOf("Structural Requirement");
-  const orderCol = headers.indexOf("Order");
-  const wordCountCol = headers.indexOf("Word Count");
-  const permittedCol = headers.indexOf("Permitted Article Types");
-
-  const articleTypeLower = articleType
-    ? String(articleType).trim().toLowerCase()
-    : null;
-
-  let requirements = [];
-
-  for (let i = 1; i < data.length; i++) {
-    const rowTier = String(data[i][tierCol] || "").trim();
-
-    if (rowTier !== tierLabel) continue;
-
-    if (
-      rowTier === "GLOBAL RULE" ||
-      rowTier === "GOVERNANCE RULE"
-    ) {
-      continue;
-    }
-
-    if (articleTypeLower && permittedCol > -1) {
-      const permittedRaw =
-        String(data[i][permittedCol] || "").trim();
-
-      const permittedList = permittedRaw
-        .split(",")
-        .map(function(s) {
-          return s.trim().toLowerCase();
-        });
-
-      if (
-        permittedList.indexOf(articleTypeLower) === -1
-      ) {
-        continue;
-      }
-    }
-
-    const order = data[i][orderCol];
-    const name = String(data[i][reqCol] || "").trim();
-    const wc = data[i][wordCountCol];
-
-    if (!order || isNaN(Number(order))) continue;
-
-    requirements.push({
-      order: Number(order),
-      name: name,
-      wordCount:
-        wc && !isNaN(Number(wc))
-          ? Number(wc)
-          : 120
-    });
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Tier Structural Coverage Matrix NEW");
+  if (!sheet || !articleType) return [];
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length < 2) return [];
+  const heads = rows[0].map(h => String(h).trim());
+  const col = key => heads.indexOf(key);
+  const idxType = col("Article Type"), idxOrder = col("Order");
+  const idxName = col("Required content function"), idxPriority = col("Priority");
+  const idxWhen = col("When applicable"), idxDepth = col("Depth");
+  const idxGuidance = col("Writing guidance"), idxEvidence = col("Evidence to protect");
+  const idxSafety = col("Technical and factual safeguards");
+  const idxLinks = col("Linking / navigation");
+  if ([idxType,idxOrder,idxName,idxPriority,idxWhen,idxDepth,idxGuidance].some(n => n < 0)) {
+    throw new Error("NEW Tier Matrix schema is incomplete");
   }
-
-  requirements.sort(function(a, b) {
-    return a.order - b.order;
-  });
-
-  return requirements;
+  const target = String(articleType).trim().toLowerCase();
+  return rows.slice(1).filter(row =>
+    String(row[idxType] || "").trim().toLowerCase() === target &&
+    Number.isFinite(Number(row[idxOrder])) && Number(row[idxOrder]) > 0
+  ).map(row => ({
+    order: Number(row[idxOrder]),
+    name: String(row[idxName] || "").trim(),
+    priority: String(row[idxPriority] || "").trim(),
+    whenApplicable: String(row[idxWhen] || "").trim(),
+    depth: String(row[idxDepth] || "").trim(),
+    guidance: String(row[idxGuidance] || "").trim(),
+    evidence: idxEvidence >= 0 ? String(row[idxEvidence] || "").trim() : "",
+    safeguards: idxSafety >= 0 ? String(row[idxSafety] || "").trim() : "",
+    linking: idxLinks >= 0 ? String(row[idxLinks] || "").trim() : "",
+    wordCount: 0
+  })).sort((x,y) => x.order - y.order);
 }
 
 /**
- * Get total word count for a tier by summing TSM requirement word counts
+ * Global NEW matrix safeguards are instructions, not numbered article sections.
+ * Keep them separate from getTierStructuralRequirements() so Order mapping
+ * continues to represent only article-type coverage.
  */
+function ce_getNewTierGlobalGovernanceBlock_() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet()
+    .getSheetByName('Tier Structural Coverage Matrix NEW');
+  if (!sheet) throw new Error('NEW Tier Structural Coverage Matrix sheet missing');
+  var rows = sheet.getDataRange().getValues();
+  var heads = rows[0].map(function(h){return String(h || '').trim();});
+  function idx(name) { return heads.indexOf(name); }
+  var type = idx('Article Type'), label = idx('Required content function');
+  var guidance = idx('Writing guidance'), evidence = idx('Evidence to protect');
+  var safety = idx('Technical and factual safeguards');
+  if (type < 0 || label < 0) throw new Error('NEW matrix global governance columns missing');
+  var out = rows.slice(1).filter(function(r){
+    return String(r[type] || '').trim().toUpperCase() === 'GLOBAL GOVERNANCE';
+  }).map(function(r){
+    return '- '+String(r[label] || '').trim()
+      +(guidance >= 0 && r[guidance] ? ': '+r[guidance] : '')
+      +(evidence >= 0 && r[evidence] ? ' | Evidence: '+r[evidence] : '')
+      +(safety >= 0 && r[safety] ? ' | Safety: '+r[safety] : '');
+  });
+  if (!out.length) throw new Error('NEW matrix GLOBAL GOVERNANCE rules are absent');
+  return 'NEW MATRIX GLOBAL GOVERNANCE (applies to every article):\n'+out.join('\n');
+}
+
+/** Old callers receive no numeric target; absence must not be treated as 900 words. */
 function getTierWordCount(tierLabel, articleType) {
-  const requirements = getTierStructuralRequirements(null, tierLabel, articleType);
-  if (requirements.length === 0) {
-    return 900;
-  }
-  let total = 0;
-  requirements.forEach(function(req) {
-    total += req.wordCount;
-  });
-  return total > 0 ? total : 900;
+  return null;
 }
 
-/**
- * SHARED SOURCE OF TRUTH — total article word count ceiling by Article Type.
- * Sums the Tier Structural Coverage Matrix's Word Count column for every
- * row whose Permitted Article Types includes this Article Type, then
- * applies the standard ±15% band.
- * Used by both W2B generation (buildTotalWordCountTargetBlock) and the
- * W1.5F semantic alignment fix prompt — keep this the ONLY place that
- * defines the ceiling calculation so the two never drift out of sync.
- * Returns null if no matching Tier Matrix rows are found.
- */
+/** NEW matrix prohibits fixed article-length ceilings. */
 function getTierWordCountCeiling(articleType) {
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var matrixSheet = ss.getSheetByName("Tier Structural Coverage Matrix");
-    if (!matrixSheet) return null;
-
-    var data = matrixSheet.getDataRange().getValues();
-    if (data.length < 2) return null;
-    var headers = data[0].map(function(h) { return String(h).trim(); });
-    var permittedIdx = headers.indexOf("Permitted Article Types");
-    var wordCountIdx = headers.indexOf("Word Count");
-    if (permittedIdx === -1 || wordCountIdx === -1) return null;
-
-    var atLower = String(articleType || "").trim().toLowerCase();
-    var total = 0;
-    var matchedRows = 0;
-
-    for (var i = 1; i < data.length; i++) {
-      var permitted = String(data[i][permittedIdx] || "");
-      var permittedList = permitted.split(",").map(function(s) { return s.trim().toLowerCase(); });
-      if (permittedList.indexOf(atLower) > -1) {
-        var wc = parseInt(data[i][wordCountIdx], 10);
-        if (!isNaN(wc)) {
-          total += wc;
-          matchedRows++;
-        }
-      }
-    }
-
-    if (total === 0 || matchedRows === 0) return null;
-
-    return {
-      total: total,
-      minTarget: Math.round(total * 0.85),
-      maxTarget: Math.round(total * 1.15)
-    };
-  } catch(e) {
-    return null;
-  }
+  return null;
 }
 
 /**
@@ -2997,7 +2938,8 @@ var filenameTopic =
       prompt:      p,
       filename:    filename,
       altText:     altText,
-      middleTitle: _middleTitle
+      middleTitle: _middleTitle,
+      postId: String(d["Post ID"] || "").trim()
     };
 
   } catch(e) {
@@ -3005,39 +2947,106 @@ var filenameTopic =
   }
 }
 
-function saveFeaturedImageToSheet(url, filename, altText) {
+function saveFeaturedImageToSheet(url, filename, altText, postId) {
   try {
-    var ss    = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("posts");
-    var row   = sheet.getActiveRange().getRow();
-    if (row < 2) return { success: false, message: "Select a data row first." };
+    var id = String(postId == null ? "" : postId).trim();
+    var imageUrl = String(url || "").trim();
 
-    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
-                       .map(function(h) { return String(h).trim(); });
-
-    var saved   = [];
-    var missing = [];
-
-    function writeCol(name, value) {
-      var idx = headers.indexOf(name);
-      if (idx === -1) { missing.push(name); return; }
-      var cell = sheet.getRange(row, idx + 1);
-      cell.setNumberFormat("@");
-      cell.setValue(value);
-      saved.push(name);
+    if (!id || !imageUrl) {
+      return {
+        success: false,
+        message: "Post ID and WordPress image URL are required."
+      };
     }
 
-    writeCol("Featured Image URL",      url);
-    writeCol("Featured Image Filename", filename);
-    writeCol("Featured Image Alt Text", altText);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("posts");
 
-    var message = "Saved " + saved.length + " field(s) to row " + row + ".";
-    if (missing.length > 0) message += " Columns not found — add to posts sheet: " + missing.join(", ");
+    if (!sheet) {
+      return { success: false, message: "posts sheet not found." };
+    }
 
-    return { success: saved.length > 0 || missing.length > 0, message: message };
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+      return { success: false, message: "No posts found." };
+    }
 
-  } catch(e) {
-    return { success: false, message: "saveFeaturedImageToSheet error: " + e.message };
+    var headers = sheet.getRange(
+      1, 1, 1, sheet.getLastColumn()
+    ).getValues()[0].map(function(h) {
+      return String(h).trim();
+    });
+
+    var required = [
+      "Post ID",
+      "Featured Image URL",
+      "Featured Image Filename",
+      "Featured Image Alt Text"
+    ];
+
+    var missing = required.filter(function(name) {
+      return headers.indexOf(name) === -1;
+    });
+
+    if (missing.length) {
+      return {
+        success: false,
+        message: "Missing columns: " + missing.join(", ")
+      };
+    }
+
+    var idCol = headers.indexOf("Post ID") + 1;
+    var ids = sheet.getRange(
+      2, idCol, lastRow - 1, 1
+    ).getDisplayValues();
+
+    var matches = [];
+
+    for (var i = 0; i < ids.length; i++) {
+      if (String(ids[i][0]).trim() === id) {
+        matches.push(i + 2);
+      }
+    }
+
+    if (matches.length !== 1) {
+      return {
+        success: false,
+        message: matches.length
+          ? "Duplicate Post ID: " + id
+          : "Post ID not found: " + id
+      };
+    }
+
+    var row = matches[0];
+
+    var fields = [
+      ["Featured Image URL", imageUrl],
+      ["Featured Image Filename", String(filename || "").trim()],
+      ["Featured Image Alt Text", String(altText || "").trim()]
+    ];
+
+    fields.forEach(function(field) {
+      var col = headers.indexOf(field[0]) + 1;
+      var cell = sheet.getRange(row, col);
+      cell.setNumberFormat("@");
+      cell.setValue(field[1]);
+    });
+
+    SpreadsheetApp.flush();
+
+    return {
+      success: true,
+      postId: id,
+      row: row,
+      message: "Saved 3 image fields for Post ID " +
+               id + " (row " + row + ")."
+    };
+
+  } catch (e) {
+    return {
+      success: false,
+      message: "Featured image save error: " + e.message
+    };
   }
 }
 function acBuildClassifyPrompt() {
@@ -3074,7 +3083,7 @@ function acBuildClassifyPrompt() {
   const headerRow = data[0];
 
   const universalCol = headerRow.indexOf('Universal');
-  const stoneCol = headerRow.indexOf(stoneType);
+  const stoneCol = headerRow.findIndex(function(h){ return String(h || '').trim().toLowerCase() === String(stoneType || '').trim().toLowerCase(); });
 
   // Group options by dropdown key
   const fields = {};
@@ -3115,13 +3124,14 @@ function acBuildClassifyPrompt() {
     'ac_story_direction'
   ];
 
-  let fieldIndex = 0;
-  fieldOrder.forEach(function(key) {
-    if (!fields[key]) return;
-    prompt += `FIELD ${fieldIndex}: ${fieldLabels[key]}\n`;
-    fields[key].forEach(function(opt) { prompt += `- ${opt}\n`; });
+  fieldOrder.forEach(function(key, fieldIndex) {
+    prompt += `FIELD ${fieldIndex}: ${fieldLabels[key] || key}\n`;
+    if (fields[key] && fields[key].length) {
+      fields[key].forEach(function(opt) { prompt += `- ${opt}\n`; });
+    } else {
+      prompt += '- [NO AVAILABLE OPTIONS — report gap; do not invent a selection]\n';
+    }
     prompt += `\n`;
-    fieldIndex++;
   });
 
   // Fetch article content from site-export sheet

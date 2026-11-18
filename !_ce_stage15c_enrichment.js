@@ -246,16 +246,17 @@ function buildStage15CPrompt() {
         "\n";
     }
   }
+  const originalEvidenceHtml = String(d['Article Type'] || '').trim() === 'Case Study' ? bc_caseEvidencePromptBlock_(row) : originalHtml;
   let prompt = `
 STAGE 1.5C — SECTION ENRICHMENT
 CASE STUDY SOURCE-FIRST EVIDENCE PASS — PERFORM BEFORE ANY ENRICHMENT:
 ARTICLE TYPE: ${String(d['Article Type'] || '')}
-ORIGINAL ARTICLE HTML — ONLY SOURCE OF PROJECT-SPECIFIC ACTIONS AND OBSERVATIONS:
-${originalHtml || "No original article HTML available."}
-END ORIGINAL ARTICLE HTML.
+STRUCTURED CASE STUDY EVIDENCE — ONLY SOURCE OF PROJECT-SPECIFIC ACTIONS AND OBSERVATIONS:
+${originalEvidenceHtml || "No original article HTML available."}
+END EVIDENCE REFERENCE.
 
 EVIDENCE EXTRACTION — SILENT FIRST PASS (DO NOT OUTPUT THE LEDGER):
-1. Read the original HTML first. Identify only explicit project-specific observations, client requests and motivations, contractor actions/tests, treatments, results and advice.
+1. Read the structured evidence record first. Identify only explicit project-specific observations, client requests and motivations, contractor actions/tests, treatments, results and advice.
 2. Create internally two separate groups: VERIFIED PROJECT FACTS supported by the original HTML, and GENERAL TECHNICAL KNOWLEDGE. Nothing may be promoted from the second group into the first.
 3. For EACH Stage 1.5A/1.5B section, identify which verified facts actually support its title. A section title, structural plan, technical matrix, entity, or common trade practice is NOT evidence.
 4. If a heading implies an inspection but the original records only a general condition assessment, describe that condition and the decision to proceed. Do not name any inspection methods or defects not explicitly recorded.
@@ -298,7 +299,7 @@ You must NOT change:
 - section order;
 - H2 wording;
 - TSM Requirement ownership;
-- Word Budget ownership;
+- Depth and source-evidence ownership;
 - HUB-INTRO status;
 - or the governed purpose of any section.
 Stage 1.5C enriches the approved structure. It does not redesign it.
@@ -324,7 +325,7 @@ Do not place a professional-only product image beside DIY avoidance advice in a 
 IMAGE CONTEXT RULE — HARD LOCK:
 Every image used in the eventual article must have substantive explanatory text before it.
 No two images should be planned consecutively without substantive text between them.
-If a section's word budget cannot support the assigned images, move the lowest-priority image to another genuinely relevant section.
+If images distract from the section's purpose, move the lowest-priority image to another relevant section.
 --- VIDEO PRESERVATION — HARD LOCK ---
 ORIGINAL VIDEO COUNT:
 ${videoCount}
@@ -366,12 +367,12 @@ Before assigning H3-Subheadings, count the entities planned for that section.
 If fewer than 3 distinct entities are being covered, H3-Subheadings is NOT eligible.
 Do not use H3s merely to make a short section look structured.
 Use a maximum of approximately 3-4 visual patterns across the entire article.
-Sections below roughly 200 words rarely need a visual pattern.
+Use a visual pattern only when it genuinely improves the explanation; do not use a word-count threshold.
 `;
   prompt += `
 --- ORIGINAL ARTICLE EVIDENCE — HARD LOCK ---
 
-For a Case Study, the original article HTML below is the factual evidence source for what actually happened on this project.
+For a Case Study, the ten extracted evidence categories are the factual source for what actually happened on this project.
 
 Do not introduce a product, defect, condition, treatment, cause or outcome merely because it appears in the Recovery Blueprint.
 
@@ -392,7 +393,7 @@ A Case Study entity may be used only when it is supported by:
 - the original article evidence below; or
 - the governed Stage 1.5A / Stage 1.5B structure.
 
-ORIGINAL ARTICLE HTML: Already provided at the very start of this prompt. Use that original source, not the technical reference or a section heading, to establish project-specific events.
+EXTRACTED PROJECT EVIDENCE: Already provided at the very start of this prompt. Use that structured evidence record, not the technical reference or a section heading, to establish project-specific events.
 
 --- ENTITY SELECTION ---
 
@@ -407,43 +408,10 @@ The following entities were flagged at W0 as missing from the page's current sea
 Where relevant to the governed section topic, prefer these gap entities over generic Recovery Blueprint entities.
 Do not force a gap entity into an unrelated section.
 ${entityGapAnalysis || "No W0 Entity Gap Analysis available for this row."}
---- INTERNAL LINK TO HUB — HARD LOCK ---
-Feeds Hub URL:
-${feedsHub || "none available — omit internal link"}
-Every article should contain one contextual internal link to its Feeds Hub when a Feeds Hub URL is available.
-
-The hub link is an enrichment requirement. It does NOT alter, replace or create a TSM Requirement.
-
-Preserve every section's Stage 1.5A TSM Requirement verbatim.
-
-Assign the hub link to the single most contextually appropriate governed section.
-
-That section's:
-
-Internal link:
-
-field must contain the exact Feeds Hub URL above.
-
-All other numbered sections must use:
-
-Internal link: None
-
-Never rename a section's TSM Requirement to "Internal Link to Hub" in order to assign the link.
---- SECTION LOAD BUDGET — HARD LOCK ---
-Before assigning enrichment elements to a section, calculate the approximate load:
-- Image assigned: 40 words
-- Visual pattern assigned other than None: 30 words
-- Each entity assigned: 15 words
-- Internal link assigned: 25 words
-Subtract this load from the section's maximum Word Budget.
-If fewer than 60 words remain, the section is overloaded.
-Reduce load in this order:
-1. Remove the visual pattern first.
-2. Reduce entities beyond the single most important one.
-3. Move an image to another genuinely relevant section if necessary.
-Never assign:
-image + visual pattern + 3 entities + internal link
-to a section whose maximum word budget is below 270 words.
+--- INTERNAL LINK OWNERSHIP ---
+All internal URLs and their placement are selected exclusively by W1.5D. W1.5C must leave every section as Internal link: None; do not preassign the hub or any other internal destination.
+--- ENRICHMENT RELEVANCE RULE ---
+Only assign images, links and visual patterns when they help the reader. Never remove documented evidence to satisfy a numerical limit.
 --- CONTENT BRIEF RULES ---
 Write 1-2 sentences describing what the section will cover.
 The brief must:
@@ -499,7 +467,7 @@ For every numbered section:
 1. Preserve the SECTION number exactly.
 2. Preserve the H2 wording exactly.
 3. Preserve the TSM Requirement assigned by Stage 1.5A.
-4. Preserve the Word Budget assigned by Stage 1.5A.
+4. Preserve the Depth guidance assigned by Stage 1.5A; do not impose a numerical word quota.
 5. Do not move one section's TSM Requirement to another section.
 6. Do not add a new numbered section.
 7. Do not remove a numbered section.
@@ -554,7 +522,7 @@ Then output EVERY numbered section.
 For each numbered section use exactly this structure:
 SECTION [N]: Heading H2/H3: [copy the Stage 1.5B section heading line verbatim, including its H2 or H3 level]
 TSM Requirement: [copy the Stage 1.5A TSM Requirement verbatim]
-Word Budget: [copy the Stage 1.5A Word Budget verbatim]
+Depth: [copy the Stage 1.5A Depth verbatim]
 Content Brief: [1-2 sentences]
 Visual Pattern: [Symptom-Anchor / Diagnostic-Sequence / Comparison-Paragraphs / Mechanism-Blockquote / H3-Subheadings / None]
 List eligible: [YES — procedural/diagnostic only / YES — named product steps preserved from original HTML / NO — prose required]
@@ -588,7 +556,7 @@ Before finalising, internally verify:
 6. Every original video is preserved.
 7. HUB-INTRO is preserved if present.
 8. The Feeds Hub link is assigned to exactly one contextually appropriate section without changing that section's Stage 1.5A TSM Requirement.
-9. No section has been overloaded beyond its available word budget.
+9. Enrichment elements are relevant and do not displace documented evidence.
 10. No enrichment choice changes the governed purpose of a section.
 Last line must be exactly:
 Stage 1.5C complete. Waiting for Stage 1.5D.
@@ -678,7 +646,7 @@ HARD RULES:
 2. Preserve all Stage 1.5A section numbers and order.
 3. Preserve every Stage 1.5B H2 character-for-character.
 4. Preserve every correct TSM Requirement.
-5. Preserve every correct Word Budget.
+5. Preserve section Depth guidance without a word quota.
 6. Do not rewrite Content Briefs merely for style or preference.
 7. Do not redistribute images, videos, entities, patterns or links unless the validation failure specifically requires it.
 8. Do not introduce new sections.
@@ -749,9 +717,9 @@ const expectedHeadingLevels = {};
 
 const expectedTsmRequirements = {};
 
-const expectedWordBudgets = {};
+const expectedDepths = {};
   const structureRegex =
-  /^SECTION\s+(\d+):\s*Order\s+\d+\s+—\s+(.+?)\s+—\s+(\d+[–-]\d+\s+words)/gmi;
+  /^SECTION\s+(\d+):\s*Order\s+\d+\s+—\s+(.+?)\s+—\s+(Required|Conditional)\s+—\s+(Light|Standard|Deep)\b[^\n]*/gmi;
   let structureMatch;
   while (
     (
@@ -771,10 +739,7 @@ const tsmRequirement =
     structureMatch[2] || ''
   ).trim();
 
-const wordBudget =
-  String(
-    structureMatch[3] || ''
-  ).trim();
+const sectionDepth = String(structureMatch[4] || '').trim(); // NEW matrix depth
 
 if (
   expectedSections.indexOf(
@@ -789,8 +754,8 @@ if (
 expectedTsmRequirements[number] =
   tsmRequirement;
 
-expectedWordBudgets[number] =
-  wordBudget;
+expectedDepths[number] =
+  sectionDepth;
 }
 
 expectedSections.sort(
@@ -836,6 +801,27 @@ expectedSections.sort(
       expectedHeadingLevels[number] =
         level;
     }
+  }
+  // Validate one-to-one section identity and heading levels before enrichment.
+  const expectedSet = {};
+  expectedSections.forEach(function(n) { expectedSet[n] = true; });
+  const unknownHeadings = Object.keys(expectedH2s).map(Number).filter(function(n) {
+    return !expectedSet[n];
+  });
+  if (unknownHeadings.length) {
+    return {success:false,message:'W1.5B produced headings for unknown SECTION '+unknownHeadings.join(', ')};
+  }
+  const sourceHeadingLevels = {};
+  String(structure15A).split(/\r?\n/).forEach(function(line) {
+    var match = line.match(/^SECTION\s+(\d+):.*?\s+[—-]\s+(H[23]):\s*/i);
+    if (match) sourceHeadingLevels[Number(match[1])] = match[2].toUpperCase();
+  });
+  const incorrectLevels = expectedSections.filter(function(n) {
+    return sourceHeadingLevels[n] && expectedHeadingLevels[n] &&
+      sourceHeadingLevels[n] !== expectedHeadingLevels[n];
+  });
+  if (incorrectLevels.length) {
+    return {success:false,message:'W1.5B changed governed H2/H3 level in SECTION '+incorrectLevels.join(', ')};
   }
   const missingH2s = [];
   expectedSections.forEach(
@@ -885,8 +871,8 @@ expectedSections.sort(
   expectedTsmRequirements:
     expectedTsmRequirements,
 
-  expectedWordBudgets:
-    expectedWordBudgets,
+  expectedDepths:
+    expectedDepths,
 
   expectsHubIntro:
     expectsHubIntro

@@ -1454,8 +1454,7 @@ function bc_runPreACPromptAutomated() {
       preAcAddGapToSheet(entry);
 
     if (addResult && addResult.success) {
-
-      gapsAdded++;
+      if (!addResult.skipped) gapsAdded++;
 
       added.push(
         String(entry.field || 'Unknown field') +
@@ -1577,40 +1576,16 @@ function bc_runACPromptAutomated(row) {
     var suggestedValue =
       String(saveResult.nudgeSuggestion || '').trim();
 
-    if (!axisToNudge) {
-      throw new Error(
-        'AC found a duplicate but supplied no axis to nudge.'
-      );
-    }
-
-    if (!suggestedValue) {
-      throw new Error(
-        'AC found a duplicate but supplied no suggested nudge value.'
-      );
-    }
-
-    // Same action as pressing the suggested option
-    // in the manual duplicate-warning panel.
-    nudgedValues[axisToNudge] = suggestedValue;
-
-    var nudgeResult =
-      saveClassificationWithNudge(nudgedValues);
-
-    if (
-      nudgeResult &&
-      nudgeResult.success === false
-    ) {
-      throw new Error(
-        nudgeResult.message ||
-        'AC suggested nudge could not be saved.'
-      );
-    }
-
+    // The classifier intentionally leaves duplicates unsaved for manual review.
+    // Automated mode must save the original truthful classification itself.
+    var acPostsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('posts');
+    var acHeaders = acPostsSheet.getRange(1, 1, 1, acPostsSheet.getLastColumn()).getValues()[0];
+    writeClassificationToSheet(acPostsSheet, row, acHeaders, nudgedValues);
+    // Never change a genuine classification solely to create artificial
+    // variety. Keep the original and report possible overlap for review.
     message =
-      'AC duplicate detected — automatic suggested nudge applied: ' +
-      axisToNudge +
-      ' → ' +
-      suggestedValue;
+      'AC possible classification overlap — original values preserved' +
+      (axisToNudge && suggestedValue ? '; optional review: ' + axisToNudge + ' → ' + suggestedValue : '; no alternative library option available');
 
   } else {
 
@@ -2027,7 +2002,7 @@ function bc_runStage15AAutomated() {
     2. Do not redesign parts of the structure that already passed.
     3. Preserve every passing audit decision unless changing it is strictly necessary to resolve a failed check.
     4. Preserve the article type, tier, material, primary entity and required structural intent.
-    5. Preserve valid section roles and word budgets wherever possible.
+    5. Preserve required coverage, applicable conditional sections, original project evidence and depth guidance without word quotas.
     6. Do not introduce new sections merely for stylistic variety.
     7. Every AUDIT CHECK must be internally re-evaluated before returning the corrected structure.
     8. Do not return any AUDIT CHECK as PASS unless the corrected structure actually satisfies it.
@@ -3159,6 +3134,26 @@ function bc_runStage15DAutomated() {
     throw new Error('Select a data row first.');
   }
 
+  // A short script lock makes the check-and-claim atomic across sidebars.
+  // Cache auto-expires after ten minutes if Apps Script terminates abruptly.
+  var gateKey = 'W15D_ACTIVE_' + ss.getId() + '_' + row;
+  var gateCache = CacheService.getScriptCache();
+  var gateLock = LockService.getScriptLock();
+  if (!gateLock.tryLock(10000)) {
+    return {success:false, cost:0,
+      message:'W1.5D is busy for this spreadsheet. No second API call was made.'};
+  }
+  try {
+    if (gateCache.get(gateKey)) {
+      return {success:false, cost:0,
+        message:'W1.5D is already running for row ' + row + '. Duplicate request blocked.'};
+    }
+    gateCache.put(gateKey, 'running', 600);
+  } finally {
+    gateLock.releaseLock();
+  }
+  try {
+
   // Clear stale W1.5D output before rebuilding.
   sheet.getRange(row, 102).clearContent();
 
@@ -3267,6 +3262,14 @@ function bc_runStage15DAutomated() {
     message:
       'W1.5D fallback used — governed W1.5C plan preserved and pipeline continued.'
   };
+  } finally {
+    // Release the gate on both success and failure.
+    var releaseLock = LockService.getScriptLock();
+    if (releaseLock.tryLock(10000)) {
+      try { gateCache.remove(gateKey); }
+      finally { releaseLock.releaseLock(); }
+    }
+  }
 }
 
 function bc_addToApiCostAndTime(cost, seconds) {
@@ -4562,9 +4565,9 @@ function bc_runCoherenceFullAutomated() {
     );
 
     return {
-      success: true,
+      success: false,
       message:
-        'W2B.3 completed with advisory exception — audit JSON was unusable, so W2B.2 HTML was retained unchanged in GI.',
+        'W2B.3 STOPPED: audit JSON unusable; GI retains original W2B.2 HTML.',
       cost: totalCost
     };
   }
@@ -4626,11 +4629,20 @@ function bc_runCoherenceFullAutomated() {
     );
 
     return {
-      success: true,
+      success: false,
       message:
-        'W2B.3 completed with advisory exception — unexpected audit structure, so W2B.2 HTML was retained unchanged in GI.',
+        'W2B.3 STOPPED: invalid audit JSON structure; GI retains original W2B.2 HTML.',
       cost: totalCost
     };
+  }
+
+  if ((status === 'PASS' && issues.length !== 0) ||
+      (status === 'FAIL' && issues.length === 0)) {
+    bc_appendGovernancePipelineException(
+      'W2B.3 — Coherence', 'Contradictory audit status and issues; pipeline stopped.'
+    );
+    return {success:false,cost:totalCost,
+      message:'W2B.3 STOPPED: contradictory audit status and issue count.'};
   }
 
   /*
@@ -4712,9 +4724,9 @@ function bc_runCoherenceFullAutomated() {
     );
 
     return {
-      success: true,
+      success: false,
       message:
-        'W2B.3 audit completed, but the repair prompt could not be built — article retained unchanged in GI.',
+        'W2B.3 STOPPED: repair prompt unavailable; GI retains original W2B.2 HTML.',
       cost: totalCost
     };
   }
@@ -4755,7 +4767,8 @@ function bc_runCoherenceFullAutomated() {
 
   var applyResult =
     applyCoherenceFix(
-      repairResult.text
+      repairResult.text,
+      issues.map(function(issue) { return Number(issue.section_number); })
     );
 
   if (
@@ -4780,20 +4793,28 @@ function bc_runCoherenceFullAutomated() {
     );
 
     return {
-      success: true,
+      success: false,
       message:
-        'W2B.3 audit completed, but its repairs could not be applied safely — original W2B.2 HTML retained in GI.',
+        'W2B.3 STOPPED: unsafe or incomplete repairs; GI retains original W2B.2 HTML.',
       cost: totalCost
     };
   }
+
+  // Keep the original GH audit JSON unchanged; store the outcome separately.
+  // No subjective second AI call: the atomic repair validator is the hard gate.
+  bc_appendPipelineRunLog(
+    row,
+    'W2B.3 REPAIRED — ' + issues.length + ' original finding(s) across ' +
+    Array.from(new Set(issues.map(function(x) { return Number(x.section_number); }))).length +
+    ' section(s); atomic structural checks passed. GH preserves original audit.'
+  );
 
   /*
    * =========================================================
    * STEP 8 — FINISH
    *
-   * NO SECOND COHERENCE CHECK.
-   * NO LOOP.
-   * NO "STILL FAILING" STATE.
+   * NO SECOND AI CHECK OR REPAIR LOOP.
+   * Original findings remain in GH.
    * =========================================================
    */
 
@@ -4808,7 +4829,7 @@ function bc_runCoherenceFullAutomated() {
   return {
     success: true,
     message:
-      'W2B.3 single-pass coherence completed — ' +
+      'W2B.3 REPAIRED (structural validation PASS; no second semantic audit) — ' +
       issues.length +
       ' issue(s) identified and repair pass completed. ' +
       applyResult.message,
@@ -4922,7 +4943,7 @@ function bc_runW4BAutomated() {
     '  Primary search term: ' + (meta.primaryTerm || 'unknown'),
     '',
     'IMAGE CATEGORIES (classify each filename before writing alt/caption):',
-    '1. FLOOR CONDITION IMAGES — photos of the actual stone floor showing a condition, stage, or result. Write a descriptive alt AND a diagnostic caption that helps the reader identify their problem. Use varied natural framing and do not default to a fixed opening such as "If your floor...".',
+    '1. FLOOR CONDITION IMAGES — photos of the actual floor showing a visible condition, stage, or result. Write descriptive alt text and a brief evidence-grounded caption; add diagnostic interpretation only when the image visibly supports it. Do not infer treatment results or unseen processes from filename alone.',
     '2. PRODUCT IMAGES — any image from m.media-amazon.com, or any filename that is clearly a commercial product (cleaner bottle, vacuum, mop, brush, sealer, tool). These are NOT decorative. Write a plain descriptive alt stating what the product is (e.g. "Fila Pro Floor Cleaner for impregnated stone surfaces"). Caption should be empty string "" — product captions are handled separately by the page template, not by this diagnostic caption system.',
     '3. TRUE DECORATIVE IMAGES — logos, icons, dividers, spacers with no informative content. Only these get alt="" and caption="".',
     '',
@@ -4930,7 +4951,7 @@ function bc_runW4BAutomated() {
     '',
     'RULES:',
     '- Alt text: descriptive, specific, under 125 characters. No keyword stuffing.',
-    '- Captions (floor condition images only): plain text only, max 15 words, diagnostic — help the reader identify their problem.',
+    '- Captions (floor condition images only): plain text only, max 15 words. Describe only what is visible or explicitly documented. Do not claim a photo proves sealing, moisture control, slurry recovery or test results. When uncertain, use a neutral condition/stage description.',
     '- Return ONLY a JSON array. No preamble. No markdown fences. No explanation.',
     '',
     'OUTPUT FORMAT:',
@@ -5322,7 +5343,14 @@ function bc_runW4Automated() {
       'ROLE: Senior UK SEO & Editorial Quality Auditor',
       '',
       'TASK:',
-      'Check only whether each section opening sentence orients the reader to their visible problem before introducing mechanism, company, entity or process.',
+      'PUBLICATION STANDARD: Only material homeowner misunderstanding, unsupported claims or real section-purpose mismatches warrant FAIL. Minor editorial preferences PASS.',
+      'Assess each section opening against its heading and editorial purpose, not a universal symptom-first requirement.',
+            'Problem and diagnosis sections should orient the reader to the observed condition or uncertainty.',
+            'Method and treatment sections may begin with the documented action or decision.',
+            'Outcome sections may begin with the observed result; do not require a repeat of the original problem.',
+            'Related-project, comparison and aftercare sections may begin with relevant comparisons or practical care advice.',
+            'Fail only when an opening is materially unrelated to its section purpose or starts with unexplained technical mechanism.',
+            'Do not fail an outcome, related-project or aftercare section merely for not mentioning a visible problem.',
       '',
       'Do not assess cluster tone.',
       'Do not assess the header.',
@@ -5347,12 +5375,10 @@ function bc_runW4Automated() {
       'ROLE: Senior UK SEO & Editorial Quality Auditor',
       '',
       'TASK:',
-      'Check only whether every named technical defect is explained to completion before the next paragraph.',
-      '',
-      'Each named defect must contain:',
-      'ELEMENT 1 — what the defect is physically.',
-      'ELEMENT 2 — what the homeowner sees or notices.',
-      'ELEMENT 3 — what professional correction does about it.',
+      'Assess whether materially important named defects are explained sufficiently for UK homeowners across the article as a whole.',
+      'PASS when the reader can understand the visible problem and the documented correction from surrounding sections.',
+      'Do not demand a textbook definition, symptom and correction within one paragraph, or repeat these each time the defect is mentioned.',
+      'FAIL only for materially misleading or genuinely incomplete explanations that leave a homeowner unable to understand the problem or outcome.',
       '',
       'Named defects include:',
       'delamination, sealer failure, efflorescence, filler collapse, colour loss, grout haze, lippage, spalling, micro-scratching, residue lock-in.',
@@ -6344,6 +6370,49 @@ function pipelineRunAC(row) {
 
 function pipelineRunAuthorityBrief(row) {
   try {
+    // Check the identity that all downstream entity governance depends on.
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sh = ss.getSheetByName('posts');
+    if (!sh) throw new Error('Posts sheet missing');
+    var heads = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0]
+      .map(function(v) { return String(v || '').trim(); });
+    function stageField(name) {
+      var idx = heads.indexOf(name);
+      return idx < 0 ? '' : String(sh.getRange(row, idx + 1).getValue() || '').trim();
+    }
+    var articleType = stageField('Article Type');
+    var entity = stageField('Primary Entity');
+    if (!articleType || !entity) {
+      throw new Error('W-1 preflight: Article Type and Primary Entity must both be set.');
+    }
+    var queryCluster = stageField('Primary Query Cluster Owned');
+    if (!queryCluster) {
+      bc_appendPipelineRunLog(row, 'W-1 warning — Primary Query Cluster Owned is empty; verify search intent.');
+    }
+    // Readiness gate for the automated path. The manual UI readiness function
+    // writes to a dashboard and depends on the active row, so do not call it
+    // from an automated batch.
+    var readinessBlocks = [];
+    var readinessReviews = [];
+    if (!articleType || !entity) readinessBlocks.push('Missing article type or primary entity');
+    if (!queryCluster) readinessBlocks.push('Primary Query Cluster Owned missing');
+    var rewriteStatus = stageField('Rewrite Status');
+    if (!rewriteStatus) readinessReviews.push('Rewrite Status missing');
+    else if (rewriteStatus === 'Needs Rewrite') {
+      // A rewrite-needed page is the expected input to this pipeline.
+      readinessReviews.push('Needs Rewrite — proceeding with governed rewrite');
+    } else if (rewriteStatus === 'Governance Tightening Recommended') {
+      readinessReviews.push('Governance tightening recommended');
+    }
+    if (!stageField('Problem Angle')) readinessReviews.push('Problem Angle will be assigned at W-1');
+    if (readinessBlocks.length) {
+      throw new Error('W-1 readiness BLOCKED — ' + readinessBlocks.join('; '));
+    }
+    if (readinessReviews.length) {
+      bc_appendPipelineRunLog(row, 'W-1 readiness REVIEW — ' + readinessReviews.join('; '));
+    } else {
+      bc_appendPipelineRunLog(row, 'W-1 readiness GO — required governance inputs present.');
+    }
     var result = autoRunAuthorityBrief(row);
 
     if (!result || result.success === false) {
@@ -6357,6 +6426,55 @@ function pipelineRunAuthorityBrief(row) {
         success: false,
         message: message
       };
+    }
+
+    if (result.review) {
+      bc_appendPipelineRunLog(row, String(result.message || 'W-1 Problem Angle requires review'));
+    }
+
+    // Report existing intent conflicts without allowing a heuristic keyword
+    // match to block an otherwise valid article automatically.
+    if (queryCluster && typeof checkProblemRegister === 'function') {
+      try {
+        var angleText = stageField('Problem Angle');
+        var angleCode = String(angleText.trim().split(/[\s—-]+/)[0] || '').toUpperCase();
+        var overlapResult = checkProblemRegister(
+          queryCluster, stageField('Stone Type'), stageField('URL'), articleType, angleCode
+        );
+        if (!overlapResult || overlapResult.success === false) {
+          bc_appendPipelineRunLog(row, 'W-1 review — Problem Register check failed: ' +
+            String(overlapResult && overlapResult.message || 'No result'));
+        } else {
+          var registerSheet = ss.getSheetByName('Problem Register');
+          if (!registerSheet || registerSheet.getLastRow() < 2) {
+            bc_appendPipelineRunLog(row, 'W-1 review — Problem Register missing/empty; overlap not verified.');
+          } else {
+            var ageValue = registerSheet.getRange(2, 8).getValue();
+            var lastUpdated = ageValue instanceof Date ? ageValue : null;
+            if (!lastUpdated && typeof ageValue === 'string') {
+              var parts = ageValue.trim().split('/');
+              if (parts.length === 3) lastUpdated = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+            }
+            var ageDays = lastUpdated && !isNaN(lastUpdated.getTime())
+              ? Math.floor((Date.now() - lastUpdated.getTime()) / 86400000) : null;
+            if (ageDays === null || ageDays > 30 || ageDays < 0) {
+              bc_appendPipelineRunLog(row, 'W-1 review — Problem Register needs refreshing (last update ' +
+                (ageDays === null ? 'unknown' : ageDays + ' days ago') + ').');
+            }
+          }
+        }
+        var conflicts = overlapResult && Array.isArray(overlapResult.matches)
+          ? overlapResult.matches.filter(function(m) {
+              return m.conflictType === 'POTENTIAL_CANNIBALISATION';
+            }) : [];
+        if (conflicts.length) {
+          bc_appendPipelineRunLog(row, 'W-1 review — ' + conflicts.length +
+            ' possible overlapping intent(s) in Problem Register; original classification retained.');
+        }
+      } catch (registerError) {
+        bc_appendPipelineRunLog(row, 'W-1 review — Problem Register check unavailable: ' +
+          String(registerError));
+      }
     }
 
     bc_recordPipelineStage(
@@ -7510,7 +7628,7 @@ function pipelineResumeToW8E(row, startStage, endStage) {
 
   bc_appendPipelineRunLog(
     row,
-    "✓ Recovery " +
+    "✓ Stage Range " +
     startStage +
     " → " + endStage + " complete — $" +
     totalCost.toFixed(4)

@@ -358,7 +358,7 @@ function buildBriefForArticleType(articleType, recallScore, missingTerms, wordCo
   if (wordCountLine) {
     lines.push('');
     lines.push('WORD COUNT: ' + wordCountLine);
-    lines.push('Competitor benchmark is a ceiling guide only. Do not pad or cut to match it.');
+    lines.push('Competitor word counts are context only, never a ceiling or target; retain all relevant supported details.');
   }
 
   return lines.join('\n');

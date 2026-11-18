@@ -39,7 +39,7 @@ function preAcBuildGapCheckPrompt() {
     const headerRow = data[0];
 
     const universalCol = headerRow.indexOf('Universal');
-    const stoneCol = headerRow.indexOf(stoneType);
+    const stoneCol = headerRow.findIndex(function(h){ return String(h || '').trim().toLowerCase() === String(stoneType || '').trim().toLowerCase(); });
 
     const fields = {};
     const fieldLabels = {};
@@ -109,13 +109,14 @@ function preAcBuildGapCheckPrompt() {
     prompt += `Only set gap to true if none of the existing options adequately describe the article. If an existing option fits reasonably well, set gap to false.\n\n`;
     prompt += `---\n\nFIELDS AND EXISTING OPTIONS:\n\n`;
 
-    let fieldIndex = 0;
-    fieldOrder.forEach(function(key) {
-      if (!fields[key]) return;
-      prompt += `FIELD ${fieldIndex}: ${fieldLabels[key]}\n`;
-      fields[key].forEach(function(opt) { prompt += `- ${opt}\n`; });
+    fieldOrder.forEach(function(key, fieldIndex) {
+      prompt += `FIELD ${fieldIndex}: ${fieldLabels[key] || key}\n`;
+      if (fields[key] && fields[key].length) {
+        fields[key].forEach(function(opt) { prompt += `- ${opt}\n`; });
+      } else {
+        prompt += '- [NO AVAILABLE OPTIONS — report a gap]\n';
+      }
       prompt += `\n`;
-      fieldIndex++;
     });
 
     prompt += `---\n\nARTICLE CONTENT:\n\n${articleContent}`;
@@ -163,36 +164,68 @@ function preAcAddGapToSheet(entry) {
     const headerRow = data[0];
 
     const universalCol = headerRow.indexOf('Universal');
-    const stoneCol = headerRow.indexOf(stoneType);
+    let stoneCol = headerRow.findIndex(function(h) { return String(h || '').trim().toLowerCase() === String(stoneType || '').trim().toLowerCase(); });
     const dropdownCol = headerRow.indexOf('dropdown');
     const labelCol = headerRow.indexOf('Label');
     const valueCol = headerRow.indexOf('value') > -1 ? headerRow.indexOf('value') : headerRow.indexOf('Value');
 
-    // Find the dropdown key for this field by matching the label
-    let dropdownKey = '';
+    // Accept a governed field key or its human-readable label.
+    const fieldKeys = ['ac_what_they_found','ac_why_they_called',
+      'ac_what_the_floor_was_doing','ac_what_forced_careful_decisions',
+      'ac_what_governed_the_approach','ac_what_changed_for_the_homeowner',
+      'ac_story_direction'];
+    const fieldIndex = Number(entry.index);
+    let dropdownKey = fieldKeys.indexOf(String(entry.field || '').trim()) >= 0
+      ? String(entry.field).trim()
+      : (Number.isInteger(fieldIndex) && fieldIndex >= 0 && fieldIndex < fieldKeys.length
+          ? fieldKeys[fieldIndex] : '');
     let fieldLabel = '';
     for (let i = 1; i < data.length; i++) {
-      if (String(data[i][labelCol] || '').trim() === entry.field) {
-        dropdownKey = String(data[i][dropdownCol] || '').trim();
-        fieldLabel = entry.field;
+      const k = String(data[i][dropdownCol] || '').trim();
+      const l = String(data[i][labelCol] || '').trim();
+      if (l.toLowerCase() === String(entry.field || '').trim().toLowerCase()) {
+        dropdownKey = k;
+        fieldLabel = l;
         break;
       }
+      if (k === dropdownKey && !fieldLabel) fieldLabel = l;
     }
+    if (!dropdownKey || fieldKeys.indexOf(dropdownKey) < 0)
+      return {success:false,message:'Unrecognised Pre-AC field: ' + entry.field};
+    if (!fieldLabel) fieldLabel = String(entry.field || dropdownKey).trim();
 
-    if (!dropdownKey) return { success: false, message: 'Could not find dropdown key for field: ' + entry.field };
-
-    // Build new row matching the sheet structure
+    const scope = String(entry.scope || '').trim().toLowerCase();
+    const materialScope = String(stoneType || '').trim().toLowerCase();
+    const universal = scope === 'universal';
+    const specific = !!materialScope && scope === materialScope;
+    if (!universal && !specific)
+      return {success:false,message:'Pre-AC option has invalid or missing scope'};
+    if (universal && universalCol < 0)
+      return {success:false,message:'Universal column missing'};
+    const normalizedSuggestion = String(entry.suggested_option || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!normalizedSuggestion)
+      return {success:false,message:'Empty suggested AC library option'};
+    const existingForKey = data.slice(1).some(function(existing) {
+      const applicable = universal
+        ? String(existing[universalCol] || '').trim().toLowerCase() === 'y'
+        : (String(existing[universalCol] || '').trim().toLowerCase() === 'y' ||
+           (stoneCol >= 0 && String(existing[stoneCol] || '').trim().toLowerCase() === 'y'));
+      return applicable && String(existing[dropdownCol] || '').trim() === dropdownKey &&
+        String(existing[valueCol] || '').trim().toLowerCase().replace(/\s+/g, ' ') === normalizedSuggestion;
+    });
+    if (existingForKey) return {success:true,skipped:true,message:'Already in AC library'};
+    // Only add a material column after the proposal has passed all checks.
+    if (specific && stoneCol < 0) {
+      stoneCol = headerRow.length;
+      acSheet.getRange(1, stoneCol + 1).setValue(String(stoneType).trim());
+      headerRow.push(String(stoneType).trim());
+    }
     const newRow = new Array(headerRow.length).fill('');
     newRow[dropdownCol] = dropdownKey;
     newRow[labelCol] = fieldLabel;
-    newRow[valueCol] = entry.suggested_option;
-
-    if (entry.scope === 'Universal') {
-      newRow[universalCol] = 'y';
-    } else if (stoneCol > -1) {
-      newRow[stoneCol] = 'y';
-    }
-
+    newRow[valueCol] = String(entry.suggested_option).trim();
+    if (universal) newRow[universalCol] = 'y';
+    else newRow[stoneCol] = 'y';
     acSheet.appendRow(newRow);
 
     logPipelineResume("Pre-AC — Gap Added to Sheet", "");

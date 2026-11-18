@@ -793,8 +793,10 @@ window.acLoadDropdowns = function() {
   };
 
   // ══ FEATURED IMAGE SYSTEM ══
+  window.fiLoadedPostId = null;
 
   window.fiGenerate = function() {
+    window.fiLoadedPostId = null;
     var statusEl = document.getElementById('fi-status');
     var customMiddleTitle = document.getElementById('fi-middle-title').value.trim();
     statusEl.textContent = 'Generating image prompt…';
@@ -807,6 +809,7 @@ window.acLoadDropdowns = function() {
           statusEl.className = 'status-bar fail';
           return;
         }
+        window.fiLoadedPostId = String(result.postId || '').trim();
         var finalTitle = customMiddleTitle || result.middleTitle || '';
       var finalPrompt = result.prompt.replace(
         /Middle title \(elegant dark serif\): .+/,
@@ -830,39 +833,135 @@ window.acLoadDropdowns = function() {
       .buildFeaturedImagePrompt();
   };
 
-  window.fiSaveToSheet = function() {
-    var url      = document.getElementById('fi-url').value.trim();
-    var filename = document.getElementById('fi-filename').value.trim();
-    var altText  = document.getElementById('fi-alttext').value.trim();
-    var statusEl = document.getElementById('fi-save-status');
+  // Resolve the selected post directly from the posts sheet.
+  // FI upload/save must not depend on the Generate Image Prompt button.
+  // Reject a changed selection if this sidebar already holds a different Post ID.
+  function fiResolveCurrentPost_(onReady, onFailure) {
+    google.script.run
+      .withSuccessHandler(function(info) {
+        var currentId = String(info && info.postID || '').trim();
+        if (!/^\d+$/.test(currentId)) {
+          onFailure('Select a valid post row on the posts sheet before uploading.');
+          return;
+        }
+        var previousId = String(window.fiLoadedPostId || '').trim();
+        if (previousId && previousId !== currentId) {
+          onFailure('Post selection changed from ' + previousId + ' to ' +
+            currentId + '. Reopen FI for the intended post before saving this image.');
+          return;
+        }
+        window.fiLoadedPostId = currentId;
+        onReady(currentId);
+      })
+      .withFailureHandler(function(err) {
+        onFailure('Could not read the selected Post ID: ' +
+          String(err && err.message || err));
+      })
+      .getActiveRowUrl();
+  }
 
+  window.fiSaveToSheet = function() {
+    var url = document.getElementById('fi-url').value.trim();
+    var filename = document.getElementById('fi-filename').value.trim();
+    var altText = document.getElementById('fi-alttext').value.trim();
+    var statusEl = document.getElementById('fi-save-status');
+    statusEl.style.display = 'block';
     if (!url) {
-      statusEl.style.display = 'block';
-      statusEl.textContent = 'Paste the WordPress image URL first';
+      statusEl.textContent = 'Enter a WordPress image URL first.';
       statusEl.className = 'status-bar fail';
       return;
     }
-
-    statusEl.style.display = 'block';
-    statusEl.textContent = 'Saving…';
+    statusEl.textContent = 'Checking selected post…';
     statusEl.className = 'status-bar pending';
-
-    var customMiddleTitle = document.getElementById('fi-middle-title').value.trim();
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result && result.success) {
-          statusEl.textContent = 'Saved to sheet';
-          statusEl.className = 'status-bar pass';
-        } else {
-          statusEl.textContent = 'Save failed: ' + (result ? result.message : 'Unknown error');
+    fiResolveCurrentPost_(function(postId) {
+      statusEl.textContent = 'Saving image details to Post ' + postId + '…';
+      google.script.run
+        .withSuccessHandler(function(result) {
+          statusEl.textContent = (result && result.success ? result.message :
+            'Save failed: ' + (result ? result.message : 'Unknown error'));
+          statusEl.className = (result && result.success) ? 'status-bar pass' : 'status-bar fail';
+        })
+        .withFailureHandler(function(err) {
+          statusEl.textContent = 'Save failed: ' + err.message;
           statusEl.className = 'status-bar fail';
+        }).saveFeaturedImageToSheet(url, filename, altText, postId);
+    }, function(message) {
+      statusEl.textContent = message;
+      statusEl.className = 'status-bar fail';
+    });
+  };
+
+  window.fiUploadToWordPress = function() {
+    var fileEl = document.getElementById('fi-file');
+    var file = fileEl.files && fileEl.files[0];
+    var statusEl = document.getElementById('fi-upload-status');
+    var button = document.getElementById('fi-upload-button');
+    statusEl.style.display = 'block';
+    if (window.fiUploading) return;
+    if (!file) {
+      statusEl.textContent = 'Choose an image file from your computer first.';
+      statusEl.className = 'status-bar fail'; return;
+    }
+    if (file.type !== 'image/webp' || file.size > 2*1024*1024) {
+      statusEl.textContent = 'Choose a WebP image smaller than 2 MB. Convert PNG or JPEG to WebP first.';
+      statusEl.className = 'status-bar fail'; return;
+    }
+    // If the prompt was not generated in this sidebar session, the chosen
+    // file's governed WebP name is an acceptable fallback.
+    var filenameEl = document.getElementById('fi-filename');
+    var filename = filenameEl.value.trim() || String(file.name || '').trim();
+    var altText = document.getElementById('fi-alttext').value.trim();
+    if (!altText) {
+      statusEl.textContent = 'Enter descriptive alt text for this image before uploading.';
+      statusEl.className = 'status-bar fail'; return;
+    }
+    if (!/^[a-z0-9][a-z0-9-]*\.webp$/i.test(filename)) {
+      statusEl.textContent = 'The selected image needs a governed filename containing only letters, numbers and hyphens, ending .webp.';
+      statusEl.className = 'status-bar fail'; return;
+    }
+    if (!filenameEl.value.trim()) filenameEl.value = filename;
+
+    window.fiUploading = true;
+    button.disabled = true;
+    statusEl.className = 'status-bar pending';
+    statusEl.textContent = 'Checking selected Post ID…';
+    function fail(message) {
+      window.fiUploading = false;
+      button.disabled = false;
+      statusEl.className = 'status-bar fail';
+      statusEl.textContent = message;
+    }
+
+    fiResolveCurrentPost_(function(postId) {
+      // The Post ID is fixed before reading/uploading, so a later active-row
+      // change cannot redirect the image to a different sheet record.
+      statusEl.textContent = 'Reading image for Post ' + postId + '…';
+      var reader = new FileReader();
+      reader.onerror = function() {
+        fail('Could not read the selected file.');
+      };
+      reader.onload = function() {
+        var data = String(reader.result || '').split(',')[1];
+        if (!data) {
+          fail('Could not read WebP image data.');
+          return;
         }
-      })
-      .withFailureHandler(function(err) {
-        statusEl.textContent = 'Save failed: ' + err.message;
-        statusEl.className = 'status-bar fail';
-      })
-      .saveFeaturedImageToSheet(url, filename, altText);
+        statusEl.textContent = 'Uploading image to WordPress for Post ' + postId + '…';
+        google.script.run.withSuccessHandler(function(result) {
+          window.fiUploading = false;
+          button.disabled = false;
+          if (result && result.url) document.getElementById('fi-url').value = result.url;
+          statusEl.className = result && result.success ? 'status-bar pass' : 'status-bar fail';
+          statusEl.textContent = result ? result.message : 'Upload failed without a response.';
+        }).withFailureHandler(function(err) {
+          fail('Upload failed: ' + err.message);
+        }).ceFiUploadImageToWordPress({
+          postId: postId,
+          filename: filename, altText: altText, mimeType: file.type, base64: data
+        });
+      };
+      reader.readAsDataURL(file);
+    }, fail);
   };
 
   function copyField(fieldId, statusId, msg) {
