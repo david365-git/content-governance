@@ -10,6 +10,29 @@
  * ================================================================================
  */
 
+
+// W1.5D owns the single material-hub assignment. It never invents a URL.
+function bc_w15dAssignHub_(plan, hubUrl, articleType) {
+  var text = String(plan || '');
+  if (articleType === 'Hub Page' || !/^https?:\/\//i.test(String(hubUrl || '')) ||
+      /hub-page-temp/i.test(hubUrl)) return text;
+  var lines = text.split('\n');
+  // Remove legacy W1.5C hub assignment if still present, avoiding duplicates.
+  lines = lines.map(function(line) {
+    return /^\s*Internal link:\s*/i.test(line) &&
+      line.indexOf(hubUrl) >= 0 ? line.replace(/Internal link:\s*.+$/i, 'Internal link: None') : line;
+  });
+  var heading = -1, chosen = -1;
+  for (var i = 0; i < lines.length; i++) {
+    if (/^SECTION\s+\d+:/i.test(lines[i])) heading = i;
+    if (heading >= 0 && /^\s*Internal link:\s*None\s*$/i.test(lines[i]) && chosen < 0) chosen = i;
+  }
+  if (chosen >= 0) {
+    lines[chosen] = lines[chosen].replace(/Internal link:\s*None/i, 'Internal link: ' + hubUrl);
+  }
+  return lines.join('\n');
+}
+
 function getW15DData() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('posts');
@@ -26,6 +49,8 @@ function getW15DData() {
   const primaryEntity = d["Primary Entity"] || material;
   const currentUrl = String(d["URL"] || "").trim();
   const hubUrl = String(d["Feeds Hub"] || "").trim();
+  const isHub = articleType === 'Hub Page';
+  // Missing or placeholder hubs are not emitted as links.
 
   const maxTotalLinks = getMaxLateralLinks(articleType);
 
@@ -52,20 +77,9 @@ function getW15DData() {
     '$1'
   );
 
-  const hubAlreadyAssigned =
-    !!hubUrl &&
-    sectionPlan.indexOf('Internal link: ' + hubUrl) !== -1;
-
-  const assignHubLink =
-    maxTotalLinks > 0 &&
-    hubUrl.length > 0;
-
-  const lateralLinksToAssign =
-    maxTotalLinks === 0
-      ? 0
-      : assignHubLink
-        ? Math.max(0, maxTotalLinks - 1)
-        : maxTotalLinks;
+  sectionPlan = bc_w15dAssignHub_(sectionPlan, hubUrl, articleType);
+  const hubAlreadyAssigned = !!hubUrl && sectionPlan.indexOf('Internal link: ' + hubUrl) !== -1;
+  const assignHubLink = !isHub && hubAlreadyAssigned;
 
   const siloMap =
     buildEnhancedSiloMap(
@@ -73,6 +87,8 @@ function getW15DData() {
       row,
       currentUrl
     );
+  // Hub Page navigation is NOT a lateral link. Its zero lateral quota is correct.
+  const lateralLinksToAssign = isHub ? siloMap.length : Math.max(0, maxTotalLinks);
 
   return {
     material: material,
@@ -139,6 +155,21 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
   const cannibalGuardIdx = headers.indexOf("Cannibalisation Guardrail");
 
   const localityIdx = headers.indexOf("Locality");
+  const evidenceNames = ['Project Location & Property','Observed Conditions','Client Requirements',
+    'Materials & Construction','Inspection & Tests','Restoration Methods',
+    'Products & Equipment','Technical Findings','Project Results','Maintenance Handover'];
+  const statusIdx = headers.indexOf('Evidence Status');
+  const postIdIdx = headers.indexOf('Post ID');
+  const exportSheet = ss.getSheetByName('site-export');
+  const originalById = {};
+  if (exportSheet && exportSheet.getLastRow()>1) {
+    const sources=exportSheet.getRange(2,1,exportSheet.getLastRow()-1,15).getValues();
+    sources.forEach(function(src) {
+      const id=String(src[0]||'').trim();
+      if(id && !(id in originalById)) originalById[id]=String(src[14]||'');
+      else if(id) originalById[id]=null;
+    });
+  }
 
   const currentLocality =
     localityIdx > -1
@@ -147,6 +178,34 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
         ).trim()
       : "";
 
+  // National service-area boundaries: a Scottish service/geo-service page
+  // may only use confirmed Scottish projects, not English projects.
+  const currentArticleType = String(data[activeRow-1][articleTypeIdx]||'').trim();
+  function confirmedRegion(locality,title,url) {
+    const val=[locality,title,url].join(' ').toLowerCase();
+    if (/\b(scotland|scottish|edinburgh|glasgow|stirling|dundee|aberdeen|inverness|perth|fife|falkirk|paisley|kinross|livingston|musselburgh|dalkeith|dunfermline|east lothian|west lothian|midlothian|borders)\b/.test(val))return 'Scotland';
+    if (/\b(england|english|london|surrey|burton|stoke|staffordshire|nottingham|derby|birmingham|somerset|northampton|walsall|tutbury|penkhull|new malden|bristol|oxford|york|leicester|manchester|liverpool)\b/.test(val))return 'England';
+    return '';
+  }
+  const currentRegion=confirmedRegion(currentLocality,
+    String(data[activeRow-1][titleIndex]||''),currentUrl);
+  // Original WordPress anchors are review candidates, never automatically approved.
+  const currentId = postIdIdx >= 0 ? String(data[activeRow - 1][postIdIdx] || '').trim() : '';
+  const originalCurrent = String(originalById[currentId] || '');
+  const sourceLinks = [];
+  const originalHrefRe = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']/gi;
+  let hrefMatch;
+  while ((hrefMatch = originalHrefRe.exec(originalCurrent)) !== null) {
+    const href = String(hrefMatch[1] || '').trim();
+    if (/^https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk(?:\/|$)/i.test(href) ||
+        (/^\//.test(href) && !/^\/\//.test(href))) {
+      if (sourceLinks.indexOf(href) < 0) sourceLinks.push(href);
+    }
+  }
+  function linkPath_(url) {
+    return String(url || '').replace(/^https?:\/\/[^/]+/i, '').split(/[?#]/)[0]
+      .replace(/\/+$/, '').toLowerCase() || '/';
+  }
   let siloPages = [];
 
   for (let i = 1; i < data.length; i++) {
@@ -167,6 +226,16 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
 
     const articleType =
       String(data[i][articleTypeIdx] || "").trim();
+    if (currentArticleType === 'Service Page' || currentArticleType === 'Geo Service Page') {
+      const candidateRegion = confirmedRegion(
+        localityIdx >= 0 ? String(data[i][localityIdx]||'') : '',
+        String(data[i][titleIndex]||''),url);
+      // Fail closed for unclassified local evidence; never cross national boundaries.
+      if (articleType === 'Case Study' || articleType === 'Geo Service Page' ||
+          articleType === 'Service Page') {
+        if (!currentRegion || !candidateRegion || currentRegion !== candidateRegion) continue;
+      }
+    }
 
     const candidateLocality =
       localityIdx > -1
@@ -186,6 +255,7 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
     if (
       currentLocality &&
       candidateLocality &&
+      articleType !== 'Case Study' &&
       candidateLocality.toLowerCase() !==
         currentLocality.toLowerCase()
     ) {
@@ -202,12 +272,13 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
      */
     if (
       articleType === "Hub Page" ||
-      articleType === "Service Page"
+      (articleType === "Service Page" && currentArticleType !== "Hub Page")
     ) {
       continue;
     }
 
     if (
+      currentArticleType !== "Hub Page" &&
       articleType === "Geo Service Page" &&
       (
         !currentLocality ||
@@ -219,18 +290,8 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
       continue;
     }
 
-    /*
-     * A Case Study with a stated locality must also match.
-     * If it has no locality, do not use it as the geographic
-     * fallback for a locality-specific article.
-     */
-    if (
-      currentLocality &&
-      articleType === "Case Study" &&
-      !candidateLocality
-    ) {
-      continue;
-    }
+    // Case Studies of the same material can illustrate technically relevant
+    // work outside the current locality. The prompt forbids local claims.
 
     const title =
       String(data[i][titleIndex] || "").trim();
@@ -255,6 +316,40 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
 
     const cannibalGuard =
       String(data[i][cannibalGuardIdx] || "").trim();
+    let caseEvidence = '';
+    if (articleType==='Case Study' && statusIdx>=0 && postIdIdx>=0 &&
+        typeof bc_caseEvidenceDigest_==='function') {
+      const original=originalById[String(data[i][postIdIdx]||'').trim()];
+      if (original && String(data[i][statusIdx]||'').trim()===
+          'SOURCE-QUOTED | sha256:'+bc_caseEvidenceDigest_(original)) {
+        const findings=[];
+        evidenceNames.forEach(function(label) {
+          const col=headers.indexOf(label);
+          if(col<0)return;
+          try {
+            const items=JSON.parse(String(data[i][col]||'[]'));
+            if(!Array.isArray(items))return;
+            const facts=items.filter(x=>x && x.fact && x.quote)
+              .slice(0,2).map(x=>String(x.fact).slice(0,140));
+            if(facts.length)findings.push(label+': '+facts.join('; '));
+          } catch(e) {}
+        });
+        caseEvidence=findings.join(' | ').slice(0,2500);
+      }
+    }
+
+    let unstructuredSourceExcerpt = '';
+    if (articleType === 'Case Study' && !caseEvidence && postIdIdx >= 0) {
+      const original = String(originalById[String(data[i][postIdIdx] || '').trim()] || '');
+      // Not a substitute for the ten verified Case Study evidence fields.
+      // Explicit source evidence is safer than drawing conclusions from the title alone.
+      unstructuredSourceExcerpt = original
+        .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&(?:nbsp|#160);/gi, ' ')
+        .replace(/\s+/g, ' ').trim().slice(0, 650);
+    }
 
     let h2Sample = "";
 
@@ -284,6 +379,7 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
 
     siloPages.push({
       url: url,
+      originallyLinked: sourceLinks.some(function(link) { return linkPath_(link) === linkPath_(url); }),
       title: title,
       articleType: articleType,
       locality: candidateLocality,
@@ -298,7 +394,9 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
       metaTitle: metaTitle,
       h2s: h2Sample,
       safeHandoff: safeHandoff,
-      cannibalGuard: cannibalGuard
+      cannibalGuard: cannibalGuard,
+      caseEvidence: caseEvidence,
+      unstructuredSourceExcerpt: unstructuredSourceExcerpt
     });
   }
 
@@ -325,6 +423,7 @@ function buildEnhancedSiloMap(material, activeRow, currentUrl) {
     return 0;
   });
 
+  siloPages.originalLinks = sourceLinks;
   return siloPages;
 }
 
@@ -346,6 +445,7 @@ function buildW15DPrompt() {
         'URL: ' + page.url + '\n' +
         'TITLE: ' + page.title + '\n' +
         'TYPE: ' + page.articleType + '\n' +
+        'LINK ALREADY IN ORIGINAL ARTICLE (REVIEW ONLY): ' + (page.originallyLinked ? 'YES' : 'NO') + '\n' +
         'LOCALITY: ' + (page.locality || 'None') + '\n' +
         'SAME LOCALITY AS CURRENT ARTICLE: ' +
           (page.sameLocality ? 'YES' : 'NO') + '\n' +
@@ -358,6 +458,15 @@ function buildW15DPrompt() {
           '\n';
       }
 
+      if (page.caseEvidence) {
+        siloMapText += 'SOURCE-QUOTED CASE STUDY FACTS: ' + page.caseEvidence + '\n';
+      }
+      if (page.unstructuredSourceExcerpt) {
+        siloMapText += 'UNSTRUCTURED ORIGINAL ARTICLE EXCERPT (not verified ledger): ' + page.unstructuredSourceExcerpt + '\n';
+      }
+      if (page.safeHandoff) {
+        siloMapText += 'SAFE HANDOFF: ' + page.safeHandoff + '\n';
+      }
       if (page.h2s) {
         siloMapText +=
           'H2s: ' +
@@ -386,12 +495,17 @@ You are NOT rewriting the section plan.
 You are NOT inserting URLs.
 You are only selecting which approved silo PAGE should be linked from which SECTION.
 
-LATERAL LINKS REQUIRED:
+${data.articleType === 'Hub Page' ? 'HUB ROUTING LINKS: Select relevant child pages. MAXIMUM:' : 'OPTIONAL LATERAL LINKS MAXIMUM:'}
 ${data.lateralLinksToAssign}
 
 --- CURRENT GOVERNED SECTION PLAN ---
 
 ${data.sectionPlan}
+
+--- ORIGINAL ARTICLE LINKS — REVIEW, DO NOT RETAIN AUTOMATICALLY ---
+${(data.siloMap.originalLinks || []).length ? data.siloMap.originalLinks.join('\n') : 'No original internal links found.'}
+An original link survives only if explicitly selected as an AVAILABLE SILO PAGE below.
+Reject original links without relevance, geographic eligibility or a matching approved candidate.
 
 --- AVAILABLE SILO PAGES ---
 
@@ -399,17 +513,15 @@ ${siloMapText}
 
 --- RULES ---
 
-1. Return exactly ${data.lateralLinksToAssign} assignment${data.lateralLinksToAssign === 1 ? '' : 's'}.
+1. Return up to ${data.lateralLinksToAssign} assignment${data.lateralLinksToAssign === 1 ? '' : 's'}.
 
 2. Only choose PAGE numbers from the AVAILABLE SILO PAGES above.
 
-3. Only choose SECTION numbers that currently contain:
+3. ${data.articleType === 'Hub Page' ? 'A Hub Page may route multiple child pages from the same relevant SECTION; zero lateral links does not mean zero hub navigation.' : 'Only choose sections currently marked Internal link: None.'}
 
-Internal link: None
+4. ${data.articleType === 'Hub Page' ? 'Prefer relevant original navigation links that match verified silo candidates.' : 'Do NOT select a section that already contains an internal link.'}
 
-4. Do NOT select a section that already contains an Internal link.
-
-5. Do NOT select the same SECTION more than once.
+5. ${data.articleType === 'Hub Page' ? 'Section reuse is permitted for distinct hub routes.' : 'Do NOT select the same SECTION more than once.'}
 
 6. Do NOT select the same PAGE more than once.
 
@@ -417,10 +529,11 @@ Internal link: None
    - If one or more relevant pages have SAME LOCALITY AS CURRENT ARTICLE: YES, choose the most relevant of those first.
    - Only use a page with LOCALITY: None when no suitable same-locality page exists.
    - Never prefer a non-geographic page over an equally relevant same-locality Case Study or Geo Service Page.
+   - An out-of-area Case Study may support a technical point, but must NOT imply the project happened in the current article's locality.
 
-8. Among the location-safe candidates, choose the page whose subject is most relevant to the section.
+8. Choose links only where they help the reader with the specific section. A zero-assignment result is valid when nothing is relevant. Match Case Studies using verified conditions, methods, findings and outcomes; do not infer undocumented project work. For other article types use primary entity, headings, supporting entities, safe handoff and cannibalisation guardrails.
 
-9. Do not reproduce or rewrite any part of the section plan.
+9. W1.5D alone selects the material hub for non-Hub articles; Hub Pages must never link to themselves. Material hubs do not count towards lateral quotas. Do not rewrite any other part of the plan.
 
 --- OUTPUT FORMAT ---
 
@@ -435,7 +548,7 @@ Return JSON only in exactly this structure:
   ]
 }
 
-Return exactly ${data.lateralLinksToAssign} assignment${data.lateralLinksToAssign === 1 ? '' : 's'} inside "assignments".
+Return up to ${data.lateralLinksToAssign} assignment${data.lateralLinksToAssign === 1 ? '' : 's'} inside "assignments".
 
 No explanation.
 No markdown fences.
@@ -473,10 +586,9 @@ function saveW15DUpdatedPlan(updatedPlan) {
       };
     }
 
-    const sourcePlan =
-      String(
-        sheet.getRange(row, 101).getValue() || ''
-      ).trim();
+    const sourcePlan = bc_w15dAssignHub_(
+      String(sheet.getRange(row, 101).getValue() || '').trim(),
+      data.hubUrl, data.articleType);
 
     if (!sourcePlan) {
       return {
@@ -518,13 +630,13 @@ function saveW15DUpdatedPlan(updatedPlan) {
     }
 
     if (
-      parsed.assignments.length !==
+      parsed.assignments.length >
       data.lateralLinksToAssign
     ) {
       return {
         success: false,
         message:
-          'Expected exactly ' +
+          'Allowed at most ' +
           data.lateralLinksToAssign +
           ' lateral link assignment(s), but received ' +
           parsed.assignments.length +
@@ -574,7 +686,7 @@ function saveW15DUpdatedPlan(updatedPlan) {
         };
       }
 
-      if (usedSections[section]) {
+      if (data.articleType !== 'Hub Page' && usedSections[section]) {
         return {
           success: false,
           message:
@@ -662,9 +774,8 @@ function saveW15DUpdatedPlan(updatedPlan) {
       ) {
 
         if (
-          /^\s*Internal link:\s*None\s*$/i.test(
-            lines[i]
-          )
+          /^\s*Internal link:\s*None\s*$/i.test(lines[i]) ||
+          (data.articleType === 'Hub Page' && /^\s*Internal link:\s*https?:\/\//i.test(lines[i]))
         ) {
           linkLine = i;
           break;
@@ -682,12 +793,26 @@ function saveW15DUpdatedPlan(updatedPlan) {
       const indent =
         String(lines[linkLine]).match(/^\s*/)[0];
 
-      lines[linkLine] =
-        indent +
-        'Internal link: ' +
-        assignment.url;
+      if (data.articleType === 'Hub Page' && !/^\s*Internal link:\s*None\s*$/i.test(lines[linkLine])) {
+        // Multiple approved child routes are permitted within a hub section.
+        lines[linkLine] = String(lines[linkLine]).trimEnd() + '; ' + assignment.url;
+      } else {
+        lines[linkLine] = indent + 'Internal link: ' + assignment.url;
+      }
     });
 
+    // Contact is a W1.5D-governed destination, not a W2B decision.
+    // Keep it separate from the material hub and discretionary lateral links.
+    if (!lines.some(function(line){return /^Contact link:\s*\/contact\/?\s*$/i.test(line);})) {
+      const finalSection = lines.map(function(line,i){return /^SECTION\s+\d+:/i.test(line)?i:-1;})
+        .filter(function(i){return i>=0;}).pop();
+      if (finalSection === undefined) throw new Error('Cannot place governed Contact link without a section.');
+      let end=lines.length;
+      for(let i=finalSection+1;i<lines.length;i++){
+        if (/^SECTION\s+\d+:/i.test(lines[i]) || /^Stage 1\.5C complete\./i.test(lines[i])) {end=i;break;}
+      }
+      lines.splice(end,0,'Contact link: /contact');
+    }
     let finalPlan =
       lines.join('\n');
 
@@ -749,21 +874,60 @@ function saveW15DFallbackPlan() {
       };
     }
 
-    const sourcePlan =
-      String(
-        sheet.getRange(row, 101).getValue() || ''
-      ).trim();
+    const governance = getW15DData();
+    if (governance.error) return { success: false, message: governance.error };
+    const sourcePlan = String(governance.sectionPlan || '');
+    if (!sourcePlan) return { success: false, message: 'No W1.5C source plan available.' };
 
-    if (!sourcePlan) {
-      return {
-        success: false,
-        message:
-          'Column CW is empty — cannot create W1.5D fallback.'
-      };
+    let fallbackSource = sourcePlan;
+    if (governance.articleType === 'Hub Page') {
+      // Retain only original navigation routes that match a known, eligible
+      // existing child page in the silo map. This is a W1.5D-only decision.
+      function routePath_(u) {
+        return String(u || '').replace(/^https?:\/\/[^/]+/i, '')
+          .split(/[?#]/)[0].replace(/\/+$/, '').toLowerCase();
+      }
+      const originalRoutes = governance.siloMap.originalLinks || [];
+      const acceptedRoutes = [];
+      originalRoutes.forEach(function(originalUrl) {
+        const match = governance.siloMap.find(function(candidate) {
+          return routePath_(candidate.url) === routePath_(originalUrl);
+        });
+        if (match && acceptedRoutes.indexOf(match.url) < 0) acceptedRoutes.push(match.url);
+      });
+      if (acceptedRoutes.length) {
+        const lines = fallbackSource.split('\n');
+        let sectionStart = -1, chosen = -1, lastSection = -1, bestSection = -1;
+        for (let i = 0; i < lines.length; i++) {
+          if (/^SECTION\s+\d+:/i.test(lines[i])) {
+            sectionStart = i;
+            lastSection = i;
+            if (/routing|navigation|related|where to|next steps|further guidance|routes/i.test(lines[i]))
+              bestSection = i;
+          }
+        }
+        const target = bestSection >= 0 ? bestSection : lastSection;
+        if (target >= 0) {
+          for (let i = target + 1; i < lines.length && !/^SECTION\s+\d+:/i.test(lines[i]); i++) {
+            if (/^\s*Internal link:\s*None\s*$/i.test(lines[i])) {
+              chosen = i;
+              break;
+            }
+          }
+          if (chosen >= 0) {
+            lines[chosen] = lines[chosen].replace(/Internal link:\s*None/i,
+              'Internal link: ' + acceptedRoutes.join('; '));
+            fallbackSource = lines.join('\n');
+          }
+        }
+      }
     }
-
+    fallbackSource = fallbackSource.replace(
+      /(Stage 1\.5C complete\. Waiting for Stage 1\.5D\.)\s*$/,
+      'Contact link: /contact\n\n$1'
+    );
     let fallbackPlan =
-      sourcePlan.replace(
+      fallbackSource.replace(
         /Stage 1\.5C complete\. Waiting for Stage 1\.5D\.\s*$/,
         'Stage 1.5D complete.'
       );
@@ -830,7 +994,7 @@ Correct ONLY the Internal link fields necessary to resolve the validation failur
 Do NOT change:
 - SECTION headings
 - TSM Requirement
-- Word Budget
+- Depth (Light / Standard / Deep), where supplied; do not introduce numerical word limits
 - Content Brief
 - Visual Pattern
 - List eligible

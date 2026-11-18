@@ -72,6 +72,32 @@ function buildFactCheckPrompt(sourceColumn) {
     ""
   ).trim();
 
+  // Same-row extracted Case Study evidence (GS:HB). Blank cells are not proof
+  // an event did not occur. These entries may contain extracted claims, not
+  // independently confirmed facts; weigh each against original and verified notes.
+  const caseStudyEvidenceFields = [
+    "Project Location & Property",
+    "Observed Conditions",
+    "Client Requirements & Restoration Objectives",
+    "Materials & Construction",
+    "Inspection & Tests",
+    "Restoration Methods",
+    "Products & Equipment",
+    "Technical Findings",
+    "Project Results",
+    "Maintenance Handover"
+  ];
+  const caseStudyEvidence = caseStudyEvidenceFields
+    .map(function(field) {
+      return { field: field, value: String(rowMap[field] || '').trim() };
+    })
+    .filter(function(entry) { return entry.value.length > 0; });
+  const caseStudyEvidenceBlock = caseStudyEvidence.length
+    ? caseStudyEvidence.map(function(entry) {
+        return entry.field + ": " + entry.value;
+      }).join("\n\n")
+    : "No extracted Case Study evidence entries supplied for this row.";
+
   // Automatically recheck a previously saved fix if one exists — GE holds
   // the W2B.05 Fixed HTML from an earlier fact-check fix pass. Checking GE
   // first (regardless of which source column was originally audited) means
@@ -132,6 +158,13 @@ LOCALITY: ${governedLocality || "Not supplied"}
 SHORT REWRITE SCOPE:
 ${rewriteBrief || "No active Rewrite Brief supplied."}
 
+CASE STUDY EVIDENCE — CURRENT POST ROW (EXTRACTED RECORD, NOT AUTOMATICALLY VERIFIED):
+${caseStudyEvidenceBlock}
+
+EVIDENCE HANDLING:
+Read the ten Case Study evidence fields alongside the source article. Treat extracted entries as supporting project context, not as independent proof of every detail: compare them with the original and any explicitly confirmed owner information. Do not promote an AI-inferred or contradictory entry into a verified project fact. An empty field means no evidence supplied, not that an action did not occur.
+Before applying the five-condition unsupported-project-claim test, check whether an assertion is supported by an actual evidence-field statement or an explicitly confirmed job fact. Preserve supported observations and methods, including first-person experience. Where evidence conflicts, do not resolve the conflict by invention; use PASS_WITH_NOTES if no safe determination is possible.
+
 ORIGINAL SOURCE ARTICLE — HISTORICAL REFERENCE, NOT AN EXHAUSTIVE TECHNICAL RECORD:
 ${originalHtml}
 
@@ -141,7 +174,7 @@ ${generatedHtml}
 EVIDENCE PRIORITY — HARD LOCK:
 The original article is a historical reference but may omit accurate details. Absence of a statement is NOT evidence it is false. A FAIL requires a demonstrable contradiction or an objectively significant error, not merely missing corroboration.
 Protect accurate professional background, mechanisms and ordinary technical detail. Do not use "not documented" alone as the sourceEvidence for FAIL.
-If a detail cannot be confirmed or denied, use PASS_WITH_NOTES with no fixes, rather than deleting it.
+If a detail cannot be confirmed or denied, use PASS_WITH_NOTES with no fixes, unless all five conditions of the MATERIAL UNSUPPORTED PROJECT CLAIM rule are met and a safe neutral correction exists.
 Do not assume that a colour-enhancing sealer is a surface coating merely because the original omitted "impregnating". Conversely, confirm actual product behaviour when material to classification.
 For the Northampton terrazzo example, the owner has confirmed: a cement matrix; colour-enhancing impregnating sealer and its pore-penetration/protective behaviour; the client removed all wooden boards; and the work area was a busy hallway. These known facts must not be labelled unsupported on that project. Do not transfer these Northampton facts to other projects.
 Distinguish generic repair limitations (such as repairs not being perfectly invisible) from a specific observed defect.
@@ -156,6 +189,30 @@ C. UNCERTAIN DIAGNOSTICS: Explain plausible causes conditionally, not as confirm
 D. ARTICLE-TYPE VOICE: Preserve I/we where the original establishes practitioner involvement; never change we to I, invent a named technician, or mandate first-person in guides. Case Studies tell the job's story; Diagnostic Guides distinguish symptoms; Method Guides explain safe steps; Buyer Guides support choices; Educational Guides explain principles; Hub Pages organise topics; service pages explain suitability; correction pieces address misconceptions.
 E. EDITORIAL QUALITY: Avoid "near me" in reader-facing narrative, unsupported local-property stereotypes, repeated headings, fabricated client reactions and empty technical padding. Preserve useful source detail and avoid boilerplate.
 Do not reject a technically sound generic explanation solely because it is absent from the original. Flag a definite job-site claim about unrecorded specific tools, grit, measurements, client reactions, personnel or outcomes when materially misleading. A qualified diagnostic possibility is not an assertion that the cause was found on site. Review image captions and headings too. Preserve the established PASS_WITH_NOTES mechanism for uncertainties that cannot be safely repaired atomically.
+
+PROJECT EVIDENCE PROTECTION — TARGETED CHECKS:
+Perform a dedicated comparison of new project-specific statements against the ORIGINAL SOURCE ARTICLE, including header, body, photographs, alt text, video titles and captions.
+1. Separate (a) documented events, (b) ordinary professional explanation or conditional advice, and (c) claims that a specific inspection, test, decision criterion, tool, treatment or observation actually occurred on this job.
+2. Scrutinise new assertions such as a controlled/consistent lighting inspection, decisions based on the quantity released during each cleaning pass, a test area being performed, or a media item depicting a particular treatment stage. These are examples of categories to verify, NOT claims to flag automatically on every article.
+3. Do not silently convert generic good practice into an assertion that the team did it on this project. If the source supports only general practice, keep the useful advice conditional and remove any misleading claim that it occurred.
+4. A new, positively asserted and materially specific on-site procedure or decision criterion that lacks source support may be classified MATERIAL UNSUPPORTED PROJECT CLAIM only when it would meaningfully misrepresent what was done or observed. Absence alone does NOT prove a false claim; genuine uncertainty belongs in PASS_WITH_NOTES.
+5. For an unsupported photo/video treatment-stage identification, compare against the source's existing caption/title. Where the rewrite newly asserts a different stage without supporting evidence, use a minimal source-grounded caption/title replacement if the claim materially misrepresents the media. Do not invent a visual description from an unseen image or video; preserve src, video URL, iframe and figure structure.
+6. Where a materially unsupported project-specific claim has an unambiguous safe, neutral rewrite, provide an atomic visible-text fix. Retain verified project facts and accurate professional explanations. Do not erase real restoration detail simply to achieve PASS.
+7. Do not turn stylistic issues, optional extra links, minor caption phrasing, or harmless general test-area advice into blocking errors. CX link governance and editorial audits remain separate.
+8. In sourceEvidence, quote the pertinent original wording and explain the precise unsupported project-specific implication; never write only 'not documented' as the justification.
+
+MATERIAL UNSUPPORTED PROJECT CLAIM — FIVE-CONDITION DECISION RULE:
+A new assertion qualifies for FAIL with issueType MATERIAL UNSUPPORTED PROJECT CLAIM ONLY if ALL five conditions hold:
+1. NEW: The specific job-site detail was introduced by the rewrite and is not already stated or reasonably entailed by the original project account or other confirmed project evidence actually supplied here.
+2. JOB-SPECIFIC: It positively claims an inspection, test, measurement, named tool/product, particular treatment stage, observed result, client reaction or decision criterion OCCURRED on this job; it is not conditional advice or an explanation of ordinary trade practice.
+3. UNSUPPORTED: The supplied project evidence does not substantiate that particular assertion. Check meaning and reasonable paraphrase, not exact-word matching. Do not presume the historical original is an exhaustive record.
+4. MATERIAL: Its asserted specificity could meaningfully mislead a homeowner about what was actually done, seen or decided. Do not escalate harmless descriptions, professional explanation, style or minor ambiguity.
+5. SAFELY CORRECTABLE: A short, unambiguous, atomically matchable visible-text replacement can remove only the unsupported job attribution while preserving genuine experience, useful trade explanation, grammar, section purpose and all links. If not, record uncertainty as PASS_WITH_NOTES instead of inventing a repair.
+When ALL five hold, return FAIL with exact atomic fixes, not PASS_WITH_NOTES. For new stage-specific photo or video claims, prefer the original source-grounded description rather than inferring what unseen media depicts. Do NOT mechanically change every first-person observation into generic advice: authentic source-supported experience must remain first-person.
+For example, 'Looking at the floor under consistent lighting helped...' and 'The amount of material released determined whether another pass was safer...' warrant this test if they are newly attributed to this job without project support. They are NOT automatic FAIL keywords.
+General guidance such as 'A test area can help confirm the likely appearance' is not a project claim. A statement may be true despite being absent from an old article, so use PASS_WITH_NOTES if the five conditions cannot be established confidently.
+Only use authenticated case-study evidence if it is actually included in the supplied prompt context; do not assume access to unseen ledgers.
+For sourceEvidence, quote the nearest original project evidence, explain the unsupported newly asserted attribution and why it is materially misleading; missing documentation alone does not establish a factual contradiction.
 
 FACT-CHECK SCOPE — MATERIAL ERRORS ONLY:
 This is a focused check of the documented project, not a line-by-line challenge to technical explanation.
@@ -206,8 +263,8 @@ On verification, apply exactly the same materiality threshold; do not introduce 
 
 CLASSIFICATION:
 PASS: No material errors and no noteworthy uncertainty.
-PASS_WITH_NOTES: No material errors, but minor uncertainty or editorial observation worth recording; do not propose corrections.
-FAIL: Only demonstrably false or materially contradictory statements, with unambiguous safe exact corrections. Doubt or missing documentation alone is PASS_WITH_NOTES.
+PASS_WITH_NOTES: No material errors or safely repairable material unsupported project assertions; minor genuine uncertainty or editorial observation worth recording, with no fixes.
+FAIL: Demonstrable factual contradictions, material safety errors, OR newly introduced material project-specific assertions meeting ALL five conditions above, each with unambiguous safe atomic fixes. Missing documentation alone is not FAIL.
 
 OUTPUT FORMAT — HARD LOCK:
 Return ONLY valid JSON, no fences.
@@ -234,7 +291,7 @@ For FAIL:
       "targetText": "unique exact visible-text fragment of the error",
       "contextText": "exact nearby visible text only if target repeats, otherwise empty string",
       "newText": "minimal replacement; blank only if safe to delete",
-      "sourceEvidence": "precise source contradiction or demonstrable technical incompatibility"
+      "sourceEvidence": "precise source contradiction, technical incompatibility, or for a five-condition unsupported claim: source quotation plus explanation of newly introduced material job-specific attribution"
     }
   ]
 }
@@ -537,7 +594,7 @@ function applyFactCheckFix(rawJson, sourceColumn) {
   });
 
   // Fact-check final/working HTML is GE.
-  sh.getRange(row, 187).setValue(updatedHtml);
+  sh.getRange(row, 187).setValue(bc_governLinksAtStage_(updatedHtml, sh, row));
 
   if (typeof logPipelineResume === 'function') {
     logPipelineResume(
@@ -568,7 +625,7 @@ function passThroughFactCheckToGE() {
     return { success: false, message: "ERROR: Column EU (W2B Raw HTML) is empty for this row." };
   }
 
-  sh.getRange(row, 187).setValue(html); // GE = column 187
+  sh.getRange(row, 187).setValue(bc_governLinksAtStage_(html, sh, row)); // GE = column 187
   if (typeof logPipelineResume === 'function') {
     logPipelineResume("W2B.05 — Fact-Check PASS, copied EU to GE", "");
   }

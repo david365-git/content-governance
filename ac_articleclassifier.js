@@ -78,8 +78,8 @@ function classifyDonorArticle() {
 
   // Parse XML tags from response
   const parsed = parseClassificationResponse(response);
-  if (!parsed) {
-    ui.alert('Classification response could not be parsed. Please try again.');
+  if (!parsed || parsed._error) {
+    ui.alert(parsed && parsed._error || 'Classification response could not be parsed. Please try again.');
     return;
   }
 
@@ -155,7 +155,28 @@ function saveClassificationResponseToSheet(response, row) {
   const postsHeaders = postsSheet.getRange(1, 1, 1, postsSheet.getLastColumn()).getValues()[0];
 
   const parsed = parseClassificationResponse(response);
-  if (!parsed) return { success: false, message: 'Could not parse classification response.' };
+  if (!parsed || parsed._error) return { success: false, message: parsed && parsed._error || 'Could not parse classification response.' };
+  // Enforce all seven current-library choices before writing to Posts.
+  const axisKeys = ['entry_condition','homeowner_perception','material_behaviour',
+    'constraint','process_emphasis','result_type','narrative_archetype'];
+  const libraryKeys = ['ac_what_they_found','ac_why_they_called',
+    'ac_what_the_floor_was_doing','ac_what_forced_careful_decisions',
+    'ac_what_governed_the_approach','ac_what_changed_for_the_homeowner',
+    'ac_story_direction'];
+  const stoneIdx = postsHeaders.indexOf('Stone Type');
+  const typeIdx = postsHeaders.indexOf('Article Type');
+  const material = stoneIdx < 0 ? '' : String(postsSheet.getRange(activeRow, stoneIdx + 1).getValue() || '').trim();
+  const articleType = typeIdx < 0 ? '' : String(postsSheet.getRange(activeRow, typeIdx + 1).getValue() || '').trim();
+  const allowed = getAcValuesForMaterial(material, articleType);
+  const values = allowed && allowed.values || {};
+  for (let i = 0; i < axisKeys.length; i++) {
+    const choice = String(parsed[axisKeys[i]] || '').trim();
+    const options = values[libraryKeys[i]] || [];
+    if (!choice || !options.includes(choice)) {
+      return {success:false,message:'AC option missing or not in library for ' +
+        libraryKeys[i] + ': ' + (choice || '[blank]')};
+    }
+  }
 
   // Run duplication check before saving
   const dupCheck = checkClassificationDuplication(postsSheet, activeRow, postsHeaders, parsed);
@@ -372,8 +393,12 @@ function parseClassificationResponse(response) {
 
       const data = JSON.parse(clean);
 
+      const gaps = data.filter(function(entry) { return entry && entry.gap === true; });
+      if (gaps.length) throw new Error('Unresolved AC library gap(s): ' + gaps.map(function(e){return e.field || e.index;}).join(', '));
       data.forEach(function(entry) {
-
+        if (entry && entry.gap === true) {
+          return; // unresolved gap is reported below after parsing
+        }
         if (
           entry &&
           Number.isInteger(Number(entry.index)) &&
@@ -395,7 +420,7 @@ function parseClassificationResponse(response) {
         if (!parsed[axis]) parsed[axis] = '';
       });
 
-      parsed.problem_angle = '';
+      // Problem Angle belongs to W-1; AC does not assign or clear it.
 
       return parsed;
     }
@@ -423,7 +448,7 @@ function parseClassificationResponse(response) {
       error.toString()
     );
 
-    return null;
+    return { _error: 'AC classification failed: ' + error.message };
   }
 }
 
@@ -436,8 +461,7 @@ function writeClassificationToSheet(postsSheet, activeRow, headers, parsed) {
       'constraint': 'ac_constraint',
       'process_emphasis': 'ac_process_emphasis',
       'result_type': 'ac_result_type',
-      'narrative_archetype': 'ac_narrative_archetype',
-      'problem_angle': 'Problem Angle'
+      'narrative_archetype': 'ac_narrative_archetype'
     };
 
     const angleDefinitions = {
@@ -500,6 +524,7 @@ function writeClassificationToSheet(postsSheet, activeRow, headers, parsed) {
 
   } catch (error) {
     Logger.log('Error writing classification to sheet: ' + error.toString());
+    throw error;
   }
 }
 function checkClassificationDuplication(postsSheet, activeRow, headers, parsed) {
@@ -507,6 +532,9 @@ function checkClassificationDuplication(postsSheet, activeRow, headers, parsed) 
     const stoneTypeCol = headers.indexOf('Stone Type') + 1;
     const activeStoneType = stoneTypeCol > 0 ? 
       String(postsSheet.getRange(activeRow, stoneTypeCol).getValue() || '').trim() : '';
+    const articleTypeIdx = headers.indexOf('Article Type');
+    const activeArticleType = articleTypeIdx >= 0 ?
+      String(postsSheet.getRange(activeRow, articleTypeIdx + 1).getValue() || '').trim() : '';
 
     const axisKeys = [
       'entry_condition',
@@ -528,62 +556,23 @@ function checkClassificationDuplication(postsSheet, activeRow, headers, parsed) 
       'narrative_archetype': 'ac_narrative_archetype'
     };
 
-    const axisValues = {
-      'entry_condition': [
-        'Residue and coating build-up',
-        'Ingrained traffic soiling',
-        'Failed or incompatible previous treatment',
-        'Biological growth or salt activity',
-        'Physical damage or instability',
-        'Surface wear and pigment loss'
-      ],
-      'homeowner_perception': [
-        'Floor looks dirty despite regular cleaning',
-        'Pattern or colour has gradually disappeared',
-        'Previous treatment made it worse',
-        'Floor looks damaged or beyond saving',
-        'Unsure whether cleaning or restoration is needed',
-        'Concerned about damaging it further'
-      ],
-      'material_behaviour': [
-        'Porosity and residue lock-in',
-        'Calcium carbonate etch sensitivity',
-        'Salt migration and moisture movement',
-        'Cleavage plane or lamination fragility',
-        'Pigment depth and surface wear',
-        'Binder or aggregate vulnerability'
-      ],
-      'constraint': [
-        'No aggressive abrasion permitted',
-        'Acid chemistry excluded',
-        'Moisture sensitive installation',
-        'Vapour permeability must be maintained',
-        'Existing damage limits mechanical intervention',
-        'Heritage surface integrity governs all decisions'
-      ],
-      'process_emphasis': [
-        'Residue softening and extraction',
-        'Controlled drying and moisture management',
-        'Sealer or coating removal',
-        'Stabilisation before cleaning',
-        'Neutralisation and rinse control',
-        'Breathable protection decision'
-      ],
-      'result_type': [
-        'Pattern definition became readable again',
-        'Colour depth and tonal contrast returned',
-        'Surface stopped cycling back to dull after cleaning',
-        'Maintenance became noticeably easier',
-        'Physical stability restored alongside appearance',
-        'Original material character preserved without artificial finish'
-      ],
-      'narrative_archetype': [
-        'Diagnostic-first',
-        'Material-first',
-        'Constraint-first',
-        'Surface-history-first'
-      ]
+    // Use the current governed AC library, never obsolete hard-coded choices.
+    const articleType = activeArticleType;
+    const liveLibrary = getAcValuesForMaterial(activeStoneType, articleType);
+    const libraryValues = liveLibrary && liveLibrary.values || {};
+    const axisLibraryKeys = {
+      entry_condition:'ac_what_they_found',
+      homeowner_perception:'ac_why_they_called',
+      material_behaviour:'ac_what_the_floor_was_doing',
+      constraint:'ac_what_forced_careful_decisions',
+      process_emphasis:'ac_what_governed_the_approach',
+      result_type:'ac_what_changed_for_the_homeowner',
+      narrative_archetype:'ac_story_direction'
     };
+    const axisValues = {};
+    Object.keys(axisLibraryKeys).forEach(function(axis) {
+      axisValues[axis] = (libraryValues[axisLibraryKeys[axis]] || []).slice();
+    });
 
     const nudgePriority = [
       'narrative_archetype',
@@ -606,6 +595,7 @@ function checkClassificationDuplication(postsSheet, activeRow, headers, parsed) 
       const rowNum = idx + 2;
       if (rowNum === activeRow) return;
       if (stoneTypeIdx > -1 && String(row[stoneTypeIdx] || '').trim() !== activeStoneType) return;
+      if (articleTypeIdx >= 0 && String(row[articleTypeIdx] || '').trim() !== activeArticleType) return;
 
       const rowValues = {};
       let hasClassification = false;

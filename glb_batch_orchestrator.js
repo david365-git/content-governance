@@ -31,6 +31,14 @@ function glb_setup_(){
  var stone=String(s.getRange(1,12).getDisplayValue()||'');
  if(stone&&stone!==GLB_STONE_HEADER)throw Error('Unexpected queue heading L: '+stone);
  if(!stone)s.getRange(1,12).setValue(GLB_STONE_HEADER);
+ // The overview includes three operator-formatted WordPress metadata columns.
+ // Never overwrite unexpected user columns during a full refresh.
+ var metaHeaders=['Published Date (WordPress)','Last Updated Date (WordPress)','Post URL'];
+ metaHeaders.forEach(function(h,i){
+  var col=i+13,actual=String(s.getRange(1,col).getDisplayValue()||'').trim();
+  if(actual&&actual!==h)throw Error('Unexpected queue heading '+col+': '+actual);
+  if(!actual)s.getRange(1,col).setValue(h);
+ });
  return s;
 }
 function glb_lookup_(postId){
@@ -75,34 +83,174 @@ function glb_prepare(postIds){
  }finally{lock.releaseLock();}
  return {ids:ids,rows:glb_progress().filter(function(x){return seen[x.postId];})};
 }
-/** Refresh the overview without changing any existing processing status or cost. */
-function glb_refreshQueueOverview(){
- var lock=LockService.getScriptLock();
- if(!lock.tryLock(15000))throw Error('Batch queue busy');
- try{
-  var p=glb_posts_(),q=glb_setup_(),data=p.getRange(2,2,p.getLastRow()-1,7).getDisplayValues();
-  var source={},duplicates={};
-  data.forEach(function(v,i){var id=String(v[2]||'').trim();if(!id)return;
-   if(source[id]){if(!duplicates[id])duplicates[id]=[source[id].row];duplicates[id].push(i+2);}
-   else source[id]={id:id,row:i+2,title:String(v[0]||'')};
-  });
-  var n=q.getLastRow(),old=n>1?q.getRange(2,1,n-1,1).getDisplayValues():[],present={};
-  old.forEach(function(v){if(v[0])present[String(v[0])]=true;});
-  var added=Object.keys(source).filter(function(id){return !present[id];}).map(function(id,i){
-   var a=source[id],r=n+i+1,duplicate=duplicates[id];
-   return [id,a.row,a.title,glb_typeFormula_(r),duplicate?'SOURCE DUPLICATE — REVIEW':'NOT STARTED','','','','',duplicate?'Duplicate Post ID in posts rows '+duplicate.join(', '):'','',glb_stoneFormula_(r)];
-  });
-  if(added.length)q.getRange(n+1,1,added.length,12).setValues(added);
-  var count=q.getLastRow()-1;
-  if(count){
-   var typ=[],stone=[];
-   for(var i=2;i<=count+1;i++){typ.push([glb_typeFormula_(i)]);stone.push([glb_stoneFormula_(i)]);}
-   q.getRange(2,4,count,1).setFormulas(typ);
-   q.getRange(2,12,count,1).setFormulas(stone);
+/**
+ * Refresh the full Google Love Batch Queue from posts and LIVE WordPress.
+ *
+ * Existing queue statuses, CI/Sol completion stamps, costs and operator
+ * messages are retained by Post ID. Date columns M/N are real Sheet dates,
+ * not text. Sort is by current WordPress publication date (most recent first),
+ * then modification date, without treating an ordinary edit as republication.
+ *
+ * Published and scheduled WordPress metadata are collected in small REST batches before any
+ * Sheet rows are written. Failed REST reads stop with the existing queue intact.
+ * Unavailable post IDs retain their prior queue dates and are reported.
+ */
+function glb_wpDate_(value) {
+  if (Object.prototype.toString.call(value)==='[object Date]') {
+    return !isNaN(value.getTime()) ? value : null;
   }
-  return {tracked:count,added:added.length,duplicatePostIds:Object.keys(duplicates)};
- }finally{lock.releaseLock();}
+  if (typeof value==='number' && isFinite(value)) {
+    return new Date(Math.round((value-25569)*86400000));
+  }
+  var s=String(value||'').trim(),m;
+  if (!s) return null;
+  m=/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(s);
+  if (m) return new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+(m[6]||0)));
+  m=/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/.exec(s);
+  if (m) return new Date(Date.UTC(+m[3],+m[2]-1,+m[1],+(m[4]||0),+(m[5]||0)));
+  return null;
 }
+function glb_wpPublishedMetadata_(ids) {
+  // Use the already-configured W6 Application Password so scheduled (future)
+  // posts are included. Public REST requests silently omit those posts.
+  var settings=ce_w6WpSettings_();
+  var result={},batchSize=60;
+  for(var i=0;i<ids.length;i+=batchSize){
+    var batch=ids.slice(i,i+batchSize);
+    if(!batch.length)continue;
+    var endpoint=settings.site+'/wp-json/wp/v2/posts?include='+
+      encodeURIComponent(batch.join(','))+'&per_page=100&orderby=include'+
+      '&context=edit&status=publish%2Cfuture&_fields='+
+      encodeURIComponent('id,date,modified,link,status');
+    var response=UrlFetchApp.fetch(endpoint,{method:'get',
+      headers:{Authorization:settings.authorization,Accept:'application/json'},
+      followRedirects:true,muteHttpExceptions:true});
+    var code=response.getResponseCode();
+    if(code!==200) throw Error('WordPress queue refresh failed (HTTP '+code+
+      ', batch '+(Math.floor(i/batchSize)+1)+'). Existing queue was not changed.');
+    var records;
+    try {records=JSON.parse(response.getContentText());}
+    catch(e){throw Error('WordPress returned invalid JSON for queue refresh; no queue changes made.');}
+    if(!Array.isArray(records))throw Error('WordPress did not return a posts array; queue unchanged.');
+    records.forEach(function(w){
+      if(!w||!w.id)return;
+      var id=String(w.id),published=glb_wpDate_(w.date),modified=glb_wpDate_(w.modified);
+      if(published)result[id]={published:published,modified:modified||published,
+        url:String(w.link||'').trim()};
+    });
+  }
+  return result;
+}
+function glb_queueUrlFormula_(row){
+  // Preserve the existing Post ID -> posts URL lookup behavior.
+  return '=IFERROR(LET(u,IFNA(XLOOKUP(VALUE($A'+row+
+    '),posts!$D$2:$D,posts!$C$2:$C),XLOOKUP($A'+row+
+    ',posts!$D$2:$D,posts!$C$2:$C)),IF(u="","",HYPERLINK(u,u))),"")';
+}
+function glb_refreshQueueOverview(){
+  var lock=LockService.getScriptLock();
+  if(!lock.tryLock(15000))throw Error('Batch queue busy');
+  try{
+    var p=glb_posts_(),q=glb_setup_();
+    var pLast=p.getLastRow();
+    if(pLast<2)throw Error('posts sheet has no data rows; queue unchanged.');
+    var data=p.getRange(2,2,pLast-1,7).getDisplayValues();
+    var source={},duplicates={};
+    data.forEach(function(v,i){
+      var id=String(v[2]||'').trim();
+      if(!id)return;
+      if(source[id]){
+        if(!duplicates[id])duplicates[id]=[source[id].row];
+        duplicates[id].push(i+2);
+      }else{
+        source[id]={id:id,row:i+2,title:String(v[0]||'').trim()};
+      }
+    });
+
+    var existingCount=Math.max(0,q.getLastRow()-1);
+    var old=existingCount?q.getRange(2,1,existingCount,15).getValues():[];
+    var byId={},previousOrder={},oldIds=[];
+    old.forEach(function(v,i){
+      var id=String(v[0]||'').trim();
+      if(!id)return;
+      if(byId[id])throw Error('Duplicate queue Post ID '+id+'; no changes made.');
+      byId[id]=v.slice();previousOrder[id]=i;oldIds.push(id);
+    });
+    var addIds=Object.keys(source).filter(function(id){return !byId[id];});
+    var allIds=oldIds.concat(addIds);
+
+    // Fetch WordPress source of truth BEFORE writing any Sheet cells.
+    // The authenticated endpoint includes publish and future; other statuses are not refreshed.
+    var live=glb_wpPublishedMetadata_(allIds);
+    var missing=[];
+    var records=allIds.map(function(id,index){
+      var oldRow=byId[id]||[];
+      var record=oldRow.slice();
+      while(record.length<15)record.push('');
+      var post=source[id],wp=live[id];
+      record[0]=id;
+      if(post){
+        record[1]=post.row;
+        record[2]=post.title || record[2];
+      }else{
+        missing.push('posts row absent for '+id);
+      }
+      // Do not overwrite prior CI/Sol workflow state or cost (columns E:K).
+      if(!byId[id]){
+        record[4]=duplicates[id]?'SOURCE DUPLICATE — REVIEW':'NOT STARTED';
+        if(duplicates[id])record[9]='Duplicate Post ID in posts rows '+duplicates[id].join(', ');
+      }
+      if(wp){
+        record[12]=wp.published;
+        record[13]=wp.modified;
+      }else{
+        // Retain old dates for unpublished/unavailable WordPress records.
+        record[12]=glb_wpDate_(record[12])||'';
+        record[13]=glb_wpDate_(record[13])||'';
+        missing.push('WordPress not returned for '+id);
+      }
+      return {id:id,values:record,index:index,
+        publishMs:record[12] instanceof Date?record[12].getTime():-Infinity,
+        modifiedMs:record[13] instanceof Date?record[13].getTime():-Infinity};
+    });
+
+    records.sort(function(a,b){
+      return b.publishMs-a.publishMs || b.modifiedMs-a.modifiedMs || a.index-b.index;
+    });
+    var nowSorted=records.map(function(r){return r.id;});
+    var moved=0;nowSorted.forEach(function(id,i){if(oldIds[i]!==id)moved++;});
+    var values=records.map(function(rec,i){
+      var row=i+2,v=rec.values;
+      v[3]=glb_typeFormula_(row);
+      v[11]=glb_stoneFormula_(row);
+      v[14]=glb_queueUrlFormula_(row);
+      return v;
+    });
+
+    // One coherent write keeps every queued post's status, costs and notes
+    // attached to its ID while updating the full overview and sorting rows.
+    // Rebuild the row-relative lookup formulas at their final positions.
+    if(values.length){
+      q.getRange(2,1,values.length,15).setValues(values);
+      q.getRange(2,13,values.length,2).setNumberFormat('dd/MM/yyyy HH:mm');
+    }
+    if(old.length>values.length){
+      q.getRange(values.length+2,1,old.length-values.length,15).clearContent();
+    }
+    SpreadsheetApp.flush();
+    var outcome={tracked:values.length,added:addIds.length,
+      orderChanged:moved,wordpressMatched:Object.keys(live).length,
+      wordpressUnavailable:missing.filter(function(x){return x.indexOf('WordPress')===0;}).length,
+      warningExamples:missing.slice(0,12),
+      duplicatePostIds:Object.keys(duplicates)};
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Queue refreshed: '+outcome.tracked+' posts, '+outcome.added+
+      ' added, '+outcome.wordpressMatched+' live WordPress dates, '+outcome.orderChanged+
+      ' positions updated.','Google Love',8);
+    return outcome;
+  }finally{lock.releaseLock();}
+}
+
 function glb_queueState_(id){
  var q=glb_setup_(),r=glb_findQueueRow_(q,String(id));
  if(r<2)throw Error('Post ID not queued: '+id);

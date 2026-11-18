@@ -55,6 +55,76 @@ function saveCoherenceCheckResult(raw) {
   };
 }
 
+
+/**
+ * W2B.3 evidence and coverage context. Read by header, not hard-coded positions.
+ * Only recorded facts are hard evidence; unverified claims remain conditional.
+ */
+function ce_w2b3GovernanceContext_(sh, row) {
+  var headings = sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
+  var values = sh.getRange(row,1,1,sh.getLastColumn()).getDisplayValues()[0];
+  function field(name) {
+    var idx = headings.indexOf(name);
+    if (idx < 0) throw new Error('W2B.3 missing column: '+name);
+    return String(values[idx] || '').trim();
+  }
+  var articleType = field('Article Type');
+  var material = field('Stone Type');
+  var evidence = '';
+  if (articleType === 'Case Study') {
+    // Shared evidence reader verifies the source SHA-256, Post ID and all JSON arrays.
+    // Never consume stale or manually altered GL–GV values as authenticated evidence.
+    evidence = bc_caseEvidencePromptBlock_(row);
+  }
+  var requirements = getTierStructuralRequirements(material, '', articleType);
+  if (!requirements || !requirements.length) {
+    throw new Error('W2B.3: no NEW matrix coverage for '+articleType);
+  }
+  var matrix = requirements.map(function(r) {
+    return 'Order '+r.order+': '+r.name+' | '+r.priority+
+      ' | Depth '+r.depth+' | When '+r.whenApplicable+
+      ' | Guidance '+r.guidance+' | Protect '+r.evidence+
+      ' | Safety '+r.safeguards;
+  }).join('\n');
+  return (evidence || 'No source-quoted case-study ledger required for this article type.')+
+    '\nNEW MATRIX CONTENT REQUIREMENTS:\n'+matrix+'\n'+
+    ce_getNewTierGlobalGovernanceBlock_();
+}
+
+// A conservative guard against deleting recognisable documented facts from
+// a repaired section. This is not a semantic fact checker: legitimate rewording
+// is allowed, and only facts clearly present beforehand are checked.
+function ce_w2b3EvidenceLoss_(sh,row,oldSection,newSection) {
+  var heads=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
+  function ix(name){return heads.indexOf(name);}
+  var typeIndex=ix('Article Type');
+  if(typeIndex<0 || String(sh.getRange(row,typeIndex+1).getValue()).trim()!=='Case Study')return [];
+  bc_caseEvidencePromptBlock_(row); // reject stale source-derived ledger
+  var labels=['Project Location & Property','Observed Conditions','Client Requirements',
+    'Materials & Construction','Inspection & Tests','Restoration Methods',
+    'Products & Equipment','Technical Findings','Project Results','Maintenance Handover'];
+  function normalise(t){return String(t||'').replace(/<[^>]*>/g,' ').replace(/&(?:nbsp|amp|quot);/gi,' ').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
+  function words(t){return Array.from(new Set(normalise(t).split(/\s+/).filter(function(x){return x.length>=4;})));}
+  var before=normalise(oldSection),after=normalise(newSection),missing=[];
+  labels.forEach(function(label){
+    var at=ix(label);
+    if(at<0)throw new Error('Missing project evidence column: '+label);
+    var data=JSON.parse(String(sh.getRange(row,at+1).getValue()||'[]'));
+    data.forEach(function(item) {
+      var tokens=words(item.fact);
+      if(tokens.length<4)return;
+      var beforeHits=tokens.filter(function(w){return before.indexOf(w)>=0;}).length;
+      if(beforeHits/tokens.length<0.8)return; // not clearly evidenced in this section
+      var afterHits=tokens.filter(function(w){return after.indexOf(w)>=0;}).length;
+      if(afterHits/tokens.length<0.5 && normalise(item.quote).length>20 &&
+         after.indexOf(normalise(item.quote))<0) {
+        missing.push(label+': '+String(item.fact).slice(0,95));
+      }
+    });
+  });
+  return missing;
+}
+
 function buildCoherenceCheckPrompt() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sh = ss.getSheetByName('posts');
@@ -221,8 +291,12 @@ function buildCoherenceCheckPrompt() {
     originalHtml = '';
   }
 
+  const governanceContext = ce_w2b3GovernanceContext_(sh, row);
   const prompt = `
     W2B.3 — SINGLE-PASS WHOLE-ARTICLE COHERENCE AUDIT
+    ${governanceContext}
+    Treat project evidence as protected; never replace it with plausible speculation.
+    Conditional matrix functions apply only when relevant. No fixed word targets.
 
     ROLE:
     Audit the complete ARTICLE HTML once.
@@ -274,6 +348,30 @@ function buildCoherenceCheckPrompt() {
     Find separate paragraphs or sections that communicate materially the same underlying fact, explanation, diagnostic point or maintenance advice.
 
     Different wording does NOT make repeated meaning unique.
+
+    Compare neighbouring sections AND non-adjacent sections. Similar subjects are
+    not automatically duplicates: a condition observed at discovery may properly
+    reappear when explaining a treatment choice or reporting the completed result.
+    Flag only repeated claims that do not add a DISTINCT observation, diagnosis,
+    method, safety consideration, decision or outcome. Protect genuine project
+    evidence and clear homeowner-friendly explanations. Do not compress material
+    solely for brevity.
+
+    CASE STUDY EVIDENCE LOCK:
+    Never remove a real project observation, practitioner decision, completed
+    method, client requirement, local context or observed outcome merely because
+    a related condition is also mentioned in another stage.
+    Original project evidence takes precedence over brevity. If you cannot
+    identify a specific harmful duplicate without sacrificing unique evidence,
+    do not flag it. General professional guidance and documented events are
+    not interchangeable. A legitimate discovery -> diagnosis -> method -> result
+    sequence may revisit the same floor condition for a different reader purpose.
+
+    PUBLICATION STANDARD: PASS when an experienced homeowner can follow the project correctly.
+    Only report redundancy if it materially obscures a project decision, confuses the sequence,
+    or impedes homeowner understanding. Minor repetition, naturally recurring project conditions,
+    and harmless editorial preferences are NOT repairable failures. Do not generate issues
+    merely to populate the issue list. Return PASS with an empty issues array when appropriate.
 
     For each REDUNDANCY issue:
 
@@ -499,7 +597,7 @@ function buildCoherenceCheckPrompt() {
 
 
 
-function applyCoherenceFix(rawJson) {
+function applyCoherenceFix(rawJson, expectedSectionNumbers) {
 
   const ss =
     SpreadsheetApp.getActiveSpreadsheet();
@@ -866,6 +964,15 @@ function applyCoherenceFix(rawJson) {
      *
      * We deliberately do NOT apply anything yet.
      */
+    var lostEvidence = ce_w2b3EvidenceLoss_(sh, row, existingSection, replacementHtml);
+    if (lostEvidence.length) {
+      return {
+        success: false,
+        message: 'Section '+sectionNumber+' may remove documented project facts: '+
+          lostEvidence.slice(0,3).join('; ')+'. GI was not changed.'
+      };
+    }
+
     validatedRepairs.push({
       sectionNumber:
         sectionNumber,
@@ -876,6 +983,24 @@ function applyCoherenceFix(rawJson) {
       replacementHtml:
         replacementHtml
     });
+  }
+
+  // Automated runs must repair every distinct section identified by the audit.
+  // Do not allow a valid but incomplete JSON response to advance the pipeline.
+  if (Array.isArray(expectedSectionNumbers)) {
+    const expected = Array.from(new Set(expectedSectionNumbers.map(Number)));
+    const missing = expected.filter(function(n) { return !seenSections[n]; });
+    const unexpected = Object.keys(seenSections).map(Number).filter(function(n) {
+      return expected.indexOf(n) === -1;
+    });
+    if (missing.length || unexpected.length) {
+      return {
+        success: false,
+        message: 'Coherence repair coverage incomplete. Missing sections: ' +
+          (missing.join(', ') || 'none') + '; unexpected sections: ' +
+          (unexpected.join(', ') || 'none') + '. GI was not changed.'
+      };
+    }
   }
 
   /*
@@ -955,9 +1080,7 @@ function applyCoherenceFix(rawJson) {
 
   sh
     .getRange(row, 191)
-    .setValue(
-      candidateHtml
-    );
+    .setValue(bc_governLinksAtStage_(candidateHtml, sh, row));
 
   if (
     typeof logPipelineResume ===
@@ -990,7 +1113,7 @@ function passThroughCoherenceCheckToGI() {
     return { success: false, message: "ERROR: No article HTML found in column GI or GG for this row." };
   }
 
-  sh.getRange(row, 191).setValue(html); // GI
+  sh.getRange(row, 191).setValue(bc_governLinksAtStage_(html, sh, row)); // GI
   if (typeof logPipelineResume === 'function') {
     logPipelineResume("W2B.3 — Coherence Check PASS, confirmed in GI", "");
   }
@@ -1008,7 +1131,7 @@ function promoteCoherenceToEU() {
     return { success: false, message: "ERROR: Column GI (W2B.3 Final HTML) is empty for this row. Run W2B.3 first." };
   }
 
-  sh.getRange(row, 151).setValue(html); // EU
+  sh.getRange(row, 151).setValue(bc_governLinksAtStage_(html, sh, row)); // EU
   if (typeof logPipelineResume === 'function') {
     logPipelineResume("W2B.3 — Confirmed, promoted GI to EU", "");
   }
@@ -1103,8 +1226,13 @@ function buildCoherenceFixPrompt(findingsText) {
     };
   }
 
+  const governanceContext = ce_w2b3GovernanceContext_(sh, row);
   const prompt = `
     W2B.3 — SINGLE-PASS COHERENCE REPAIR
+    ${governanceContext}
+    For each requested section, preserve all recorded project facts relevant to that section.
+    Make only the targeted corrections. Do not invent additional project actions.
+    Avoid arbitrary shortening. Do not strip unique observations to resolve semantic overlap.
 
     ROLE:
     Apply ALL coherence repairs listed in the locked audit below.

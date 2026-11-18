@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html><head><base target="_top"><style>
+body{font:13px Arial,sans-serif;margin:16px;color:#263238}
+h3{margin:0 0 12px}.line{margin:9px 0}.muted{color:#607d8b}
+progress{width:100%;height:18px}button{margin-top:10px;padding:7px 12px}
+#error{white-space:pre-wrap;color:#b71c1c}
+</style></head><body>
+<h3>Case Study Evidence — Filtered Stone Type</h3>
+<div class="line" id="state" role="status">Running — finding Case Study rows…</div>
+<div class="line">Elapsed: <b id="elapsed">00:00</b> · Cost: $<b id="cost">0.0000</b></div>
+<progress id="progress" max="1" value="0"></progress>
+<div class="line" id="counts">Preparing batch…</div>
+<div class="line muted" id="current">Only the currently visible Stone Type is processed.</div>
+<div id="error"></div>
+<button id="stop" onclick="stopRequested=true;this.disabled=true;this.textContent='Stopping after current row…'">Stop after current row</button>
+<script>
+var started=Date.now(), stopRequested=false, done=0, skipped=0, failed=0, cost=0, rows=[], index=0, stone='';
+var timer=setInterval(function(){
+  var elapsed=Math.floor((Date.now()-started)/1000);
+  document.getElementById('elapsed').textContent=
+    String(Math.floor(elapsed/60)).padStart(2,'0')+':'+String(elapsed%60).padStart(2,'0');
+},1000);
+function setText(id,value){document.getElementById(id).textContent=value;}
+function refresh(){
+ document.getElementById('progress').max=Math.max(rows.length,1);
+ document.getElementById('progress').value=index;
+ setText('counts',index+'/'+rows.length+' processed · '+done+' extracted · '+skipped+' skipped · '+failed+' failed');
+ setText('cost',cost.toFixed(4));
+}
+function finish(message){
+ clearInterval(timer);setText('state',message);
+ document.getElementById('stop').disabled=true;refresh();
+}
+function next(){
+ if(stopRequested || index>=rows.length){
+   finish((stopRequested?'Stopped':'Complete')+' — '+stone+'. '+(rows.length-index)+' remaining.');
+   return;
+ }
+ var row=rows[index];
+ setText('state','Running — '+stone);
+ setText('current','Processing Case Study row '+row+' ('+(index+1)+' of '+rows.length+')');
+ google.script.run.withSuccessHandler(function(result){
+   cost+=Number(result&&result.cost||0);
+   if(result&&result.skipped) skipped++;
+   else if(result&&result.success)done++;
+   else {failed++;setText('error','Row '+row+': '+(result&&result.message||'Unsuccessful'));}
+   index++;refresh();next();
+ }).withFailureHandler(function(err){
+   failed++;setText('error','Row '+row+': '+(err&&err.message||err));
+   index++;refresh();next();
+ }).bc_caseEvidenceRunRowBatch(row);
+}
+google.script.run.withSuccessHandler(function(info){
+ if(!info||!info.success){
+    finish('Cannot start batch');setText('error',info&&info.message||'Could not read filtered rows');return;
+ }
+ stone=info.stoneType;rows=info.rows||[];
+ setText('state','Running — '+stone);refresh();next();
+}).withFailureHandler(function(err){
+ finish('Cannot start batch');setText('error',err&&err.message||String(err));
+}).bc_caseEvidenceFilteredRows();
+</script></body></html>

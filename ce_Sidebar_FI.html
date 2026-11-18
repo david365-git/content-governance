@@ -34,18 +34,6 @@
         <button class="btn-copy btn-full" onclick="copyText('fi-prompt','fi-status','Image prompt copied')">⚙ Copy Prompt</button>
       </div>
 
-      <label class="section-label" style="margin-top:8px;">Governed Filename</label>
-      <input type="text" id="fi-filename" readonly style="width:100%;font-size:11px;padding:4px;box-sizing:border-box;" />
-      <div class="btn-row">
-        <button class="btn-copy btn-full" onclick="copyField('fi-filename','fi-status','Filename copied')">⚙ Copy Filename</button>
-      </div>
-
-      <label class="section-label" style="margin-top:8px;">Alt Text</label>
-      <input type="text" id="fi-alttext" readonly style="width:100%;font-size:11px;padding:4px;box-sizing:border-box;" />
-      <div class="btn-row">
-        <button class="btn-copy btn-full" onclick="copyField('fi-alttext','fi-status','Alt text copied')">⚙ Copy Alt Text</button>
-      </div>
-
       <div style="margin-top:10px;padding:8px;background:#fff3e0;border:1px solid #e65100;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:10px;color:#37474f;line-height:1.8;">
         <strong style="color:#e65100;">⚠ BEFORE YOU PASTE INTO CHATGPT:</strong><br>
         Attach a photograph of the actual floor from this job.<br>
@@ -56,11 +44,36 @@
         <strong>Next steps:</strong><br>
         1. Attach a floor photograph to your ChatGPT message<br>
         2. Copy prompt → paste into ChatGPT with the photograph attached<br>
-        3. Save generated image as the governed filename above (webp, 1270px, under 100kb)<br>
-        4. Upload to WordPress Media Library<br>
-        5. Copy the image URL from WordPress<br>
-        6. Paste URL below and click Save to Sheet
+        3. Save generated image as the governed filename shown below (webp, 1270px, under 100kb)<br>
+        4. Choose the image from F:\\content-engine\\ (or another local folder)<br>
+        5. Click Upload to WordPress — the URL and sheet fields are saved automatically<br>
+        6. Alternatively, paste an existing WordPress URL below and click Save to Sheet
       </div>
+
+      </div>
+
+      <!-- Image upload and sheet-save controls remain available without running Image Prompt. -->
+      <div style="font-size:10px;color:#546e7a;margin-top:7px;">Already have the finished image? Choose your WebP below — generating an image prompt is optional.</div>
+
+      <label class="section-label" style="margin-top:8px;">Governed Filename</label>
+      <input type="text" id="fi-filename" placeholder="Use chosen WebP filename or edit it" style="width:100%;font-size:11px;padding:4px;box-sizing:border-box;" />
+      <div class="btn-row">
+        <button class="btn-copy btn-full" onclick="copyField('fi-filename','fi-status','Filename copied')">⚙ Copy Filename</button>
+      </div>
+
+      <label class="section-label" style="margin-top:8px;">Alt Text</label>
+      <input type="text" id="fi-alttext" placeholder="Describe the actual floor in the image" style="width:100%;font-size:11px;padding:4px;box-sizing:border-box;" />
+      <div class="btn-row">
+        <button class="btn-copy btn-full" onclick="copyField('fi-alttext','fi-status','Alt text copied')">⚙ Copy Alt Text</button>
+      </div>
+
+      <label class="section-label" style="margin-top:8px;">Choose Local Image</label>
+      <input type="file" id="fi-file" accept=".webp,image/webp" style="width:100%;font-size:11px;" />
+      <div style="font-size:10px;color:#546e7a;margin-top:3px;">Browse to F:\\content-engine\\. The image will upload using its governed filename. WebP only; maximum 2 MB.</div>
+      <div class="btn-row" style="margin-top:6px;">
+        <button type="button" id="fi-upload-button" class="btn-push btn-full" onclick="window.fiUploadToWordPress()">Upload to WordPress &amp; Save to Sheet</button>
+      </div>
+      <div id="fi-upload-status" class="status-bar pending" style="margin-top:6px;display:none;"></div>
 
       <label class="section-label" style="margin-top:8px;">WordPress Image URL</label>
       <input type="text" id="fi-url" placeholder="Paste WordPress media URL here..." style="width:100%;font-size:11px;padding:4px;box-sizing:border-box;" />
@@ -70,7 +83,6 @@
 
       <div id="fi-save-status" class="status-bar pending" style="margin-top:6px;display:none;"></div>
 
-    </div>
   </div>
   <script>
   (function () {

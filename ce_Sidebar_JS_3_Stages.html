@@ -25,6 +25,50 @@
       .bc_caseEvidenceActiveRow();
   }
 
+  function masterRunCaseEvidenceFilteredBatch() {
+    var btn = document.getElementById('batchCaseEvidenceBtn');
+    var status = document.getElementById('batchCaseEvidenceStatus');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    status.textContent = 'Finding unprocessed Case Studies in the current sheet filter…';
+    google.script.run.withSuccessHandler(function(info) {
+      if (!info || !info.success) {
+        btn.disabled = false;
+        status.textContent = '❌ ' + (info && info.message || 'Unable to read filter');
+        return;
+      }
+      var rows = info.rows || [], index = 0, done = 0, skipped = info.alreadyCompleted || 0, failed = 0, cost = 0;
+      if (!rows.length) {
+        btn.disabled = false;
+        status.textContent = '✔ ' + info.stoneType + ': no pending Case Studies (' + skipped + ' already completed).';
+        return;
+      }
+      function next() {
+        if (index >= rows.length) {
+          btn.disabled = false;
+          status.textContent = '✔ ' + info.stoneType + ': ' + done + ' extracted, ' + skipped + ' skipped, ' + failed + ' failed. Cost $' + cost.toFixed(4);
+          return;
+        }
+        var row = rows[index++];
+        status.textContent = info.stoneType + ': processing row ' + row + ' (' + index + '/' + rows.length + ') | ' + done + ' completed, ' + failed + ' failed';
+        google.script.run.withSuccessHandler(function(res) {
+          cost += Number(res && res.cost || 0);
+          if (res && res.skipped) skipped++;
+          else if (res && res.success) done++;
+          else failed++;
+          next();
+        }).withFailureHandler(function(err) {
+          failed++;
+          status.textContent = '⚠ Row ' + row + ': ' + (err && err.message || err) + '; continuing…';
+          next();
+        }).bc_caseEvidenceRunRowBatch(row);
+      }
+      next();
+    }).withFailureHandler(function(err) {
+      btn.disabled = false;
+      status.textContent = '❌ ' + (err && err.message || err);
+    }).bc_caseEvidenceFilteredRows();
+  }
   function runStage0() {
     setGenerating('status0','gen0btn','W0');
     google.script.run

@@ -57,115 +57,24 @@ function saveStage15AStructure(structure) {
         };
       }
 
-      // Hard-lock aggregate word budgets for repeated TSM Orders.
+      // NEW matrix: verify Required functions are mapped, never numeric budgets.
       const d = getActiveRowDataMap();
-      const material = d["Stone Type"] || "UNKNOWN";
-      const articleType = d["Article Type"] || "General";
-      const secondaryIntents =
-        String(d["Secondary Intent Decisions"] || "");
-
-      const tierMap = {
-        "Hub Page":          "Tier 1",
-        "Educational Guide": "Tier 1",
-        "Method Guide":      "Tier 2",
-        "Service Page":      "Tier 2",
-        "Geo Service Page":  "Tier 2",
-        "Diagnostic Guide":  "Tier 3",
-        "Buyer Guide":       "Tier 3",
-        "FAQ Spoke":         "Tier 3",
-        "Case Study":        "Tier 4"
-      };
-
-      const tierLabel = tierMap[articleType] || "Tier 2";
-      let tsmData =
-        getTierStructuralRequirements(
-          material,
-          tierLabel,
-          articleType
-        ) || [];
-
-      tsmData = tsmData.filter(function(req) {
-        return !secondaryIntents.includes(
-          "N — " + req.name
-        );
-      });
-
-      const expectedByOrder = {};
-      tsmData.forEach(function(req, index) {
-        const minWords = Number(req.wordCount || 0);
-        expectedByOrder[index + 1] = {
-          name: String(req.name || ""),
-          min: minWords,
-          max: Math.round(minWords * 1.2)
-        };
-      });
-
-      const actualByOrder = {};
-      const sectionLineRegex =
-        /^SECTION\s+\d+:\s*Order\s+(\d+)\b[^\n]*?—\s*(\d+)\s*[–-]\s*(\d+)\s+words\b/gmi;
-
-      let sectionMatch;
-      while ((sectionMatch = sectionLineRegex.exec(cleanedStructure)) !== null) {
-        const order = Number(sectionMatch[1]);
-        const minWords = Number(sectionMatch[2]);
-        const maxWords = Number(sectionMatch[3]);
-
-        if (!actualByOrder[order]) {
-          actualByOrder[order] = {
-            min: 0,
-            max: 0
-          };
-        }
-
-        actualByOrder[order].min += minWords;
-        actualByOrder[order].max += maxWords;
+      const articleType = String(d["Article Type"] || "").trim();
+      const requirements = getTierStructuralRequirements(
+        d["Stone Type"] || "", "", articleType
+      );
+      if (!requirements.length) {
+        return { success: false, message: "No NEW matrix requirements for " + articleType };
       }
-
-      const budgetErrors = [];
-
-      Object.keys(expectedByOrder).forEach(function(key) {
-        const order = Number(key);
-        const expected = expectedByOrder[order];
-        const actual = actualByOrder[order];
-
-        if (!actual) {
-          budgetErrors.push(
-            'Order ' + order +
-            ' (' + expected.name + ') has no mapped word budget.'
-          );
-          return;
-        }
-
-        if (
-          actual.min !== expected.min ||
-          actual.max !== expected.max
-        ) {
-          budgetErrors.push(
-            'Order ' + order +
-            ' (' + expected.name + ') totals ' +
-            actual.min + '–' + actual.max +
-            ' words; governed total is ' +
-            expected.min + '–' + expected.max + '.'
-          );
-        }
-      });
-
-      Object.keys(actualByOrder).forEach(function(key) {
-        const order = Number(key);
-        if (!expectedByOrder[order]) {
-          budgetErrors.push(
-            'Unexpected Order ' + order +
-            ' appears in the section mapping.'
-          );
-        }
-      });
-
-      if (budgetErrors.length > 0) {
+      const missing = requirements.filter(req =>
+        req.priority.toLowerCase() === "required" &&
+        !new RegExp("Order\\s+" + req.order + "\\b", "i").test(cleanedStructure)
+      );
+      if (missing.length) {
         return {
           success: false,
-          message:
-            'W1.5A word-budget validation failed — structure not saved to CU. ' +
-            budgetErrors.join(' | ')
+          message: "NEW matrix required functions unmapped: " +
+            missing.map(req => req.name).join(", ")
         };
       }
 
@@ -467,7 +376,7 @@ function saveStage15CEnrichedPlan(plan) {
 
     // Canonicalise governed fields from W1.5A before validation.
     // W1.5C may enrich a section, but it must never redefine
-    // the TSM Requirement or Word Budget inherited from CU.
+    // the TSM Requirement or Depth inherited from CU.
     governed.expectedSections.forEach(
       function(number) {
         const blockRegex =
@@ -488,8 +397,8 @@ function saveStage15CEnrichedPlan(plan) {
               const governedTsm =
                 governed.expectedTsmRequirements[number];
 
-              const governedBudget =
-                governed.expectedWordBudgets[number];
+              const governedDepth =
+                governed.expectedDepths[number];
 
               if (
                 /^TSM Requirement:/mi.test(
@@ -528,15 +437,15 @@ function saveStage15CEnrichedPlan(plan) {
               }
 
               if (
-                /^Word Budget:/mi.test(
+                /^Depth:/mi.test(
                   canonicalBlock
                 )
               ) {
                 canonicalBlock =
                   canonicalBlock.replace(
-                    /^Word Budget:.*$/mi,
-                    'Word Budget: ' +
-                    governedBudget
+                    /^Depth:.*$/mi,
+                    'Depth: ' +
+                    governedDepth
                   );
               } else {
                 const tsmLineRegex =
@@ -548,8 +457,8 @@ function saveStage15CEnrichedPlan(plan) {
                     function(tsmLine) {
                       return (
                         tsmLine +
-                        '\nWord Budget: ' +
-                        governedBudget
+                        '\nDepth: ' +
+                        governedDepth
                       );
                     }
                   );
@@ -687,7 +596,7 @@ function saveStage15CEnrichedPlan(plan) {
         blockMatch[0];
       const requiredFields = [
         'TSM Requirement:',
-        'Word Budget:',
+        'Depth:',
         'Content Brief:',
         'Visual Pattern:',
         'List eligible:',
@@ -750,9 +659,9 @@ function saveStage15CEnrichedPlan(plan) {
             /^TSM Requirement:\s*(.+)$/mi
           );
 
-        const budgetMatch =
+        const depthMatch =
           block.match(
-            /^Word Budget:\s*(.+)$/mi
+            /^Depth:\s*(.+)$/mi
           );
 
         if (
@@ -768,14 +677,14 @@ function saveStage15CEnrichedPlan(plan) {
         }
 
         if (
-          budgetMatch &&
-          budgetMatch[1].trim() !==
-          governed.expectedWordBudgets[number]
+          depthMatch &&
+          depthMatch[1].trim() !==
+          governed.expectedDepths[number]
         ) {
           errors.push(
             'SECTION ' +
             number +
-            ' Word Budget does not exactly match W1.5A.'
+            ' Depth does not exactly match W1.5A.'
           );
         }
       }
