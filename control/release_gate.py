@@ -89,6 +89,9 @@ def main():
     menu = MENU.findall(data.get("!_menu.js", ""))
     missing = [(label, fn) for label, fn in menu if fn not in functions]
     check("Every menu function exists", not missing, missing if missing else str(len(menu)) + " registered")
+    retired = "openSelectedRowInViewerSheet"
+    check("Retired viewer menu command stays absent", retired not in data.get("!_menu.js", ""),
+          "user approved retirement on 2026-11-18")
     main_html = data.get("ce_Sidebar_Main.html", "")
     included = set(re.findall(r"""include\(\s*['"]([^'"]+)['"]\s*\)""", main_html))
     shared = set()
