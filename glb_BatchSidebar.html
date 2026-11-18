@@ -13,12 +13,12 @@ small{color:#777}.ok{color:#137333}.warn{color:#9b5700}.err{color:#b3261e}
 <h3>Content Intelligence → Google Love Sol</h3>
 <p>Enter the Post IDs to process, separated by commas or new lines. Each Post ID runs the <b>existing full Content Intelligence</b> (including case-study and media extraction), then one Sol article generation. The finished HTML is saved in <b>posts → New HTML</b> for your original image, meta and schema windows.</p>
 <textarea id="ids" placeholder="5628&#10;11417&#10;6847"></textarea>
-<div><button id="run" onclick="runPosts()">Run Post IDs</button><button class="secondary" onclick="stopRun()">Stop after current stage</button></div>
-<div id="status">Ready.</div><div id="progressSummary">0 / 0 completed</div><div id="barOuter"><div id="barInner"></div></div><div id="counts"><span id="remaining">0 remaining</span><span id="blocked">0 require review</span></div><div id="current">Current: —</div><small>Post IDs run Content Intelligence, Sol, W5 H1/Meta and W5C Schema Builder in the order entered. Keep this sidebar open during the batch. If a stage fails, the batch stops and displays the reason.</small>
+<div><button id="run" onclick="runPosts()">Run Post IDs</button><button class="secondary" onclick="stopRun()">Stop after current article</button></div>
+<div id="status">Ready.</div><div id="progressSummary">0 / 0 completed</div><div id="barOuter"><div id="barInner"></div></div><div id="counts"><span id="remaining">0 remaining</span><span id="blocked">0 require review</span></div><div id="current">Current: —</div><small>Post IDs run Content Intelligence, Sol, W5 H1/Meta and W5C Schema Builder in the order entered. Stop finishes all four stages of the current article before pausing. Keep this sidebar open during the batch. If a stage fails, the batch stops immediately; review recorded stages before any restart. Closing the sidebar does not safely stop a running server request.</small>
 <div id="grid"><table><thead><tr><th>Post ID</th><th>Stage</th><th>CI completed</th><th>Sol completed</th></tr></thead><tbody id="rows"></tbody></table></div>
 <div id="log"></div>
 <script>
-var active=false,busy=false,items=[],index=0,phase='CI',queue=[],refreshBusy=false;
+var active=false,busy=false,stopRequested=false,items=[],index=0,phase='CI',queue=[],refreshBusy=false;
 function el(id){return document.getElementById(id);}
 function show(t){el('status').textContent=t;}
 function log(t){var n=el('log');n.textContent+=(n.textContent?'\n':'')+t;n.scrollTop=n.scrollHeight;}
@@ -48,24 +48,34 @@ function poll(){
 function runPosts(){
  if(active||busy)return;
  items=parse();if(!items.length){show('Enter at least one Post ID');return;}
- active=true;busy=true;index=0;phase='CI';el('run').disabled=true;
+ active=true;busy=true;stopRequested=false;index=0;phase='CI';el('run').disabled=true;
  el('log').textContent='';show('Preparing '+items.length+' Post IDs…');render();
  google.script.run.withSuccessHandler(function(v){
   busy=false;items=v.ids;log('Processing '+items.join(', '));advance();
  }).withFailureHandler(stopError).glb_prepare(items.join('\n'));
 }
 function stopError(e){
- active=false;busy=false;el('run').disabled=false;
+ active=false;busy=false;stopRequested=false;el('run').disabled=false;
  show('STOPPED — '+String(e&&e.message||e));log('Stopped: '+String(e&&e.message||e));poll();
 }
 function stopRun(){
- active=false;show('Stopping after current stage…');
- if(!busy){el('run').disabled=false;show('Stopped by operator');}
+ if(!active){show('No batch is running.');return;}
+ stopRequested=true;
+ show('Stop requested — finishing current Post ID through W5C before pausing.');
+ log('Stop requested; no further Post IDs will start after the current article completes.');
 }
 function advance(){
  if(!active){busy=false;el('run').disabled=false;poll();return;}
- if(index>=items.length){
+ // Only honour a stop at an article boundary, never between CI, Sol, W5 and W5C.
+ // If preparation has not begun an article, stop before starting the first one.
+ if(stopRequested && phase==='CI'){
   active=false;busy=false;el('run').disabled=false;
+  show('PAUSED after '+index+' completed article(s). Check queue status before starting another run.');
+  log('Paused at article boundary; '+(items.length-index)+' Post ID(s) were not started.');
+  poll();return;
+ }
+ if(index>=items.length){
+  active=false;busy=false;stopRequested=false;el('run').disabled=false;
   show('FINISHED — Check featured images, then run W6');log('All '+items.length+' Post IDs processed through W5C');poll();return;
  }
  var id=items[index],step=({CI:'Content Intelligence',SOL:'Google Love Sol',W5:'W5 — H1 & Meta',W5C:'W5C — Schema Builder'})[phase];
