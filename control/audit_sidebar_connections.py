@@ -44,6 +44,7 @@ def main():
         # Google Apps Script template include expression; tolerate quote styles.
         return ("include('" + name + "')" in entry_text or
                 'include("' + name + '")' in entry_text)
+    html_files = sorted(root.glob("*.html"))
     shared_html_defs = set()
     for shared in html_files:
         if included(shared.stem):
