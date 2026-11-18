@@ -86,3 +86,17 @@ python control/release_gate.py --mode review
 ```
 
 If the automatic GitHub check fails, read its job log and fix the source or control record before requesting approval. Never make a fake function, suppress a failing test, or change a version lock solely to turn a failure green.
+
+## Step 1 of controlled deployment — verified live snapshot
+
+`control/backup_live_apps_script.py` is **backup-only**. It refuses to run if the Script ID in the chosen last-successful deployment directory differs from the repository's current `.clasp.json`. It downloads from Apps Script into a new dated, isolated folder, stores per-file SHA-256 checksums, creates a ZIP, and verifies the ZIP. It never invokes `clasp push`.
+
+From the dedicated PC consolidation working copy:
+
+```bash
+python control/backup_live_apps_script.py --deployment-folder /f/clasp-downloads/content-governance-w6-w2c-deploy-20261117
+```
+
+Output is created under `F:\clasp-downloads\ce-control-reports\live-backups`, outside Git and deployment sources. A backup counts as successful only after **PASS**, with file count and verified ZIP. If it blocks, inspect the reported cause; **never** substitute a different Script ID or force-push.
+
+A successful backup is necessary but **not sufficient** to deploy: approved main version, reliable post-deploy readback, rollback planning and runtime smoke tests are still outstanding.
