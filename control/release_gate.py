@@ -136,8 +136,18 @@ def main():
         check("Google Love stop finishes current article", stop_test.returncode == 0,
               stop_test.stdout.strip()[-400:] if stop_test.returncode == 0 else (stop_test.stderr or stop_test.stdout)[-1200:])
     if args.mode == "release":
-        check("Deployment/readback workflow tested", False,
-              "not yet implemented: production release intentionally disabled")
+        tests = (
+            "test_deploy_safety.py",
+            "test_full_release_simulation.py",
+            "test_backup_safety.py",
+            "test_readback_verifier.py",
+        )
+        for test in tests:
+            result = run([sys.executable, "-B", str(root / "control" / test)], root)
+            check("Release safeguard test: " + test,
+                  result.returncode == 0,
+                  "offline mock test" if result.returncode == 0 else
+                  (result.stderr or result.stdout)[-1200:])
     print("\n" + ("STATIC REVIEW PASSED" if not problems else
                    "HOLD — " + str(len(problems)) + " unresolved checks"))
     print("No source changes, no Git changes, no clasp calls.")
