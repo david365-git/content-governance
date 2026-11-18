@@ -17,6 +17,8 @@ jobs:
   validate:
     name: Master Register and protected features
     runs-on: ubuntu-latest
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - name: Read repository source
         uses: actions/checkout@v4
