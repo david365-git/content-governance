@@ -7,7 +7,6 @@ claim that static text matching proves a UI works or is broken.
 """
 import argparse
 import re
-from collections import defaultdict
 from pathlib import Path
 
 FUNCTION_DECL = re.compile(r"\bfunction\s+([A-Za-z_$][\w$]*)\s*\(")
@@ -38,7 +37,6 @@ def main():
     server_defs = set()
     for p in scripts:
         server_defs.update(all_defs(p.read_text(encoding="utf-8-sig", errors="replace")))
-    html_files = sorted(root.glob("*.html"))
     summaries = []
     for filename in TARGETS:
         p = root / filename
@@ -62,7 +60,7 @@ def main():
         # Identify calls with a known server-style prefix, rather than treating
         # every JS method chain as an Apps Script RPC. This is incomplete by
         # design: ambiguous calls require human review.
-        server_candidates = set(SERVER_DIRECT.findall(content))
+        server_candidates = set(SERVER_DIRECT.findall(content)) - IGNORED
         for m in SERVER_CALL_LINE.finditer(content):
             name = m.group(1)
             if name in IGNORED:
