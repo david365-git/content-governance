@@ -36,3 +36,5 @@ jobs:
         run: python control/release_gate.py --mode review
       - name: Verify deployment refuses unsafe attempts
         run: python control/test_deploy_safety.py
+      - name: Simulate full release and failed releases without live calls
+        run: python control/test_full_release_simulation.py
