@@ -6,6 +6,7 @@ pre-release inspection on main. This script cannot deploy.
 """
 import argparse
 import csv
+import os
 import re
 import shutil
 import subprocess
@@ -60,7 +61,10 @@ def main():
     status_result = run(["git", "status", "--porcelain=v1", "-uall"], root)
     branch = branch_result.stdout.strip()
     check("Git working tree clean", status_result.returncode == 0 and not status_result.stdout.strip())
-    check("Approved branch", branch == "main" if args.mode == "release" else bool(branch), branch)
+    pr_checkout = (os.environ.get("GITHUB_ACTIONS") == "true" and
+                   os.environ.get("GITHUB_EVENT_NAME") == "pull_request")
+    check("Approved branch", branch == "main" if args.mode == "release" else bool(branch) or pr_checkout,
+          branch or ("GitHub pull request checkout" if pr_checkout else "detached checkout"))
     check("Matching origin/main",
           head_result.returncode == 0 and origin_result.returncode == 0 and
           (head_result.stdout == origin_result.stdout if args.mode == "release" else True),
