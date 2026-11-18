@@ -37,6 +37,9 @@ def main():
     server_defs = set()
     for p in scripts:
         server_defs.update(all_defs(p.read_text(encoding="utf-8-sig", errors="replace")))
+    shared_html_defs = set()
+    for shared in html_files:
+        shared_html_defs.update(all_defs(shared.read_text(encoding="utf-8-sig", errors="replace")))
     summaries = []
     for filename in TARGETS:
         p = root / filename
@@ -47,6 +50,7 @@ def main():
         local_defs = all_defs(content)
         inline_handlers = []
         unresolved_handlers = []
+        shared_handlers = []
         for match in HANDLER.finditer(content):
             expression = match.group(2)
             called = HANDLER_FUNC.search(expression)
@@ -54,7 +58,10 @@ def main():
                 name = called.group(1)
                 inline_handlers.append(name)
                 if name not in local_defs:
-                    unresolved_handlers.append(name)
+                    if name in shared_html_defs:
+                        shared_handlers.append(name)
+                    else:
+                        unresolved_handlers.append(name)
         # Server functions typically appear on a continuation line after
         # google.script.run and optional withSuccessHandler()/FailureHandler().
         # Identify calls with a known server-style prefix, rather than treating
@@ -69,9 +76,11 @@ def main():
                 server_candidates.add(name)
         server_candidates = sorted(server_candidates)
         missing_servers = [x for x in server_candidates if x not in server_defs]
-        summaries.append((filename, len(inline_handlers), len(server_candidates), unresolved_handlers, missing_servers))
+        summaries.append((filename, len(inline_handlers), len(server_candidates), unresolved_handlers, missing_servers, shared_handlers))
         print("\n" + filename)
         print("  Inline HTML actions:", len(inline_handlers), "| server-looking calls:", len(server_candidates))
+        for name in sorted(set(shared_handlers)):
+            print("  SHARED: HTML action is defined in another HTML file (inclusion not verified):", name)
         for name in sorted(set(unresolved_handlers)):
             print("  REVIEW: HTML action has no matching function in this file:", name)
         for name in missing_servers:
@@ -83,6 +92,7 @@ def main():
     print("Server-looking calls reviewed:", sum(x[2] for x in summaries))
     print("Unmatched inline action references:", sum(len(x[3]) for x in summaries))
     print("Unmatched server candidates:", sum(len(x[4]) for x in summaries))
+    print("Shared HTML action references:", sum(len(x[5]) for x in summaries))
     print("\nNOTE: No changes made. These are preliminary static checks.")
     print("Dynamic calls, shared HTML includes, aliases, and event delegation may")
     print("need manual inspection; passing does not prove buttons work.")
