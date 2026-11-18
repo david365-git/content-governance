@@ -41,7 +41,9 @@ def main():
     entry = root / "ce_Sidebar_Main.html"
     entry_text = entry.read_text(encoding="utf-8-sig", errors="replace") if entry.is_file() else ""
     def included(name):
-        return bool(re.search(r"<\\?!=\\s*include\\s*\\(\\s*['\\\"]" + re.escape(name) + r"['\\\"]\\s*\\)\\s*;?\\s*\\?>", entry_text))
+        # Google Apps Script template include expression; tolerate quote styles.
+        return ("include('" + name + "')" in entry_text or
+                'include("' + name + '")' in entry_text)
     shared_html_defs = set()
     for shared in html_files:
         if included(shared.stem):
