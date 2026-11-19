@@ -43,7 +43,7 @@ function generateAzonProductHTML() {
   }
 
   const products = [prod1, prod2, prod3];
-  let cellsHtml = "";
+  let cardsHtml = "";
   let notFound = [];
 
   products.forEach(function(prodName) {
@@ -51,32 +51,33 @@ function generateAzonProductHTML() {
     const productRow = findProductRow(prodName);
     if (!productRow) { notFound.push(prodName); return; }
 
-    const name = escapeHTML(productRow[7]);   // H = prod-name
+    const name = escapeHTML(productRow[7]);    // H = prod-name
     const imgLink = escapeHTML(productRow[8]); // I = img-link
     const affLink = escapeHTML(productRow[9]); // J = aff-link
 
-    cellsHtml +=
-      '<td style="border: 1px solid #ddd; border-radius: 8px; padding: 10px; text-align: center; vertical-align: top;">' +
-      '<img style="max-height: 100px; width: auto; display: block; margin: 0 auto;" src="' + imgLink + '" alt="' + name + '" width="100" />\n' +
-      '<div style="font-weight: bold; margin: 10px 0;">' + name + '</div>\n' +
-      '<a style="display: inline-block; background: #28a745; color: #fff; padding: 8px 8px; border-radius: 10px; font-weight: bold; text-decoration: none;" href="' + affLink + '" target="_blank" rel="nofollow noopener">Shop Now</a></td>\n';
+    cardsHtml +=
+      '<div style="border: 1px solid #ddd; border-radius: 8px; padding: 16px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; background: #fff;">\n' +
+      '<div>\n' +
+      '<img style="height: 100px; width: auto; max-width: 100%; display: block; margin: 0 auto;" src="' + imgLink + '" alt="' + name + ' product image" width="100" height="100" loading="lazy" />\n' +
+      '<div style="font-weight: bold; margin: 12px 0;">' + name + '</div>\n' +
+      '</div>\n' +
+      '<div><a style="display: inline-block; background: #28a745; color: #fff; padding: 8px 16px; border-radius: 8px; font-weight: bold; text-decoration: none;" href="' + affLink + '" target="_blank" rel="sponsored nofollow noopener noreferrer">Check Price on Amazon</a></div>\n' +
+      '</div>\n';
   });
 
-  if (!cellsHtml) {
+  if (!cardsHtml) {
     return "ERROR: No matching products found in 'azon' sheet for: " + products.filter(String).join(", ");
   }
 
   let template =
     '<!-- New Azon -->\n' +
-    '<h2 style="background: #f8f9fa; border-left: 5px solid #28a745; padding: 10px 15px; font-weight: bold; font-size: 1.1em; margin-bottom: 20px; border-radius: 4px;">' + escapeHTML(introText) + '</h2>\n' +
-    '<table style="width: 100%; border-spacing: 10px;">\n' +
-    '<tbody>\n' +
-    '<tr>\n' +
-    cellsHtml +
-    '</tr>\n' +
-    '</tbody>\n' +
-    '</table>';
-
+    '<div class="abbey-affiliate-box" style="margin: 24px 0;">\n' +
+    '<p style="background: #f8f9fa; border-left: 5px solid #28a745; padding: 10px 15px; font-weight: bold; font-size: 1.1em; margin: 0 0 8px 0; border-radius: 4px;">' + escapeHTML(introText) + '</p>\n' +
+    '<p style="font-size: 0.85em; color: #555; margin: 0 0 16px 0; font-style: italic;">Disclosure: As an Amazon Associate, Abbey Floor Care earns from qualifying purchases at no extra cost to you.</p>\n' +
+    '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 16px;">\n' +
+    cardsHtml +
+    '</div>\n' +
+    '</div>';
   if (notFound.length > 0) {
     template += '\n<!-- NOT FOUND IN AZON SHEET: ' + notFound.join(', ') + ' -->';
   }
