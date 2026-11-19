@@ -24,7 +24,7 @@ const cx = [
 ].join('\n');
 const cw = cx.replace('Stage 1.5D complete.', 'Stage 1.5C complete. Waiting for Stage 1.5D.');
 assert.strictEqual(context.glb_linkPlanIsCurrent_(cw,cx),true);
-assert.strictEqual(context.glb_linkPlanIsCurrent_(cw+' changed',cx),false);
+assert.strictEqual(context.glb_linkPlanIsCurrent_(cw.replace('SECTION 6: Cleaning options','SECTION 6: Changed'),cx),false);
 const plan = context.glb_linkPlanFromCx_(cx,hub,'Educational Guide',own);
 assert.strictEqual(plan.ready,true);
 assert.strictEqual(plan.required.length,3);
