@@ -630,6 +630,11 @@ function w2cBuildMediaEntryControls(html) {
           'Copy Generator Prompt' +
         '</button>' +
 
+        '<div style="margin:8px 0;font-size:11px;font-weight:700;">Original image dimensions (pixels)</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:5px;">' +
+        '<label style="flex:1;font-size:11px;">Width<input type="number" min="1" max="50000" id="w2cWidth_' + imageNumber + '" value="1280" style="width:100%;box-sizing:border-box;padding:5px;"></label>' +
+        '<label style="flex:1;font-size:11px;">Height<input type="number" min="1" max="50000" id="w2cHeight_' + imageNumber + '" value="720" style="width:100%;box-sizing:border-box;padding:5px;"></label></div>' +
+        '<div id="w2cDimStatus_' + imageNumber + '" style="font-size:11px;color:#666;margin-bottom:10px;">Suggested 1280 × 720 (not yet verified)</div>' +
         '<div style="margin-bottom:12px;">' +
           '<label for="w2cFile_' + imageNumber + '" ' +
             'style="font-size:11px;font-weight:700;display:block;margin-bottom:5px;">' +
@@ -683,6 +688,15 @@ function w2cBuildMediaEntryControls(html) {
       fileInput.addEventListener('change', (function(number) {
         return function() { w2cShowSelectedLocalFile(number); };
       })(imageNumber));
+      ['Width','Height'].forEach(function(part) {
+        document.getElementById('w2c' + part + '_' + imageNumber).addEventListener('input', function() {
+          document.getElementById('w2cWidth_' + imageNumber).dataset.manual = 'true';
+          document.getElementById('w2cDimStatus_' + imageNumber).textContent = 'Manually entered — check against actual dimensions.';
+        });
+      });
+      document.getElementById('w2cUrl_' + imageNumber).addEventListener('change', function() {
+        w2cDetectUrl(imageNumber);
+      });
     }
   );
 }
@@ -727,6 +741,49 @@ function w2cCopySuggestedSlugFallback(slug, success) {
   else alert('Unable to copy automatically. Please select and copy the slug.');
 }
 
+function w2cGetDimensions(source, local) {
+  return new Promise(function(resolve) {
+    var img = new Image(), objectUrl = local ? URL.createObjectURL(source) : null;
+    var done = false;
+    function finish(dim) {
+      if (done) return;
+      done = true;
+      img.onload = null;
+      img.onerror = null;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      resolve(dim);
+    }
+    img.onload = function() {
+      finish(img.naturalWidth && img.naturalHeight ? {width:img.naturalWidth, height:img.naturalHeight} : null);
+    };
+    img.onerror = function() { finish(null); };
+    img.src = objectUrl || source;
+    if (img.complete && img.naturalWidth && img.naturalHeight)
+      finish({width:img.naturalWidth, height:img.naturalHeight});
+  });
+}
+function w2cApplyDimensions(number, size, source) {
+  if (!size) return;
+  var width = document.getElementById('w2cWidth_' + number);
+  var height = document.getElementById('w2cHeight_' + number);
+  if (!width || !height || width.dataset.manual === 'true') return;
+  width.value = size.width;
+  height.value = size.height;
+  document.getElementById('w2cDimStatus_' + number).textContent =
+    'Detected from ' + source + ': ' + size.width + ' × ' + size.height;
+}
+function w2cDetectUrl(number) {
+  var input = document.getElementById('w2cUrl_' + number);
+  var url = input ? String(input.value || '').trim() : '';
+  if (!/^https:\/\//i.test(url)) return;
+  w2cGetDimensions(url, false).then(function(size) {
+    if (input.value.trim() === url) w2cApplyDimensions(number, size, 'URL');
+  });
+}
+function w2cValidPixels(n) {
+  return /^\d+$/.test(String(n)) && Number(n) > 0 && Number(n) <= 50000;
+}
+
 function w2cShowSelectedLocalFile(imageNumber) {
   var input = document.getElementById('w2cFile_' + imageNumber);
   var status = document.getElementById('w2cFileStatus_' + imageNumber);
@@ -751,6 +808,13 @@ function w2cShowSelectedLocalFile(imageNumber) {
   status.textContent = '✔ Selected: ' + file.name +
     ' (' + (file.size / (1024 * 1024)).toFixed(2) +
     ' MB). Not uploaded yet.';
+  w2cGetDimensions(file, true).then(function(size) {
+    if (input.files && input.files[0] === file) {
+      w2cApplyDimensions(imageNumber, size, 'local file');
+      if (!size) document.getElementById('w2cDimStatus_' + imageNumber).textContent =
+        'Could not detect dimensions; you can enter them manually.';
+    }
+  });
 }
 
 /* ============================================================
@@ -835,6 +899,7 @@ function w2cUploadAllSelectedImages() {
         .withSuccessHandler(function(res) {
           if (res && res.success && res.url) {
             document.getElementById('w2cUrl_' + n).value = res.url;
+            w2cDetectUrl(n);
             completed++;
             status.style.color = res.message && res.message.indexOf('but') >= 0 ? '#b45309' : '#2e7d32';
             status.textContent = '✔ Image ' + n + ' uploaded. ' + (res.message || '');
@@ -918,7 +983,7 @@ function w2cExtractPlaceholderField(
    BUILD UPDATED HTML
 ============================================================ */
 
-function w2cBuildUpdatedHtml() {
+async function w2cBuildUpdatedHtml() {
 
   var sourceHtml =
     document.getElementById(
@@ -973,6 +1038,7 @@ function w2cBuildUpdatedHtml() {
   var inserted = 0;
   var rejected = 0;
   var replacedExisting = [];
+  var needsDimensions = [];
 
 
   placeholders.forEach(
@@ -1078,6 +1144,7 @@ function w2cBuildUpdatedHtml() {
         'alt',
         alt
       );
+      needsDimensions.push({number:imageNumber, url:url, img:img});
 
       /*
        * W2C has already generated and approved
@@ -1158,6 +1225,52 @@ function w2cBuildUpdatedHtml() {
     }
   );
 
+
+  // Read sizes before exposing output; a proposed default is never assumed.
+  var checked = await Promise.all(needsDimensions.map(async function(entry) {
+    var widthField = document.getElementById('w2cWidth_' + entry.number);
+    var heightField = document.getElementById('w2cHeight_' + entry.number);
+    var manual = widthField && widthField.dataset.manual === 'true';
+    var measured = manual ? null : await w2cGetDimensions(entry.url, false);
+    return {entry:entry, widthField:widthField, heightField:heightField,
+      manual:manual, measured:measured};
+  }));
+  for (var i = 0; i < checked.length; i++) {
+    var rec = checked[i], pixels = rec.measured;
+    if (!pixels && rec.manual && w2cValidPixels(rec.widthField.value) &&
+        w2cValidPixels(rec.heightField.value)) {
+      pixels = {width:Number(rec.widthField.value), height:Number(rec.heightField.value)};
+    }
+    if (!pixels) {
+      var w = window.prompt('Image ' + rec.entry.number + ': image dimensions unavailable. Enter its ACTUAL width (Cancel stops building):',
+        rec.widthField ? rec.widthField.value : '1280');
+      if (w === null) {
+        document.getElementById('w2cUpdatedHtml').value = '';
+        resultDiv.style.display = 'block';
+        resultDiv.innerText = 'Build cancelled — dimensions not guessed.';
+        return;
+      }
+      var h = window.prompt('Image ' + rec.entry.number + ': enter its ACTUAL height (Cancel stops building):',
+        rec.heightField ? rec.heightField.value : '720');
+      if (h === null || !w2cValidPixels(w) || !w2cValidPixels(h)) {
+        document.getElementById('w2cUpdatedHtml').value = '';
+        resultDiv.style.display = 'block';
+        resultDiv.innerText = 'Build stopped — dimensions missing or invalid.';
+        return;
+      }
+      pixels = {width:Number(w), height:Number(h)};
+      if (rec.widthField && rec.heightField) {
+        rec.widthField.value = w;
+        rec.heightField.value = h;
+        rec.widthField.dataset.manual = 'true';
+        document.getElementById('w2cDimStatus_' + rec.entry.number).textContent =
+          'Manually confirmed: ' + w + ' × ' + h;
+      }
+    } else if (rec.measured) w2cApplyDimensions(rec.entry.number, pixels, 'URL');
+    rec.entry.img.setAttribute('width', pixels.width);
+    rec.entry.img.setAttribute('height', pixels.height);
+    rec.entry.img.setAttribute('style', 'max-width:100%;height:auto;');
+  }
 
   var updatedHtml =
     wrapper.innerHTML.trim();
