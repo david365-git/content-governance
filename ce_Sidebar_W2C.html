@@ -745,9 +745,11 @@ function w2cGetDimensions(source, local) {
   return new Promise(function(resolve) {
     var img = new Image(), objectUrl = local ? URL.createObjectURL(source) : null;
     var done = false;
+    var timeout = setTimeout(function() { finish(null); }, 12000);
     function finish(dim) {
       if (done) return;
       done = true;
+      clearTimeout(timeout);
       img.onload = null;
       img.onerror = null;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
