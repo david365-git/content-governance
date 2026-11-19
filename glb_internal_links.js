@@ -90,6 +90,22 @@ function glb_linkAuditHtml_(html, plan) {
 
 
 /**
+ * Detect whether CX was built from the current CW source plan.
+ * W1.5D is permitted to alter link lines, contact routing and its completion
+ * marker, but not the governed section structure or technical instructions.
+ */
+function glb_linkPlanIsCurrent_(cw, cx) {
+  if (!String(cw || '').trim() || !String(cx || '').trim()) return false;
+  function baseline(value) {
+    return String(value).split(/\r?\n/)
+      .filter(function(line) {
+        return !/^\s*(?:Internal link:|Contact link:|Stage 1\.5[CD] complete\.)/i.test(line);
+      }).join('\n').replace(/\s+/g, ' ').trim();
+  }
+  return baseline(cw) === baseline(cx);
+}
+
+/**
  * Read-only per-post preflight using the existing W1.5D approval and silo rules.
  * Nothing is automatically selected or approved when CX is missing.
  */
@@ -109,6 +125,9 @@ function glb_linkPreflight_(article) {
   var hub = value('Feeds Hub');
   // The existing W1.5D writer stores its governed final plan in CX (102).
   var cx = String(sh.getRange(article.row, 102).getValue() || '').trim();
+  var cw = String(sh.getRange(article.row, 101).getValue() || '').trim();
+  if (!glb_linkPlanIsCurrent_(cw, cx))
+    throw Error('Google Love links need W1.5D review: CX no longer matches its CW source plan.');
   var plan = glb_linkPlanFromCx_(cx, hub, type, url);
   if (!plan.ready) throw Error('Google Love links need W1.5D review: ' + plan.reason);
   var limit = getMaxLateralLinks(type);
