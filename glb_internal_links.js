@@ -62,7 +62,10 @@ function glb_linkPlanFromCx_(cx, feedsHub, articleType, ownUrl) {
 function glb_linkHrefPaths_(html) {
   var safe = String(html || '')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '')
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '');
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '')
+    // Only meaningful editorial-body anchors count, not the fixed CTA/footer.
+    .replace(/<!--[^]*?-->/g, '')
+    .replace(/<footer\b[^>]*>[\s\S]*?<\/footer\s*>/gi, '');
   var paths = {};
   var matcher = /<a\b[^>]*\bhref\s*=\s*(?:"([^"]+)"|'([^']+)')/gi;
   var match;
