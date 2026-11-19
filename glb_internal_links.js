@@ -84,3 +84,63 @@ function glb_linkAuditHtml_(html, plan) {
   return {pass:missing.length===0,missing:missing,reason:missing.length
     ? 'Generated HTML is missing approved internal anchors' : ''};
 }
+
+
+/**
+ * Read-only per-post preflight using the existing W1.5D approval and silo rules.
+ * Nothing is automatically selected or approved when CX is missing.
+ */
+function glb_linkPreflight_(article) {
+  var sh = glb_posts_();
+  var heads = sh.getRange(1, 1, 1, sh.getLastColumn()).getDisplayValues()[0]
+    .map(function(v) { return String(v || '').trim(); });
+  function value(header) {
+    var col = heads.indexOf(header) + 1;
+    if (!col) throw Error('Required posts column missing: ' + header);
+    return String(sh.getRange(article.row, col).getValue() || '').trim();
+  }
+  if (String(value('Post ID')) !== String(article.id))
+    throw Error('Posts row changed during Google Love link preflight.');
+  var type = value('Article Type');
+  var url = value('URL');
+  var hub = value('Feeds Hub');
+  // The existing W1.5D writer stores its governed final plan in CX (102).
+  var cx = String(sh.getRange(article.row, 102).getValue() || '').trim();
+  var plan = glb_linkPlanFromCx_(cx, hub, type, url);
+  if (!plan.ready) throw Error('Google Love links need W1.5D review: ' + plan.reason);
+  var limit = getMaxLateralLinks(type);
+  if (limit === null || !Number.isInteger(limit) || limit < 0)
+    throw Error('Google Love cannot verify the article-type lateral link budget.');
+  var lateral = plan.required.filter(function(item) { return item.kind === 'lateral'; });
+  if (type !== 'Hub Page' && lateral.length > limit)
+    throw Error('Approved CX contains more lateral links than article-type rules allow.');
+  var candidates = buildEnhancedSiloMap(value('Stone Type'), article.row, url);
+  var eligible = {};
+  candidates.forEach(function(page) {
+    var canonical = glb_linkCanonical_(page.url);
+    if (canonical) eligible[canonical] = true;
+  });
+  lateral.forEach(function(item) {
+    if (!eligible[item.path]) throw Error('CX lateral link no longer eligible: ' + item.url);
+  });
+  return plan;
+}
+
+/** Give Sol only the exact approved URLs. No new destinations may be inferred. */
+function glb_linkPrompt_(plan) {
+  if (!plan || !plan.ready) throw Error('No verified internal link plan.');
+  var lines = [
+    'GOVERNED INTERNAL LINKS — MANDATORY:',
+    'The exact listed URLs were approved by the W1.5D governance plan, not invented by the writer.',
+    'Include every listed URL once as a real <a href="exact URL">natural contextual anchor</a> in the article body.',
+    'The section numbers identify the original planned topic; place each anchor near the corresponding relevant subject, not mechanically in an unrelated paragraph.',
+    'Do not put the links only in a contact footer, script, data block, author biography or navigation comment.',
+    'Do not invent, substitute, shorten or redirect destinations. Avoid claims not supported by the evidence.',
+    'Do not create a new link when W1.5D has approved none. Contact CTA is separate.'
+  ];
+  plan.required.forEach(function(item) {
+    lines.push('Approved ' + item.kind + ' link for planned SECTION ' +
+      item.section + ': ' + item.url);
+  });
+  return lines.join('\n');
+}
