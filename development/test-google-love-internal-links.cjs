@@ -22,6 +22,9 @@ const cx = [
   'SECTION 11: Next steps','Internal link: '+hub,
   'Stage 1.5D complete.'
 ].join('\n');
+const cw = cx.replace('Stage 1.5D complete.', 'Stage 1.5C complete. Waiting for Stage 1.5D.');
+assert.strictEqual(context.glb_linkPlanIsCurrent_(cw,cx),true);
+assert.strictEqual(context.glb_linkPlanIsCurrent_(cw+' changed',cx),false);
 const plan = context.glb_linkPlanFromCx_(cx,hub,'Educational Guide',own);
 assert.strictEqual(plan.ready,true);
 assert.strictEqual(plan.required.length,3);
@@ -50,7 +53,7 @@ const lookup = {'Post ID':'48148','Article Type':'Educational Guide','URL':own,
 const worksheet = {getLastColumn:()=>headers.length,
   getRange:(row,col)=>({
     getDisplayValues:()=>[headers],
-    getValue:()=>row===283 && col===102 ? cx : lookup[headers[col-1]]
+    getValue:()=>row===283 && col===102 ? cx : row===283 && col===101 ? cw : lookup[headers[col-1]]
   })};
 context.glb_posts_ = () => worksheet;
 context.getMaxLateralLinks = () => 2;
