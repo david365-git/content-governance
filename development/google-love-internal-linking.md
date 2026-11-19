@@ -41,15 +41,15 @@ No code is authorised for production until these conditions are demonstrated.
 
 **Implemented on this branch (not deployed):**
 - `glb_internal_links.js` interprets completed CX link assignments, validates exact site-local destinations, refuses self-links and duplicate URLs, and checks that the material hub is assigned for non-hub articles.
-- A read-only `glb_linkPreflight_` calls the existing W1.5D silo candidate generator and article-type lateral limit to reject ineligible or over-quota assignments before a paid Sol call.
+- A read-only `glb_linkPreflight_` compares CX against its current CW source plan, then calls the existing W1.5D silo candidate generator and article-type lateral limit to reject stale, ineligible or over-quota assignments before a paid Sol call.
 - `glb_batch_orchestrator.js` sends the exact approved destinations and intended section numbers to Sol.
 - After a Sol response, the final HTML is audited. The pre-existing `New HTML` is preserved if approved anchors are missing; a recoverable production draft is retained and the queue shows `SOL REVIEW`.
-- Offline tests under `development/test-google-love-internal-links.cjs` cover candidate eligibility, missing links, disallowed links, ordinary anchors and footer-only anchors. The new script and modified runner have passed JavaScript parse checks.
+- Offline tests under `development/test-google-love-internal-links.cjs` cover candidate eligibility, missing links, stale CW/CX plans, disallowed links, ordinary anchors and footer-only anchors. The new script and modified runner have passed JavaScript parse checks. A direct execution of synthetic preflight and link-audit functions passed all six check groups.
 - Real read-only check: posts row 283, Post 48148, Feeds Hub `/home-garden/terrazzo-flooring/`, and CX approve three destinations (sections 6, 9, 11), all absent from `New HTML`. The two lateral destinations exist as separate Terrazzo educational guides in rows 162 and 129.
 
 **Open blockers before merge or live testing:**
 1. **Absent CX:** the initial integration intentionally refuses to start Sol without a completed approved W1.5D plan. A safe selection/review path is needed for articles that have never run W1.5D.
-2. **Stale section assignment:** URL eligibility is checked but contextual section alignment and date/freshness of CX cannot yet be guaranteed.
+2. **Section-placement evidence:** CX and CW structural freshness is now checked, but alignment of the new Sol prose to those planned sections cannot be guaranteed without stable section IDs.
 3. **End-to-end Apps Script test:** no live spreadsheet, production API or WordPress write has been exercised; tests are synthetic and static.
 4. **Layout audit:** at present the checker verifies presence in editorial HTML, not exact section placement if the generated HTML does not carry stable section IDs.
 5. **Sidebar recovery:** a missing CX currently blocks before the paid API request; the operator needs a clear recovery path that does not rerun completed CI work.
