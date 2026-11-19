@@ -394,6 +394,8 @@ function glb_buildSolPrompt_(a){
  if(!String(source.technical||'').trim()||String(source.technicalSource||'').indexOf('technical!')!==0)
   throw Error('Approved Technical Matrix N:S missing for '+a.id);
  var rule=glc_moistureRule_();
+ // Verify governed W1.5D destinations before any paid Sol request.
+ var linkPlan=glb_linkPreflight_(a);
  var authorInstruction=[
   'AUTHOR AND CONTACT FOOTER REQUIRED: The article HTML must end with a separate machine-readable JSON data block directly after the closing </article> and before </body> if present. Do not write the finished author box or footer yourself.',
   'Return this literal marker followed by a script element: <!-- ABBEY_AUTHOR_CTA --><script type="application/json">{"bio":"...","ctaSummary":"...","ctaAnchor":"..."}</script>',
@@ -470,10 +472,10 @@ function glb_buildSolPrompt_(a){
   'CASE-STUDY FOCUS: Connect each documented observed problem to the reason for the treatment selected and the result actually achieved. Preserve the real chronology, methods and evidence. Never invent a rationale, action or outcome to fill a narrative gap.',
   'FINAL EDITORIAL PASS: Before returning HTML, remove sections that merely restate an earlier point, check that each section earns its place and that the homeowner can make the intended decision. Do not sacrifice factual fidelity or practical completeness.'
  ];
- common=common.concat(editorialFocus,authorInstruction);
+ common=common.concat(editorialFocus,[glb_linkPrompt_(linkPlan)],authorInstruction);
  var prompt=common.join('\n\n');
  if(prompt.length>170000)throw Error('Prompt too large; stopped without truncating');
- return {prompt:prompt,media:a.type==='Case Study'?JSON.parse(String(glb_posts_().getRange(a.row,207).getDisplayValue()||'{}')):null};
+ return {prompt:prompt,linkPlan:linkPlan,media:a.type==='Case Study'?JSON.parse(String(glb_posts_().getRange(a.row,207).getDisplayValue()||'{}')):null};
 }
 function glb_runSol(postId){
  var id=String(postId||''),q=glb_queueState_(id),state=String(q.values[4]||'');
@@ -498,6 +500,14 @@ function glb_runSol(postId){
   var target=glb_posts_(),col=glb_col_(target,'New HTML',false);
   var prior=String(target.getRange(a.row,col).getValue()||'');
   out.appendRow([id,a.row,glb_utc_(),html,'gpt-6.1-sol',Number(res.cost)||0,audit?JSON.stringify(audit):'',prior]);
+  // The draft is retained, but previous New HTML is never replaced on link failure.
+  var linkAudit=glb_linkAuditHtml_(html,built.linkPlan);
+  if(!linkAudit.pass){
+   var missingLinks=linkAudit.missing.map(function(item){return item.url;}).join(' | ');
+   var warning=linkAudit.reason+(missingLinks?': '+missingLinks:'');
+   glb_mark_(id,'SOL REVIEW',warning+'; draft preserved, New HTML not replaced. No automatic paid retry.',Number(res.cost)||0,'SOL');
+   return {success:false,status:'SOL REVIEW',message:warning+'; prior New HTML preserved.'};
+  }
   target.getRange(a.row,col).setValue(html);
   var date=glb_stamp_(a.row,GLB_SOL_HEADER);
   q.sh.getRange(q.row,7).setValue(date);
