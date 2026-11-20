@@ -33,8 +33,13 @@ function ce_w6WpRequest_(method, path, body) {
   var parsed = {};
   try { parsed = JSON.parse(response.getContentText()); } catch (ignore) {}
   if (status < 200 || status >= 300) {
-    throw new Error('WordPress HTTP ' + status + ': ' +
-      String(parsed.message || response.getContentText()).slice(0, 350));
+    // A server may commit wp_update_post() and then return an empty 500 when
+    // a later hook/meta operation dies. Preserve the HTTP status and WP code.
+    var raw = String(response.getContentText() || '').trim();
+    var detail = parsed && (parsed.message || parsed.code) ||
+      (raw ? raw.slice(0, 350) : 'empty response body; server-side error details unavailable');
+    var code = parsed && parsed.code ? ' [' + String(parsed.code).slice(0, 90) + ']' : '';
+    throw new Error('WordPress HTTP ' + status + code + ': ' + String(detail).slice(0, 350));
   }
   return parsed;
 }
@@ -83,35 +88,56 @@ function ce_w6ReadBackAfterError_(postId, mode, before, intended, originalError)
   var base = {
     success:false, postId:postId, mode:mode, published:false,
     partial:true, retryBlocked:true, recoveryCheck:'unavailable',
-    message:'W6 WordPress request returned an uncertain result: ' + reason +
-      '. DO NOT RETRY. Check WordPress before taking another publishing action.'
+    checks:{}, diagnostics:[],
+    message:'W6 received no verified WordPress receipt. A post write may have occurred. ' +
+      'DO NOT RETRY publishing. Original error: ' + reason
   };
   try {
+    // Standard authenticated REST read-back only. Never issue another POST.
     var live = ce_w6WpRequest_('get',
       '/wp-json/wp/v2/posts/' + postId +
       '?context=edit&_fields=id,status,date,modified,link,title,content,meta,featured_media');
     if (Number(live.id) !== postId) throw new Error('WordPress returned a different post ID.');
     var liveDate = String(live.date || '');
-    var oldDate = String(before.publishedDate || '');
     var liveStatus = String(live.status || '');
-    var oldStatus = String(before.status || '');
-    var changed = liveDate !== oldDate || liveStatus !== oldStatus;
+    var changed = liveDate !== String(before.publishedDate || '') ||
+      liveStatus !== String(before.status || '');
     var title = live.title && live.title.raw;
     var html = live.content && live.content.raw;
+    var meta = live.meta || {};
     var checks = {
       status:liveStatus, publicationDate:liveDate,
       titleMatches:typeof title === 'string' ? title === String(intended.newH1 || '') : null,
-      htmlMatches:typeof html === 'string' ? html === String(intended.newHtml || '') : null
+      htmlMatches:typeof html === 'string' ? html === String(intended.newHtml || '') : null,
+      metaTitleMatches:typeof meta._yoast_wpseo_title === 'string'
+        ? meta._yoast_wpseo_title === String(intended.newMetaTitle || '') : null,
+      metaDescriptionMatches:typeof meta._yoast_wpseo_metadesc === 'string'
+        ? meta._yoast_wpseo_metadesc === String(intended.newMetaDesc || '') : null,
+      focusKeyphraseMatches:typeof meta._yoast_wpseo_focuskw === 'string'
+        ? meta._yoast_wpseo_focuskw === String(intended.yoastKeyphrase || '') : null,
+      featuredMediaId:Number(live.featured_media || 0),
+      featuredImageMatches:null,
+      schemaSaved:null
     };
-    if (live.meta && typeof live.meta === 'object') {
-      var meta = live.meta;
-      checks.metaTitleMatches = typeof meta._yoast_wpseo_title === 'string'
-        ? meta._yoast_wpseo_title === String(intended.newMetaTitle || '') : null;
-      checks.metaDescriptionMatches = typeof meta._yoast_wpseo_metadesc === 'string'
-        ? meta._yoast_wpseo_metadesc === String(intended.newMetaDesc || '') : null;
-      checks.focusKeyphraseMatches = typeof meta._yoast_wpseo_focuskw === 'string'
-        ? meta._yoast_wpseo_focuskw === String(intended.yoastKeyphrase || '') : null;
+    if (String(intended.featuredImageUrl || '').trim()) {
+      // Read attachment metadata to compare against EM without changing it.
+      if (checks.featuredMediaId > 0) {
+        try {
+          var media = ce_w6WpRequest_('get', '/wp-json/wp/v2/media/' +
+            checks.featuredMediaId + '?context=edit&_fields=id,source_url');
+          checks.featuredImageMatches = String(media.source_url || '').replace(/^http:/i,'https:') ===
+            String(intended.featuredImageUrl || '').trim().replace(/^http:/i,'https:');
+        } catch (mediaError) {
+          base.diagnostics.push('Featured image URL could not be read: ' +
+            String(mediaError.message || mediaError).slice(0,200));
+        }
+      } else {
+        checks.featuredImageMatches = false;
+      }
     }
+    // Head & Footer Code is NOT registered in core WP REST post meta.
+    // Therefore schemaSaved is UNKNOWN, not true or false, until an
+    // independently authorised schema/head-code read verifies it.
     base.publishedDate = liveDate;
     base.modifiedDate = String(live.modified || '');
     base.status = liveStatus;
@@ -122,33 +148,33 @@ function ce_w6ReadBackAfterError_(postId, mode, before, intended, originalError)
     var mismatch = Object.keys(checks).filter(function(k) {
       return /Matches$/.test(k) && checks[k] === false;
     });
-    if (base.published) {
-      base.message = 'WORDPRESS IS ALREADY PUBLISHED (Post ' + postId +
-        ', date ' + liveDate + '). The W6 request failed before a verified receipt. ' +
-        'Title/HTML/metadata/schema may be incomplete; sheet records were NOT written by W6. ' +
-        (mismatch.length ? 'Differences detected: ' + mismatch.join(', ') + '. ' : '') +
-        'DO NOT REPUBLISH. Review and reconcile the live post. Original error: ' + reason;
-    } else if (changed) {
-      base.message = 'WORDPRESS CHANGED DURING A FAILED W6 REQUEST (Post ' + postId +
-        ', status ' + liveStatus + ', date ' + liveDate + '). ' +
-        'Publication or update completion is NOT confirmed. Sheet records were NOT written. ' +
-        'DO NOT RETRY. Review the live post. Original error: ' + reason;
-    } else {
-      base.message = 'WordPress status/date are unchanged for Post ' + postId +
-        ' after the W6 error. This does NOT establish that content or metadata were unchanged. ' +
-        'No publication-log/site-export changes were written. DO NOT RETRY until the live post is checked. ' +
-        'Original error: ' + reason;
-    }
+    var unknown = Object.keys(checks).filter(function(k) {
+      return (/Matches$/.test(k) || k === 'schemaSaved') && checks[k] === null;
+    });
+    base.mismatches = mismatch;
+    base.unverified = unknown;
+    base.message = (base.published
+      ? 'WORDPRESS IS ALREADY PUBLISHED (Post ' + postId + ', date ' + liveDate + '). '
+      : changed
+        ? 'WORDPRESS CHANGED AFTER W6 ERROR (Post ' + postId + ', status ' + liveStatus + '). '
+        : 'WordPress status/date were unchanged after W6 error (Post ' + postId + '). ') +
+      'The request has NO VERIFIED RECEIPT; post, metadata and schema changes may be partial. ' +
+      (mismatch.length ? 'Differences detected: ' + mismatch.join(', ') + '. ' : '') +
+      (unknown.length ? 'Not independently verified: ' + unknown.join(', ') + '. ' : '') +
+      'No publication-log, site-export or posts schema records were written by W6. ' +
+      'DO NOT REPUBLISH OR RETRY UPDATE. Reconcile individual fields without publishing. ' +
+      'Original error: ' + reason;
   } catch (readError) {
-    base.message += ' Read-only recovery check also failed: ' +
-      String(readError.message || readError) + '.';
+    base.message += ' Read-only recovery failed: ' + String(readError.message || readError) +
+      '. No safe assumptions can be made.';
   }
   return base;
 }
 
 /**
  * Publish only after the matching row was loaded, and the user explicitly
- * confirmed UPDATE or REPUBLISH. Bridge validates WordPress write atomically.
+ * confirmed UPDATE or REPUBLISH. WordPress writes are NOT atomic; the
+ * bridge response may fail after the post has changed.
  * Republish uses a separate guarded WordPress operation. Verify the external
  * syndication event independently; a WordPress date change alone is not proof.
  */
