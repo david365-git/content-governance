@@ -80,3 +80,58 @@ function glb_solSelectLinks_(article,html){
   throw Error('Hub quota or lateral budget not met.');
  return {links:links,cost:Number(api.cost||0)};
 }
+
+/** Insert one link only into an unlinked single text node in an existing paragraph. */
+function glb_solInsertOne_(html,assignment){
+ var sections=glb_solSections_(html),sec=sections[assignment.section-1];
+ if(!sec)throw Error('W1.5D_Sol target H2 section absent.');
+ var before=html.slice(0,sec.start),within=html.slice(sec.start,sec.end),after=html.slice(sec.end);
+ var editable=within.split(/<footer\b|<div\b[^>]*class=["'][^"']*abbey-bio-box/i)[0];
+ var p=/<p\b[^>]*>[\s\S]*?<\/p\s*>/gi,m,places=[];
+ while((m=p.exec(editable))) {
+  var tokens=m[0].split(/(<[^>]*>)/g),inAnchor=false,inForbidden=false;
+  for(var i=0;i<tokens.length;i++){
+   var token=tokens[i];
+   if(token.charAt(0)==='<'){
+    if(/^<a\b/i.test(token))inAnchor=true;
+    if(/^<\/a\s*>/i.test(token))inAnchor=false;
+    if(/^<(?:script|style|code|strong|em|span|svg)\b/i.test(token))inForbidden=true;
+    if(/^<\/(?:script|style|code|strong|em|span|svg)\s*>/i.test(token))inForbidden=false;
+   } else if(!inAnchor&&!inForbidden&&token.indexOf(assignment.anchor)>=0){
+    places.push({index:m.index,raw:m[0],tokens:tokens,token:i,at:token.indexOf(assignment.anchor)});
+   }
+  }
+ }
+ if(places.length!==1)throw Error('W1.5D_Sol anchor missing/ambiguous in H2 section '+assignment.section+': '+assignment.anchor);
+ var found=places[0],text=found.tokens[found.token];
+ var href=assignment.url.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+ found.tokens[found.token]=text.slice(0,found.at)+'<a href="'+href+'">'+assignment.anchor+'</a>'+text.slice(found.at+assignment.anchor.length);
+ var modified=editable.slice(0,found.index)+found.tokens.join('')+editable.slice(found.index+found.raw.length)+within.slice(editable.length);
+ return before+modified+after;
+}
+function glb_solApplyLinks_(original,selection){
+ var html=String(original||''),links=selection.links.slice();
+ // The H2 sections are recalculated after each insertion, preserving intended locations.
+ links.forEach(function(link){html=glb_solInsertOne_(html,link);});
+ // Undo just approved anchors to verify zero editorial wording or markup was changed.
+ var revert=html;
+ links.forEach(function(link){
+  var href=link.url.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  var snippet='<a href="'+href+'">'+link.anchor+'</a>';
+  if(revert.split(snippet).length!==2)throw Error('W1.5D_Sol inserted anchor is not unique.');
+  revert=revert.replace(snippet,link.anchor);
+ });
+ if(revert!==original)throw Error('W1.5D_Sol altered the original article outside approved anchors.');
+ var sections=glb_solSections_(html);
+ links.forEach(function(link){
+  var sec=sections[link.section-1];
+  var href=link.url.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  if(!sec||html.slice(sec.start,sec.end).indexOf('<a href="'+href+'">'+link.anchor+'</a>')<0)
+   throw Error('W1.5D_Sol placement validation failed.');
+ });
+ return html;
+}
+function glb_runW15DSol_(article,html){
+ var selected=glb_solSelectLinks_(article,html);
+ return {html:glb_solApplyLinks_(html,selected),links:selected.links,cost:selected.cost};
+}
