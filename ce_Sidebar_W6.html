@@ -90,6 +90,27 @@
   var _w6VerifiedPublishedDate = null;
   var _w6VerifiedModifiedDate = null;
   var _w6DirectReceipt = null;
+  // An uncertain write blocks further publication actions for that post in this sidebar session.
+  // WordPress can commit a post update even if its REST response fails.
+  var _w6UncertainPosts = {};
+  function w6_showRecovery(res) {
+    if (!res || !res.retryBlocked) return '';
+    _w6UncertainPosts[String(res.postId || _w6Data && _w6Data.postId)] = true;
+    var c = res.checks || {};
+    var labels = {titleMatches:'Post title',htmlMatches:'Article HTML',
+      metaTitleMatches:'Yoast SEO title',metaDescriptionMatches:'Yoast description',
+      focusKeyphraseMatches:'Focus keyphrase',featuredImageMatches:'Featured image',
+      schemaSaved:'AddFunc schema'};
+    var lines = ['READ-ONLY RECOVERY REPORT (no WordPress or sheet changes):'];
+    Object.keys(labels).forEach(function(k) {
+      var v = c[k];
+      lines.push('• ' + labels[k] + ': ' + (v === true ? 'MATCH' : v === false ? 'DIFFERS' : 'NOT VERIFIED'));
+    });
+    if (c.featuredMediaId) lines.push('• WordPress featured media ID: ' + c.featuredMediaId);
+    (res.diagnostics || []).forEach(function(x) { lines.push('• ' + x); });
+    lines.push('BLOCKED: no further Update/Republish actions for this post in this sidebar session.');
+    return '\\n\\n' + lines.join('\\n');
+  }
 
   function w6_load() {
     _w6VerifiedId = null;
@@ -183,8 +204,13 @@
           'Verified Post ' + res.postId + ' — Status: ' + (res.status === 'future' ? 'Scheduled' : 'Published') +
            ' — ' + (res.status === 'future' ? 'Scheduled for: ' : 'Published: ') + res.publishedDate +
           ' — Last updated: ' + res.modifiedDate;
-        document.getElementById('w6DirectUpdateBtn').disabled = false;
-        document.getElementById('w6DirectRepublishBtn').disabled = false;
+        var blocked = !!_w6UncertainPosts[String(res.postId)];
+        document.getElementById('w6DirectUpdateBtn').disabled = blocked;
+        document.getElementById('w6DirectRepublishBtn').disabled = blocked;
+        if (blocked) {
+          document.getElementById('w6WpVerification').textContent +=
+            ' — PREVIOUS UNCERTAIN W6 WRITE: publishing actions remain blocked in this session.';
+        }
         setStatus('statusW6','done','WordPress post verified. No changes made.');
       })
       .withFailureHandler(function(e) {
@@ -194,8 +220,12 @@
   }
 
   function w6_directUpdate() {
+    if (_w6Data && _w6UncertainPosts[String(_w6Data.postId)]) {
+      setStatus('statusW6','fail','W6 write is uncertain. Reconcile without republishing; Update is blocked in this session.');
+      return;
+    }
     if (!_w6Data || String(_w6Data.postId) !== _w6VerifiedId) {
-      setStatus('statusW6','fail','Verify this WordPress post first.');
+      setStatus('statusW6','fail','Verify this WordPress post first.
       return;
     }
     var confirmed = window.confirm(
@@ -212,7 +242,7 @@
       .withSuccessHandler(function(res) {
         if (!res || !res.success) {
           var message = (res && res.message) || 'WordPress update failed.';
-          document.getElementById('w6PublishResult').textContent = message;
+          document.getElementById('w6PublishResult').textContent = message + w6_showRecovery(res);
           if (res && res.retryBlocked) {
             _w6VerifiedId = null;
             _w6VerifiedStatus = null;
@@ -242,12 +272,19 @@
         setStatus('statusW6','done',res.message);
       })
       .withFailureHandler(function(e) {
-        setStatus('statusW6','fail','WordPress update could not be verified: '+e.message);
+        _w6UncertainPosts[String(_w6Data.postId)] = true;
+        document.getElementById('w6DirectUpdateBtn').disabled = true;
+        document.getElementById('w6DirectRepublishBtn').disabled = true;
+        setStatus('statusW6','fail','WordPress update could not be verified: '+e.message+'. DO NOT RETRY or republish.');
       })
       .ce_w6DirectPublishAndRecord({postId:_w6Data.postId,mode:'update',verifiedStatus:_w6VerifiedStatus});
   }
 
   function w6_directRepublish() {
+    if (_w6Data && _w6UncertainPosts[String(_w6Data.postId)]) {
+      setStatus('statusW6','fail','W6 write is uncertain. Reconcile without republishing; Republish is blocked in this session.');
+      return;
+    }
     if (!_w6Data || String(_w6Data.postId) !== _w6VerifiedId ||
         !_w6VerifiedPublishedDate || !_w6VerifiedModifiedDate) {
       setStatus('statusW6','fail','Load the row and verify the live WordPress post first.');
@@ -274,7 +311,7 @@
     google.script.run
       .withSuccessHandler(function(res) {
         var message = (res && res.message) || 'WordPress republish could not be verified.';
-        document.getElementById('w6PublishResult').textContent = message;
+        document.getElementById('w6PublishResult').textContent = message + w6_showRecovery(res);
         if (!res || !res.success) {
           if (res && res.retryBlocked) {
             _w6VerifiedId = null;
@@ -308,6 +345,9 @@
         var message = 'WordPress republish could not be verified: ' + e.message +
           '. Check the live post before trying again.';
         document.getElementById('w6PublishResult').textContent = message;
+        _w6UncertainPosts[String(_w6Data.postId)] = true;
+        document.getElementById('w6DirectUpdateBtn').disabled = true;
+        document.getElementById('w6DirectRepublishBtn').disabled = true;
         setStatus('statusW6','fail',message);
       })
       .ce_w6DirectPublishAndRecord({
