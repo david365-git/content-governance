@@ -131,6 +131,8 @@ function glb_linkPreflight_(article) {
   // The existing W1.5D writer stores its governed final plan in CX (102).
   var cx = String(sh.getRange(article.row, 102).getValue() || '').trim();
   var cw = String(sh.getRange(article.row, 101).getValue() || '').trim();
+  if (!cw || !cx)
+    throw Error('Complete Content Generation stages W1.5C and W1.5D to populate CW and CX before running Google Love.');
   if (!glb_linkPlanIsCurrent_(cw, cx))
     throw Error('Google Love links need W1.5D review: CX no longer matches its CW source plan.');
   var plan = glb_linkPlanFromCx_(cx, hub, type, url);
