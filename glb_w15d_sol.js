@@ -9,6 +9,41 @@ function glb_solCanonical_(url){
  if(!m)return '';
  return (m[1]||'/').replace(/\/{2,}/g,'/').replace(/\/+$/,'').toLowerCase()||'/';
 }
+/**
+ * Geographical educational pages are not general-purpose destinations.
+ * Case studies are explicitly exempt: projects can illustrate a material
+ * or method outside their own locality, without implying local service.
+ * Deterministic matching prevents model-only geographic exceptions.
+ */
+function glb_solGeoEducationAllowed_(page,currentLocality){
+ var type=String(page.articleType||'').trim();
+ if(type==='Case Study')return true;
+ if(type!=='Educational Guide'&&type!=='Diagnostic Guide'&&
+    type!=='Method Guide'&&type!=='Buyer Guide'&&type!=='FAQ Spoke')return true;
+ var own=String(currentLocality||'').trim().toLowerCase();
+ var target=String(page.locality||'').trim().toLowerCase();
+ if(target)return !!own&&own===target;
+ // Some geographically targeted educational pages have no locality metadata.
+ // Detect explicit UK location targeting in the title/URL, but never suppress
+ // case studies or make geographic assumptions from an unrecognised name.
+ var title=String(page.title||'').toLowerCase();
+ var url=String(page.url||'').toLowerCase().replace(/[-_]/g,' ');
+ var markers=['glasgow','edinburgh','london','birmingham','manchester',
+  'liverpool','bristol','leeds','sheffield','newcastle','nottingham',
+  'derby','leicester','coventry','oxford','cambridge','york','walsall',
+  'stirling','dundee','aberdeen','inverness','perth','fife',
+  'croydon','surrey','staffordshire','somerset','scotland','wales'];
+ var found=markers.filter(function(place){
+  var pattern=new RegExp('\\b'+place+'\\b','i');
+  return pattern.test(title)||pattern.test(url);
+ });
+ if(!found.length)return true;
+ // Require an explicit matching current locality for geographically focused
+ // educational pages. Blank locality on a national guide never grants access.
+ return !!own&&found.some(function(place){
+  return own===place||own.indexOf(place+',')===0||own.indexOf(', '+place)>=0;
+ });
+}
 function glb_solSections_(html){
  var source=String(html||''),head=/<h2\b[^>]*>[\s\S]*?<\/h2\s*>/gi,m,list=[];
  while((m=head.exec(source)))list.push({start:m.index,after:head.lastIndex,title:m[0].replace(/<[^>]*>/g,' ').trim()});
@@ -31,23 +66,29 @@ function glb_solSelectLinks_(article,html){
  if(read('Post ID')!==String(article.id))throw Error('W1.5D_Sol post row moved.');
  var type=read('Article Type'),material=read('Stone Type'),url=read('URL'),hub=read('Feeds Hub');
  var own=glb_solCanonical_(url),hubPath=glb_solCanonical_(hub),isHub=type==='Hub Page';
+ var currentLocality=read('Locality');
  if(!isHub&&(!hubPath||hubPath===own))throw Error('W1.5D_Sol invalid Feeds Hub.');
  var limit=getMaxLateralLinks(type);
  if(limit===null||!Number.isInteger(limit)||limit<0)throw Error('W1.5D_Sol invalid lateral-link budget.');
  var used={},pages=buildEnhancedSiloMap(material,article.row,url).filter(function(p){
   var path=glb_solCanonical_(p.url);
   if(!path||path===own||path===hubPath||path==='/contact'||used[path])return false;
+  if(!glb_solGeoEducationAllowed_(p,currentLocality))return false;
   used[path]=true;return true;
  });
  if(pages.length>150)throw Error('Too many eligible pages for safe selection.');
  var sections=glb_solSections_(html);
  var prompt=[
   'W1.5D_Sol: select contextual internal links for FINISHED article; do NOT rewrite it.',
-  'JSON only: {"assignments":[{"section":1,"page":0,"anchorText":"exact phrase"}]}',
+  'JSON only: {"assignments":[{"section":1,"page":0,"anchorText":"exact phrase","readerBenefit":"specific distinct reason to visit that page"}]}',
   'PAGE 0 is the material hub, mandatory once for non-hub articles; forbidden for Hub Pages.',
   'Choose at most '+(isHub?pages.length:limit)+' other pages, zero if none relevant.',
   'Never repeat page numbers. Respect same-material, locality and cannibalisation scope.',
-  'Prefer relevant same-locality pages. Nonlocal case studies must not be represented as local.',
+  'Geographically targeted educational destinations are eligible ONLY when the current article shares their explicit locality; do not force local guides into national advice.',
+  'Case studies are different: allow nonlocal projects only when their documented methods, conditions or outcomes directly help the reader; do not imply they happened locally.',
+  'For EACH selected page provide readerBenefit: a concise, specific explanation of what the reader learns from that destination BEYOND what this section already explains.',
+  'Do not pick a destination merely because it shares the material, repeats the warning or uses similar keywords.',
+  'Choose anchors that accurately signal the destination topic, not generic statements of fact or misleading location/service claims.',
   'Anchor text must be an exact, single text-node substring from a paragraph in that H2 section.',
   'Choose a descriptive, naturally occurring phrase 3 to 75 characters long.',
   'No headings, existing links, formatted words, image captions, footers or invented text.',
@@ -79,9 +120,11 @@ function glb_solSelectLinks_(article,html){
   seen[page]=true;
   if(page===0)hubCount++;else lateral++;
   if(anchor.length<3||anchor.length>75||/[<>]/.test(anchor))throw Error('Invalid anchor phrase.');
+  var benefit=String(x.readerBenefit||'').trim();
+  if(benefit.length<25||benefit.length>350)throw Error('W1.5D_Sol requires a distinct reader benefit for every selected link.');
   var target=page===0?hub:pages[page-1].url;
   if(!glb_solCanonical_(target)||glb_solCanonical_(target)===own)throw Error('Invalid destination.');
-  links.push({section:section,url:target,anchor:anchor});
+  links.push({section:section,url:target,anchor:anchor,readerBenefit:benefit});
  });
  if((!isHub&&hubCount!==1)||(isHub&&hubCount!==0)||lateral>(isHub?pages.length:limit))
   throw Error('Hub quota or lateral budget not met.');
