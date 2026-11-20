@@ -67,4 +67,47 @@ assert.throws(() => context.glb_linkPreflight_({id:'48148',row:283}),/more later
 context.getMaxLateralLinks = () => 2;
 context.buildEnhancedSiloMap = () => [{url:clean}];
 assert.throws(() => context.glb_linkPreflight_({id:'48148',row:283}),/no longer eligible/);
+
+// Isolate the orchestrator's W1.5D sequencing function; never run real APIs.
+const orchestrationSource = runner.slice(
+  runner.indexOf('function glb_prepareW15DForSol_'),
+  runner.indexOf('function glb_buildSolPrompt_')
+);
+assert.ok(orchestrationSource.includes('bc_runStage15DAutomated()'));
+const selectedRow = {current:0, apiCalls:0, produceFallback:false, approved:false};
+const rowRange = (row,col) => ({
+  getDisplayValue:()=>col===4?'48148':'',
+  getValue:()=>col===101?'Approved CW source':'',
+  getRow:()=>row
+});
+const mockPosts = {
+  getRange: rowRange,
+  setActiveRange: r=>{selectedRow.current=r.getRow();},
+  getActiveRange:()=>({getRow:()=>selectedRow.current})
+};
+const mockSS = {setActiveSheet:()=>{}};
+const prepareW15D = new Function(
+  'glb_posts_', 'SpreadsheetApp', 'glb_linkPreflight_', 'bc_runStage15DAutomated',
+  orchestrationSource+';return glb_prepareW15DForSol_;'
+)(
+  ()=>mockPosts,
+  {getActiveSpreadsheet:()=>mockSS},
+  ()=>{if(!selectedRow.approved)throw Error('CX missing');return {ready:true,required:[{url:hub}]};},
+  ()=>{selectedRow.apiCalls++;selectedRow.approved=true;return {
+    success:true,fallback:selectedRow.produceFallback,cost:0.02
+  };}
+);
+const first=prepareW15D({id:'48148',row:283});
+assert.strictEqual(first.generated,true);
+assert.strictEqual(selectedRow.apiCalls,1);
+assert.strictEqual(selectedRow.current,283);
+const second=prepareW15D({id:'48148',row:283});
+assert.strictEqual(second.generated,false);
+assert.strictEqual(selectedRow.apiCalls,1);
+selectedRow.approved=false;
+selectedRow.produceFallback=true;
+assert.throws(()=>prepareW15D({id:'48148',row:283}),/did not produce a newly approved link selection/);
+assert.strictEqual(selectedRow.apiCalls,2);
+console.log('PASS: existing W1.5D is called once when CX invalid, and skipped on valid CX; fallback blocked');
+
 console.log('PASS: Google Love link governance, prompt, HTML and preflight regression checks');
