@@ -388,6 +388,38 @@ function glb_publishFragment_(html){
  return t;
 }
 
+/**
+ * Read approved W1.5D output when valid; otherwise run the existing automated
+ * W1.5D selector once, before charging for Sol. No Content Intelligence rerun.
+ * W1.5D's legacy fallback is REVIEW, not approval of lateral selection.
+ */
+function glb_prepareW15DForSol_(a){
+ var posts=glb_posts_(),ss=SpreadsheetApp.getActiveSpreadsheet();
+ if(String(posts.getRange(a.row,4).getDisplayValue()).trim()!==String(a.id))
+  throw Error('Post ID changed: W1.5D will not run on the wrong row.');
+ // Reuse current, already approved CX without unnecessary W1.5D API cost.
+ try {
+  return {plan:glb_linkPreflight_(a),generated:false,cost:0};
+ }catch(e){
+  var first=String(e.message||e);
+  var cw=String(posts.getRange(a.row,101).getValue()||'').trim();
+  if(!cw)throw Error('W1.5D cannot run: CW enriched plan missing. Complete W1.5C first. No Sol request made.');
+  if(typeof bc_runStage15DAutomated!=='function')
+   throw Error('Automated W1.5D runner unavailable. No Sol request made.');
+  ss.setActiveSheet(posts);
+  posts.setActiveRange(posts.getRange(a.row,1));
+  if(posts.getActiveRange().getRow()!==a.row ||
+     String(posts.getRange(a.row,4).getDisplayValue()).trim()!==String(a.id))
+   throw Error('Unable to select the correct row for W1.5D.');
+  var run=bc_runStage15DAutomated();
+  if(!run || !run.success || run.fallback)
+   throw Error('W1.5D did not produce a newly approved link selection: '+
+     String(run&&run.message||first)+'. Sol was not called.');
+  var plan=glb_linkPreflight_(a);
+  return {plan:plan,generated:true,cost:Number(run.cost||0)};
+ }
+}
+
 function glb_buildSolPrompt_(a){
  if(typeof glc_getArticle_!=='function')throw Error('Missing Google Love article reader');
  var source=glc_getArticle_(a.id);
@@ -395,7 +427,8 @@ function glb_buildSolPrompt_(a){
   throw Error('Approved Technical Matrix N:S missing for '+a.id);
  var rule=glc_moistureRule_();
  // Verify governed W1.5D destinations before any paid Sol request.
- var linkPlan=glb_linkPreflight_(a);
+ var w15d=glb_prepareW15DForSol_(a);
+ var linkPlan=w15d.plan;
  var authorInstruction=[
   'AUTHOR AND CONTACT FOOTER REQUIRED: The article HTML must end with a separate machine-readable JSON data block directly after the closing </article> and before </body> if present. Do not write the finished author box or footer yourself.',
   'Return this literal marker followed by a script element: <!-- ABBEY_AUTHOR_CTA --><script type="application/json">{"bio":"...","ctaSummary":"...","ctaAnchor":"..."}</script>',
@@ -475,7 +508,7 @@ function glb_buildSolPrompt_(a){
  common=common.concat(editorialFocus,[glb_linkPrompt_(linkPlan)],authorInstruction);
  var prompt=common.join('\n\n');
  if(prompt.length>170000)throw Error('Prompt too large; stopped without truncating');
- return {prompt:prompt,linkPlan:linkPlan,media:a.type==='Case Study'?JSON.parse(String(glb_posts_().getRange(a.row,207).getDisplayValue()||'{}')):null};
+ return {prompt:prompt,linkPlan:linkPlan,w15dCost:w15d.cost,media:a.type==='Case Study'?JSON.parse(String(glb_posts_().getRange(a.row,207).getDisplayValue()||'{}')):null};
 }
 function glb_runSol(postId, operatorSolOnly){
  var id=String(postId||''),q=glb_queueState_(id),state=String(q.values[4]||'');
