@@ -11,11 +11,11 @@ small{color:#777}.ok{color:#137333}.warn{color:#9b5700}.err{color:#b3261e}
 #status{padding:6px 0;font-weight:bold}#grid{max-height:315px;overflow:auto}
 </style></head><body>
 <h3>Content Intelligence → Google Love Sol</h3>
-<p>Enter the Post IDs to process, separated by commas or new lines. Choose the full batch or <b>Google Love Sol Only</b>. The full batch runs Content Intelligence, Sol, W5 and W5C. <b>Sol Only</b> reuses previously completed Content Intelligence, runs/reuses W1.5D and generates new article HTML without re-running Content Intelligence or W5/W5C.</p>
+<p>Enter the Post IDs to process, separated by commas or new lines. Choose the full batch or <b>Google Love Sol Only</b>. The full batch runs Content Intelligence, Sol, W5 and W5C. <b>Sol Only</b> reuses previously completed Content Intelligence, runs W1.5D_Sol against the article’s actual H2 sections and generates new article HTML without re-running Content Intelligence or W5/W5C.</p>
 <textarea id="ids" placeholder="5628&#10;11417&#10;6847"></textarea>
 <div><button id="run" onclick="runPosts()">Run Full Batch</button><button id="solOnly" onclick="runSolOnly()">Run Google Love Sol Only</button><button class="secondary" onclick="stopRun()">Stop after current stage</button></div>
-<small>Sol Only makes one new paid Sol request per ID, requires recorded completed Content Intelligence and an existing CW plan, and may replace New HTML after passing validation. It never runs Content Intelligence. A confirmation appears before starting.</small>
-<div id="status">Ready.</div><div id="progressSummary">0 / 0 completed</div><div id="barOuter"><div id="barInner"></div></div><div id="counts"><span id="remaining">0 remaining</span><span id="blocked">0 require review</span></div><div id="current">Current: —</div><small>Full Batch: Content Intelligence → W1.5D/Sol → W5 → W5C. Sol Only: W1.5D/Sol, without Content Intelligence, W5 or W5C. Keep this sidebar open during the batch. Any failed stage stops the batch.</small>
+<small>Sol Only makes one new paid Sol request per ID, requires recorded completed Content Intelligence (no CW/CX or W1.5A–C prerequisite), and may replace New HTML after passing validation. It never runs Content Intelligence. A confirmation appears before starting.</small>
+<div id="status">Ready.</div><div id="progressSummary">0 / 0 completed</div><div id="barOuter"><div id="barInner"></div></div><div id="counts"><span id="remaining">0 remaining</span><span id="blocked">0 require review</span></div><div id="current">Current: —</div><small>Full Batch: Content Intelligence → Sol → W1.5D_Sol → W5 → W5C. Sol Only: Sol → W1.5D_Sol without Content Intelligence, W5 or W5C. Keep this sidebar open during the batch. Any failed stage stops the batch.</small>
 <div id="grid"><table><thead><tr><th>Post ID</th><th>Stage</th><th>CI completed</th><th>Sol completed</th></tr></thead><tbody id="rows"></tbody></table></div>
 <div id="log"></div>
 <script>
@@ -52,7 +52,7 @@ function runSolOnly(){startBatch('solOnly');}
 function startBatch(selectedMode){
  if(active||busy)return;
  items=parse();if(!items.length){show('Enter at least one Post ID');return;}
- if(selectedMode==='solOnly'&&!confirm('Start a NEW paid Sol generation for each of '+items.length+' selected Post IDs? Content Intelligence will NOT run. W1.5D may incur a small separate charge. Existing New HTML can be replaced after checks pass.'))return;
+ if(selectedMode==='solOnly'&&!confirm('Start a NEW paid Sol generation for each of '+items.length+' selected Post IDs? Content Intelligence will NOT run. W1.5D_Sol selection may incur a small separate charge. Existing New HTML can be replaced after checks pass.'))return;
  mode=selectedMode;
  active=true;busy=true;index=0;phase=mode==='solOnly'?'SOL':'CI';setButtons(true);
  el('log').textContent='';show('Preparing '+items.length+' Post IDs…');render();
@@ -73,7 +73,7 @@ function advance(){
  if(index>=items.length){
   active=false;busy=false;setButtons(false);
   if(mode==='solOnly'){
-   show('FINISHED — Sol Only. Review New HTML and links; W5/W5C were not run.');
+   show('FINISHED — Sol Only. Review New HTML and W1.5D_Sol links; W5/W5C were not run.');
    log('All '+items.length+' Post IDs completed Sol Only without Content Intelligence.');
   }else{
    show('FINISHED — Check featured images, then run W6');log('All '+items.length+' Post IDs processed through W5C');
