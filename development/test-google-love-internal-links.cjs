@@ -68,46 +68,28 @@ context.getMaxLateralLinks = () => 2;
 context.buildEnhancedSiloMap = () => [{url:clean}];
 assert.throws(() => context.glb_linkPreflight_({id:'48148',row:283}),/no longer eligible/);
 
-// Isolate the orchestrator's W1.5D sequencing function; never run real APIs.
-const orchestrationSource = runner.slice(
-  runner.indexOf('function glb_prepareW15DForSol_'),
-  runner.indexOf('function glb_buildSolPrompt_')
-);
-assert.ok(orchestrationSource.includes('bc_runStage15DAutomated()'));
-const selectedRow = {current:0, apiCalls:0, produceFallback:false, approved:false};
-const rowRange = (row,col) => ({
-  getDisplayValue:()=>col===4?'48148':'',
-  getValue:()=>col===101?'Approved CW source':'',
-  getRow:()=>row
-});
-const mockPosts = {
-  getRange: rowRange,
-  setActiveRange: r=>{selectedRow.current=r.getRow();},
-  getActiveRange:()=>({getRow:()=>selectedRow.current})
+// W1.5D_Sol replaces the CW/CX dependency in Google Love.
+const solLinking = fs.readFileSync('glb_w15d_sol.js', 'utf8');
+vm.runInContext(solLinking, context);
+assert.ok(runner.includes('glb_runW15DSol_(a,html)'));
+assert.ok(!runner.includes('glb_prepareW15DForSol_(a)'));
+assert.ok(!runner.includes('glb_linkPrompt_(linkPlan)'));
+const article = '<article><h2>Daily care</h2><p>Routine cleaning helps protect a terrazzo floor from tracked dirt.</p>'+
+  '<h2>Professional options</h2><p>Professional polishing can improve a worn but suitable terrazzo surface.</p></article>';
+const selected = {
+  links:[
+    {section:1,url:hub,anchor:'Routine cleaning'},
+    {section:2,url:polish,anchor:'Professional polishing'}
+  ]
 };
-const mockSS = {setActiveSheet:()=>{}};
-const prepareW15D = new Function(
-  'glb_posts_', 'SpreadsheetApp', 'glb_linkPreflight_', 'bc_runStage15DAutomated',
-  orchestrationSource+';return glb_prepareW15DForSol_;'
-)(
-  ()=>mockPosts,
-  {getActiveSpreadsheet:()=>mockSS},
-  ()=>{if(!selectedRow.approved)throw Error('CX missing');return {ready:true,required:[{url:hub}]};},
-  ()=>{selectedRow.apiCalls++;selectedRow.approved=true;return {
-    success:true,fallback:selectedRow.produceFallback,cost:0.02
-  };}
-);
-const first=prepareW15D({id:'48148',row:283});
-assert.strictEqual(first.generated,true);
-assert.strictEqual(selectedRow.apiCalls,1);
-assert.strictEqual(selectedRow.current,283);
-const second=prepareW15D({id:'48148',row:283});
-assert.strictEqual(second.generated,false);
-assert.strictEqual(selectedRow.apiCalls,1);
-selectedRow.approved=false;
-selectedRow.produceFallback=true;
-assert.throws(()=>prepareW15D({id:'48148',row:283}),/did not produce a newly approved link selection/);
-assert.strictEqual(selectedRow.apiCalls,2);
-console.log('PASS: existing W1.5D is called once when CX invalid, and skipped on valid CX; fallback blocked');
-
-console.log('PASS: Google Love link governance, prompt, HTML and preflight regression checks');
+const enhanced = context.glb_solApplyLinks_(article, selected);
+assert.ok(enhanced.includes('<a href="'+hub+'">Routine cleaning</a>'));
+assert.ok(enhanced.includes('<a href="'+polish+'">Professional polishing</a>'));
+assert.strictEqual(context.glb_solSections_(enhanced).length,2);
+assert.throws(() => context.glb_solApplyLinks_(
+  '<article><h2>Care</h2><p>Routine cleaning helps.</p><p>Routine cleaning is important.</p></article>',
+  {links:[{section:1,url:hub,anchor:'Routine cleaning'}]}),/ambiguous/);
+assert.throws(() => context.glb_solApplyLinks_(article,
+  {links:[{section:2,url:hub,anchor:'Routine cleaning'}]}),/missing\/ambiguous/);
+console.log('PASS: Sol article structure preserved; exact H2 anchor insertion and ambiguity review');
+console.log('PASS: Legacy CW/CX governance tests retained for original Content Generation only');
