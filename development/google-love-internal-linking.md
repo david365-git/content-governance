@@ -65,3 +65,17 @@ The owner confirmed that new articles will be run through Content Generation to 
 - Eleven isolated JavaScript preflight/HTML/section-topic/eligibility checks passed in the development environment; both changed Apps Script files parse correctly.
 - **Remaining acceptance boundary:** a plain HTML anchor audit cannot prove that new Sol prose is semantically in the right section, and model output cannot be tested end-to-end without an explicitly controlled Apps Script pilot. After approval of the two-script install, use one trial article and visually review its contextual anchor placement, HTML, images and author CTA before bulk runs. Do not claim a verified end-to-end live test yet.
 - **Deployment scope:** new `glb_internal_links.js` and updated `glb_batch_orchestrator.js` only. No changes to the existing W1.5D script or WordPress. Existing `glb_BatchSidebar.html` remains unchanged.
+
+## W1.5D-on-Sol integration checkpoint — 20 November 2026
+
+The owner clarified that the desired flow is for Sol to **run W1.5D itself** rather than requiring a separately run W1.5D stage. This now happens in `glb_prepareW15DForSol_` inside the development orchestrator:
+
+1. If CX is already complete, current against CW, and passes governance, reuse it without extra W1.5D API expenditure.
+2. Otherwise require CW (W1.5C's enriched plan), select and verify the exact posts row, and call the existing `bc_runStage15DAutomated()` selector **once**.
+3. Block Sol if W1.5D reports failure or used its safe fallback (fallback completion does not prove the links were selected).
+4. Verify the newly saved CX via `glb_linkPreflight_`, then place approved link URLs and section topics into the Sol prompt.
+5. There is no call to Content Intelligence from this function. W1.5D may itself incur a small model/API charge; Sol is a separate paid request.
+
+This development change does not generate CW. Without CW, Google Love must clearly instruct the operator to complete W1.5C before invoking W1.5D.
+
+The Sol-only sidebar button remains a separate, unfinished UI task. Do not treat the development code as live until the Apps Script files are updated deliberately and a single-post test is performed.
