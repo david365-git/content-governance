@@ -55,3 +55,13 @@ No code is authorised for production until these conditions are demonstrated.
 5. **Sidebar recovery:** a missing CX currently blocks before the paid API request; the operator needs a clear recovery path that does not rerun completed CI work.
 
 Keep the PR in draft; no merging until all blockers are addressed and the owner approves.
+
+## Final development review checkpoint — 20 November 2026
+
+The owner confirmed that new articles will be run through Content Generation to populate CW/CX before Google Love; **a second selector for missing CX is explicitly out of scope**. Google Love stops before its paid Sol request if CW or CX is missing, incomplete, or not structurally aligned, instructing the operator to complete W1.5C/W1.5D.
+
+- Sol receives the original W1.5D section numbers **and H2 topic titles**, not simply a detached list of links.
+- A failed link audit retains the existing New HTML, saves the generated draft, records `LINK AUDIT FAILED`, and blocks W5 from proceeding on an old draft.
+- Eleven isolated JavaScript preflight/HTML/section-topic/eligibility checks passed in the development environment; both changed Apps Script files parse correctly.
+- **Remaining acceptance boundary:** a plain HTML anchor audit cannot prove that new Sol prose is semantically in the right section, and model output cannot be tested end-to-end without an explicitly controlled Apps Script pilot. After approval of the two-script install, use one trial article and visually review its contextual anchor placement, HTML, images and author CTA before bulk runs. Do not claim a verified end-to-end live test yet.
+- **Deployment scope:** new `glb_internal_links.js` and updated `glb_batch_orchestrator.js` only. No changes to the existing W1.5D script or WordPress. Existing `glb_BatchSidebar.html` remains unchanged.
