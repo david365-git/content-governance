@@ -17,18 +17,20 @@ const polish = 'https://www.abbeyfloorcare.co.uk/home-garden/tile-care/terrazzo-
 const own = 'https://www.abbeyfloorcare.co.uk/home-garden/floor-care/can-you-use-a-steam-mop-on-terrazzo/';
 const cx = [
   'SECTION 1: Origin','Internal link: None',
-  'SECTION 6: Cleaning options','Internal link: '+clean,
-  'SECTION 9: Professional correction','Internal link: '+polish,
-  'SECTION 11: Next steps','Internal link: '+hub,
+  'SECTION 6: Heading H2: Cleaning options','Internal link: '+clean,
+  'SECTION 9: Heading H2: Professional correction','Internal link: '+polish,
+  'SECTION 11: Heading H2: Next steps','Internal link: '+hub,
   'Stage 1.5D complete.'
 ].join('\n');
 const cw = cx.replace('Stage 1.5D complete.', 'Stage 1.5C complete. Waiting for Stage 1.5D.');
 assert.strictEqual(context.glb_linkPlanIsCurrent_(cw,cx),true);
-assert.strictEqual(context.glb_linkPlanIsCurrent_(cw.replace('SECTION 6: Cleaning options','SECTION 6: Changed'),cx),false);
+assert.strictEqual(context.glb_linkPlanIsCurrent_(cw.replace('SECTION 6: Heading H2: Cleaning options','SECTION 6: Heading H2: Changed'),cx),false);
 const plan = context.glb_linkPlanFromCx_(cx,hub,'Educational Guide',own);
 assert.strictEqual(plan.ready,true);
 assert.strictEqual(plan.required.length,3);
 assert.deepStrictEqual(Array.from(plan.required,x=>x.section),[6,9,11]);
+assert.strictEqual(plan.required[0].heading,'Cleaning options');
+assert.strictEqual(context.glb_linkPrompt_(plan).includes('topic: Cleaning options'),true);
 assert.strictEqual(context.glb_linkAuditHtml_('<a href="/contact">Contact</a>',plan).pass,false);
 assert.strictEqual(context.glb_linkAuditHtml_(clean+' '+polish+' '+hub,plan).pass,false);
 assert.strictEqual(context.glb_linkAuditHtml_('<script><a href="'+clean+'">X</a></script>',plan).pass,false);
