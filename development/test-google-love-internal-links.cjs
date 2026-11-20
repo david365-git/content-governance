@@ -92,4 +92,18 @@ assert.throws(() => context.glb_solApplyLinks_(
 assert.throws(() => context.glb_solApplyLinks_(article,
   {links:[{section:2,url:hub,anchor:'Routine cleaning'}]}),/missing\/ambiguous/);
 console.log('PASS: Sol article structure preserved; exact H2 anchor insertion and ambiguity review');
+
+// Geographically targeted educational pages must not be recycled into national
+// guides, but nonlocal case studies remain valid when technically relevant.
+const localGuide = {articleType:'Educational Guide',title:'Terrazzo Care Glasgow',
+  url:'https://www.abbeyfloorcare.co.uk/glasgow-terrazzo-care/',locality:''};
+const regionalStudy = {articleType:'Case Study',title:'Terrazzo Restoration Glasgow',
+  url:'https://www.abbeyfloorcare.co.uk/glasgow-terrazzo-restoration/',locality:'Glasgow'};
+assert.strictEqual(context.glb_solGeoEducationAllowed_(localGuide,''),false);
+assert.strictEqual(context.glb_solGeoEducationAllowed_(localGuide,'Glasgow'),true);
+assert.strictEqual(context.glb_solGeoEducationAllowed_(regionalStudy,''),true);
+assert.strictEqual(context.glb_solGeoEducationAllowed_(
+  {articleType:'Educational Guide',title:'Terrazzo',url:clean,locality:''},''),true);
+console.log('PASS: regional educational filtering preserves nonlocal case studies');
+
 console.log('PASS: Legacy CW/CX governance tests retained for original Content Generation only');
