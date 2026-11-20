@@ -1,81 +1,34 @@
-# Google Love internal-linking integration — development specification
+# Google Love Sol internal-link integration — W1.5D_Sol
 
-**Status:** development only; do not merge, deploy, or republish.
-**Reference case:** Post 48148 — contact is present but the material hub and relevant internal links are missing.
-**Baseline:** exact live-source GitHub `main` at branch creation.
+## Current architecture (20 November 2026)
 
-## Confirmed existing code
+Google Love Sol **continues generating its own article structure and editorial copy**, independent of the Content Generation W1.5A–W1.5D plan. The new **glb_w15d_sol.js** module acts on the finished HTML:
 
-- `!_ce_stage15d_laterallinks.js`: W1.5D reads **Feeds Hub** from the posts row and a governed W1.5C plan in **CW (101)**, assigns the hub and approved lateral routes, then saves its final plan in **CX (102)**. Selection relies on `buildEnhancedSiloMap` and article-type link budgets.
-- `!_ce_stage2_contentgeneration.js`: legacy W2B consumes CX's exact section-linked destinations, instructs the writer to emit actual links, and refuses missing CX.
-- `glb_batch_orchestrator.js`: Google Love CI → Sol → W5 → W5C does **not** currently run W1.5D or pass CX / Feeds Hub destinations to Sol. It saves Sol HTML without checking material-hub or lateral anchor completeness. It separately adds a contact footer.
+1. The existing Sol prompt generates the article unchanged (no CW/CX or W1.5A–C prerequisites).
+2. The original Sol HTML is written to the recoverable **Google Love Production Drafts** sheet before link selection.
+3. **W1.5D_Sol** extracts actual H2 headings and paragraph excerpts.
+4. It calls the existing **buildEnhancedSiloMap** and **getMaxLateralLinks** helpers from the original W1.5D script, preserving their locality, material, eligibility and article-type rules. It verifies Feeds Hub separately.
+5. A small **MODEL_CHEAP** call chooses eligible destinations, H2 numbers and an exact existing paragraph phrase.
+6. A deterministic inserter adds only approved HTML anchor tags; it refuses ambiguous or missing phrase matches, changes to the original article HTML, wrong sections, invalid destinations, missing hub and exceeded lateral quotas.
+7. If any validation fails, **New HTML remains unchanged**, the unlinked draft stays recoverable, and the queue marks **SOL REVIEW**. No automatic second paid Sol call.
+8. If all checks pass, linked HTML is written into **posts → New HTML**. Original full-batch CI → Sol → W5 → W5C and Sol-only Sol-without-CI modes remain available.
 
-## Requirements before any merge
+**Original W1.5D remains unchanged.** The old **glb_internal_links.js** represents a legacy development experiment for the CW/CX approach and is NOT required by this architecture.
 
-1. **No invented destinations.** Feeds Hub is the authoritative material hub for non-hub articles when populated with a valid on-site URL. Existing W1.5D CX assignments are reused only when current and verifiable against the posts row and known eligible destinations. Do not trust a stale CX plan merely because it says `Stage 1.5D complete.`
-2. **Article type rules.** Hub pages must not link to themselves; Hub pages may link to approved children. Service / geo-service regional and locality restrictions must remain intact. Lateral quotas come from Article Type Control Sheet. Contact is separate from hub and lateral quotas.
-3. **Missing CX support.** Google Love should work for posts never run through W1.5, but it must not silently invent or auto-approve lateral links. It needs a controlled proposal/selection path, using `buildEnhancedSiloMap`, relevance checks and existing W1.5D eligibility rules. A missing or invalid hub cannot be fabricated.
-4. **Correct placement.** Supply approved destinations to Sol with section context, and verify the **final generated HTML** has a real `<a href>` pointing to each required destination, not merely a URL in plain text, JSON-LD, script, image or footer. Resolve relative vs absolute paths carefully and reject self-links and duplicates.
-5. **Fail clearly before production output.** On required-link failure, keep previous `posts!New HTML` intact; preserve draft/review evidence and label link review, with no automatic second paid API call. Do not retry publishing.
-6. **Respect user-authored content.** Do not rewrite historical content, change W2C media, stage W5/5C, author footer, or WordPress publication solely to insert links.
-7. **Explicit tests.** Good CX, stale CX, missing CX, missing hub, article-is-hub, zero lateral quota, approved case-study, disallowed geo service route, wrong locality/country, duplicate links, self-link, URL aliases/trailing slash, incorrect section, href missing but text present, contact-only output, case-study image retention, and recovery on failed link audit.
+## Installation (after offline and one-post verification)
 
-## Suggested implementation milestones
+Update only:
+- glb_batch_orchestrator.js (existing)
+- glb_BatchSidebar.html (existing sidebar HTML)
+- glb_w15d_sol.js (new Apps Script code file)
 
-- **A — Discovery / read-only validation:** record current per-post link governance inputs and demonstrate gaps on representative rows including 48148.
-- **B — Governed destination adapter:** reuse W1.5D's eligibility and preserve manually/previously approved assignments where still valid.
-- **C — Sol prompt integration:** require approved links without inventing URLs or section-specific evidence.
-- **D — Deterministic HTML audit:** prevent `SOL DONE` and production HTML replacement when required links are absent.
-- **E — Offline regression tests:** no API calls, no spreadsheet writes and no WordPress actions; check sidebars and existing stages unaffected.
-- **F — Owner review, then separate PR merge and controlled one-file/few-file Apps Script deployment.**
+Keep the existing !_ce_stage15d_laterallinks.js and !_bc_automatedchain.js files; W1.5D_Sol calls their pre-existing helper functions but does not require running W1.5A–D or the Content Generation pipeline.
 
-## Open questions to resolve from actual sheet row, not guess
+**Test constraints:** Only isolated syntax/unit checks have passed so far. A live Google Apps Script end-to-end test, model-output quality review and cost review are still needed. The Sol-only button requires a recorded successful **Content Intelligence completion in the Google Love Batch Queue**, not the unrelated `posts` column CI ("New Post Sent To Site"). All new Sol requests incur model cost; the independent link-selection call may incur a smaller cost.
 
-- Post 48148's article type, material, Feeds Hub, populated CW/CX, current New HTML and current Site Export source links.
-- Whether the existing CX plan is fresh for this Google Love rewrite, or whether W1.5D candidates must be selected anew.
-- How the existing Sol article sections align with W1.5D's section identifiers; absent alignment, validation must not falsely claim in-section placement.
+## Known deliberate constraints
 
-No code is authorised for production until these conditions are demonstrated.
-
-## Development checkpoint — 19 November 2026
-
-**Implemented on this branch (not deployed):**
-- `glb_internal_links.js` interprets completed CX link assignments, validates exact site-local destinations, refuses self-links and duplicate URLs, and checks that the material hub is assigned for non-hub articles.
-- A read-only `glb_linkPreflight_` compares CX against its current CW source plan, then calls the existing W1.5D silo candidate generator and article-type lateral limit to reject stale, ineligible or over-quota assignments before a paid Sol call.
-- `glb_batch_orchestrator.js` sends the exact approved destinations and intended section numbers to Sol.
-- After a Sol response, the final HTML is audited. The pre-existing `New HTML` is preserved if approved anchors are missing; a recoverable production draft is retained and the queue shows `SOL REVIEW`.
-- Offline tests under `development/test-google-love-internal-links.cjs` cover candidate eligibility, missing links, stale CW/CX plans, disallowed links, ordinary anchors and footer-only anchors. The new script and modified runner have passed JavaScript parse checks. A direct execution of synthetic preflight and link-audit functions passed all six check groups.
-- Real read-only check: posts row 283, Post 48148, Feeds Hub `/home-garden/terrazzo-flooring/`, and CX approve three destinations (sections 6, 9, 11), all absent from `New HTML`. The two lateral destinations exist as separate Terrazzo educational guides in rows 162 and 129.
-
-**Open blockers before merge or live testing:**
-1. **Absent CX:** the initial integration intentionally refuses to start Sol without a completed approved W1.5D plan. A safe selection/review path is needed for articles that have never run W1.5D.
-2. **Section-placement evidence:** CX and CW structural freshness is now checked, but alignment of the new Sol prose to those planned sections cannot be guaranteed without stable section IDs.
-3. **End-to-end Apps Script test:** no live spreadsheet, production API or WordPress write has been exercised; tests are synthetic and static.
-4. **Layout audit:** at present the checker verifies presence in editorial HTML, not exact section placement if the generated HTML does not carry stable section IDs.
-5. **Sidebar recovery:** a missing CX currently blocks before the paid API request; the operator needs a clear recovery path that does not rerun completed CI work.
-
-Keep the PR in draft; no merging until all blockers are addressed and the owner approves.
-
-## Final development review checkpoint — 20 November 2026
-
-The owner confirmed that new articles will be run through Content Generation to populate CW/CX before Google Love; **a second selector for missing CX is explicitly out of scope**. Google Love stops before its paid Sol request if CW or CX is missing, incomplete, or not structurally aligned, instructing the operator to complete W1.5C/W1.5D.
-
-- Sol receives the original W1.5D section numbers **and H2 topic titles**, not simply a detached list of links.
-- A failed link audit retains the existing New HTML, saves the generated draft, records `LINK AUDIT FAILED`, and blocks W5 from proceeding on an old draft.
-- Eleven isolated JavaScript preflight/HTML/section-topic/eligibility checks passed in the development environment; both changed Apps Script files parse correctly.
-- **Remaining acceptance boundary:** a plain HTML anchor audit cannot prove that new Sol prose is semantically in the right section, and model output cannot be tested end-to-end without an explicitly controlled Apps Script pilot. After approval of the two-script install, use one trial article and visually review its contextual anchor placement, HTML, images and author CTA before bulk runs. Do not claim a verified end-to-end live test yet.
-- **Deployment scope:** new `glb_internal_links.js` and updated `glb_batch_orchestrator.js` only. No changes to the existing W1.5D script or WordPress. Existing `glb_BatchSidebar.html` remains unchanged.
-
-## W1.5D-on-Sol integration checkpoint — 20 November 2026
-
-The owner clarified that the desired flow is for Sol to **run W1.5D itself** rather than requiring a separately run W1.5D stage. This now happens in `glb_prepareW15DForSol_` inside the development orchestrator:
-
-1. If CX is already complete, current against CW, and passes governance, reuse it without extra W1.5D API expenditure.
-2. Otherwise require CW (W1.5C's enriched plan), select and verify the exact posts row, and call the existing `bc_runStage15DAutomated()` selector **once**.
-3. Block Sol if W1.5D reports failure or used its safe fallback (fallback completion does not prove the links were selected).
-4. Verify the newly saved CX via `glb_linkPreflight_`, then place approved link URLs and section topics into the Sol prompt.
-5. There is no call to Content Intelligence from this function. W1.5D may itself incur a small model/API charge; Sol is a separate paid request.
-
-This development change does not generate CW. Without CW, Google Love must clearly instruct the operator to complete W1.5C before invoking W1.5D.
-
-The Sol-only sidebar button remains a separate, unfinished UI task. Do not treat the development code as live until the Apps Script files are updated deliberately and a single-post test is performed.
+- Insertion is fail-closed: the model must select a unique, exact plain-text phrase within a single HTML paragraph text node. Formatting spans or repeated phrases stop for review rather than generating guessed links.
+- No semantic rewrite and no new wording: the post-processing changes tags only.
+- Original W1.5D rules are reused through shared helper calls. The model supplies content-specific relevance judgments from the actual article.
+- First pilot should review whether candidate selection, locality and paragraph placement are natural.
