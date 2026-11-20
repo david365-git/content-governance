@@ -11,7 +11,7 @@ Google Love Sol **continues generating its own article structure and editorial c
 5. A small **MODEL_CHEAP** call chooses eligible destinations, H2 numbers and an exact existing paragraph phrase.
 6. A deterministic inserter adds only approved HTML anchor tags; it refuses ambiguous or missing phrase matches, changes to the original article HTML, wrong sections, invalid destinations, missing hub and exceeded lateral quotas.
 7. If any validation fails, **New HTML remains unchanged**, the unlinked draft stays recoverable, and the queue marks **SOL REVIEW**. No automatic second paid Sol call.
-8. If all checks pass, linked HTML is written into **posts → New HTML**. Original full-batch CI → Sol → W5 → W5C and Sol-only Sol-without-CI modes remain available.
+8. If all checks pass, linked HTML is written into **posts → New HTML**. Full Batch runs CI → Sol → W1.5D_Sol → W5 → W5C. Sol Only reuses completed CI and runs Sol → W1.5D_Sol → W5 → W5C.
 
 **Original W1.5D remains unchanged.** The old **glb_internal_links.js** represents a legacy development experiment for the CW/CX approach and is NOT required by this architecture.
 
@@ -32,3 +32,7 @@ Keep the existing !_ce_stage15d_laterallinks.js and !_bc_automatedchain.js files
 - No semantic rewrite and no new wording: the post-processing changes tags only.
 - Original W1.5D rules are reused through shared helper calls. The model supplies content-specific relevance judgments from the actual article.
 - First pilot should review whether candidate selection, locality and paragraph placement are natural.
+
+## Sol-only W5/W5C regression check
+
+A mocked two-post sidebar execution confirmed `PREPARE → SOL → W5 → W5C` for each Post ID in Sol Only mode, without CI. Full Batch still uses `PREPARE → CI → SOL → W5 → W5C`. These are offline behavioural checks, not live Apps Script execution.
