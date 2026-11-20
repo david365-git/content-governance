@@ -36,3 +36,9 @@ Keep the existing !_ce_stage15d_laterallinks.js and !_bc_automatedchain.js files
 ## Sol-only W5/W5C regression check
 
 A mocked two-post sidebar execution confirmed `PREPARE → SOL → W5 → W5C` for each Post ID in Sol Only mode, without CI. Full Batch still uses `PREPARE → CI → SOL → W5 → W5C`. These are offline behavioural checks, not live Apps Script execution.
+
+## Stronger destination relevance (20 November 2026)
+
+W1.5D_Sol now excludes geography-targeted educational, diagnostic, method, buyer and FAQ pages when the current article's explicit locality does not match. The check uses destination locality metadata where populated and recognisable UK geographic markers in titles/URLs where not. It is deliberately conservative: blank locality on a general article does not justify a Glasgow-targeted educational guide. **Case studies remain exempt from this added geographic educational filter**; their technical relevance is still judged from supplied evidence and the existing silo rules. Existing geo-service and service-page eligibility is unchanged.
+
+Selection instructions require a distinct reader benefit for every chosen link, discourage repeating the source article's advice, and demand anchors that signal destination topic rather than a generic statement. Returned assignments must contain a nontrivial `readerBenefit` explanation or validation stops. This is a structural check, **not proof** that every claimed benefit is substantively correct; review the first pilots editorially. The source article and links previously saved to New HTML are not retroactively altered.
