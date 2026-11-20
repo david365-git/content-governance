@@ -389,21 +389,55 @@ function glb_publishFragment_(html){
 }
 
 /**
- * Read approved W1.5D output when valid; otherwise run the existing automated
- * W1.5D selector once, before charging for Sol. No Content Intelligence rerun.
- * W1.5D's legacy fallback is REVIEW, not approval of lateral selection.
+ * Ensure W1.5C exists before asking W1.5D to select links. Run the original
+ * validated W1.5C authoring stage only when CW is missing.
+ * W1.5C requires the existing upstream W1.5A audit (CU) and W1.5B H2s (CV).
+ * Never generate or rewrite either upstream stage in Google Love.
+ */
+function glb_prepareW15CForSol_(a){
+ var posts=glb_posts_(),ss=SpreadsheetApp.getActiveSpreadsheet();
+ if(String(posts.getRange(a.row,4).getDisplayValue()).trim()!==String(a.id))
+  throw Error('Post ID changed: W1.5C will not run on the wrong row.');
+ if(String(posts.getRange(a.row,101).getValue()||'').trim())
+  return {generated:false,cost:0};
+ var cu=String(posts.getRange(a.row,99).getValue()||'').trim();
+ var cv=String(posts.getRange(a.row,100).getValue()||'').trim();
+ if(!cu)throw Error('Sol preflight stopped: W1.5A audit missing in CU. No paid W1.5C/Sol call.');
+ if(!cv || /FINAL FAILURE REPORT/i.test(cv))
+  throw Error('Sol preflight stopped: W1.5B H2 plan missing or failed in CV. No paid W1.5C/Sol call.');
+ if(typeof bc_runStage15CAutomated!=='function')
+  throw Error('Automated W1.5C runner unavailable. No Sol request made.');
+ ss.setActiveSheet(posts);
+ posts.setActiveRange(posts.getRange(a.row,1));
+ if(posts.getActiveRange().getRow()!==a.row ||
+    String(posts.getRange(a.row,4).getDisplayValue()).trim()!==String(a.id))
+  throw Error('Unable to select the correct row for W1.5C.');
+ var result=bc_runStage15CAutomated();
+ if(!result || !result.success)
+  throw Error('W1.5C failed: '+String(result&&result.message||'unknown error')+'. Sol was not called.');
+ if(!String(posts.getRange(a.row,101).getValue()||'').trim())
+  throw Error('W1.5C reported success but CW was not saved. Sol was not called.');
+ return {generated:true,cost:Number(result.cost||0)};
+}
+
+/**
+ * Build the governed section plan (W1.5C) as needed, then read existing CX
+ * or run the original W1.5D selector before charging for Sol.
+ * W1.5D's safe fallback is not treated as verified link selection.
  */
 function glb_prepareW15DForSol_(a){
  var posts=glb_posts_(),ss=SpreadsheetApp.getActiveSpreadsheet();
  if(String(posts.getRange(a.row,4).getDisplayValue()).trim()!==String(a.id))
   throw Error('Post ID changed: W1.5D will not run on the wrong row.');
- // Reuse current, already approved CX without unnecessary W1.5D API cost.
+ // Reuse current, approved CW/CX without any new W1.5C or W1.5D cost.
  try {
-  return {plan:glb_linkPreflight_(a),generated:false,cost:0};
+  return {plan:glb_linkPreflight_(a),generated:false,cost:0,w15cCost:0};
  }catch(e){
   var first=String(e.message||e);
+  // W1.5C is an independent upstream stage, run before W1.5D when needed.
+  var w15c=glb_prepareW15CForSol_(a);
   var cw=String(posts.getRange(a.row,101).getValue()||'').trim();
-  if(!cw)throw Error('W1.5D cannot run: CW enriched plan missing. Complete W1.5C first. No Sol request made.');
+  if(!cw)throw Error('W1.5C produced no CW enriched plan. No Sol request made.');
   if(typeof bc_runStage15DAutomated!=='function')
    throw Error('Automated W1.5D runner unavailable. No Sol request made.');
   ss.setActiveSheet(posts);
@@ -416,7 +450,7 @@ function glb_prepareW15DForSol_(a){
    throw Error('W1.5D did not produce a newly approved link selection: '+
      String(run&&run.message||first)+'. Sol was not called.');
   var plan=glb_linkPreflight_(a);
-  return {plan:plan,generated:true,cost:Number(run.cost||0)};
+  return {plan:plan,generated:true,cost:Number(run.cost||0),w15cCost:Number(w15c.cost||0)};
  }
 }
 
@@ -508,7 +542,7 @@ function glb_buildSolPrompt_(a){
  common=common.concat(editorialFocus,[glb_linkPrompt_(linkPlan)],authorInstruction);
  var prompt=common.join('\n\n');
  if(prompt.length>170000)throw Error('Prompt too large; stopped without truncating');
- return {prompt:prompt,linkPlan:linkPlan,w15dCost:w15d.cost,media:a.type==='Case Study'?JSON.parse(String(glb_posts_().getRange(a.row,207).getDisplayValue()||'{}')):null};
+ return {prompt:prompt,linkPlan:linkPlan,w15cCost:w15d.w15cCost,w15dCost:w15d.cost,media:a.type==='Case Study'?JSON.parse(String(glb_posts_().getRange(a.row,207).getDisplayValue()||'{}')):null};
 }
 function glb_runSol(postId, operatorSolOnly){
  var id=String(postId||''),q=glb_queueState_(id),state=String(q.values[4]||'');
