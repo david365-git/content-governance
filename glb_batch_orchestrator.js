@@ -505,7 +505,7 @@ function glb_runSol(postId){
   if(!linkAudit.pass){
    var missingLinks=linkAudit.missing.map(function(item){return item.url;}).join(' | ');
    var warning=linkAudit.reason+(missingLinks?': '+missingLinks:'');
-   glb_mark_(id,'SOL REVIEW',warning+'; draft preserved, New HTML not replaced. No automatic paid retry.',Number(res.cost)||0,'SOL');
+   glb_mark_(id,'SOL REVIEW','LINK AUDIT FAILED: '+warning+'; draft preserved, New HTML not replaced. No automatic paid retry.',Number(res.cost)||0,'SOL');
    return {success:false,status:'SOL REVIEW',message:warning+'; prior New HTML preserved.'};
   }
   target.getRange(a.row,col).setValue(html);
@@ -563,6 +563,8 @@ function glb_runSeoStage(postId,phase){
  var state=String(q.values[4]||'');
  if(phase==='W5'&&!/^(SOL DONE|SOL REVIEW)$/.test(state))
   return {success:false,message:'W5 requires generated Sol HTML; queue state '+state};
+ if(phase==='W5'&&state==='SOL REVIEW'&&/^LINK AUDIT FAILED:/.test(String(q.values[9]||'')))
+  return {success:false,message:'W5 stopped: Google Love internal-link audit failed; review the saved Sol draft before proceeding.'};
  if(phase==='W5C'&&state!=='W5 DONE')
   return {success:false,message:'W5C requires W5 DONE; queue state '+state};
  var headings=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
