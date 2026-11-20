@@ -24,11 +24,16 @@ function glb_linkPlanFromCx_(cx, feedsHub, articleType, ownUrl) {
   if (!/Stage 1\.5D complete\.\s*$/i.test(content)) {
     return {ready:false,reason:'No completed W1.5D final plan in CX',required:[],hub:''};
   }
-  var result = [], section = 0, seen = {};
+  var result = [], section = 0, sectionHeading = '', seen = {};
   var lines = content.split(/\r?\n/);
   for (var i = 0; i < lines.length; i++) {
     var heading = /^\s*SECTION\s+(\d+):/i.exec(lines[i]);
-    if (heading) {section = Number(heading[1]);continue;}
+    if (heading) {
+      section = Number(heading[1]);
+      var headingText = /Heading H2:\s*(.+?)\s*$/i.exec(lines[i]);
+      sectionHeading = headingText ? headingText[1].trim() : '';
+      continue;
+    }
     var assignment = /^\s*Internal link:\s*(.+?)\s*$/i.exec(lines[i]);
     if (!assignment || /^None\s*$/i.test(assignment[1])) continue;
     if (!section) return {ready:false,reason:'CX link appears outside a numbered section',required:[],hub:''};
@@ -43,7 +48,7 @@ function glb_linkPlanFromCx_(cx, feedsHub, articleType, ownUrl) {
         return {ready:false,reason:'CX assigns the same internal destination more than once',required:[],hub:''};
       }
       seen[path] = true;
-      result.push({url:url,path:path,section:section,kind:hub && path===hub ? 'hub' : 'lateral'});
+      result.push({url:url,path:path,section:section,heading:sectionHeading,kind:hub && path===hub ? 'hub' : 'lateral'});
     }
   }
   if (!isHub) {
@@ -155,14 +160,14 @@ function glb_linkPrompt_(plan) {
     'GOVERNED INTERNAL LINKS — MANDATORY:',
     'The exact listed URLs were approved by the W1.5D governance plan, not invented by the writer.',
     'Include every listed URL once as a real <a href="exact URL">natural contextual anchor</a> in the article body.',
-    'The section numbers identify the original planned topic; place each anchor near the corresponding relevant subject, not mechanically in an unrelated paragraph.',
+    'The section numbers and H2 topics identify where W1.5D assigned each destination. Place each anchor in a substantive paragraph or list item explaining that topic; do not append a generic block of links at the end.',
     'Do not put the links only in a contact footer, script, data block, author biography or navigation comment.',
     'Do not invent, substitute, shorten or redirect destinations. Avoid claims not supported by the evidence.',
     'Do not create a new link when W1.5D has approved none. Contact CTA is separate.'
   ];
   plan.required.forEach(function(item) {
     lines.push('Approved ' + item.kind + ' link for planned SECTION ' +
-      item.section + ': ' + item.url);
+      item.section + (item.heading ? ' (topic: ' + item.heading + ')' : '') + ': ' + item.url);
   });
   return lines.join('\n');
 }
