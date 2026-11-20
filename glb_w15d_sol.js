@@ -2,6 +2,13 @@
  * W1.5D_Sol selects governed links for the ACTUAL finished Sol article H2s.
  * The original W1.5D script and Content Generation CU:CX remain unchanged.
  */
+function glb_solCanonical_(url){
+ var text=String(url||'').trim().replace(/&amp;/gi,'&');
+ if(/^\/(?!\/)/.test(text))text='https://www.abbeyfloorcare.co.uk'+text;
+ var m=/^https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk(\/[^?#]*)?(?:[?#].*)?$/i.exec(text);
+ if(!m)return '';
+ return (m[1]||'/').replace(/\/{2,}/g,'/').replace(/\/+$/,'').toLowerCase()||'/';
+}
 function glb_solSections_(html){
  var source=String(html||''),head=/<h2\b[^>]*>[\s\S]*?<\/h2\s*>/gi,m,list=[];
  while((m=head.exec(source)))list.push({start:m.index,after:head.lastIndex,title:m[0].replace(/<[^>]*>/g,' ').trim()});
@@ -23,12 +30,12 @@ function glb_solSelectLinks_(article,html){
   return String(sh.getRange(article.row,i+1).getValue()||'').trim();}
  if(read('Post ID')!==String(article.id))throw Error('W1.5D_Sol post row moved.');
  var type=read('Article Type'),material=read('Stone Type'),url=read('URL'),hub=read('Feeds Hub');
- var own=glb_linkCanonical_(url),hubPath=glb_linkCanonical_(hub),isHub=type==='Hub Page';
+ var own=glb_solCanonical_(url),hubPath=glb_solCanonical_(hub),isHub=type==='Hub Page';
  if(!isHub&&(!hubPath||hubPath===own))throw Error('W1.5D_Sol invalid Feeds Hub.');
  var limit=getMaxLateralLinks(type);
  if(limit===null||!Number.isInteger(limit)||limit<0)throw Error('W1.5D_Sol invalid lateral-link budget.');
  var used={},pages=buildEnhancedSiloMap(material,article.row,url).filter(function(p){
-  var path=glb_linkCanonical_(p.url);
+  var path=glb_solCanonical_(p.url);
   if(!path||path===own||path===hubPath||path==='/contact'||used[path])return false;
   used[path]=true;return true;
  });
@@ -73,7 +80,7 @@ function glb_solSelectLinks_(article,html){
   if(page===0)hubCount++;else lateral++;
   if(anchor.length<3||anchor.length>75||/[<>]/.test(anchor))throw Error('Invalid anchor phrase.');
   var target=page===0?hub:pages[page-1].url;
-  if(!glb_linkCanonical_(target)||glb_linkCanonical_(target)===own)throw Error('Invalid destination.');
+  if(!glb_solCanonical_(target)||glb_solCanonical_(target)===own)throw Error('Invalid destination.');
   links.push({section:section,url:target,anchor:anchor});
  });
  if((!isHub&&hubCount!==1)||(isHub&&hubCount!==0)||lateral>(isHub?pages.length:limit))
