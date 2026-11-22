@@ -388,6 +388,7 @@ function glb_publishFragment_(html){
  return t;
 }
 
+/** Sol writes its existing structure; W1.5D_Sol links it afterwards. */
 function glb_buildSolPrompt_(a){
  if(typeof glc_getArticle_!=='function')throw Error('Missing Google Love article reader');
  var source=glc_getArticle_(a.id);
@@ -475,10 +476,21 @@ function glb_buildSolPrompt_(a){
  if(prompt.length>170000)throw Error('Prompt too large; stopped without truncating');
  return {prompt:prompt,media:a.type==='Case Study'?JSON.parse(String(glb_posts_().getRange(a.row,207).getDisplayValue()||'{}')):null};
 }
-function glb_runSol(postId){
+function glb_runSol(postId, operatorSolOnly){
  var id=String(postId||''),q=glb_queueState_(id),state=String(q.values[4]||'');
- if(state==='SOL DONE'||state==='SOL REVIEW')return {success:true,skipped:true,status:state};
- if(state!=='CI DONE')throw Error('Sol requires successful CI; current status '+state);
+ if(operatorSolOnly){
+  // Explicit Sol-only button can regenerate an existing Sol article, but it
+  // cannot run CI, bypass missing CI evidence, or resume an uncertain in-flight call.
+  if(!String(q.values[5]||'').trim())
+   return {success:false,message:'Sol Only requires a recorded completed Content Intelligence run. CI has not been recorded for this Post ID.'};
+  if(/RUNNING/.test(state))
+   return {success:false,message:'A stage is marked RUNNING; inspect it before any paid Sol-only call.'};
+  if(/^(CI REVIEW|CI FAILED)$/.test(state))
+   return {success:false,message:'Content Intelligence is marked for review; resolve it before Sol Only.'};
+ }else{
+  if(state==='SOL DONE'||state==='SOL REVIEW')return {success:true,skipped:true,status:state};
+  if(state!=='CI DONE')throw Error('Sol requires successful CI; current status '+state);
+ }
  var a=glb_lookup_(id);
  if(Number(q.values[1])!==a.row)throw Error('Posts row changed for '+id);
  var built=glb_buildSolPrompt_(a); // preflight before creating an uncertain paid request
@@ -498,16 +510,36 @@ function glb_runSol(postId){
   var target=glb_posts_(),col=glb_col_(target,'New HTML',false);
   var prior=String(target.getRange(a.row,col).getValue()||'');
   out.appendRow([id,a.row,glb_utc_(),html,'gpt-6.1-sol',Number(res.cost)||0,audit?JSON.stringify(audit):'',prior]);
+  // The draft is retained, but previous New HTML is never replaced on link failure.
+  // W1.5D_Sol selects and inserts links in Sol's finished H2 sections.
+  // The recoverable unlinked draft was saved above before any new API call.
+  var linked=glb_runW15DSol_(a,html);
+  html=linked.html;
+  if(html.length>48000)throw Error('W1.5D_Sol linked output too large; draft preserved.');
   target.getRange(a.row,col).setValue(html);
   var date=glb_stamp_(a.row,GLB_SOL_HEADER);
   q.sh.getRange(q.row,7).setValue(date);
-  glb_mark_(id,issues?'SOL REVIEW':'SOL DONE',issues?'Article generated; media retention warning recorded in production drafts.':'Article generated and saved to posts New HTML.',Number(res.cost)||0,'SOL');
+  glb_mark_(id,issues?'SOL REVIEW':'SOL DONE',issues?'Article generated; media retention warning recorded in production drafts.':'Article generated; W1.5D_Sol links verified and saved to posts New HTML.',Number(res.cost)||0,'SOL');
   return {success:true,status:issues?'SOL REVIEW':'SOL DONE',cost:Number(res.cost)||0};
  }catch(err){
   glb_mark_(id,'SOL REVIEW',String(err.message||err)+' — do not auto-repeat paid request.',Number(res&&res.cost)||0,'SOL');
   return {success:false,message:String(err.message||err)};
  }
 }
+/**
+ * Explicit Sol-only action. Never invokes Content Intelligence or resets its
+ * completion stamp/cost. The operator selects exactly one paid Sol call per ID.
+ * W5/W5C remain separate actions outside this mode.
+ */
+function glb_runSolOnly(postId){
+ var id=String(postId||'').trim();
+ if(!/^\d+$/.test(id))return {success:false,message:'Invalid Post ID'};
+ var a=glb_lookup_(id),q=glb_queueState_(id);
+ if(Number(q.values[1])!==a.row)
+  return {success:false,message:'Posts row changed for '+id};
+ return glb_runSol(id,true);
+}
+
 function glb_openSidebar(){
  glb_setup_();
  SpreadsheetApp.getUi().showSidebar(HtmlService.createHtmlOutputFromFile('glb_BatchSidebar').setTitle('Content Intelligence → Google Love Sol'));
@@ -553,6 +585,8 @@ function glb_runSeoStage(postId,phase){
  var state=String(q.values[4]||'');
  if(phase==='W5'&&!/^(SOL DONE|SOL REVIEW)$/.test(state))
   return {success:false,message:'W5 requires generated Sol HTML; queue state '+state};
+ if(phase==='W5'&&state==='SOL REVIEW'&&/^LINK AUDIT FAILED:/.test(String(q.values[9]||'')))
+  return {success:false,message:'W5 stopped: Google Love internal-link audit failed; review the saved Sol draft before proceeding.'};
  if(phase==='W5C'&&state!=='W5 DONE')
   return {success:false,message:'W5C requires W5 DONE; queue state '+state};
  var headings=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
