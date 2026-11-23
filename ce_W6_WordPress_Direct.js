@@ -3,6 +3,14 @@
  * Requires the Abbey W6 REST bridge on WordPress (not provided by core WP REST).
  * Does not use the WPVibe connector. Never expose credentials to the sidebar.
  */
+/** Final publishing boundary: canonicalise Abbey Floor Care URLs only. */
+function ce_w6CanonicalAbbeyUrls_(value) {
+ return String(value==null?'':value).replace(
+  /(?:https?:)?\/\/(?:www\.)?abbeyfloorcare\.co\.uk(?=[\/?#"'\s<>:]|$)/gi,
+  'https://www.abbeyfloorcare.co.uk'
+ );
+}
+
 function ce_w6WpSettings_() {
   var p = PropertiesService.getScriptProperties();
   var site = String(p.getProperty('CE_WP_MEDIA_SITE_URL') || '').trim().replace(/\/+$/, '');
@@ -217,13 +225,13 @@ function ce_w6WordPressPublish(request) {
 
     // Optional EM image: only send the URL when populated.
     // The WordPress bridge resolves and validates the Media Library attachment.
-    var imageUrl = String(data.featuredImageUrl || '').trim();
+    var imageUrl = ce_w6CanonicalAbbeyUrls_(String(data.featuredImageUrl || '').trim());
     if (imageUrl && !/^https:\/\/[^\s?#]+(?:\?[^#\s]*)?$/i.test(imageUrl)) {
       throw new Error('Column EM must contain a valid HTTPS featured-image URL.');
     }
     // Fail closed if a saved featured image has not yet been reflected in W5C.
     if (imageUrl) {
-      var rawSchema = String(data.newSchema || '').trim();
+      var rawSchema = ce_w6CanonicalAbbeyUrls_(String(data.newSchema || '').trim());
       var bodyMatch = rawSchema.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i);
       var parsedSchema;
       try { parsedSchema = JSON.parse(bodyMatch ? bodyMatch[1] : rawSchema); }
@@ -249,11 +257,11 @@ function ce_w6WordPressPublish(request) {
       expected_date: current.publishedDate,
       expected_status: current.status,
       title: data.newH1,
-      html: data.newHtml,
+      html: ce_w6CanonicalAbbeyUrls_(data.newHtml),
       meta_title: data.newMetaTitle,
       meta_description: data.newMetaDesc,
       focus_keyphrase: data.yoastKeyphrase,
-      schema: data.newSchema
+      schema: ce_w6CanonicalAbbeyUrls_(data.newSchema)
     };
     if (request.mode === 'republish') publishBody.expected_modified = current.modifiedDate;
     if (imageUrl) publishBody.featured_image_url = imageUrl;
