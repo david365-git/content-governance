@@ -821,6 +821,7 @@ window.acLoadDropdowns = function() {
       if (!customMiddleTitle && result.middleTitle) {
         document.getElementById('fi-middle-title').value = result.middleTitle;
       }
+        if (window.fiRestoreDefaultGuidance) window.fiRestoreDefaultGuidance();
         document.getElementById('fi-output-block').style.display = 'block';
         document.getElementById('fi-save-status').style.display  = 'none';
         statusEl.textContent = 'Prompt ready — copy and paste into ChatGPT';
@@ -831,6 +832,48 @@ window.acLoadDropdowns = function() {
         statusEl.className = 'status-bar fail';
       })
       .buildFeaturedImagePrompt();
+  };
+
+  // Alternative FI prompt: preserve actual before and after project photographs.
+  // Shares the existing FI prompt/output fields; does not change the default generator.
+  window.fiGenerateBeforeAfter = function() {
+    window.fiLoadedPostId = null;
+    var statusEl = document.getElementById('fi-status');
+    statusEl.textContent = 'Preparing before-and-after image prompt…';
+    statusEl.className = 'status-bar pending';
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (!result || !result.success) {
+          statusEl.textContent = 'Error: ' + (result ? result.message : 'Unknown error');
+          statusEl.className = 'status-bar fail';
+          return;
+        }
+        window.fiLoadedPostId = String(result.postId || '').trim();
+        document.getElementById('fi-prompt').value = result.prompt || '';
+        document.getElementById('fi-filename').value = result.filename || '';
+        document.getElementById('fi-alttext').value = result.altText || '';
+        document.getElementById('fi-output-block').style.display = 'block';
+        document.getElementById('fi-save-status').style.display = 'none';
+        var guidance = document.getElementById('fi-image-guidance');
+        if (guidance) guidance.innerHTML =
+          '<strong>BEFORE / AFTER PROMPT:</strong> Attach TWO original project photographs. ' +
+          'Image 1 = BEFORE; Image 2 = AFTER. The result must preserve both photos as evidence, ' +
+          'without inventing damage or artificially increasing the shine.';
+        var nextSteps = document.getElementById('fi-image-next-steps');
+        if (nextSteps) nextSteps.innerHTML =
+          '<strong>Next steps:</strong><br>' +
+          '1. Attach the actual BEFORE and AFTER photos to ChatGPT in that order.<br>' +
+          '2. Copy and paste this prompt with both photos.<br>' +
+          '3. Save the finished 1280 × 720 image as the WebP filename shown below.<br>' +
+          '4. Choose the finished WebP, then use Upload to WordPress &amp; Save to Sheet.';
+        statusEl.textContent = 'Before/After prompt ready — attach both project photographs';
+        statusEl.className = 'status-bar pass';
+      })
+      .withFailureHandler(function(err) {
+        statusEl.textContent = 'Failed: ' + err.message;
+        statusEl.className = 'status-bar fail';
+      })
+      .buildBeforeAfterFeaturedImagePrompt();
   };
 
   // Resolve the selected post directly from the posts sheet.
