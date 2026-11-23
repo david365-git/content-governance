@@ -169,6 +169,15 @@ function glb_refreshQueueOverview(){
 
     var existingCount=Math.max(0,q.getLastRow()-1);
     var old=existingCount?q.getRange(2,1,existingCount,15).getValues():[];
+    // Capture the Post-ID cell colours before the queue is resorted.
+    // Each colour must travel with its Post ID, not remain at a row position.
+    var oldBackgrounds=existingCount?q.getRange(2,1,existingCount,1).getBackgrounds():[];
+    var oldFontColours=existingCount?q.getRange(2,1,existingCount,1).getFontColors():[];
+    var oldColourById={};
+    old.forEach(function(v,i){
+      var key=String(v[0]||'').trim();
+      if(key)oldColourById[key]={background:oldBackgrounds[i][0],font:oldFontColours[i][0]};
+    });
     var byId={},previousOrder={},oldIds=[];
     old.forEach(function(v,i){
       var id=String(v[0]||'').trim();
@@ -233,6 +242,18 @@ function glb_refreshQueueOverview(){
     if(values.length){
       q.getRange(2,1,values.length,15).setValues(values);
       q.getRange(2,13,values.length,2).setNumberFormat('dd/MM/yyyy HH:mm');
+      var colourRows=records.map(function(rec){
+        var status=String(rec.values[4]||'').toLowerCase();
+        if(status==='republish'||status==='republished')
+          return {background:'#ffff00',font:'#000000'};
+        if(status==='updated'||status==='update')
+          return {background:'#7030a0',font:'#ffffff'};
+        return oldColourById[rec.id]||{background:'#ffffff',font:'#000000'};
+      });
+      q.getRange(2,1,values.length,1).setBackgrounds(
+        colourRows.map(function(x){return [x.background];}));
+      q.getRange(2,1,values.length,1).setFontColors(
+        colourRows.map(function(x){return [x.font];}));
     }
     if(old.length>values.length){
       q.getRange(values.length+2,1,old.length-values.length,15).clearContent();
