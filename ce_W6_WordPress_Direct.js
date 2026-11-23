@@ -331,6 +331,52 @@ function ce_w6SaveConfirmedSchema_(postId, expectedSchema, confirmedSchema) {
 }
 
 /**
+ * Record the final successful W6 action by Post ID, never by a potentially
+ * changed active row. The posts!D140 colour is #ffff00 (yellow/black).
+ * Queue E is its existing Status field; prior workflow stamps remain intact.
+ * This is ONLY called after WordPress and the normal W6 sheet writes succeed.
+ */
+function ce_w6MarkCompletedAction_(postId, mode) {
+  if (!/^\d+$/.test(String(postId)) || !['republish','update'].includes(mode))
+    return {success:false,message:'Invalid W6 completion status.'};
+  var ss=SpreadsheetApp.getActiveSpreadsheet();
+  var posts=ss.getSheetByName('posts');
+  if (!posts) return {success:false,message:'posts sheet missing.'};
+  var last=posts.getLastRow();
+  if(last<2)return {success:false,message:'posts sheet has no Post IDs.'};
+  var ids=posts.getRange(2,4,last-1,1).getDisplayValues();
+  var matches=[];
+  ids.forEach(function(r,i){if(String(r[0]).trim()===String(postId))matches.push(i+2);});
+  if(matches.length!==1)return {success:false,message:'posts Post ID '+postId+
+    ' matched '+matches.length+' rows; completion colour not recorded.'};
+
+  var queue=ss.getSheetByName('Google Love Batch Queue');
+  var queueRow=-1;
+  if(queue&&queue.getLastRow()>1){
+    var qids=queue.getRange(2,1,queue.getLastRow()-1,1).getDisplayValues();
+    var qMatches=[];
+    qids.forEach(function(r,i){if(String(r[0]).trim()===String(postId))qMatches.push(i+2);});
+    if(qMatches.length>1)return {success:false,message:'Duplicate Post ID '+postId+
+      ' in Google Love Batch Queue; no completion colours written.'};
+    if(qMatches.length===1)queueRow=qMatches[0];
+  }
+  var colour=mode==='republish'?'#ffff00':'#7030a0';
+  var textColour=mode==='republish'?'#000000':'#ffffff';
+  try {
+    posts.getRange(matches[0],4).setBackground(colour).setFontColor(textColour);
+    if(queueRow>1){
+      queue.getRange(queueRow,1).setBackground(colour).setFontColor(textColour);
+      queue.getRange(queueRow,5).setValue(mode==='republish'?'Republish':'Updated');
+    }
+    SpreadsheetApp.flush();
+    return {success:true,postsRow:matches[0],queueRow:queueRow,
+      message:queueRow>1?'Posts and Google Love Batch Queue updated.':
+        'Posts coloured; Post ID not present in Google Love Batch Queue.'};
+  } catch(e) {
+    return {success:false,message:'W6 completion marking failed: '+String(e.message||e)};
+  }
+}
+/**
  * Single W6 action: publish first, then record the confirmed WordPress result.
  * If a sheet write fails after publishing, report a PARTIAL result and do not
  * invite another publish; the user can reconcile the record separately.
@@ -365,6 +411,13 @@ function ce_w6DirectPublishAndRecord(request) {
   var schemaSync = ce_w6SaveConfirmedSchema_(result.postId, sourceSchema, result.schema);
   if (!schemaSync.success) problems.push('posts schema: ' + schemaSync.message);
   result.postsSchemaUpdated = !!schemaSync.success;
+  if (!problems.length) {
+    // No marking on an unverified or partially recorded WordPress operation.
+    var marked = ce_w6MarkCompletedAction_(result.postId, result.mode);
+    result.completionMarked = !!marked.success;
+    result.completionMarkMessage = marked.message;
+    if (!marked.success) problems.push('Completion colours/status: ' + marked.message);
+  }
   if (problems.length) {
     result.success = false;
     result.message = 'WordPress WAS updated, but sheet recording needs attention. Do not publish again. ' +
