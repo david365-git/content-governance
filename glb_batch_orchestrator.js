@@ -167,6 +167,18 @@ function glb_refreshQueueOverview(){
       }
     });
 
+    // Mirror the displayed posts!D Post ID colours, including existing progress
+    // conditional formatting. Read once; keep colours tied to ID across sorting.
+    var postIds=p.getRange(2,4,pLast-1,1).getDisplayValues();
+    var postBg=p.getRange(2,4,pLast-1,1).getBackgrounds();
+    var postFg=p.getRange(2,4,pLast-1,1).getFontColors();
+    var postColours={};
+    postIds.forEach(function(r,i){
+      var id=String(r[0]||'').trim();
+      if(id&&!postColours[id]){
+        postColours[id]={background:postBg[i][0],font:postFg[i][0]};
+      }
+    });
     var existingCount=Math.max(0,q.getLastRow()-1);
     var old=existingCount?q.getRange(2,1,existingCount,15).getValues():[];
     // Capture the Post-ID cell colours before the queue is resorted.
@@ -243,12 +255,9 @@ function glb_refreshQueueOverview(){
       q.getRange(2,1,values.length,15).setValues(values);
       q.getRange(2,13,values.length,2).setNumberFormat('dd/MM/yyyy HH:mm');
       var colourRows=records.map(function(rec){
-        var status=String(rec.values[4]||'').toLowerCase();
-        if(status==='republish'||status==='republished')
-          return {background:'#ffff00',font:'#000000'};
-        if(status==='updated'||status==='update')
-          return {background:'#7030a0',font:'#ffffff'};
-        return oldColourById[rec.id]||{background:'#ffffff',font:'#000000'};
+        // Use posts column D as the single colour source of truth.
+        return postColours[rec.id]||oldColourById[rec.id]||
+          {background:'#ffffff',font:'#000000'};
       });
       q.getRange(2,1,values.length,1).setBackgrounds(
         colourRows.map(function(x){return [x.background];}));
