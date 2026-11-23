@@ -2947,6 +2947,103 @@ var filenameTopic =
   }
 }
 
+/**
+ * FI alternative: evidence-led before/after featured-image prompt.
+ * Leaves the existing problem-led buildFeaturedImagePrompt() untouched.
+ * Uses two photographs supplied by the operator; it never invents their contents.
+ */
+function buildBeforeAfterFeaturedImagePrompt() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("posts");
+    if (!sheet || !sheet.getActiveRange() || sheet.getActiveRange().getRow() < 2)
+      return {success:false,message:"Select a data row on posts first."};
+    var d = getActiveRowDataMap();
+    var postId = String(d["Post ID"] || "").trim();
+    if (!/^\d+$/.test(postId)) return {success:false,message:"Selected row has no valid Post ID."};
+
+    var material = String(d["Stone Type"] || "").trim();
+    var type = String(d["Article Type"] || "").trim();
+    var locality = String(d["Locality"] || "").trim();
+    var parent = String(d["Parent Area"] || "").trim();
+    var location = locality ? locality + (parent ? ", " + parent : "") : parent;
+    var title = String(d["New H1"] || d["H1"] || "").trim();
+    var condition = String(d["ac_entry_condition"] || "").trim();
+    var homeowner = String(d["ac_homeowner_perception"] || "").trim();
+    var work = String(d["ac_process_emphasis"] || "").trim();
+    var result = String(d["ac_result_type"] || "").trim();
+    var constraint = String(d["ac_constraint"] || "").trim();
+    var materialBehaviour = String(d["ac_material_behaviour"] || "").trim();
+    var narrative = String(d["ac_narrative_archetype"] || "").trim();
+
+    // Preserve the existing FI filename conventions without reusing its creative direction.
+    var standard = buildFeaturedImagePrompt();
+    if (!standard || !standard.success)
+      return {success:false,message:standard&&standard.message||"Unable to read FI article details."};
+    var filename = String(standard.filename || "").replace(/\.webp$/i,"");
+    if (!/-before-after$/.test(filename)) filename += "-before-after";
+    filename += ".webp";
+    var alt = [material ? material+" floor" : "Restored floor",
+      "before and after restoration",location ? "in "+location : ""].filter(Boolean).join(" ");
+    if (alt.length>140) alt=alt.slice(0,140).replace(/\s+\S*$/,"");
+    var projectLabel = location ? (locality || parent).toUpperCase()+" PROJECT" : "RESTORATION PROJECT";
+
+    var parts = [
+      "Act as an experienced editorial art director specialising in authentic UK stone and tile restoration photography.",
+      "Create ONE featured blog image from TWO photographs that I upload with this prompt.",
+      "Image 1 = BEFORE restoration. Image 2 = AFTER restoration. These are real project evidence, not inspiration for an invented room.",
+      "",
+      "ARTICLE-SPECIFIC PROJECT FACTS (use only facts supported by these fields and the supplied photos):",
+      "Article: "+(title||"(Use the project context and photographs)"),
+      "Article type: "+(type||"Not specified"),
+      "Material: "+(material||"Identify only where clear"),
+      "Location or setting: "+(location||"Not established — do not invent"),
+      "Starting condition: "+(condition||"Not established — inspect the before photo without inventing damage"),
+      "What the homeowner noticed: "+(homeowner||"Not specified"),
+      "Restoration work: "+(work||"Not specified — do not invent tools or treatments"),
+      "Documented outcome: "+(result||"Not specified — rely on the after photograph"),
+      "Material limitation: "+(constraint||"Not specified"),
+      "Relevant material behaviour: "+(materialBehaviour||"Not specified"),
+      "Project narrative: "+(narrative||"Not specified"),
+      "",
+      "VISUAL EVIDENCE FIRST:",
+      "Preserve the exact floor pattern, tile format, aggregate, colour, grout, holes, repairs, texture and visible surroundings shown in each photograph.",
+      "Do NOT invent damage, remove defects, enhance the shine, introduce an unphotographed restoration result, change furniture or architecture, or simulate matching camera angles.",
+      "Do NOT depict the finished floor as dirtier or brighter than the supplied reference.",
+      "If the two photographs differ in viewpoint, retain their individual viewpoints. Crop only to improve visibility without distorting either photograph.",
+      "If either image is not genuinely before or after, do not mislabel it: make only a truthful comparison or request the correct photograph.",
+      "",
+      "COMPOSITION:",
+      "Exactly 1280 x 720 pixels, landscape 16:9.",
+      "Clean side-by-side split screen. BEFORE photograph occupies the left half; AFTER photograph the right half.",
+      "Separate with one crisp, thin vertical white line at the exact centre.",
+      "Make the floor the visual subject in both halves. Do not synthesise an artificial matching room.",
+      "Do not add props, people, tools or unrecorded flooring details.",
+      "",
+      "TEXT OVERLAY — THREE SHORT LEVELS ONLY:",
+      "Eyebrow: small uppercase sans-serif; derive the shortest truthful place/project label (suggestion: "+projectLabel+").",
+      "Headline: compact bold serif, preferably 2–4 words, identifying the actual floor and restoration (e.g. 'Terrazzo Restoration' only when appropriate).",
+      "Subheadline: one restrained 6–8-word maximum phrase describing the documented change, without promises, diagnosis or unsupported claims.",
+      "Place only one headline: do not restate the article H1, location, material or result in a second large headline.",
+      "Keep the complete central text group compact, ideally no more than about 30–35% of the frame width, leaving most of BOTH photographs unobstructed.",
+      "Use medium-small editorial type, not oversized marketing copy. It must remain readable at mobile thumbnail size.",
+      "Use a subtle LOCAL translucent/frosted or lightly shaded backing only where needed for legibility; do not darken the whole image.",
+      "No huge black uppercase bottom caption, no duplicate slogans, no logo, no watermark, no badges or decorative icons.",
+      "Add only small 'BEFORE' at the bottom-left and 'AFTER' at the bottom-right; keep labels fully visible inside safe margins.",
+      "Use restrained colours and natural contrast. Accurate spelling and legibility are essential.",
+      "",
+      "FINAL CHECK:",
+      "The original real photographs are the evidence. Their fidelity overrides visual drama or symmetry.",
+      "A reader should see both the initial floor and the real result clearly, even without the text.",
+      "Output ONE completed image, 1280 x 720, without surrounding explanation."
+    ];
+    return {success:true,prompt:parts.join("\n"),filename:filename,altText:alt,
+      postId:postId,middleTitle:""};
+  } catch(e) {
+    return {success:false,message:"buildBeforeAfterFeaturedImagePrompt error: "+e.message};
+  }
+}
+
 function saveFeaturedImageToSheet(url, filename, altText, postId) {
   try {
     var id = String(postId == null ? "" : postId).trim();
