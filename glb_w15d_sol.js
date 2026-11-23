@@ -53,7 +53,11 @@ function glb_solSections_(html){
   var body=source.slice(h.after,end).split(/<footer\b|<div\b[^>]*class=["'][^"']*abbey-bio-box/i)[0];
   var p=/<p\b[^>]*>([\s\S]*?)<\/p\s*>/gi,match,paras=[];
   while((match=p.exec(body))) {
-   var text=match[1].replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+   // Hide text that cannot be linked: old tags were stripped, misleading the model.
+   var selectable=match[1]
+    .replace(/<a\b[^>]*>[\s\S]*?<\/a\s*>/gi,' [existing link unavailable] ')
+    .replace(/<(?:strong|em|span|code|script|style)\b[^>]*>[\s\S]*?<\/(?:strong|em|span|code|script|style)\s*>/gi,' [formatted text unavailable] ');
+   var text=selectable.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
    if(text.length>45)paras.push(text.slice(0,350));
   }
   return {number:i+1,title:h.title,start:h.after,end:end,paras:paras.slice(0,5)};
@@ -90,6 +94,7 @@ function glb_solSelectLinks_(article,html){
   'Do not pick a destination merely because it shares the material, repeats the warning or uses similar keywords.',
   'Choose anchors that accurately signal the destination topic, not generic statements of fact or misleading location/service claims.',
   'Anchor text must be an exact, single text-node substring from a paragraph in that H2 section.',
+  'Paragraph excerpts mark existing links and protected formatting as unavailable. Do not select words from these unavailable spans as anchor text.',
   'Choose a descriptive, naturally occurring phrase 3 to 75 characters long.',
   'No headings, existing links, formatted words, image captions, footers or invented text.',
   'ARTICLE '+JSON.stringify({id:article.id,title:article.title,type:type,material:material}),
