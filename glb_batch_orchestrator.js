@@ -389,6 +389,35 @@ function glb_publishFragment_(html){
 }
 
 /** Sol writes its existing structure; W1.5D_Sol links it afterwards. */
+/** Recover known hosted videos without mistaking their thumbnails for photographs. */
+function glb_sourceMedia_(media){
+ var entries=Array.isArray(media&&media.imagesAndVideos)?media.imagesAndVideos:[];
+ var images=[],videos=[],seen={};
+ entries.forEach(function(m){
+  if(!m||!m.url)return;
+  var url=String(m.url).trim(),type=String(m.type||'').toLowerCase();
+  var thumbnail=/^https?:\/\/(?:i|img)\.ytimg\.com\/vi(?:_webp)?\/([A-Za-z0-9_-]{11})\//i.exec(url);
+  var youtube=/^https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtube\.com\/(?:embed|shorts)\/|youtu\.be\/)([A-Za-z0-9_-]{11})(?:[?&#\/]|$)/i.exec(url);
+  var vimeo=/^https?:\/\/(?:www\.)?vimeo\.com\/(\d+)(?:[?&#\/]|$)/i.exec(url);
+  if(type==='video'||thumbnail){
+   if(!thumbnail&&!youtube&&!vimeo)return;
+   var id=thumbnail?'youtube:'+thumbnail[1]:youtube?'youtube:'+youtube[1]:'vimeo:'+vimeo[1];
+   if(seen[id])return;
+   seen[id]=true;
+   videos.push({url:thumbnail?'https://www.youtube.com/watch?v='+thumbnail[1]:url,id:id,
+    sourceThumbnail:thumbnail?url:'',sourceSection:m.sourceSection||'',
+    nearbySourceText:m.nearbySourceText||'',alt:m.alt||'',
+    originalCaption:m.originalCaption||'',order:m.order||0});
+  }else if(type==='image')images.push(m);
+ });
+ return {images:images,videos:videos};
+}
+/** Flag when Sol omitted a recognised source video; preserve the recoverable draft. */
+function glb_videoRetention_(html,videos){
+ var text=String(html||'');
+ return videos.filter(function(v){var id=String(v.id||'').split(':')[1];return id&&text.indexOf(id)<0;})
+  .map(function(v){return {url:v.url,sourceSection:v.sourceSection,reason:'Source video missing from generated HTML'};});
+}
 function glb_buildSolPrompt_(a){
  if(typeof glc_getArticle_!=='function')throw Error('Missing Google Love article reader');
  var source=glc_getArticle_(a.id);
@@ -430,7 +459,7 @@ function glb_buildSolPrompt_(a){
   if(missing.length)throw Error('Required extracted evidence incomplete: '+missing.join(', '));
   var media=JSON.parse(String(v[13]||'{}'));
   if(!Array.isArray(media.imagesAndVideos))throw Error('Case-study media inventory invalid');
-  var images=media.imagesAndVideos.filter(function(x){return x&&x.type==='image'&&x.url;});
+  var sourceMedia=glb_sourceMedia_(media),images=sourceMedia.images,videos=sourceMedia.videos;
   // Reuse the tested single-pass media-aware case-study instructions.
   common=[
    'Create one outstanding UK homeowner-facing restoration case study, in clean article HTML only.',
@@ -443,10 +472,10 @@ function glb_buildSolPrompt_(a){
    'PHOTO CAPTIONS: Use concise, homeowner-facing descriptions grounded in supplied alt text, original captions and context. Never say the source says, the photograph proves, the inventory shows, or the record describes. When the scene is not independently verified, use neutral labels (e.g. Marble tile lippage illustration) or no caption; do not invent what an image depicts.',
    'Use technical matrix for material behaviour, safe advice and corrections; do not override recorded history or present outdated methods as universal recommendations.',
    'Evidence Package and Evidence Relationships support factual fidelity when present; Evidence Coverage, Gaps and Status restrict certainty. Do not print internal metadata or evidence schema.',
-   'MEDIA PLACEMENT: The separate image inventory below contains actual source HTML URLs and description metadata, NOT independent visual verification. Never infer image contents from a URL alone.',
+   'MEDIA PLACEMENT: The source inventories contain URLs and description metadata, NOT independent visual verification. Never infer photograph or video contents from a URL alone.',
    'Place every relevant, distinct project image near the paragraph or section supported by its original alt/caption, source section, and nearby text. Use original source order if equally relevant. Use the exact image URL, unchanged, as an HTML img src.',
    'Do not invent captions, image descriptions, image URLs, or work-to-image relationships. If stage or description is uncertain, use a neutral caption, or omit the caption; do not assert that an image proves a specific method or outcome.',
-   'Photographs of unrelated branding, authors, repeated views or illustrations may be omitted if they do not serve the homeowner; do not replace them with invented photos. Include relevant source videos only if supported and safe to embed; never invent embed URLs.',
+   'Photographs of unrelated branding, authors, repeated views or illustrations may be omitted if they do not serve the homeowner; do not replace them with invented photos. Preserve relevant project videos with valid source video URLs. Embed recognised YouTube/Vimeo URLs using a responsive 16:9 iframe with a descriptive title, loading=lazy and allowfullscreen; use a plain video link if embedding is unsuitable. Never invent video IDs or embed URLs. Place a project overview near the early project evidence, a process video alongside the process and a result video near the outcome. Do not show a video thumbnail again as an unrelated project photograph.',
    'Never silently drop a useful before/during/after photograph for brevity. Place captions conservatively, based on supplied source wording, and do not imply a photo was independently inspected.',
    'Direct answer, British English, practical and readable, no fluff, padding, generic town history, SEO stuffing or lengthy disclaimers.',
    'When urethane/polyurethane means a type of sealer in homeowner text, use film-forming sealer. Preserve distinct topical and impregnating terminology, sealer coat counts, and actual finishes.',
@@ -458,7 +487,9 @@ function glb_buildSolPrompt_(a){
    '=== STRUCTURED PROJECT EVIDENCE ===',fields.filter(function(x,i){return i!==13&&String(v[i]||'').trim();}).map(function(x){return '=== '+x+' ===\n'+v[fields.indexOf(x)];}).join('\n\n'),
    '=== SOURCE IMAGE INVENTORY (URLS + CONTEXT, NOT VISUALLY VERIFIED) ===',
    images.map(function(m,i){return JSON.stringify({imageNumber:i+1,url:m.url,alt:m.alt||'',originalCaption:m.originalCaption||'',sourceSection:m.sourceSection||'',nearbySourceText:m.nearbySourceText||'',nearbyTextBasis:m.nearbyTextBasis||'',suggestedStage:m.suggestedStage||'uncertain',placementConfidence:m.placementConfidence||'unconfirmed',sourceOrder:m.order||i+1});}).join('\n')||'(no indexed project images)',
-   '=== SOURCE MEDIA COMPLETENESS ===',JSON.stringify(media.mediaAudit||{}),
+   '=== SOURCE VIDEO INVENTORY (SOURCE URLS; CONTENT NOT VISUALLY VERIFIED) ===',
+    videos.map(function(v){return JSON.stringify(v);}).join('\n')||'(no indexed source videos)',
+    '=== SOURCE MEDIA COMPLETENESS ===',JSON.stringify(media.mediaAudit||{}),
    '=== UNPOPULATED FIELDS; DO NOT GUESS ===',fields.filter(function(x,i){return !String(v[i]||'').trim();}).join('; ')||'(none)'
   ];
  }
@@ -502,8 +533,10 @@ function glb_runSol(postId, operatorSolOnly){
   var html=glb_publishFragment_(glb_appendAuthorCta_(String(res.text).replace(/^\s*```(?:html)?\s*/i,'').replace(/\s*```\s*$/,'').trim()));
   if(html.length>48000||!/<h[12]\b/i.test(html)||!/<p\b/i.test(html))throw Error('Sol returned invalid or oversized HTML');
   if(/\brising[\s-]+damp\b/i.test(html.replace(/<[^>]*>/g,' ')))throw Error('Prohibited moisture wording detected');
-  var audit=a.type==='Case Study'?glse_mediaCheck_(html.replace(/<div class="abbey-bio-box"[\s\S]*?(?=<footer class="abbey-article-cta")/i,''),{images:built.media.imagesAndVideos.filter(function(x){return x&&x.type==='image'&&x.url;})}):null;
-  var issues=audit&&(audit.missingProjectEvidence.length||audit.unexpected.length);
+  var sourceMedia=a.type==='Case Study'?glb_sourceMedia_(built.media):null;
+  var audit=a.type==='Case Study'?glse_mediaCheck_(html.replace(/<div class="abbey-bio-box"[\s\S]*?(?=<footer class="abbey-article-cta")/i,''),{images:sourceMedia.images}):null;
+  if(audit)audit.missingSourceVideos=glb_videoRetention_(html,sourceMedia.videos);
+  var issues=audit&&(audit.missingProjectEvidence.length||audit.unexpected.length||audit.missingSourceVideos.length);
   // Save a recoverable draft before replacing the production New HTML cell.
   var ss=SpreadsheetApp.getActiveSpreadsheet(),out=ss.getSheetByName('Google Love Production Drafts');
   if(!out){out=ss.insertSheet('Google Love Production Drafts');out.appendRow(['Post ID','Posts row','UTC','HTML','Model','Cost USD','Media audit JSON','Prior New HTML']);out.setFrozenRows(1);}
