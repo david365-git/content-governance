@@ -371,6 +371,14 @@ function glb_runRequestedSol(postId){
  return glb_runSol(postId);
 }
 
+/** Canonicalise Abbey link/media host only, preserving URLs on other domains. */
+function glb_canonicalAbbeyUrls_(value) {
+ return String(value==null?'':value).replace(
+  /(?:https?:)?\/\/(?:www\.)?abbeyfloorcare\.co\.uk(?=[\/?#"'\s<>:]|$)/gi,
+  'https://www.abbeyfloorcare.co.uk'
+ );
+}
+
 /** Fixed Abbey author and CTA HTML. Sol supplies only article-specific copy. */
 function glb_escapeHtml_(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function glb_appendAuthorCta_(html){
@@ -469,7 +477,7 @@ function glb_buildSolPrompt_(a){
   'Use the approved Technical Matrix to explain materials, limitations and safe practical methods; never invent observed conditions, completed work, clients, results or testing.',
   'When urethane or polyurethane means a sealer, use film-forming sealer in homeowner language. Retain evidence-backed topical and impregnating distinctions.',
   'Do not use or imply the prohibited UK property-defect moisture diagnosis.',
-  'Avoid invented photos, captions, product claims, business guarantees and links.',
+  'Avoid invented photos, captions, product claims, business guarantees and links. All Abbey Floor Care URLs in href, src and srcset must use https://www.abbeyfloorcare.co.uk; leave third-party URLs unchanged.',
   'POST ID '+a.id,'TITLE '+source.title,'TYPE '+source.type,'STONE '+source.material,
   '=== MATERIAL RULE ===',rule,'=== APPROVED TECHNICAL MATRIX N:S ===',source.technical
  ];
@@ -503,7 +511,7 @@ function glb_buildSolPrompt_(a){
    'Use technical matrix for material behaviour, safe advice and corrections; do not override recorded history or present outdated methods as universal recommendations.',
    'Evidence Package and Evidence Relationships support factual fidelity when present; Evidence Coverage, Gaps and Status restrict certainty. Do not print internal metadata or evidence schema.',
    'MEDIA PLACEMENT: The source inventories contain URLs and description metadata, NOT independent visual verification. Never infer photograph or video contents from a URL alone.',
-   'Place every relevant, distinct project image near the paragraph or section supported by its original alt/caption, source section, and nearby text. Use original source order if equally relevant. Use the exact image URL, unchanged, as an HTML img src.',
+   'Place every relevant, distinct project image near the paragraph or section supported by its original alt/caption, source section, and nearby text. Use original source order if equally relevant. Preserve exact source image path and filename in HTML img src, but canonicalise the Abbey Floor Care hostname to https://www.abbeyfloorcare.co.uk.',
    'Do not invent captions, image descriptions, image URLs, or work-to-image relationships. If stage or description is uncertain, use a neutral caption, or omit the caption; do not assert that an image proves a specific method or outcome.',
    'Photographs of unrelated branding, authors, repeated views or illustrations may be omitted if they do not serve the homeowner; do not replace them with invented photos. Preserve relevant project videos with valid source video URLs. Embed recognised YouTube/Vimeo URLs using a responsive 16:9 iframe with a descriptive title, loading=lazy and allowfullscreen; use a plain video link if embedding is unsuitable. Never invent video IDs or embed URLs. Place a project overview near the early project evidence, a process video alongside the process and a result video near the outcome. Do not show a video thumbnail again as an unrelated project photograph.',
    'Never silently drop a useful before/during/after photograph for brevity. Place captions conservatively, based on supplied source wording, and do not imply a photo was independently inspected.',
@@ -561,6 +569,8 @@ function glb_runSol(postId, operatorSolOnly){
   res=bc_sendPromptViaOpenAI(built.prompt,16000,'gpt-6.1-sol');
   if(!res||!res.success||res.truncated||!String(res.text||'').trim())throw Error('Sol returned no complete article');
   var html=glb_publishFragment_(glb_appendAuthorCta_(String(res.text).replace(/^\s*```(?:html)?\s*/i,'').replace(/\s*```\s*$/,'').trim()));
+  html=glb_canonicalAbbeyUrls_(html);
+
   if(html.length>48000||!/<h[12]\b/i.test(html)||!/<p\b/i.test(html))throw Error('Sol returned invalid or oversized HTML');
   if(/\brising[\s-]+damp\b/i.test(html.replace(/<[^>]*>/g,' ')))throw Error('Prohibited moisture wording detected');
   var sourceMedia=a.type==='Case Study'?glb_sourceMedia_(built.media):null;
@@ -577,7 +587,7 @@ function glb_runSol(postId, operatorSolOnly){
   // W1.5D_Sol selects and inserts links in Sol's finished H2 sections.
   // The recoverable unlinked draft was saved above before any new API call.
   var linked=glb_runW15DSol_(a,html);
-  html=linked.html;
+  html=glb_canonicalAbbeyUrls_(linked.html);
   if(html.length>48000)throw Error('W1.5D_Sol linked output too large; draft preserved.');
   target.getRange(a.row,col).setValue(html);
   var date=glb_stamp_(a.row,GLB_SOL_HEADER);
