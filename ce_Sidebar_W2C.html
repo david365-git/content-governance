@@ -1235,7 +1235,7 @@ async function w2cBuildUpdatedHtml() {
       google.script.run
         .withSuccessHandler(resolve)
         .withFailureHandler(reject)
-        .w2c_normalizeBuiltHtml_(wrapper.innerHTML.trim());
+        .w2c_normalizeBuiltHtml(wrapper.innerHTML.trim());
     });
     if(!formatted || !formatted.success || !formatted.html)
       throw Error('W2C image verification returned no HTML');
