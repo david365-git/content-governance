@@ -545,6 +545,36 @@ function glb_normalizeImages_(html) {
       tag=setAttribute(tag,'src',url.replace(/^https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk/i,'https://www.abbeyfloorcare.co.uk'));
     return tag;
   });
+  // Keep each caption background exactly as wide as its displayed image.
+  // Never stretch a small source file merely to fill the default 700px figure.
+  output=output.replace(/<figure\b[^>]*>[\s\S]*?<\/figure\s*>/gi,function(figure){
+    var opening=/^<figure\b[^>]*>/i.exec(figure);
+    var imageTags=figure.match(/<img\b[^>]*>/gi)||[];
+    if(!opening||imageTags.length!==1||!/<figcaption\b/i.test(figure))return figure;
+    var img=imageTags[0],verifiedWidth=Number(attribute(img,'width'));
+    var hasVerified=!!(verifiedWidth>0&&verifiedWidth<=30000&&dimensions(attribute(img,'src')));
+    var frameWidth=hasVerified?Math.min(700,verifiedWidth)+'px':'fit-content';
+    function mergeStyle(tag,rules) {
+      var old=attribute(tag,'style'), parts=old?old.split(';'):[];
+      var keep=parts.filter(function(part){
+        var k=String(part).split(':')[0].trim().toLowerCase();
+        return k&&!Object.prototype.hasOwnProperty.call(rules,k);
+      });
+      Object.keys(rules).forEach(function(k){keep.push(k+':'+rules[k]);});
+      return setAttribute(tag,'style',keep.join(';')+';');
+    }
+    var open=mergeStyle(opening[0],{'width':frameWidth,'max-width':'100%','box-sizing':'border-box'});
+    figure=open+figure.slice(opening[0].length);
+    // The figure and its image share one rendered width, including on mobile.
+    var changedImg=mergeStyle(img,hasVerified?
+      {'display':'block','width':'100%','max-width':'100%','height':'auto'}:
+      {'display':'block','width':'auto','max-width':'100%','height':'auto'});
+    figure=figure.replace(img,changedImg);
+    figure=figure.replace(/<figcaption\b[^>]*>/i,function(caption){
+      return mergeStyle(caption,{'display':'block','width':'100%','max-width':'100%','box-sizing':'border-box'});
+    });
+    return figure;
+  });
   return {html:output,warnings:warnings};
 }
 
