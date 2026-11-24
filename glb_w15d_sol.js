@@ -136,41 +136,86 @@ function glb_solSelectLinks_(article,html){
  return {links:links,cost:Number(api.cost||0)};
 }
 
-/** Insert one link only into an unlinked single text node in an existing paragraph. */
-function glb_solInsertOne_(html,assignment){
- var sections=glb_solSections_(html),sec=sections[assignment.section-1];
- if(!sec)throw Error('W1.5D_Sol target H2 section absent.');
- var before=html.slice(0,sec.start),within=html.slice(sec.start,sec.end),after=html.slice(sec.end);
+/**
+ * Identify each exact linkable occurrence, ignoring existing links, formatted
+ * spans and non-paragraph content. The same text-node rules apply to
+ * candidate validation and insertion.
+ */
+function glb_solAnchorPositions_(html,section,anchor){
+ var sections=glb_solSections_(html),sec=sections[section-1];
+ if(!sec)return [];
+ var within=html.slice(sec.start,sec.end);
  var editable=within.split(/<footer\b|<div\b[^>]*class=["'][^"']*abbey-bio-box/i)[0];
  var p=/<p\b[^>]*>[\s\S]*?<\/p\s*>/gi,m,places=[];
- while((m=p.exec(editable))) {
-  var tokens=m[0].split(/(<[^>]*>)/g),inAnchor=false,inForbidden=false;
+ while((m=p.exec(editable))){
+  var tokens=m[0].split(/(<[^>]*>)/g),inAnchor=false,forbiddenDepth=0;
   for(var i=0;i<tokens.length;i++){
    var token=tokens[i];
    if(token.charAt(0)==='<'){
     if(/^<a\b/i.test(token))inAnchor=true;
     if(/^<\/a\s*>/i.test(token))inAnchor=false;
-    if(/^<(?:script|style|code|strong|em|span|svg)\b/i.test(token))inForbidden=true;
-    if(/^<\/(?:script|style|code|strong|em|span|svg)\s*>/i.test(token))inForbidden=false;
-   } else if(!inAnchor&&!inForbidden&&token.indexOf(assignment.anchor)>=0){
-    places.push({index:m.index,raw:m[0],tokens:tokens,token:i,at:token.indexOf(assignment.anchor)});
+    if(/^<(?:script|style|code|strong|em|span|svg)\b/i.test(token))forbiddenDepth++;
+    if(/^<\/(?:script|style|code|strong|em|span|svg)\s*>/i.test(token))forbiddenDepth=Math.max(0,forbiddenDepth-1);
+   }else if(!inAnchor&&!forbiddenDepth){
+    var from=0,at;
+    while((at=token.indexOf(anchor,from))>=0){
+     places.push({sec:sec,offset:m.index,raw:m[0],tokens:tokens,token:i,at:at});
+     from=at+anchor.length;
+    }
    }
   }
  }
- if(places.length!==1)throw Error('W1.5D_Sol anchor missing/ambiguous in H2 section '+assignment.section+': '+assignment.anchor);
+ return places;
+}
+/**
+ * Use the chosen section whenever its anchor occurs uniquely there.
+ * If missing there, correct the section ONLY when the exact phrase appears
+ * once in a different eligible paragraph in the whole article.
+ * No text is rewritten or guessed.
+ */
+function glb_solResolveAnchor_(html,assignment){
+ var sections=glb_solSections_(html);
+ var intended=glb_solAnchorPositions_(html,assignment.section,assignment.anchor);
+ if(intended.length===1)return assignment;
+ if(intended.length>1)throw Error('W1.5D_Sol ambiguous anchor in H2 section '+assignment.section+': '+assignment.anchor);
+ var candidates=[];
+ for(var n=1;n<=sections.length;n++){
+  var matches=glb_solAnchorPositions_(html,n,assignment.anchor);
+  for(var i=0;i<matches.length;i++)candidates.push(n);
+ }
+ if(candidates.length!==1)
+  throw Error('W1.5D_Sol anchor not uniquely linkable in any H2 paragraph: '+assignment.anchor+
+   ' ('+candidates.length+' matches); saved Sol draft retained.');
+ var corrected={};
+ Object.keys(assignment).forEach(function(key){corrected[key]=assignment[key];});
+ corrected.section=candidates[0];
+ return corrected;
+}
+/** Insert one validated, unique existing phrase into an eligible paragraph. */
+function glb_solInsertOne_(html,assignment){
+ var resolved=glb_solResolveAnchor_(html,assignment);
+ var sec=glb_solSections_(html)[resolved.section-1];
+ var places=glb_solAnchorPositions_(html,resolved.section,resolved.anchor);
+ if(places.length!==1)throw Error('W1.5D_Sol linkable anchor changed unexpectedly: '+resolved.anchor);
  var found=places[0],text=found.tokens[found.token];
- var href=assignment.url.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
- found.tokens[found.token]=text.slice(0,found.at)+'<a href="'+href+'">'+assignment.anchor+'</a>'+text.slice(found.at+assignment.anchor.length);
- var modified=editable.slice(0,found.index)+found.tokens.join('')+editable.slice(found.index+found.raw.length)+within.slice(editable.length);
- return before+modified+after;
+ var href=resolved.url.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+ found.tokens[found.token]=text.slice(0,found.at)+'<a href="'+href+'">'+resolved.anchor+'</a>'+text.slice(found.at+resolved.anchor.length);
+ var within=html.slice(sec.start,sec.end);
+ var editable=within.split(/<footer\b|<div\b[^>]*class=["'][^"']*abbey-bio-box/i)[0];
+ var modified=editable.slice(0,found.offset)+found.tokens.join('')+editable.slice(found.offset+found.raw.length)+within.slice(editable.length);
+ return {html:html.slice(0,sec.start)+modified+html.slice(sec.end),assignment:resolved};
 }
 function glb_solApplyLinks_(original,selection){
- var html=String(original||''),links=selection.links.slice();
- // The H2 sections are recalculated after each insertion, preserving intended locations.
- links.forEach(function(link){html=glb_solInsertOne_(html,link);});
- // Undo just approved anchors to verify zero editorial wording or markup was changed.
- var revert=html;
+ var html=String(original||''),links=selection.links.slice(),placed=[];
+ // Resolve and validate against the current HTML, including any earlier links.
  links.forEach(function(link){
+  var insertion=glb_solInsertOne_(html,link);
+  html=insertion.html;
+  placed.push(insertion.assignment);
+ });
+ // Undo only the inserted links. Article text, attributes and images must be identical.
+ var revert=html;
+ placed.forEach(function(link){
   var href=link.url.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
   var snippet='<a href="'+href+'">'+link.anchor+'</a>';
   if(revert.split(snippet).length!==2)throw Error('W1.5D_Sol inserted anchor is not unique.');
@@ -178,15 +223,16 @@ function glb_solApplyLinks_(original,selection){
  });
  if(revert!==original)throw Error('W1.5D_Sol altered the original article outside approved anchors.');
  var sections=glb_solSections_(html);
- links.forEach(function(link){
+ placed.forEach(function(link){
   var sec=sections[link.section-1];
   var href=link.url.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
   if(!sec||html.slice(sec.start,sec.end).indexOf('<a href="'+href+'">'+link.anchor+'</a>')<0)
    throw Error('W1.5D_Sol placement validation failed.');
  });
- return html;
+ return {html:html,links:placed};
 }
 function glb_runW15DSol_(article,html){
  var selected=glb_solSelectLinks_(article,html);
- return {html:glb_solApplyLinks_(html,selected),links:selected.links,cost:selected.cost};
+ var placed=glb_solApplyLinks_(html,selected);
+ return {html:placed.html,links:placed.links,cost:selected.cost};
 }
