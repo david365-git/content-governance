@@ -632,8 +632,8 @@ function w2cBuildMediaEntryControls(html) {
 
         '<div style="margin:8px 0;font-size:11px;font-weight:700;">Original image dimensions (pixels)</div>' +
         '<div style="display:flex;gap:8px;margin-bottom:5px;">' +
-        '<label style="flex:1;font-size:11px;">Width<input type="number" min="1" max="50000" id="w2cWidth_' + imageNumber + '" value="1280" style="width:100%;box-sizing:border-box;padding:5px;"></label>' +
-        '<label style="flex:1;font-size:11px;">Height<input type="number" min="1" max="50000" id="w2cHeight_' + imageNumber + '" value="720" style="width:100%;box-sizing:border-box;padding:5px;"></label></div>' +
+        '<label style="flex:1;font-size:11px;">Width<input type="number" min="1" max="50000" id="w2cWidth_' + imageNumber + '" placeholder="Auto-detect" style="width:100%;box-sizing:border-box;padding:5px;"></label>' +
+        '<label style="flex:1;font-size:11px;">Height<input type="number" min="1" max="50000" id="w2cHeight_' + imageNumber + '" placeholder="Auto-detect" style="width:100%;box-sizing:border-box;padding:5px;"></label></div>' +
         '<div id="w2cDimStatus_' + imageNumber + '" style="font-size:11px;color:#666;margin-bottom:10px;">Suggested 1280 × 720 (not yet verified)</div>' +
         '<div style="margin-bottom:12px;">' +
           '<label for="w2cFile_' + imageNumber + '" ' +
@@ -1040,7 +1040,6 @@ async function w2cBuildUpdatedHtml() {
   var inserted = 0;
   var rejected = 0;
   var replacedExisting = [];
-  var needsDimensions = [];
 
 
   placeholders.forEach(
@@ -1128,7 +1127,7 @@ async function w2cBuildUpdatedHtml() {
 
       figure.setAttribute(
         'style',
-        'width: 700px'
+        'width:700px;max-width:100%;box-sizing:border-box;'
       );
 
 
@@ -1146,7 +1145,6 @@ async function w2cBuildUpdatedHtml() {
         'alt',
         alt
       );
-      needsDimensions.push({number:imageNumber, url:url, img:img});
 
       /*
        * W2C has already generated and approved
@@ -1167,6 +1165,7 @@ async function w2cBuildUpdatedHtml() {
 
       figcaption.className =
         'wp-caption-text';
+      figcaption.style.cssText = 'display:block;width:100%;box-sizing:border-box;';
 
       figcaption.textContent =
         caption;
@@ -1228,51 +1227,28 @@ async function w2cBuildUpdatedHtml() {
   );
 
 
-  // Read sizes before exposing output; a proposed default is never assumed.
-  var checked = await Promise.all(needsDimensions.map(async function(entry) {
-    var widthField = document.getElementById('w2cWidth_' + entry.number);
-    var heightField = document.getElementById('w2cHeight_' + entry.number);
-    var manual = widthField && widthField.dataset.manual === 'true';
-    var measured = manual ? null : await w2cGetDimensions(entry.url, false);
-    return {entry:entry, widthField:widthField, heightField:heightField,
-      manual:manual, measured:measured};
-  }));
-  for (var i = 0; i < checked.length; i++) {
-    var rec = checked[i], pixels = rec.measured;
-    if (!pixels && rec.manual && w2cValidPixels(rec.widthField.value) &&
-        w2cValidPixels(rec.heightField.value)) {
-      pixels = {width:Number(rec.widthField.value), height:Number(rec.heightField.value)};
-    }
-    if (!pixels) {
-      var w = window.prompt('Image ' + rec.entry.number + ': image dimensions unavailable. Enter its ACTUAL width (Cancel stops building):',
-        rec.widthField ? rec.widthField.value : '1280');
-      if (w === null) {
-        document.getElementById('w2cUpdatedHtml').value = '';
-        resultDiv.style.display = 'block';
-        resultDiv.innerText = 'Build cancelled — dimensions not guessed.';
-        return;
-      }
-      var h = window.prompt('Image ' + rec.entry.number + ': enter its ACTUAL height (Cancel stops building):',
-        rec.heightField ? rec.heightField.value : '720');
-      if (h === null || !w2cValidPixels(w) || !w2cValidPixels(h)) {
-        document.getElementById('w2cUpdatedHtml').value = '';
-        resultDiv.style.display = 'block';
-        resultDiv.innerText = 'Build stopped — dimensions missing or invalid.';
-        return;
-      }
-      pixels = {width:Number(w), height:Number(h)};
-      if (rec.widthField && rec.heightField) {
-        rec.widthField.value = w;
-        rec.heightField.value = h;
-        rec.widthField.dataset.manual = 'true';
-        document.getElementById('w2cDimStatus_' + rec.entry.number).textContent =
-          'Manually confirmed: ' + w + ' × ' + h;
-      }
-    } else if (rec.measured) w2cApplyDimensions(rec.entry.number, pixels, 'URL');
-    rec.entry.img.setAttribute('width', pixels.width);
-    rec.entry.img.setAttribute('height', pixels.height);
-    rec.entry.img.setAttribute('style', 'max-width:100%;height:auto;');
+  // Verify the complete output using the same WordPress media rules as Google Love.
+  // No manual prompts, default pixel values or guessed dimensions.
+  var formatted;
+  try {
+    formatted = await new Promise(function(resolve,reject) {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .w2c_normalizeBuiltHtml_(wrapper.innerHTML.trim());
+    });
+    if(!formatted || !formatted.success || !formatted.html)
+      throw Error('W2C image verification returned no HTML');
+  } catch (error) {
+    document.getElementById('w2cUpdatedHtml').value = '';
+    resultDiv.style.display = 'block';
+    resultDiv.style.color = '#c62828';
+    resultDiv.innerText = '❌ Image formatting could not finish: ' +
+      (error && error.message ? error.message : String(error));
+    return;
   }
+  wrapper.innerHTML = formatted.html;
+  var dimensionWarnings = formatted.warnings || [];
 
   var updatedHtml =
     wrapper.innerHTML.trim();
@@ -1303,7 +1279,7 @@ async function w2cBuildUpdatedHtml() {
           ' replaced'
         : ''
     ) +
-    '.';
+    '. Image dimensions not verified: ' + dimensionWarnings.length + '.';
 }
 
 
