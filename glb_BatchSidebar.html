@@ -15,88 +15,69 @@ small{color:#777}.ok{color:#137333}.warn{color:#9b5700}.err{color:#b3261e}
 <textarea id="ids" placeholder="5628&#10;11417&#10;6847"></textarea>
 <div><button id="run" onclick="runPosts()">Run Full Batch</button><button id="solOnly" onclick="runSolOnly()">Run Google Love Sol Only</button><button class="secondary" onclick="stopRun()">Stop after current stage</button></div>
 <small>Sol Only makes one new paid Sol request per ID, requires recorded completed Content Intelligence (no CW/CX or W1.5A–C prerequisite), and may replace New HTML after passing validation. It never runs Content Intelligence. A confirmation appears before starting.</small>
-<div id="status">Ready.</div><div id="progressSummary">0 / 0 completed</div><div id="barOuter"><div id="barInner"></div></div><div id="counts"><span id="remaining">0 remaining</span><span id="blocked">0 require review</span></div><div id="current">Current: —</div><small>Full Batch: Content Intelligence → Sol → W1.5D_Sol → W5 → W5C. Sol Only: Sol → W1.5D_Sol → W5 → W5C, reusing Content Intelligence. Keep this sidebar open during the batch. Any failed stage stops the batch.</small>
+<div id="status">Ready.</div><div id="progressSummary">0 / 0 completed</div><div id="barOuter"><div id="barInner"></div></div><div id="counts"><span id="remaining">0 remaining</span><span id="blocked">0 require review</span></div><div id="current">Current: —</div><small>Full Batch: Content Intelligence → Sol → W1.5D_Sol → W5 → W5C. Sol Only: Sol → W1.5D_Sol → W5 → W5C, reusing Content Intelligence. You can switch tabs or close this sidebar: Apps Script continues the batch. Stages are scheduled approximately once a minute. Failed or uncertain stages stop the batch for review.</small>
 <div id="grid"><table><thead><tr><th>Post ID</th><th>Stage</th><th>CI completed</th><th>Sol completed</th></tr></thead><tbody id="rows"></tbody></table></div>
 <div id="log"></div>
 <script>
-var active=false,busy=false,items=[],index=0,phase='CI',mode='full',queue=[],refreshBusy=false;
-function setButtons(disabled){el('run').disabled=disabled;el('solOnly').disabled=disabled;}
+var queue=[],job={state:'IDLE',ids:[],index:0,total:0},requestBusy=false,refreshBusy=false;
 function el(id){return document.getElementById(id);}
-function show(t){el('status').textContent=t;}
-function log(t){var n=el('log');n.textContent+=(n.textContent?'\n':'')+t;n.scrollTop=n.scrollHeight;}
-function parse(){return Array.from(new Set(el('ids').value.split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean)));}
+function show(value){el('status').textContent=value;}
+function log(value){var node=el('log');node.textContent+=(node.textContent?'\n':'')+value;node.scrollTop=node.scrollHeight;}
+function parse(){return Array.from(new Set(el('ids').value.split(/[\s,;]+/).map(function(x){return x.trim();}).filter(Boolean)));}
+function phaseTitle(phase){return ({CI:'Content Intelligence',SOL:'Google Love Sol',W5:'W5 — H1 & Meta',W5C:'W5C — Schema Builder'})[phase]||phase||'—';}
 function render(){
+ var running=job.state==='RUNNING';
+ el('run').disabled=running||requestBusy;
+ el('solOnly').disabled=running||requestBusy;
+ el('progressSummary').textContent=(job.index||0)+' / '+(job.total||0)+' completed';
+ el('barInner').style.width=(job.total?Math.round((job.index||0)/job.total*100):0)+'%';
+ el('remaining').textContent=Math.max(0,(job.total||0)-(job.index||0))+' remaining';
+ el('blocked').textContent=job.state==='REVIEW REQUIRED'?'Review required':running?'Scheduled':'';
+ el('current').textContent=job.currentId?'Current: '+job.currentId+' — '+phaseTitle(job.phase):'Current: —';
+ show((job.state||'IDLE')+' — '+(job.message||''));
  var body=el('rows');body.textContent='';
- queue.forEach(function(q){
-  if(items.length&&!items.includes(q.postId))return;
+ (queue||[]).forEach(function(q){
+  if(job.ids&&job.ids.length&&job.ids.indexOf(q.postId)<0)return;
   var tr=document.createElement('tr');
   [q.postId,q.status,q.ciDate||'—',q.solDate||'—'].forEach(function(v){
-   var td=document.createElement('td');td.textContent=v;if(/REVIEW/.test(q.status))td.className='err';tr.appendChild(td);
+    var td=document.createElement('td');td.textContent=v;
+    if(/REVIEW|FAILED/.test(q.status))td.className='err';
+    tr.appendChild(td);
   });body.appendChild(tr);
  });
- var n=items.length;
- el('progressSummary').textContent=index+' / '+n+' processed';
- el('barInner').style.width=(n?Math.round(index/n*100):0)+'%';
- el('remaining').textContent=(n-index)+' remaining';
- el('blocked').textContent=active?'Running':'';
- el('current').textContent=active&&items[index]?'Current: '+items[index]+' — '+phase:'Current: —';
 }
 function poll(){
  if(refreshBusy)return;
  refreshBusy=true;
- google.script.run.withSuccessHandler(function(v){refreshBusy=false;queue=v||[];render();})
-  .withFailureHandler(function(e){refreshBusy=false;log('Progress refresh: '+(e.message||e));}).glb_progress();
+ google.script.run.withSuccessHandler(function(v){
+  job=v||{state:'IDLE',ids:[],index:0,total:0};
+  if(job.ids&&job.ids.length&&!el('ids').value.trim())el('ids').value=job.ids.join('\n');
+  google.script.run.withSuccessHandler(function(rows){
+    refreshBusy=false;queue=rows||[];render();
+  }).withFailureHandler(function(e){refreshBusy=false;log('Queue refresh: '+(e.message||e));render();}).glb_progress();
+ }).withFailureHandler(function(e){refreshBusy=false;log('Status refresh: '+(e.message||e));}).glb_backgroundStatus();
 }
 function runPosts(){startBatch('full');}
 function runSolOnly(){startBatch('solOnly');}
-function startBatch(selectedMode){
- if(active||busy)return;
- items=parse();if(!items.length){show('Enter at least one Post ID');return;}
- if(selectedMode==='solOnly'&&!confirm('Start a NEW paid Sol generation for each of '+items.length+' selected Post IDs? Content Intelligence will NOT run. W1.5D_Sol selection may incur a small separate charge. Existing New HTML can be replaced after checks pass.'))return;
- mode=selectedMode;
- active=true;busy=true;index=0;phase=mode==='solOnly'?'SOL':'CI';setButtons(true);
- el('log').textContent='';show('Preparing '+items.length+' Post IDs…');render();
- google.script.run.withSuccessHandler(function(v){
-  busy=false;items=v.ids;log((mode==='solOnly'?'Sol Only (no Content Intelligence): ':'Full batch: ')+items.join(', '));advance();
- }).withFailureHandler(stopError).glb_prepare(items.join('\n'));
-}
-function stopError(e){
- active=false;busy=false;setButtons(false);
- show('STOPPED — '+String(e&&e.message||e));log('Stopped: '+String(e&&e.message||e));poll();
+function startBatch(mode){
+ if(requestBusy||job.state==='RUNNING')return;
+ var ids=parse();
+ if(!ids.length){show('Enter at least one Post ID');return;}
+ if(mode==='solOnly'&&!confirm('Start a NEW paid Sol generation for '+ids.length+' Post IDs? Content Intelligence will NOT run. Work continues even when this tab is inactive.'))return;
+ requestBusy=true;render();
+ show('Scheduling '+ids.length+' Post IDs on Apps Script…');
+ google.script.run.withSuccessHandler(function(res){
+  requestBusy=false;job=res;log('Scheduled '+res.total+' Post IDs ('+mode+').');render();poll();
+ }).withFailureHandler(function(e){requestBusy=false;show('Not started: '+String(e.message||e));log('Start failed: '+String(e.message||e));render();}).glb_backgroundStart(ids.join('\n'),mode);
 }
 function stopRun(){
- active=false;show('Stopping after current stage…');
- if(!busy){setButtons(false);show('Stopped by operator');}
+ if(job.state!=='RUNNING'){show('No running batch to stop');return;}
+ if(requestBusy)return;
+ requestBusy=true;
+ google.script.run.withSuccessHandler(function(res){
+  requestBusy=false;job=res;render();poll();
+ }).withFailureHandler(function(e){requestBusy=false;show('Stop request failed: '+String(e.message||e));}).glb_backgroundStop();
 }
-function advance(){
- if(!active){busy=false;setButtons(false);poll();return;}
- if(index>=items.length){
-  active=false;busy=false;setButtons(false);
-  if(mode==='solOnly'){
-   show('FINISHED — Sol Only. Review New HTML, W1.5D_Sol links, W5 and W5C outputs. Check featured images before W6.');
-   log('All '+items.length+' Post IDs completed Sol, W1.5D_Sol, W5 and W5C without rerunning Content Intelligence.');
-  }else{
-   show('FINISHED — Check featured images, then run W6');log('All '+items.length+' Post IDs processed through W5C');
-  }
-  poll();return;
- }
- var id=items[index],step=({CI:'Content Intelligence',SOL:'Google Love Sol',W5:'W5 — H1 & Meta',W5C:'W5C — Schema Builder'})[phase];
- busy=true;show('RUNNING — '+id+' — '+step);el('current').textContent='RUNNING: '+id+' — '+step;
- log('Starting '+id+' — '+step);
- var runner=google.script.run.withSuccessHandler(function(r){
-  busy=false;poll();
-  if(!r||!r.success){stopError(new Error('Post '+id+': '+(r&&r.message||'stage failed')));return;}
-  log(id+' — '+step+' completed');
-  // Both modes continue through W5 and W5C after Sol.
-  if(phase==='CI')phase='SOL';
-  else if(phase==='SOL')phase='W5';
-  else if(phase==='W5')phase='W5C';
-  else{index++;phase=mode==='solOnly'?'SOL':'CI';}
-  render();advance();
- }).withFailureHandler(stopError);
- if(mode==='solOnly'&&phase==='SOL')runner.glb_runSolOnly(id);
- else if(phase==='CI'||phase==='SOL')runner.glb_runDirectPost(id,phase);
- else runner.glb_runSeoStage(id,phase);
-}
-setInterval(poll,5000);poll();
+setInterval(poll,10000);
+poll();
 </script></body></html>
