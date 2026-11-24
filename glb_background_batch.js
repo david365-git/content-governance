@@ -1,0 +1,134 @@
+/**
+ * Google Love persistent batch scheduler.
+ * Runs one CI / Sol / W5 / W5C stage per time-driven trigger invocation.
+ * The sidebar is monitoring only; switching tabs cannot pause the queue.
+ * An interrupted or uncertain paid request is NEVER replayed automatically.
+ */
+var GLB_BG_KEY='GLB_BACKGROUND_BATCH_V1';
+var GLB_BG_HANDLER='glb_backgroundStep';
+
+function glb_backgroundRead_(){
+  var value=PropertiesService.getScriptProperties().getProperty(GLB_BG_KEY);
+  if(!value)return null;
+  try{return JSON.parse(value);}catch(e){throw Error('Invalid saved Google Love batch state; manual review required');}
+}
+function glb_backgroundWrite_(state){
+  state.updatedUtc=glb_utc_();
+  PropertiesService.getScriptProperties().setProperty(GLB_BG_KEY,JSON.stringify(state));
+}
+function glb_backgroundRemoveTriggers_(){
+  ScriptApp.getProjectTriggers().forEach(function(t){
+    if(t.getHandlerFunction()===GLB_BG_HANDLER)ScriptApp.deleteTrigger(t);
+  });
+}
+function glb_backgroundFinish_(job,status,message){
+  job.state=status;job.message=String(message||'').slice(0,2000);
+  job.inflight=null;job.inflightSince=null;
+  glb_backgroundWrite_(job);
+  glb_backgroundRemoveTriggers_();
+}
+function glb_backgroundStart(idsText,mode){
+  mode=mode==='solOnly'?'solOnly':'full';
+  var ids=String(idsText||'').split(/[\s,;]+/).map(function(x){return x.trim();}).filter(Boolean);
+  if(!ids.length||ids.length>50||ids.some(function(x){return !/^\d+$/.test(x);}))
+    throw Error('Enter 1–50 valid numeric Post IDs');
+  var lock=LockService.getScriptLock();
+  if(!lock.tryLock(15000))throw Error('Another Google Love operation is starting');
+  try{
+    var previous=glb_backgroundRead_();
+    if(previous&&(previous.state==='RUNNING'||previous.inflight))
+      throw Error('A batch is running or has an unresolved stage. Inspect it before starting another; no automatic retry is permitted.');
+    // Existing preparation retains row mapping and validation.
+    var prepared=glb_prepare(ids.join('\n'));
+    if(!prepared||!prepared.ids||!prepared.ids.length)throw Error('No Post IDs prepared');
+    var job={version:1,ids:prepared.ids,index:0,phase:mode==='solOnly'?'SOL':'CI',
+      mode:mode,state:'RUNNING',message:'Waiting for Apps Script scheduler',
+      stopRequested:false,inflight:null,inflightSince:null,startedUtc:glb_utc_(),updatedUtc:glb_utc_()};
+    // Persist before scheduling; fail closed if scheduling is unsuccessful.
+    glb_backgroundWrite_(job);
+    try {
+      glb_backgroundRemoveTriggers_();
+      ScriptApp.newTrigger(GLB_BG_HANDLER).timeBased().everyMinutes(1).create();
+    }catch(e){
+      glb_backgroundFinish_(job,'STOPPED','Trigger creation failed: '+String(e.message||e));
+      throw e;
+    }
+    return glb_backgroundStatus();
+  }finally{lock.releaseLock();}
+}
+function glb_backgroundStop(){
+  var lock=LockService.getScriptLock();
+  if(!lock.tryLock(15000))throw Error('Google Love scheduler busy; try Stop again');
+  try{
+    var job=glb_backgroundRead_();
+    if(!job)return {state:'IDLE',message:'No scheduled batch'};
+    if(job.state!=='RUNNING')return glb_backgroundStatus();
+    job.stopRequested=true;
+    if(!job.inflight)glb_backgroundFinish_(job,'STOPPED','Stopped before next stage by operator');
+    else{job.message='Stopping after current stage finishes';glb_backgroundWrite_(job);}
+    return glb_backgroundStatus();
+  }finally{lock.releaseLock();}
+}
+function glb_backgroundStatus(){
+  var job=glb_backgroundRead_();
+  if(!job)return {state:'IDLE',message:'No scheduled batch',ids:[],index:0,total:0,phase:'',currentId:''};
+  var stale=!!(job.inflight&&Date.now()-Number(job.inflightSince||0)>15*60*1000);
+  return {state:job.state,message:job.message,ids:job.ids||[],index:job.index||0,
+    total:(job.ids||[]).length,phase:job.phase,mode:job.mode,stopRequested:!!job.stopRequested,
+    currentId:job.ids[job.index]||'',inflight:job.inflight||'',stale:stale,updatedUtc:job.updatedUtc};
+}
+function glb_backgroundStep(){
+  var lock=LockService.getScriptLock();
+  if(!lock.tryLock(1000))return;
+  var job,id,phase;
+  try{
+    job=glb_backgroundRead_();
+    if(!job||job.state!=='RUNNING'){glb_backgroundRemoveTriggers_();return;}
+    if(job.inflight){
+      // Another invocation may still be running. Never launch the same paid stage twice.
+      if(Date.now()-Number(job.inflightSince||0)>15*60*1000){
+        job.state='REVIEW REQUIRED';
+        job.message='Stage '+job.inflight+' is unresolved or timed out. Inspect Sheets and API usage; do not automatically retry.';
+        glb_backgroundWrite_(job);
+        glb_backgroundRemoveTriggers_();
+      }
+      return;
+    }
+    if(job.stopRequested){glb_backgroundFinish_(job,'STOPPED','Stopped before next stage');return;}
+    if(job.index>=job.ids.length){glb_backgroundFinish_(job,'COMPLETE','All Post IDs completed through W5C');return;}
+    id=job.ids[job.index];phase=job.phase;
+    // Reserve the stage BEFORE executing any paid or sheet-mutating work.
+    job.inflight=id+':'+phase;job.inflightSince=Date.now();
+    job.message='Running '+id+' — '+phase;
+    glb_backgroundWrite_(job);
+  }finally{lock.releaseLock();}
+  var result=null,error='';
+  try{
+    if(phase==='SOL'&&job.mode==='solOnly')result=glb_runSolOnly(id);
+    else if(phase==='CI'||phase==='SOL')result=glb_runDirectPost(id,phase);
+    else if(phase==='W5'||phase==='W5C')result=glb_runSeoStage(id,phase);
+    else throw Error('Unexpected stage '+phase);
+    if(!result||!result.success)error=String(result&&result.message||'Stage failed');
+  }catch(e){error=String(e&&e.message||e);}
+  // A script timeout before this point leaves the reservation intact: no replay.
+  lock=LockService.getScriptLock();
+  if(!lock.tryLock(15000))throw Error('Cannot record Google Love stage outcome; reservation retained for review');
+  try{
+    var latest=glb_backgroundRead_();
+    if(!latest||latest.inflight!==id+':'+phase)throw Error('Google Love stage reservation changed; review required');
+    if(error){
+      glb_backgroundFinish_(latest,'REVIEW REQUIRED','Post '+id+' '+phase+' failed: '+error+'. No automatic retry.');
+      return;
+    }
+    latest.inflight=null;latest.inflightSince=null;
+    if(phase==='CI')latest.phase='SOL';
+    else if(phase==='SOL')latest.phase='W5';
+    else if(phase==='W5')latest.phase='W5C';
+    else {latest.index++;latest.phase=latest.mode==='solOnly'?'SOL':'CI';}
+    latest.message='Completed '+id+' — '+phase;
+    if(latest.stopRequested)glb_backgroundFinish_(latest,'STOPPED','Stopped after '+id+' — '+phase);
+    else if(latest.index>=latest.ids.length)
+      glb_backgroundFinish_(latest,'COMPLETE','All '+latest.ids.length+' Post IDs completed through W5C');
+    else glb_backgroundWrite_(latest);
+  }finally{lock.releaseLock();}
+}
