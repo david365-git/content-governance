@@ -20,18 +20,20 @@ function glb_recoverLinksOnly(postId){
   if(Number(queue.values[1])!==a.row)throw Error('Post row changed; recovery cancelled');
   var ss=SpreadsheetApp.getActiveSpreadsheet(),out=ss.getSheetByName('Google Love Production Drafts');
   if(!out||out.getLastRow()<2)throw Error('No saved Google Love Production Drafts');
-  var rows=out.getRange(2,1,out.getLastRow()-1,8).getValues(),latest=null;
-  // The most recent draft for this exact Post ID and posts row wins.
+  // Scan only ID and row columns; avoid loading every large HTML draft.
+  var rows=out.getRange(2,1,out.getLastRow()-1,2).getValues(),draftRow=0;
   for(var i=rows.length-1;i>=0;i--){
-   if(String(rows[i][0]).trim()===id&&Number(rows[i][1])===a.row){latest=rows[i];break;}
+   if(String(rows[i][0]).trim()===id&&Number(rows[i][1])===a.row){draftRow=i+2;break;}
   }
-  if(!latest||!String(latest[3]||'').trim())throw Error('No matching saved Sol draft for '+id);
-  draft=String(latest[3]);
+  if(!draftRow)throw Error('No matching saved Sol draft for '+id);
+  draft=String(out.getRange(draftRow,4).getValue()||'');
+  var savedPrior=String(out.getRange(draftRow,8).getValue()||'');
+  if(!draft.trim())throw Error('Saved Sol draft is empty for '+id);
   if(draft.length>48000||!/<h2\b/i.test(draft)||!/<p\b/i.test(draft))
    throw Error('Saved draft failed HTML validation');
   var target=glb_posts_();htmlColumn=glb_col_(target,'New HTML',false);
   previous=String(target.getRange(a.row,htmlColumn).getValue()||'');
-  if(previous!==String(latest[7]||''))
+  if(previous!==savedPrior)
    throw Error('New HTML has changed since the saved Sol draft; will not overwrite newer work.');
   // Reserve before any API request; failed or interrupted recovery never retries itself.
   job.inflight=id+':LINK_RECOVERY';job.inflightSince=Date.now();
