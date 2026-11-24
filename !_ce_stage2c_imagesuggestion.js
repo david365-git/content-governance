@@ -862,6 +862,11 @@ function saveFigureHtmlToImageLibrary(raw) {
  * Shared, WordPress-verified formatting for W2C and Google Love.
  * No default dimensions are invented; unresolved media is reported.
  */
+/** Public entry point callable from google.script.run in W2C sidebar. */
+function w2c_normalizeBuiltHtml(html) {
+  return w2c_normalizeBuiltHtml_(html);
+}
+
 function w2c_normalizeBuiltHtml_(html) {
   if(typeof glb_normalizeImages_!=='function')
     throw Error('Google Love image normaliser is unavailable');
