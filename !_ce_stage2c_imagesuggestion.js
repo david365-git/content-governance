@@ -583,9 +583,9 @@ function injectImagesFromLibraryToFL() {
       figureTag = '\n' + r.figureHtml + '\n';
     } else {
       figureTag =
-        '\n<figure class="wp-caption aligncenter" style="width: 700px">' +
-        '<img src="' + r.imageUrl + '" alt="' + r.alt + '" data-w4b-skip="true" />' +
-        '<figcaption class="wp-caption-text">' + r.caption + '</figcaption>' +
+        '\n<figure class="wp-caption aligncenter" style="width:700px;max-width:100%;box-sizing:border-box;">' +
+        '<img src="' + r.imageUrl + '" alt="' + r.alt + '" data-w4b-skip="true" style="display:block;width:100%;height:auto;" />' +
+        '<figcaption class="wp-caption-text" style="display:block;width:100%;max-width:100%;box-sizing:border-box;">' + r.caption + '</figcaption>' +
         '</figure>\n';
     }
 
@@ -729,9 +729,9 @@ function buildFigureHtmlPrompt() {
     "------------------------------------------------------------\n" +
     "FIGURE HTML FORMAT (use exactly this structure for every image):\n" +
     "------------------------------------------------------------\n" +
-    "<figure class='wp-caption aligncenter' style='width: 700px'>\n" +
-    "<img src='[image_url]' alt='[alt text]' data-w4b-skip='true' />\n" +
-    "<figcaption class='wp-caption-text'>[caption text]</figcaption>\n" +
+    "<figure class='wp-caption aligncenter' style='width:700px;max-width:100%;box-sizing:border-box;'>\n" +
+    "<img src='[image_url]' alt='[alt text]' data-w4b-skip='true' style='display:block;width:100%;height:auto;' />\n" +
+    "<figcaption class='wp-caption-text' style='display:block;width:100%;box-sizing:border-box;'>[caption text]</figcaption>\n" +
     "</figure>\n\n" +
     "RULES FOR EVERY FIGURE:\n" +
     "- The data-w4b-skip=\"true\" attribute MUST be present on every img tag — do not omit it.\n" +
@@ -858,6 +858,17 @@ function saveFigureHtmlToImageLibrary(raw) {
   return { success: true, message: message };
 }
 
+/**
+ * Shared, WordPress-verified formatting for W2C and Google Love.
+ * No default dimensions are invented; unresolved media is reported.
+ */
+function w2c_normalizeBuiltHtml_(html) {
+  if(typeof glb_normalizeImages_!=='function')
+    throw Error('Google Love image normaliser is unavailable');
+  var result=glb_normalizeImages_(String(html||''));
+  return {success:true,html:result.html,warnings:result.warnings||[]};
+}
+
 /* ============================================================
    STAGE 2C — RECONCILE
    Reads W2B Raw HTML (column 151) and Image Suggestions JSON
@@ -907,11 +918,12 @@ function reconcileImageSuggestions(sourceKey) {
   }
 
   if (suggestions.length === 0) {
-    posts.getRange(row, 168).setValue(html);
+    var formatted=w2c_normalizeBuiltHtml_(html);
+    posts.getRange(row, 168).setValue(formatted.html);
 
     return {
       success: true,
-      message: "No additional or replacement media recommended — source HTML copied to FL unchanged.",
+      message: "No new media recommended; existing images formatted in FL. Unverified dimensions: "+formatted.warnings.length+".",
       notFound: []
     };
   }
@@ -1032,10 +1044,11 @@ function reconcileImageSuggestions(sourceKey) {
     );
   });
 
-  posts.getRange(row, 168).setValue(html);
+  var formatted=w2c_normalizeBuiltHtml_(html);
+  posts.getRange(row, 168).setValue(formatted.html);
 
   var message =
-    "Visible W2C media-review placeholders saved to FL.";
+    "Visible W2C media-review placeholders saved to FL; existing figures formatted. Unverified dimensions: "+formatted.warnings.length+".";
 
   if (notFound.length > 0) {
     message +=
@@ -1066,14 +1079,15 @@ function saveW2CFinalHtmlToSheet(html) {
   var ss    = SpreadsheetApp.getActiveSpreadsheet();
   var posts = ss.getSheetByName('posts');
   var row   = posts.getActiveRange().getRow();
-  var finalHtml = html.trim();
+  var checked=w2c_normalizeBuiltHtml_(html.trim());
+  var finalHtml=checked.html;
 
   posts.getRange(row, 168).setValue(finalHtml); // FL
   posts.getRange(row, 98).setValue(finalHtml);  // CT
 
   return {
     success: true,
-    message: "Final W2C HTML saved to FL and CT."
+    message: "Final W2C HTML saved to FL and CT. Unverified image dimensions: "+checked.warnings.length+"."
   };
 }
 
