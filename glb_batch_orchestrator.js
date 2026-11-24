@@ -545,6 +545,109 @@ function glb_buildSolPrompt_(a){
  if(prompt.length>170000)throw Error('Prompt too large; stopped without truncating');
  return {prompt:prompt,media:a.type==='Case Study'?JSON.parse(String(glb_posts_().getRange(a.row,207).getDisplayValue()||'{}')):null};
 }
+/** Verify dimensions for the exact uploaded or WordPress-generated image variant. */
+function glb_normalizeImages_(html) {
+  var settings=ce_w6WpSettings_();
+  var base=String(settings.site||'').replace(/\/$/,'');
+  var warnings=[], cache={}, imageIndex=0;
+  function attribute(tag,name) {
+    var match=new RegExp('\\b'+name+'\\s*=\\s*(?:"([^"]*)"|\\x27([^\\x27]*)\\x27|([^\\s>]+))','i').exec(tag);
+    return match?(match[1]!==undefined?match[1]:match[2]!==undefined?match[2]:match[3]):'';
+  }
+  function setAttribute(tag,name,value) {
+    var pattern=new RegExp('\\s+'+name+'\\s*=\\s*(?:"[^"]*"|\\x27[^\\x27]*\\x27|[^\\s>]+)','i');
+    var addition=' '+name+'="'+String(value).replace(/"/g,'&quot;')+'"';
+    return pattern.test(tag)?tag.replace(pattern,addition):tag.replace(/\/?>$/,function(end){return addition+end;});
+  }
+  function pathOf(url) {
+    try {
+      var p=String(url||'').replace(/&amp;/g,'&').split(/[?#]/)[0].replace(/^https?:\/\/[^/]+/i,'');
+      return decodeURIComponent(p);
+    }catch(e){return '';}
+  }
+  function dimensions(url) {
+    var path=pathOf(url);
+    if(Object.prototype.hasOwnProperty.call(cache,path))return cache[path];
+    cache[path]=null;
+    if(!/^\/wp-content\/uploads\//i.test(path))return null;
+    var name=path.split('/').pop();
+    var search=name.replace(/\.[^.]+$/,'').replace(/-\d+x\d+$/,'');
+    var endpoint=base+'/wp-json/wp/v2/media?search='+encodeURIComponent(search)+
+      '&per_page=50&_fields='+encodeURIComponent('id,source_url,media_details');
+    try {
+      var response=UrlFetchApp.fetch(endpoint,{method:'get',
+        headers:{Authorization:settings.authorization,Accept:'application/json'},
+        muteHttpExceptions:true});
+      if(response.getResponseCode()!==200)throw Error('HTTP '+response.getResponseCode());
+      var records=JSON.parse(response.getContentText());
+      if(!Array.isArray(records))throw Error('Unexpected media response');
+      for(var i=0;i<records.length;i++){
+        var r=records[i],d=r.media_details||{},sizes=d.sizes||{};
+        var variants=[{source_url:r.source_url,width:d.width,height:d.height}];
+        Object.keys(sizes).forEach(function(k){variants.push(sizes[k]);});
+        for(var j=0;j<variants.length;j++){
+          var v=variants[j];
+          if(v&&pathOf(v.source_url)===path&&Number(v.width)>0&&Number(v.height)>0)
+            return cache[path]={width:Number(v.width),height:Number(v.height)};
+        }
+      }
+    }catch(err){warnings.push('WordPress media lookup '+name+': '+String(err.message||err));}
+    return null;
+  }
+  var output=String(html||'').replace(/<img\b[^>]*>/gi,function(tag){
+    var url=attribute(tag,'src');
+    if(!url)return tag;
+    var isBio=/David_Allen\.jpg/i.test(url);
+    if(!isBio)imageIndex++;
+    var actual=isBio?null:dimensions(url);
+    if(actual){
+      tag=setAttribute(tag,'width',actual.width);
+      tag=setAttribute(tag,'height',actual.height);
+    }else if(!isBio){
+      warnings.push('Unverified dimensions: '+url);
+    }
+    // Conservative: first article image is eager; other content images are deferred.
+    // The WordPress template controls whether a featured image is the real LCP.
+    tag=setAttribute(tag,'loading',!isBio&&imageIndex===1?'eager':'lazy');
+    tag=setAttribute(tag,'decoding','async');
+    if(/^https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk\//i.test(url))
+      tag=setAttribute(tag,'src',url.replace(/^https?:\/\/(?:www\.)?abbeyfloorcare\.co\.uk/i,'https://www.abbeyfloorcare.co.uk'));
+    return tag;
+  });
+  // Keep each caption background exactly as wide as its displayed image.
+  // Never stretch a small source file merely to fill the default 700px figure.
+  output=output.replace(/<figure\b[^>]*>[\s\S]*?<\/figure\s*>/gi,function(figure){
+    var opening=/^<figure\b[^>]*>/i.exec(figure);
+    var imageTags=figure.match(/<img\b[^>]*>/gi)||[];
+    if(!opening||imageTags.length!==1||!/<figcaption\b/i.test(figure))return figure;
+    var img=imageTags[0],verifiedWidth=Number(attribute(img,'width'));
+    var hasVerified=!!(verifiedWidth>0&&verifiedWidth<=30000&&dimensions(attribute(img,'src')));
+    var frameWidth=hasVerified?Math.min(700,verifiedWidth)+'px':'fit-content';
+    function mergeStyle(tag,rules) {
+      var old=attribute(tag,'style'), parts=old?old.split(';'):[];
+      var keep=parts.filter(function(part){
+        var k=String(part).split(':')[0].trim().toLowerCase();
+        return k&&!Object.prototype.hasOwnProperty.call(rules,k);
+      });
+      Object.keys(rules).forEach(function(k){keep.push(k+':'+rules[k]);});
+      return setAttribute(tag,'style',keep.join(';')+';');
+    }
+    var open=mergeStyle(opening[0],{'width':frameWidth,'max-width':'100%','box-sizing':'border-box'});
+    figure=open+figure.slice(opening[0].length);
+    // The figure and its image share one rendered width, including on mobile.
+    var changedImg=mergeStyle(img,hasVerified?
+      {'display':'block','width':'100%','max-width':'100%','height':'auto'}:
+      {'display':'block','width':'auto','max-width':'100%','height':'auto'});
+    figure=figure.replace(img,changedImg);
+    figure=figure.replace(/<figcaption\b[^>]*>/i,function(caption){
+      return mergeStyle(caption,{'display':'block','width':'100%','max-width':'100%','box-sizing':'border-box'});
+    });
+    return figure;
+  });
+  return {html:output,warnings:warnings};
+}
+
+
 function glb_runSol(postId, operatorSolOnly){
  var id=String(postId||''),q=glb_queueState_(id),state=String(q.values[4]||'');
  if(operatorSolOnly){
@@ -570,19 +673,21 @@ function glb_runSol(postId, operatorSolOnly){
   if(!res||!res.success||res.truncated||!String(res.text||'').trim())throw Error('Sol returned no complete article');
   var html=glb_publishFragment_(glb_appendAuthorCta_(String(res.text).replace(/^\s*```(?:html)?\s*/i,'').replace(/\s*```\s*$/,'').trim()));
   html=glb_canonicalAbbeyUrls_(html);
+  var imageResult=glb_normalizeImages_(html);
+  html=imageResult.html;
 
   if(html.length>48000||!/<h[12]\b/i.test(html)||!/<p\b/i.test(html))throw Error('Sol returned invalid or oversized HTML');
   if(/\brising[\s-]+damp\b/i.test(html.replace(/<[^>]*>/g,' ')))throw Error('Prohibited moisture wording detected');
   var sourceMedia=a.type==='Case Study'?glb_sourceMedia_(built.media):null;
   var audit=a.type==='Case Study'?glse_mediaCheck_(html.replace(/<div class="abbey-bio-box"[\s\S]*?(?=<footer class="abbey-article-cta")/i,''),{images:sourceMedia.images}):null;
   if(audit)audit.missingSourceVideos=glb_videoRetention_(html,sourceMedia.videos);
-  var issues=audit&&(audit.missingProjectEvidence.length||audit.unexpected.length||audit.missingSourceVideos.length);
+  var issues=!!((audit&&(audit.missingProjectEvidence.length||audit.unexpected.length||audit.missingSourceVideos.length))||imageResult.warnings.length);
   // Save a recoverable draft before replacing the production New HTML cell.
   var ss=SpreadsheetApp.getActiveSpreadsheet(),out=ss.getSheetByName('Google Love Production Drafts');
   if(!out){out=ss.insertSheet('Google Love Production Drafts');out.appendRow(['Post ID','Posts row','UTC','HTML','Model','Cost USD','Media audit JSON','Prior New HTML']);out.setFrozenRows(1);}
   var target=glb_posts_(),col=glb_col_(target,'New HTML',false);
   var prior=String(target.getRange(a.row,col).getValue()||'');
-  out.appendRow([id,a.row,glb_utc_(),html,'gpt-6.1-sol',Number(res.cost)||0,audit?JSON.stringify(audit):'',prior]);
+  out.appendRow([id,a.row,glb_utc_(),html,'gpt-6.1-sol',Number(res.cost)||0,JSON.stringify({mediaAudit:audit,imageWarnings:imageResult.warnings}),prior]);
   // The draft is retained, but previous New HTML is never replaced on link failure.
   // W1.5D_Sol selects and inserts links in Sol's finished H2 sections.
   // The recoverable unlinked draft was saved above before any new API call.
@@ -592,7 +697,7 @@ function glb_runSol(postId, operatorSolOnly){
   target.getRange(a.row,col).setValue(html);
   var date=glb_stamp_(a.row,GLB_SOL_HEADER);
   q.sh.getRange(q.row,7).setValue(date);
-  glb_mark_(id,issues?'SOL REVIEW':'SOL DONE',issues?'Article generated; media retention warning recorded in production drafts.':'Article generated; W1.5D_Sol links verified and saved to posts New HTML.',Number(res.cost)||0,'SOL');
+  glb_mark_(id,issues?'SOL REVIEW':'SOL DONE',issues?'Article generated; review media or image-dimension warnings in production drafts.':'Article generated; W1.5D_Sol links verified and saved to posts New HTML.',Number(res.cost)||0,'SOL');
   return {success:true,status:issues?'SOL REVIEW':'SOL DONE',cost:Number(res.cost)||0};
  }catch(err){
   glb_mark_(id,'SOL REVIEW',String(err.message||err)+' — do not auto-repeat paid request.',Number(res&&res.cost)||0,'SOL');
