@@ -63,7 +63,7 @@ function glb_solSections_(html){
   return {number:i+1,title:h.title,start:h.after,end:end,paras:paras.slice(0,5)};
  });
 }
-function glb_solSelectLinks_(article,html){
+function glb_solSelectLinks_(article,html,priorFailure){
  var sh=glb_posts_(),heads=sh.getRange(1,1,1,sh.getLastColumn()).getDisplayValues()[0];
  function read(h){var i=heads.indexOf(h);if(i<0)throw Error('Missing posts heading '+h);
   return String(sh.getRange(article.row,i+1).getValue()||'').trim();}
@@ -85,6 +85,7 @@ function glb_solSelectLinks_(article,html){
  var prompt=[
   'W1.5D_Sol: select contextual internal links for FINISHED article; do NOT rewrite it.',
   'JSON only: {"assignments":[{"section":1,"page":0,"anchorText":"exact phrase","readerBenefit":"specific distinct reason to visit that page"}]}',
+  priorFailure?'PREVIOUS LINK SELECTION WAS INVALID: '+String(priorFailure).slice(0,300)+'. Select a DIFFERENT exact phrase found verbatim once in an eligible paragraph; do not repeat the rejected phrase. This is a one-time correction, not article generation.':'',
   'PAGE 0 is the material hub, mandatory once for non-hub articles; forbidden for Hub Pages.',
   'Choose at most '+(isHub?pages.length:limit)+' other pages, zero if none relevant.',
   'Never repeat page numbers. Respect same-material, locality and cannibalisation scope.',
@@ -232,7 +233,18 @@ function glb_solApplyLinks_(original,selection){
  return {html:html,links:placed};
 }
 function glb_runW15DSol_(article,html){
- var selected=glb_solSelectLinks_(article,html);
- var placed=glb_solApplyLinks_(html,selected);
- return {html:placed.html,links:placed.links,cost:selected.cost};
+ var selected=glb_solSelectLinks_(article,html),placed,totalCost=selected.cost;
+ try{
+  placed=glb_solApplyLinks_(html,selected);
+ }catch(e){
+  var msg=String(e&&e.message||e);
+  // A single inexpensive W1.5D selection correction is allowed for
+  // invalid anchors; NEVER rerun full Sol article generation.
+  if(!/W1\.5D_Sol (?:ambiguous anchor|anchor not uniquely linkable)/.test(msg))
+   throw e;
+  var corrected=glb_solSelectLinks_(article,html,msg);
+  totalCost+=corrected.cost;
+  placed=glb_solApplyLinks_(html,corrected);
+ }
+ return {html:placed.html,links:placed.links,cost:totalCost};
 }
