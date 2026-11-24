@@ -36,7 +36,7 @@ function glb_backgroundStart(idsText,mode){
   if(!lock.tryLock(15000))throw Error('Another Google Love operation is starting');
   try{
     var previous=glb_backgroundRead_();
-    if(previous&&(previous.state==='RUNNING'||previous.inflight))
+    if(previous&&(previous.state==='RUNNING'||previous.state==='REVIEW REQUIRED'||previous.inflight))
       throw Error('A batch is running or has an unresolved stage. Inspect it before starting another; no automatic retry is permitted.');
     // Existing preparation retains row mapping and validation.
     var prepared=glb_prepare(ids.join('\n'));
@@ -73,7 +73,9 @@ function glb_backgroundStatus(){
   var job=glb_backgroundRead_();
   if(!job)return {state:'IDLE',message:'No scheduled batch',ids:[],index:0,total:0,phase:'',currentId:''};
   var stale=!!(job.inflight&&Date.now()-Number(job.inflightSince||0)>15*60*1000);
-  return {state:job.state,message:job.message,ids:job.ids||[],index:job.index||0,
+  var canRecover=job.state==='REVIEW REQUIRED'&&job.phase==='SOL'&&
+    !job.inflight&&/W1\.5D_Sol/.test(job.message||'');
+  return {canRecover:canRecover,state:job.state,message:job.message,ids:job.ids||[],index:job.index||0,
     total:(job.ids||[]).length,phase:job.phase,mode:job.mode,stopRequested:!!job.stopRequested,
     currentId:job.ids[job.index]||'',inflight:job.inflight||'',stale:stale,updatedUtc:job.updatedUtc};
 }
