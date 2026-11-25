@@ -75,7 +75,9 @@ function glb_backgroundStatus(){
   var stale=!!(job.inflight&&Date.now()-Number(job.inflightSince||0)>15*60*1000);
   var canRecover=job.state==='REVIEW REQUIRED'&&job.phase==='SOL'&&
     !job.inflight&&/W1\.5D_Sol/.test(job.message||'');
-  return {canRecover:canRecover,state:job.state,message:job.message,ids:job.ids||[],index:job.index||0,
+  var canRecoverCI=job.state==='REVIEW REQUIRED'&&job.phase==='CI'&&
+    !job.inflight&&/Post [0-9]+ CI failed: STOPPED at W0/.test(job.message||'');
+  return {canRecover:canRecover,canRecoverCI:canRecoverCI,state:job.state,message:job.message,ids:job.ids||[],index:job.index||0,
     total:(job.ids||[]).length,phase:job.phase,mode:job.mode,stopRequested:!!job.stopRequested,
     currentId:job.ids[job.index]||'',inflight:job.inflight||'',stale:stale,updatedUtc:job.updatedUtc};
 }
@@ -133,4 +135,57 @@ function glb_backgroundStep(){
       glb_backgroundFinish_(latest,'COMPLETE','All '+latest.ids.length+' Post IDs completed through W5C');
     else glb_backgroundWrite_(latest);
   }finally{lock.releaseLock();}
+}
+
+/**
+ * Operator-attested recovery of a CI run completed manually after W0 input repair.
+ * No CI/API work is repeated. Accepts only the exact stopped CI batch item.
+ */
+function glb_resumeAfterManualCI(postId,confirmed){
+ var id=String(postId||'').trim();
+ if(!/^\d+$/.test(id)||confirmed!==true)throw Error('Confirm successful manual Content Intelligence for the exact Post ID.');
+ var lock=LockService.getScriptLock();
+ if(!lock.tryLock(15000))throw Error('Google Love recovery is busy');
+ try{
+  var job=glb_backgroundRead_();
+  if(!job||job.state!=='REVIEW REQUIRED'||job.phase!=='CI'||
+     String(job.ids[job.index])!==id||job.inflight||
+     !/Post [0-9]+ CI failed: STOPPED at W0/.test(job.message||''))
+   throw Error('This is not the current stopped W0 Content Intelligence item.');
+  var queue=glb_queueState_(id);
+  if(String(queue.values[4])!=='CI REVIEW'||String(queue.values[5]||'').trim()||
+     String(queue.values[6]||'').trim())
+   throw Error('Queue is not an uncompleted CI REVIEW without a prior CI or Sol completion.');
+  var article=glb_lookup_(id);
+  if(Number(queue.values[1])!==article.row)throw Error('Posts row changed since batch started.');
+  var posts=glb_posts_(),headers=posts.getRange(1,1,1,posts.getLastColumn()).getDisplayValues()[0];
+  function field(name){
+   var col=headers.indexOf(name);
+   if(col<0)throw Error('Missing posts column '+name);
+   return String(posts.getRange(article.row,col+1).getDisplayValue()||'').trim();
+  }
+  var locality=field('Locality'),parent=field('Parent Area'),context=field('Location Context'),
+      term=field('Primary Search Term');
+  if(article.type==='Case Study'&&(!locality||!parent||!context))
+   throw Error('Case Study still needs Locality, Parent Area and Location Context.');
+  if(!term||locality&&term.toLowerCase().indexOf(locality.toLowerCase())<0)
+   throw Error('Primary Search Term must contain the full Locality.');
+  if(posts.getRange(article.row,4).getBackground().toLowerCase()!=='#2196f3')
+   throw Error('Successful Content Intelligence completion marker (blue Post ID cell) was not found.');
+  if(article.type==='Case Study'&&field('Evidence Status').indexOf('SOURCE-QUOTED | sha256:')!==0)
+   throw Error('Completed case-study source-quoted evidence was not found.');
+  // Preflight Sol prompt and its prerequisites before changing any queue state.
+  glb_buildSolPrompt_(article);
+  // Ensure the background trigger is installed before clearing the review state.
+  glb_backgroundRemoveTriggers_();
+  try{ScriptApp.newTrigger(GLB_BG_HANDLER).timeBased().everyMinutes(1).create();}
+  catch(e){throw Error('Could not schedule SOL; queue review retained: '+String(e.message||e));}
+  var stamp=glb_utc_();
+  queue.sh.getRange(queue.row,6).setValue(stamp);
+  glb_mark_(id,'CI DONE','Operator-confirmed manual CI success after W0 recovery; verified source fields, marker and Sol prerequisites. Original CI cost not recharged.');
+  job.phase='SOL';job.state='RUNNING';job.stopRequested=false;
+  job.message='Manual CI acknowledged for Post '+id+'; scheduling SOL without rerunning CI.';
+  glb_backgroundWrite_(job);
+  return {success:true,message:job.message};
+ }finally{lock.releaseLock();}
 }
