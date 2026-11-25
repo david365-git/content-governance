@@ -290,21 +290,6 @@
       setStatus('statusW6','fail','Load the row and verify the live WordPress post first.');
       return;
     }
-    var entered = window.prompt(
-      (_w6VerifiedStatus === 'future' ? 'PUBLISH SCHEDULED POST NOW ' : 'REPUBLISH Post ') + _w6Data.postId + '?\n\n' +
-      'This advances its publication date to the current WordPress time and may send it through your syndication network.\n' +
-      'The existing HTML, title, metadata, schema and optional image will also be written.\n\n' +
-      'Articles already published within 30 days are blocked. Scheduled posts may be published now.\n' +
-      'Type the Post ID ' + _w6Data.postId + ' to continue:'
-    );
-    if (entered !== String(_w6Data.postId)) {
-      if (entered !== null) setStatus('statusW6','fail','Republish cancelled: Post ID did not match.');
-      return;
-    }
-    if (!window.confirm(
-      'FINAL CONFIRMATION — ' + (_w6VerifiedStatus === 'future' ? 'PUBLISH NOW' : 'REPUBLISH') + ' Post ' + _w6Data.postId +
-      '\n\n' + (_w6VerifiedStatus === 'future' ? 'Remove the future schedule and make this article PUBLIC NOW?' : 'Change the live WordPress publication date now?') + ' This may trigger syndication.\n\nContinue?'
-    )) return;
     document.getElementById('w6DirectUpdateBtn').disabled = true;
     document.getElementById('w6DirectRepublishBtn').disabled = true;
     setStatus('statusW6','running','Republishing WordPress post...',true);
