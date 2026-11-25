@@ -13,7 +13,7 @@ small{color:#777}.ok{color:#137333}.warn{color:#9b5700}.err{color:#b3261e}
 <h3>Content Intelligence → Google Love Sol</h3>
 <p>Enter the Post IDs to process, separated by commas or new lines. Choose the full batch or <b>Google Love Sol Only</b>. The full batch runs Content Intelligence, Sol, W5 and W5C. <b>Sol Only</b> reuses previously completed Content Intelligence, runs W1.5D_Sol against the article’s actual H2 sections and generates new article HTML without re-running Content Intelligence. Sol Only then runs W5 and W5C.</p>
 <textarea id="ids" placeholder="5628&#10;11417&#10;6847"></textarea>
-<div><button id="run" onclick="runPosts()">Run Full Batch</button><button id="solOnly" onclick="runSolOnly()">Run Google Love Sol Only</button><button class="secondary" onclick="stopRun()">Stop after current stage</button><button id="recover" style="display:none;background:#137333" onclick="recoverLinks()">Retry Internal Linking Only &amp; Resume</button></div>
+<div><button id="run" onclick="runPosts()">Run Full Batch</button><button id="solOnly" onclick="runSolOnly()">Run Google Love Sol Only</button><button class="secondary" onclick="stopRun()">Stop after current stage</button><button id="recoverCI" style="display:none;background:#137333" onclick="recoverManualCI()">Resume After Manual CI</button><button id="recover" style="display:none;background:#137333" onclick="recoverLinks()">Retry Internal Linking Only &amp; Resume</button></div>
 <small>Sol Only makes one new paid Sol request per ID, requires recorded completed Content Intelligence (no CW/CX or W1.5A–C prerequisite), and may replace New HTML after passing validation. It never runs Content Intelligence. A confirmation appears before starting.</small>
 <div id="status">Ready.</div><div id="progressSummary">0 / 0 completed</div><div id="barOuter"><div id="barInner"></div></div><div id="counts"><span id="remaining">0 remaining</span><span id="blocked">0 require review</span></div><div id="current">Current: —</div><small>Full Batch: Content Intelligence → Sol → W1.5D_Sol → W5 → W5C. Sol Only: Sol → W1.5D_Sol → W5 → W5C, reusing Content Intelligence. You can switch tabs or close this sidebar: Apps Script continues the batch. Stages are scheduled approximately once a minute. Failed or uncertain stages stop the batch for review.</small>
 <div id="grid"><table><thead><tr><th>Post ID</th><th>Stage</th><th>CI completed</th><th>Sol completed</th></tr></thead><tbody id="rows"></tbody></table></div>
@@ -31,6 +31,8 @@ function render(){
  el('solOnly').disabled=running||job.state==='REVIEW REQUIRED'||requestBusy;
  el('recover').style.display=job.canRecover?'inline-block':'none';
  el('recover').disabled=requestBusy;
+ el('recoverCI').style.display=job.canRecoverCI?'inline-block':'none';
+ el('recoverCI').disabled=requestBusy;
  el('progressSummary').textContent=(job.index||0)+' / '+(job.total||0)+' completed';
  el('barInner').style.width=(job.total?Math.round((job.index||0)/job.total*100):0)+'%';
  el('remaining').textContent=Math.max(0,(job.total||0)-(job.index||0))+' remaining';
@@ -71,6 +73,16 @@ function startBatch(mode){
  google.script.run.withSuccessHandler(function(res){
   requestBusy=false;job=res;log('Scheduled '+res.total+' Post IDs ('+mode+').');render();poll();
  }).withFailureHandler(function(e){requestBusy=false;show('Not started: '+String(e.message||e));log('Start failed: '+String(e.message||e));render();}).glb_backgroundStart(ids.join('\n'),mode);
+}
+function recoverManualCI(){
+ if(requestBusy||!job.canRecoverCI||!job.currentId)return;
+ if(!confirm('I confirm that manual Content Intelligence finished successfully for Post '+job.currentId+'.\\n\\nVerify the saved CI outputs and resume this batch at Google Love SOL, without rerunning CI?'))return;
+ requestBusy=true;render();show('Checking manually completed CI for Post '+job.currentId+'…');
+ google.script.run.withSuccessHandler(function(res){
+  requestBusy=false;log(res&&res.message||'Manual CI recovery returned no response');poll();
+ }).withFailureHandler(function(e){
+  requestBusy=false;show('Manual CI recovery blocked: '+String(e.message||e));log('Manual CI recovery blocked: '+String(e.message||e));poll();
+ }).glb_resumeAfterManualCI(job.currentId,true);
 }
 function recoverLinks(){
  if(requestBusy||!job.canRecover||!job.currentId)return;
