@@ -666,15 +666,18 @@ function glb_runSol(postId, operatorSolOnly){
  var a=glb_lookup_(id);
  if(Number(q.values[1])!==a.row)throw Error('Posts row changed for '+id);
  var built=glb_buildSolPrompt_(a); // preflight before creating an uncertain paid request
+ if(typeof glb_backgroundCheckpoint_==='function')glb_backgroundCheckpoint_(id,'SOL',1,6,'Prompt and source evidence prepared');
  glb_mark_(id,'SOL RUNNING','Single GPT-6.1 Sol request reserved; do not automatically retry if interrupted.',undefined);
  var res;
  try{
   res=bc_sendPromptViaOpenAI(built.prompt,16000,'gpt-6.1-sol');
+  if(typeof glb_backgroundCheckpoint_==='function')glb_backgroundCheckpoint_(id,'SOL',2,6,'AI generation returned; validating article');
   if(!res||!res.success||res.truncated||!String(res.text||'').trim())throw Error('Sol returned no complete article');
   var html=glb_publishFragment_(glb_appendAuthorCta_(String(res.text).replace(/^\s*```(?:html)?\s*/i,'').replace(/\s*```\s*$/,'').trim()));
   html=glb_canonicalAbbeyUrls_(html);
   var imageResult=glb_normalizeImages_(html);
   html=imageResult.html;
+  if(typeof glb_backgroundCheckpoint_==='function')glb_backgroundCheckpoint_(id,'SOL',3,6,'HTML and images normalised');
 
   if(html.length>48000||!/<h[12]\b/i.test(html)||!/<p\b/i.test(html))throw Error('Sol returned invalid or oversized HTML');
   if(/\brising[\s-]+damp\b/i.test(html.replace(/<[^>]*>/g,' ')))throw Error('Prohibited moisture wording detected');
@@ -682,12 +685,14 @@ function glb_runSol(postId, operatorSolOnly){
   var audit=a.type==='Case Study'?glse_mediaCheck_(html.replace(/<div class="abbey-bio-box"[\s\S]*?(?=<footer class="abbey-article-cta")/i,''),{images:sourceMedia.images}):null;
   if(audit)audit.missingSourceVideos=glb_videoRetention_(html,sourceMedia.videos);
   var issues=!!((audit&&(audit.missingProjectEvidence.length||audit.unexpected.length||audit.missingSourceVideos.length))||imageResult.warnings.length);
+  if(typeof glb_backgroundCheckpoint_==='function')glb_backgroundCheckpoint_(id,'SOL',4,6,'Media and article checks completed');
   // Save a recoverable draft before replacing the production New HTML cell.
   var ss=SpreadsheetApp.getActiveSpreadsheet(),out=ss.getSheetByName('Google Love Production Drafts');
   if(!out){out=ss.insertSheet('Google Love Production Drafts');out.appendRow(['Post ID','Posts row','UTC','HTML','Model','Cost USD','Media audit JSON','Prior New HTML']);out.setFrozenRows(1);}
   var target=glb_posts_(),col=glb_col_(target,'New HTML',false);
   var prior=String(target.getRange(a.row,col).getValue()||'');
   out.appendRow([id,a.row,glb_utc_(),html,'gpt-6.1-sol',Number(res.cost)||0,JSON.stringify({mediaAudit:audit,imageWarnings:imageResult.warnings}),prior]);
+  if(typeof glb_backgroundCheckpoint_==='function')glb_backgroundCheckpoint_(id,'SOL',5,6,'Recoverable draft saved; selecting internal links');
   // The draft is retained, but previous New HTML is never replaced on link failure.
   // W1.5D_Sol selects and inserts links in Sol's finished H2 sections.
   // The recoverable unlinked draft was saved above before any new API call.
@@ -695,6 +700,7 @@ function glb_runSol(postId, operatorSolOnly){
   html=glb_canonicalAbbeyUrls_(linked.html);
   if(html.length>48000)throw Error('W1.5D_Sol linked output too large; draft preserved.');
   target.getRange(a.row,col).setValue(html);
+  if(typeof glb_backgroundCheckpoint_==='function')glb_backgroundCheckpoint_(id,'SOL',6,6,'Linked article saved to New HTML');
   var date=glb_stamp_(a.row,GLB_SOL_HEADER);
   q.sh.getRange(q.row,7).setValue(date);
   glb_mark_(id,issues?'SOL REVIEW':'SOL DONE',issues?'Article generated; review media or image-dimension warnings in production drafts.':'Article generated; W1.5D_Sol links verified and saved to posts New HTML.',Number(res.cost)||0,'SOL');
