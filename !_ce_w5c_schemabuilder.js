@@ -409,9 +409,8 @@ function generateSchemaForActiveRow() {
     const supportingEntities = colByHeader("Supporting Entities Core");
 
     // ── Featured image ──
-    // EM (featured image) is authoritative for W6; preserve CG/HTML fallback when blank.
     let featuredImg = String(sheet.getRange(row, 143).getValue() || "").trim()
-                   || String(sheet.getRange(row, 85).getValue() || "").trim();
+    || String(sheet.getRange(row, 85).getValue() || "").trim();
     if (!featuredImg) {
       const pageHtml  = String(sheet.getRange(row, 98).getValue() || "");
       const imgMatches = pageHtml.match(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi) || [];
