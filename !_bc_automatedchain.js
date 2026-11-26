@@ -4846,23 +4846,29 @@ function bc_runW2CPlanningAutomated() {
   var apiResult = bc_sendPromptViaOpenAI(promptData.prompt);
   if (!apiResult.success) throw new Error(apiResult.message);
 
-  var saveResult = saveW2CSuggestions(apiResult.text);
+  var candidates = w2cParsePlanningArray_(apiResult.text);
+  var auditResult = bc_sendPromptViaOpenAI(
+    w2cBuildVisualAuditPrompt_(promptData.prompt, candidates)
+  );
+  if (!auditResult.success) throw new Error('W2C visual audit failed: ' + auditResult.message);
+
+  var finalItems = w2cParsePlanningArray_(auditResult.text);
+  var saveResult = saveW2CSuggestions(JSON.stringify(finalItems));
   if (!saveResult.success) throw new Error(saveResult.message);
 
   var reconcileResult = reconcileImageSuggestions('new_html');
   if (!reconcileResult.success) throw new Error(reconcileResult.message);
 
-  bc_addToApiCostAndTime(
-    apiResult.cost,
-    (Date.now() - startTime) / 1000
-  );
+  var totalCost = (Number(apiResult.cost) || 0) + (Number(auditResult.cost) || 0);
+  bc_addToApiCostAndTime(totalCost, (Date.now() - startTime) / 1000);
 
   return {
     success: true,
     message:
-      'W2C planning complete — visual requirements assessed and FL prepared for review. ' +
-      reconcileResult.message,
-    cost: apiResult.cost
+      'W2C planning complete — article-wide visual audit reviewed ' +
+      candidates.length + ' initial candidate(s) and selected ' +
+      finalItems.length + ' final recommendation(s). ' + reconcileResult.message,
+    cost: totalCost
   };
 }
 
