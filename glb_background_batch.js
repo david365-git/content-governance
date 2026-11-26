@@ -23,7 +23,7 @@ function glb_backgroundRemoveTriggers_(){
 }
 function glb_backgroundFinish_(job,status,message){
   job.state=status;job.message=String(message||'').slice(0,2000);
-  job.inflight=null;job.inflightSince=null;
+  job.inflight=null;job.inflightSince=null;job.detail=null;
   glb_backgroundWrite_(job);
   glb_backgroundRemoveTriggers_();
 }
@@ -56,6 +56,13 @@ function glb_backgroundStart(idsText,mode){
     return glb_backgroundStatus();
   }finally{lock.releaseLock();}
 }
+/** Reports genuine checkpoints of the currently reserved stage; never estimates API completion. */
+function glb_backgroundCheckpoint_(postId,phase,step,total,label){
+ var job=glb_backgroundRead_();
+ if(!job||job.state!=='RUNNING'||job.inflight!==String(postId)+':'+phase)return;
+ job.detail={step:step,total:total,label:String(label||'').slice(0,180)};
+ glb_backgroundWrite_(job);
+}
 function glb_backgroundStop(){
   var lock=LockService.getScriptLock();
   if(!lock.tryLock(15000))throw Error('Google Love scheduler busy; try Stop again');
@@ -79,7 +86,7 @@ function glb_backgroundStatus(){
     !job.inflight&&/Post [0-9]+ CI failed: STOPPED at W0/.test(job.message||'');
   return {canRecover:canRecover,canRecoverCI:canRecoverCI,state:job.state,message:job.message,ids:job.ids||[],index:job.index||0,
     total:(job.ids||[]).length,phase:job.phase,mode:job.mode,stopRequested:!!job.stopRequested,
-    currentId:job.ids[job.index]||'',inflight:job.inflight||'',stale:stale,updatedUtc:job.updatedUtc};
+    currentId:job.ids[job.index]||'',inflight:job.inflight||'',detail:job.detail||null,stale:stale,updatedUtc:job.updatedUtc};
 }
 function glb_backgroundStep(){
   var lock=LockService.getScriptLock();
@@ -103,6 +110,7 @@ function glb_backgroundStep(){
     id=job.ids[job.index];phase=job.phase;
     // Reserve the stage BEFORE executing any paid or sheet-mutating work.
     job.inflight=id+':'+phase;job.inflightSince=Date.now();
+     job.detail={step:0,total:phase==='SOL'?6:1,label:phase==='SOL'?'Preparing article and source evidence':'Running '+phase};
     job.message='Running '+id+' — '+phase;
     glb_backgroundWrite_(job);
   }finally{lock.releaseLock();}
@@ -124,7 +132,7 @@ function glb_backgroundStep(){
       glb_backgroundFinish_(latest,'REVIEW REQUIRED','Post '+id+' '+phase+' failed: '+error+'. No automatic retry.');
       return;
     }
-    latest.inflight=null;latest.inflightSince=null;
+    latest.inflight=null;latest.inflightSince=null;latest.detail=null;
     if(phase==='CI')latest.phase='SOL';
     else if(phase==='SOL')latest.phase='W5';
     else if(phase==='W5')latest.phase='W5C';
