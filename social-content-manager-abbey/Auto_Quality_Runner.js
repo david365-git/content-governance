@@ -91,3 +91,23 @@ function scm_autoLog_(action,stage,details) {
     'Request Fingerprint':'auto|'+action+'|'+stage+'|'+new Date().toISOString()
   });
 }
+
+/** Optional standalone background trigger. Explicit opt-in via Script Properties. */
+function scm_autoGBPBackgroundTick() {
+  const enabled=PropertiesService.getScriptProperties().getProperty('SCM_AUTOMATION_ENABLED');
+  if(enabled!=='YES')return {status:'DISABLED'};
+  return scm_autoGBPAdvance();
+}
+function scm_installDraftAutomationTrigger() {
+  const enabled=PropertiesService.getScriptProperties().getProperty('SCM_AUTOMATION_ENABLED');
+  if(enabled!=='YES')throw new Error('Set SCM_AUTOMATION_ENABLED=YES before installing a paid automated runner.');
+  const current=ScriptApp.getProjectTriggers().filter(t=>t.getHandlerFunction()==='scm_autoGBPBackgroundTick');
+  if(current.length)return {installed:false,existing:current.length};
+  ScriptApp.newTrigger('scm_autoGBPBackgroundTick').timeBased().everyHours(6).create();
+  return {installed:true,frequency:'every 6 hours',publishing:'DISABLED'};
+}
+function scm_removeDraftAutomationTrigger() {
+  const current=ScriptApp.getProjectTriggers().filter(t=>t.getHandlerFunction()==='scm_autoGBPBackgroundTick');
+  current.forEach(t=>ScriptApp.deleteTrigger(t));
+  return {removed:current.length};
+}
