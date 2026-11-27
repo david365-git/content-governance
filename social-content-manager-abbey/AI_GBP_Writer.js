@@ -94,7 +94,7 @@ function scm_generateReviewedAIPreviews() {
           'Suggested Draft':post?String(post.text||''):'',
           'Decision':'REVIEW','Status':'AI REVIEW HELD',
           'Generated UTC':new Date().toISOString(),
-          'Notes':'Automatic retry scheduled where eligible. Reason: '+issue.slice(0,300)};
+          'Notes':'Eligible for retry after 24 hours when the controller runs. Reason: '+issue.slice(0,300)};
         const older=existing.get(req.id);
         if(older){
           if(String(older.item.Status)!=='APPLIED')scm_reviewPut_(preview,older,heldFields);
