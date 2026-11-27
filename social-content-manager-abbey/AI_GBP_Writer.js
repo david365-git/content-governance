@@ -36,7 +36,13 @@ function scm_generateReviewedAIPreviews() {
   const preview=scm_reviewRows_();
   const existing=new Map(preview.rows.map(r=>[String(r.item['Social Post ID']),r]));
   const groups=new Map();
-  queue.forEach(r=>{const k=String(r.item['Article Post ID']);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r);});
+  queue.forEach(r=>{
+    const existingPreview=existing.get(String(r.item['Social Post ID']));
+    if(existingPreview && ['AI REVIEW PASSED','APPLIED'].includes(String(existingPreview.item.Status)))return;
+    const k=String(r.item['Article Post ID']);
+    if(!groups.has(k))groups.set(k,[]);
+    groups.get(k).push(r);
+  });
   let accepted=0,held=0,processed=0;
   for(const [id,rows] of groups) {
     if(processed>=2)break; // Deliberately limit API spend per run.
