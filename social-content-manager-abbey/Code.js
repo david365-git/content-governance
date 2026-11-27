@@ -45,7 +45,7 @@ function scm_checkSetup() {
   if (!auto || String(auto.item.Value).toUpperCase()!=='NO') {
     throw new Error('Safety stop: Settings > Auto Publish must be NO during setup.');
   }
-  SpreadsheetApp.getActive().toast('Core sheets checked; automatic publishing is OFF.');
+  scm_book_().toast('Core sheets checked; automatic publishing is OFF.');
 }
 
 /** Explicit send only; callable from the Content Engine project via the companion script. */
@@ -110,7 +110,7 @@ function scm_scanAllArticles() {
       created++;
     });
   });
-  SpreadsheetApp.getActive().toast(created+' new image opportunities added.');
+  scm_book_().toast(created+' new image opportunities added.');
   return {created:created};
 }
 /** Makes reviewable GBP draft placeholders only; no invented visual claims. */
@@ -142,6 +142,6 @@ function scm_generateGBP(){
     });
     made++;queued.add(String(im['Opportunity ID']));
   });
-  SpreadsheetApp.getActive().toast(made+' GBP drafts created for review.');
+  scm_book_().toast(made+' GBP drafts created for review.');
   return {created:made};
 }
