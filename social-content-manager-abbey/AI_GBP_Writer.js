@@ -37,6 +37,7 @@ function scm_generateReviewedAIPreviews() {
   const existing=new Map(preview.rows.map(r=>[String(r.item['Social Post ID']),r]));
   const groups=new Map();
   queue.forEach(r=>{
+    if(!scm_aiEligible_(String(r.item['Social Post ID'])))return;
     const existingPreview=existing.get(String(r.item['Social Post ID']));
     if(existingPreview && ['AI REVIEW PASSED','APPLIED'].includes(String(existingPreview.item.Status)))return;
     const k=String(r.item['Article Post ID']);
@@ -84,7 +85,10 @@ function scm_generateReviewedAIPreviews() {
     requested.forEach(req=>{
       const post=postById.get(req.id),check=checkById.get(req.id);
       if(!post||!check||check.pass!==true||!scm_aiSafeText_(post.text,article['Article URL'])||
-        used.includes(String(post.text||'').trim())){held++;return;}
+        used.includes(String(post.text||'').trim())){
+        scm_aiRecordHold_(req.id,check?String(check.issues||'Quality check failed'):'Missing independent review');
+        held++;return;
+      }
       used.push(String(post.text).trim());
       const sourceRow=rows.find(r=>String(r.item['Social Post ID'])===req.id);
       const fields={'Social Post ID':req.id,'Article Post ID':id,
@@ -103,4 +107,22 @@ function scm_generateReviewedAIPreviews() {
   }
   scm_book_().toast('AI previews: '+accepted+' passed, '+held+' held; nothing published.');
   return {accepted:accepted,held:held,articles:processed};
+}
+
+/** Limit expensive failed generations: at most three attempts, separated by 24 hours. */
+function scm_aiEligible_(postId) {
+  const raw=PropertiesService.getScriptProperties().getProperty('SCM_AI_HOLD_'+postId);
+  if(!raw)return true;
+  try{const item=JSON.parse(raw);return Number(item.attempts||0)<3 && Date.now()>=Number(item.retryAfter||0);}
+  catch(e){return false;}
+}
+function scm_aiRecordHold_(postId,reason) {
+  const props=PropertiesService.getScriptProperties(),key='SCM_AI_HOLD_'+postId;
+  let item={attempts:0};
+  try{item=JSON.parse(props.getProperty(key)||'{}');}catch(e){}
+  const attempts=Math.min(3,Number(item.attempts||0)+1);
+  props.setProperty(key,JSON.stringify({
+    attempts:attempts,retryAfter:Date.now()+86400000,
+    reason:String(reason||'Quality hold').slice(0,250)
+  }));
 }
