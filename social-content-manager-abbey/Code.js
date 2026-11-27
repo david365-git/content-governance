@@ -113,7 +113,7 @@ function scm_scanAllArticles() {
   scm_book_().toast(created+' new image opportunities added.');
   return {created:created};
 }
-/** Makes reviewable GBP draft placeholders only; no invented visual claims. */
+/** Creates factual draft copy using the source article around each image. */
 function scm_generateGBP(){
   scm_checkSetup();
   const imgs=scm_rows_(SCM.images).rows, articles=scm_rows_(SCM.articles).rows,
@@ -126,22 +126,67 @@ function scm_generateGBP(){
     if(String(im.Decision).toUpperCase()!=='GENERATE'||queued.has(String(im['Opportunity ID'])))return;
     const a=articleById.get(String(im['Article Post ID']));
     if(!a)return;
-    const title=String(a.Title||'').trim();
-    const place=String(a.Locality||'').trim();
     const angle=String(im['Distinct Post Angle']||'').trim();
-    if(!angle)return; // No unsupported automated assertions.
+    if(!angle)return; // Require an image-specific, documented angle.
+    const draft=scm_draftFromEvidence_(a,im);
     scm_append_(SCM.queue,{
       'Social Post ID':scm_id_('GBP'), 'Article Post ID':im['Article Post ID'],
       'Opportunity ID':im['Opportunity ID'],'Platform':'GBP',
-      'Draft Text':angle+'\n\nRead the full article: '+title+(place?' ('+place+')':''),
+      'Draft Text':draft,
       'Original Image URL':im['Original WebP URL'],
       'Article URL':a['Article URL'],
       'CTA':'Learn more','Approval':'DRAFT',
       'Publication Status':'NOT SCHEDULED','Revision':1,
-      'Notes':'Requires human review, confirmed image suitability and prepared JPG before scheduling'
+      'Notes':'Evidence-based draft from nearby article text; requires editorial review and approval before publishing'
     });
     made++;queued.add(String(im['Opportunity ID']));
   });
   scm_book_().toast(made+' GBP drafts created for review.');
   return {created:made};
+}
+
+
+/** Pull a figure's own caption and nearby article paragraphs. This is not an AI API call. */
+function scm_photoEvidence_(html, url) {
+  const source=String(html||'');
+  const figures=/<figure\b[\s\S]*?<\/figure>/gi;
+  let match;
+  while((match=figures.exec(source))) {
+    if(match[0].indexOf(String(url))<0)continue;
+    const captionMatch=match[0].match(/<figcaption\b[^>]*>([\s\S]*?)<\/figcaption>/i);
+    const caption=scm_plainArticleText_(captionMatch?captionMatch[1]:'');
+    const before=source.slice(0,match.index);
+    const sectionAt=Math.max(before.lastIndexOf('<section'),before.lastIndexOf('<h2'));
+    const scoped=sectionAt>=0?before.slice(sectionAt):before;
+    const paragraphTags=scoped.match(/<p\b[^>]*>[\s\S]*?<\/p>/gi)||[];
+    const paragraphs=paragraphTags.map(scm_plainArticleText_)
+      .filter(p=>p.length>45&&!/^(advertisement|disclosure|pro tip)/i.test(p));
+    return {caption:caption,paragraphs:paragraphs.slice(-2)};
+  }
+  return {caption:'',paragraphs:[]};
+}
+function scm_plainArticleText_(html) {
+  return String(html||'').replace(/<[^>]*>/g,' ')
+    .replace(/&nbsp;|&#160;/gi,' ').replace(/&amp;/gi,'&')
+    .replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'")
+    .replace(/&rsquo;/gi,'’').replace(/&ldquo;|&rdquo;/gi,'"')
+    .replace(/\s+/g,' ').trim();
+}
+function scm_draftFromEvidence_(article, image) {
+  const url=String(article['Article URL']||'').trim();
+  const evidence=scm_photoEvidence_(article['Finished HTML'],image['Original WebP URL']);
+  const angle=String(image['Distinct Post Angle']||'').trim();
+  const caption=evidence.caption||String(image['Original Alt / Caption']||'').trim();
+  const opener=caption||angle;
+  // Use unmodified, source-backed full sentences. Do not invent treatments or outcomes.
+  const detail=evidence.paragraphs.join(' ').slice(0,750);
+  const clipped=detail.length===750 ? detail.slice(0,detail.lastIndexOf('.')+1) : detail;
+  const text=[
+    opener,
+    clipped && clipped!==opener ? clipped : '',
+    'See the full '+(String(article['Stone Type']||'stone').toLowerCase())+
+      ' project'+(article.Locality?' in '+String(article.Locality):'')+':',
+    url
+  ].filter(Boolean).join('\n\n');
+  return text.slice(0,1450); // Stay comfortably below typical social post text limits.
 }
