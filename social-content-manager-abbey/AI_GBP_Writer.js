@@ -86,7 +86,19 @@ function scm_generateReviewedAIPreviews() {
       const post=postById.get(req.id),check=checkById.get(req.id);
       if(!post||!check||check.pass!==true||!scm_aiSafeText_(post.text,article['Article URL'])||
         used.includes(String(post.text||'').trim())){
-        scm_aiRecordHold_(req.id,check?String(check.issues||'Quality check failed'):'Missing independent review');
+        const issue=check?String(check.issues||'Quality check failed'):'Missing independent review';
+        scm_aiRecordHold_(req.id,issue);
+        const origin=rows.find(r=>String(r.item['Social Post ID'])===req.id);
+        const heldFields={'Social Post ID':req.id,'Article Post ID':id,
+          'Opportunity ID':origin.item['Opportunity ID'],'Current Draft':origin.item['Draft Text'],
+          'Suggested Draft':post?String(post.text||''):'',
+          'Decision':'REVIEW','Status':'AI REVIEW HELD',
+          'Generated UTC':new Date().toISOString(),
+          'Notes':'Automatic retry scheduled where eligible. Reason: '+issue.slice(0,300)};
+        const older=existing.get(req.id);
+        if(older){
+          if(String(older.item.Status)!=='APPLIED')scm_reviewPut_(preview,older,heldFields);
+        }else preview.sheet.appendRow(preview.header.map(k=>heldFields[k]===undefined?'':heldFields[k]));
         held++;return;
       }
       used.push(String(post.text).trim());
@@ -125,4 +137,11 @@ function scm_aiRecordHold_(postId,reason) {
     attempts:attempts,retryAfter:Date.now()+86400000,
     reason:String(reason||'Quality hold').slice(0,250)
   }));
+  scm_append_(SCM.log,{
+    'Event ID':scm_id_('EVT'),'Social Post ID':postId,
+    'Platform':'GBP','Action':'AI QUALITY HOLD',
+    'Attempt UTC':scm_now_(),'Result':attempts>=3?'QUARANTINED':'RETRY LATER',
+    'Details':String(reason||'Quality hold').slice(0,450),
+    'Request Fingerprint':postId+'|AI-HOLD|'+attempts
+  });
 }
