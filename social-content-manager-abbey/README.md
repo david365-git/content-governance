@@ -11,11 +11,15 @@ This folder is an **isolated staging copy** in the existing GitHub repository. I
 - Preserve the manual-approval and no-auto-publishing safeguards.
 - Validate GBP approval, UK schedule, Abbey article URL and prepared JPG availability; preview due/future/blocked posts without publishing.
 - Record eligible due posts in Publication Log with an explicit DRY RUN result.
+- Prepare temporary JPG copies of selected Abbey WordPress uploads through a protected WordPress REST endpoint; keep the original files untouched.
+- Release prepared files only after all linked posts are marked published; WordPress then waits seven days before cleanup.
 
 ## Installation targets
-1. **Social Content Manager Abbey** Google Apps Script project `1YJrDXIjPiWuK8uKIDtqImSZUDZsVVCe9goCEbTDIEk2i3rVtGeuf8b36`: use `Code.js` and `Schedule_DryRun.js`. Avoid overwriting any unrelated functions you have already added.
+1. **Social Content Manager Abbey** Google Apps Script project `1YJrDXIjPiWuK8uKIDtqImSZUDZsVVCe9goCEbTDIEk2i3rVtGeuf8b36`: use `Code.js`, `Schedule_DryRun.js` and `Image_Processing.js`. Avoid overwriting any unrelated functions you have already added.
 2. **Content Engine** existing Apps Script project: use `ContentEngine_SendToSocial.js` there only. Run `ce_sendActiveArticleToSocialManager` on the desired active row. It needs permission to edit the separate workbook.
-3. Destination workbook: `Social Content Manager - Abbey`, ID `1XQbRXDfesWPEKY_EmD8YXj0M5CVtgP-C5OH2bAx3ucE`.
+3. **WordPress administrator** installs and activates `wordpress/abbey-social-temporary-images.php` as a WordPress plugin (place it inside its own plugin folder first). The plugin exposes authenticated `/wp-json/abbey-social/v1/prepare` and `/release` endpoints. WordPress must have an image editor capable of reading WebP and writing JPEG. Do not make the endpoint public.
+4. **Social Manager Apps Script settings**: under Project Settings > Script Properties, store `SCM_WP_USER` and `SCM_WP_APP_PASSWORD` for a WordPress account with upload permission. Do not put passwords or application passwords in GitHub or Sheet cells. This calls the WordPress REST API with the account's application password.
+5. Destination workbook: `Social Content Manager - Abbey`, ID `1XQbRXDfesWPEKY_EmD8YXj0M5CVtgP-C5OH2bAx3ucE`.
 
 ### First safe test
 - Confirm Settings > Auto Publish = NO.
@@ -25,10 +29,11 @@ This folder is an **isolated staging copy** in the existing GitHub repository. I
 - Run **Create GBP drafts**. Inspect the draft in `Social Posts Queue`.
 - Set a valid scheduled date/time, add a prepared JPG URL and approve a test draft; run **Preview scheduled GBP posts**. No external posts are sent.
 - Optionally run **Log GBP dry run** to record eligible posts in Publication Log.
+- After WordPress installation and credential setup, choose **Prepare selected JPG images** for a reviewed opportunity marked GENERATE. Check `Image Processing` and the prepared JPG URL on linked queue rows. This processes at most 10 jobs per manual execution.
 
 ### Important limitations
 - Drafts are deliberately conservative templates, **not AI-written final copy**. The supplied angle is reviewed by the owner and remains unverified by the script.
-- No Google Business Profile API publishing, scheduling triggers, JPG conversion, Facebook or X integration is active yet.
+- No Google Business Profile API publishing, scheduling triggers, Facebook or X integration is active yet. JPG conversion is implemented but requires WordPress plugin installation and configuration.
 - The schedule preview accepts ISO (YYYY-MM-DD) or UK (DD/MM/YYYY) dates, and 24-hour UK times (HH:MM).
 - Nothing in this branch has been deployed to Apps Script or WordPress.
 - `ContentEngine_SendToSocial.js` uses named columns where available and known fallback positions (D, B, H, G, DK, DL, CT). Confirm header mapping on a test row.
@@ -37,7 +42,7 @@ This folder is an **isolated staging copy** in the existing GitHub repository. I
 ## Next development increments
 1. Validate source/target data and add quality gates for photo selection.
 2. Scheduled-post eligibility checks, idempotent Publication Log and dry-run execution.
-3. Temporary WordPress WebP-to-JPEG conversion and clean-up.
+3. Test temporary WordPress WebP-to-JPEG conversion and clean-up on a non-critical image.
 4. Explicit approval, authorised GBP API integration and controlled pilot.
 5. Facebook and X integrations once GBP publishing is reliable.
 
