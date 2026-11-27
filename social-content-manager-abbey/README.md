@@ -9,9 +9,11 @@ This folder is an **isolated staging copy** in the existing GitHub repository. I
 - Add image opportunities in REVIEW state, with duplicates suppressed.
 - Create GBP draft placeholders only for image opportunities manually marked GENERATE **and** supplied with a distinct, fact-checked post angle.
 - Preserve the manual-approval and no-auto-publishing safeguards.
+- Validate GBP approval, UK schedule, Abbey article URL and prepared JPG availability; preview due/future/blocked posts without publishing.
+- Record eligible due posts in Publication Log with an explicit DRY RUN result.
 
 ## Installation targets
-1. **Social Content Manager Abbey** Google Apps Script project `1YJrDXIjPiWuK8uKIDtqImSZUDZsVVCe9goCEbTDIEk2i3rVtGeuf8b36`: use `Code.js`. Avoid overwriting any unrelated functions you have already added.
+1. **Social Content Manager Abbey** Google Apps Script project `1YJrDXIjPiWuK8uKIDtqImSZUDZsVVCe9goCEbTDIEk2i3rVtGeuf8b36`: use `Code.js` and `Schedule_DryRun.js`. Avoid overwriting any unrelated functions you have already added.
 2. **Content Engine** existing Apps Script project: use `ContentEngine_SendToSocial.js` there only. Run `ce_sendActiveArticleToSocialManager` on the desired active row. It needs permission to edit the separate workbook.
 3. Destination workbook: `Social Content Manager - Abbey`, ID `1XQbRXDfesWPEKY_EmD8YXj0M5CVtgP-C5OH2bAx3ucE`.
 
@@ -21,10 +23,13 @@ This folder is an **isolated staging copy** in the existing GitHub repository. I
 - In the destination spreadsheet menu, run **Find article images**.
 - Review `Image Opportunities`: add a distinct verified `Distinct Post Angle` and change Decision to `GENERATE` for one genuinely useful photograph.
 - Run **Create GBP drafts**. Inspect the draft in `Social Posts Queue`.
+- Set a valid scheduled date/time, add a prepared JPG URL and approve a test draft; run **Preview scheduled GBP posts**. No external posts are sent.
+- Optionally run **Log GBP dry run** to record eligible posts in Publication Log.
 
 ### Important limitations
 - Drafts are deliberately conservative templates, **not AI-written final copy**. The supplied angle is reviewed by the owner and remains unverified by the script.
 - No Google Business Profile API publishing, scheduling triggers, JPG conversion, Facebook or X integration is active yet.
+- The schedule preview accepts ISO (YYYY-MM-DD) or UK (DD/MM/YYYY) dates, and 24-hour UK times (HH:MM).
 - Nothing in this branch has been deployed to Apps Script or WordPress.
 - `ContentEngine_SendToSocial.js` uses named columns where available and known fallback positions (D, B, H, G, DK, DL, CT). Confirm header mapping on a test row.
 - This branch remains separate from the Content Engine runtime until deliberately installed.
