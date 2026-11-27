@@ -12,10 +12,11 @@ This folder is an **isolated staging copy** in the existing GitHub repository. I
 - Validate GBP approval, UK schedule, Abbey article URL and prepared JPG availability; preview due/future/blocked posts without publishing.
 - Record eligible due posts in Publication Log with an explicit DRY RUN result.
 - Prepare temporary JPG copies of selected Abbey WordPress uploads through a protected WordPress REST endpoint; keep the original files untouched.
+- Batch-plan imported articles: select documented non-portrait images with distinct captions, draft eligible GBP posts, reuse existing JPEGs and spread drafts across available weekly dates. Nothing is automatically approved or published.
 - Release prepared files only after all linked posts are marked published; WordPress then waits seven days before cleanup.
 
 ## Installation targets
-1. **Social Content Manager Abbey** Google Apps Script project `1YJrDXIjPiWuK8uKIDtqImSZUDZsVVCe9goCEbTDIEk2i3rVtGeuf8b36`: use `Code.js`, `Schedule_DryRun.js` and `Image_Processing.js`. Avoid overwriting any unrelated functions you have already added.
+1. **Social Content Manager Abbey** Google Apps Script project `1YJrDXIjPiWuK8uKIDtqImSZUDZsVVCe9goCEbTDIEk2i3rVtGeuf8b36`: use `Code.js`, `Schedule_DryRun.js`, `Image_Processing.js` and `Batch_Planner.js`. Run the standalone `scm_batchPlanGBP` function from the Apps Script editor; the onOpen menu is only relevant to bound scripts. Avoid overwriting any unrelated functions you have already added.
 2. **Content Engine** existing Apps Script project: use `ContentEngine_SendToSocial.js` there only. Run `ce_sendActiveArticleToSocialManager` on the desired active row. It needs permission to edit the separate workbook.
 3. **WordPress administrator** installs and activates `wordpress/abbey-social-temporary-images.php` as a WordPress plugin (place it inside its own plugin folder first). The plugin exposes authenticated `/wp-json/abbey-social/v1/prepare` and `/release` endpoints. WordPress must have an image editor capable of reading WebP and writing JPEG. Do not make the endpoint public.
 4. **Social Manager Apps Script settings**: under Project Settings > Script Properties, store `SCM_WP_USER` and `SCM_WP_APP_PASSWORD` for a WordPress account with upload permission. Do not put passwords or application passwords in GitHub or Sheet cells. This calls the WordPress REST API with the account's application password.
@@ -29,6 +30,7 @@ This folder is an **isolated staging copy** in the existing GitHub repository. I
 - Run **Create GBP drafts**. Inspect the draft in `Social Posts Queue`.
 - Set a valid scheduled date/time, add a prepared JPG URL and approve a test draft; run **Preview scheduled GBP posts**. No external posts are sent.
 - Optionally run **Log GBP dry run** to record eligible posts in Publication Log.
+- For batch planning, run **`scm_batchPlanGBP`** from the Apps Script function dropdown. It preserves previously entered decisions and dates. It fills the Publishing Schedule tab but never approves or publishes drafts. Review each generated angle and date before approval.
 - After WordPress installation and credential setup, choose **Prepare selected JPG images** for a reviewed opportunity marked GENERATE. Check `Image Processing` and the prepared JPG URL on linked queue rows. This processes at most 10 jobs per manual execution.
 
 ### Important limitations
