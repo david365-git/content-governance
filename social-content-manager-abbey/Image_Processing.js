@@ -69,7 +69,7 @@ function scm_prepareSelectedImages() {
       failed++;
     }
   });
-  SpreadsheetApp.getActive().toast('JPG preparation: '+ready+' ready, '+failed+' failed, '+skipped+' already ready.');
+  scm_book_().toast('JPG preparation: '+ready+' ready, '+failed+' failed, '+skipped+' already ready.');
   return {ready:ready,failed:failed,skipped:skipped};
 }
 function scm_updateRow_(sheetData,rowNumber,fields) {
