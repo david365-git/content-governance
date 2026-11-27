@@ -7,7 +7,7 @@ This folder is an **isolated staging copy** in the existing GitHub repository. I
 - Update an existing article by WordPress Post ID without deleting its image/post records.
 - Extract each unique published Abbey image URL from finished article HTML.
 - Add image opportunities in REVIEW state, with duplicates suppressed.
-- Create GBP draft placeholders only for image opportunities manually marked GENERATE **and** supplied with a distinct, fact-checked post angle.
+- Create GBP evidence-based drafts for images marked GENERATE and supplied with distinct article-backed angles. Each draft uses the matching figure caption and nearby article paragraphs, plus the original article link; no external AI API is called.
 - Preserve the manual-approval and no-auto-publishing safeguards.
 - Validate GBP approval, UK schedule, Abbey article URL and prepared JPG availability; preview due/future/blocked posts without publishing.
 - Record eligible due posts in Publication Log with an explicit DRY RUN result.
@@ -34,7 +34,7 @@ This folder is an **isolated staging copy** in the existing GitHub repository. I
 - After WordPress installation and credential setup, choose **Prepare selected JPG images** for a reviewed opportunity marked GENERATE. Check `Image Processing` and the prepared JPG URL on linked queue rows. This processes at most 10 jobs per manual execution.
 
 ### Important limitations
-- Drafts are deliberately conservative templates, **not AI-written final copy**. The supplied angle is reviewed by the owner and remains unverified by the script.
+- Drafts are assembled from verbatim article evidence and are **not AI-written final copy**. They may need rewriting for variety, length and natural tone; editorial review is required. Existing posts are never overwritten by regeneration.
 - No Google Business Profile API publishing, scheduling triggers, Facebook or X integration is active yet. JPG conversion is implemented but requires WordPress plugin installation and configuration.
 - The schedule preview accepts ISO (YYYY-MM-DD) or UK (DD/MM/YYYY) dates, and 24-hour UK times (HH:MM).
 - Nothing in this branch has been deployed to Apps Script or WordPress.
