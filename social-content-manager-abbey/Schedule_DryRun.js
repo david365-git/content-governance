@@ -54,6 +54,7 @@ function scm_scheduledDue_(p, now){
 }
 function scm_previewDueGBP(){
   scm_scheduleConfig_();
+  scm_syncPublishingSchedule();
   const now=new Date();
   const queue=scm_rows_(SCM_SCHEDULE.queue).rows;
   const result={due:[],blocked:[],future:[]};
@@ -82,4 +83,44 @@ function scm_logDryRunGBP(){
     'Request Fingerprint':post.id+'|DRY-RUN|'+at
   }));
   return {eligible:report.due.length,blocked:report.blocked.length,future:report.future.length};
+}
+
+/** Reflect queue approvals and date changes in the calendar before any schedule check. */
+function scm_syncPublishingSchedule() {
+  scm_scheduleConfig_();
+  const queue=scm_rows_(SCM_SCHEDULE.queue);
+  const cal=scm_rows_('Publishing Schedule');
+  const indexed=new Map(cal.rows.map(r=>[String(r.item['Social Post ID']),r]));
+  let updated=0,added=0;
+  const put=(table,row,name,value)=>{
+    const column=table.keys.indexOf(name);
+    if(column<0)throw new Error('Missing column '+name);
+    if(String(row.item[name]||'')===String(value||''))return;
+    table.sheet.getRange(row.number,column+1).setValue(value);
+    row.item[name]=value;
+  };
+  for(const r of queue.rows) {
+    const p=r.item;
+    if(p.Platform!=='GBP'||!scm_validDate_(p['Scheduled Date'])||!scm_validTime_(p['Scheduled Time (UK)']))continue;
+    const approval=String(p.Approval||'DRAFT');
+    const prior=String(p['Publication Status']||'');
+    const status=prior==='PUBLISHED'||prior==='PUBLISHING'||prior==='REVIEW REQUIRED'
+      ?prior:(approval==='APPROVED'?'SCHEDULED':'NOT SCHEDULED');
+    put(queue,r,'Publication Status',status);
+    const fields={
+      'Social Post ID':p['Social Post ID'],'Article Post ID':p['Article Post ID'],
+      'Image Opportunity ID':p['Opportunity ID'],'Platform':'GBP',
+      'Scheduled Date':scm_validDate_(p['Scheduled Date']),
+      'Scheduled Time (UK)':scm_validTime_(p['Scheduled Time (UK)']),
+      'Approval':approval,'Publication Status':status,
+      'Last Checked UTC':scm_now_()
+    };
+    const calendarRow=indexed.get(String(p['Social Post ID']));
+    if(calendarRow){
+      ['Scheduled Date','Scheduled Time (UK)','Approval','Publication Status','Last Checked UTC']
+        .forEach(name=>put(cal,calendarRow,name,fields[name]));
+      updated++;
+    }else{scm_append_('Publishing Schedule',fields);added++;}
+  }
+  return {updated:updated,added:added};
 }
