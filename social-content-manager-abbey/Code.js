@@ -13,6 +13,8 @@ function onOpen() {
     .addItem('Check setup', 'scm_checkSetup')
     .addItem('Find article images', 'scm_scanAllArticles')
     .addItem('Create GBP drafts', 'scm_generateGBP')
+    .addItem('Preview scheduled GBP posts', 'scm_previewDueGBP')
+    .addItem('Log GBP dry run', 'scm_logDryRunGBP')
     .addToUi();
 }
 
