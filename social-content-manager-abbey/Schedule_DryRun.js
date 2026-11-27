@@ -65,7 +65,7 @@ function scm_previewDueGBP(){
     if(scm_scheduledDue_(p,now)) result.due.push({id:id,postId:String(p['Article Post ID']),row:row.number});
     else result.future.push({id:id,row:row.number});
   });
-  SpreadsheetApp.getActive().toast(
+  scm_book_().toast(
     'Dry-run: '+result.due.length+' due, '+result.future.length+' future, '+result.blocked.length+' blocked. No posts sent.'
   );
   return result;
