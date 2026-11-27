@@ -135,7 +135,23 @@ function scm_batchPlanGBP() {
   scm_checkSetup();
   const selection=scm_selectDistinctProjectImages_();
   const generated=scm_generateGBP();
+  const reused=scm_reuseExistingJpgs_();
   const scheduled=scm_autoScheduleGBP();
   scm_book_().toast('GBP plan: '+generated.created+' drafts; '+scheduled.planned+' new dates. Publishing remains OFF.');
-  return {selection:selection,generated:generated,scheduled:scheduled};
+  return {selection:selection,generated:generated,reusedJpgs:reused,scheduled:scheduled};
+}
+
+/** If the source is already a JPEG, reuse its URL; WordPress conversion is unnecessary. */
+function scm_reuseExistingJpgs_() {
+  const queue=scm_rows_(SCM.queue);
+  let reused=0;
+  queue.rows.forEach(row=>{
+    const src=String(row.item['Original Image URL']||'');
+    if(row.item['Prepared JPG URL'])return;
+    if(!/^https:\/\/www\.abbeyfloorcare\.co\.uk\/wp-content\/uploads\//i.test(src))return;
+    if(!/\.jpe?g(?:[?#]|$)/i.test(src))return;
+    scm_setField_(queue,row,'Prepared JPG URL',src);
+    reused++;
+  });
+  return reused;
 }
