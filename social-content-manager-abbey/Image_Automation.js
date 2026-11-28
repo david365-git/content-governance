@@ -1,8 +1,8 @@
 /** Platform-specific image preparation. No live social publishing. */
 const SCM_IMAGE_DEFAULTS = [
-  ['GBP','YES',1200,900,90,'CONTAIN','#FFFFFF'],
-  ['FACEBOOK','NO',1200,630,90,'CONTAIN','#FFFFFF'],
-  ['X','NO',1200,675,90,'CONTAIN','#FFFFFF']
+  ['GBP','YES',1200,900,90,'WIDTH','#FFFFFF'],
+  ['FACEBOOK','NO',1200,630,90,'WIDTH','#FFFFFF'],
+  ['X','NO',1200,675,90,'WIDTH','#FFFFFF']
 ];
 function scm_imageSettings_() {
   const book=scm_book_();
@@ -31,7 +31,7 @@ function scm_imageSettings_() {
     if(!Number.isInteger(width)||width<400||width>1600 ||
        !Number.isInteger(height)||height<400||height>1600 ||
        !Number.isInteger(quality)||quality<75||quality>95 ||
-       !['CONTAIN','COVER'].includes(fit)||!/^#[0-9A-F]{6}$/.test(background))
+       !['WIDTH','CONTAIN','COVER'].includes(fit)||!/^#[0-9A-F]{6}$/.test(background))
       throw new Error('Invalid Image Settings for '+platform);
     settings[platform]={enabled:String(x.Enabled||row[1]).toUpperCase()==='YES',
       width,height,quality,fit,background};
@@ -103,7 +103,7 @@ function scm_autoPrepareQueuedImages() {
       const url=String(result.jpg_url||'');
       if(!/^https:\/\/www\.abbeyfloorcare\.co\.uk\/wp-content\/uploads\/abbey-social-temp\/social-[a-f0-9]{64}\.jpg$/i.test(url) ||
          !/^[a-f0-9]{64}$/.test(String(result.token||'')) ||
-         Number(result.width)!==g.opts.width || Number(result.height)!==g.opts.height)
+         Number(result.width)!==g.opts.width || Number(result.height)<g.opts.height || Number(result.height)>1600)
         throw new Error('Image service did not produce the requested platform dimensions. Update WordPress plugin.');
       Object.assign(job,{'Prepared JPG URL':url,'Processing Status':'READY',
         'Completed UTC':scm_now_(),'Last Error':'',
