@@ -121,7 +121,7 @@ function scm_manualRefreshViews_() {
     return [scm_validDate_(p['Scheduled Date']),String(p.Platform||''),String(article?.Title||''),
       String(image?.['Original Alt / Caption']||''),String(p['Social Post ID']||''),
       String(p['Draft Text']||''),String(p['Prepared JPG URL']||''),String(p['Article URL']||''),
-      SCM_MANUAL.destinations[String(p.Platform)]||'',String(p['Publication Status']||''),
+      SCM_MANUAL.destinations[String(p.Platform)]||'',(String(p['Prepared JPG URL']||'') ? String(p['Publication Status']||'SCHEDULED') : 'IMAGE PENDING'),
       String(p['Article Post ID']||''),String(p['Opportunity ID']||''),
       String(p['Published UTC']||''),String(p['Platform Post ID']||'')];
   };
@@ -138,10 +138,40 @@ function scm_manualRefreshViews_() {
   return {ready:ready.length,published:published.length};
 }
 /** Initial setup / repeated sync. Does not publish externally. */
+function scm_manualEnablePlatforms_() {
+  const sheet=scm_imageSettings_(); // Ensure settings tab exists.
+  const table=scm_rows_('Image Settings');
+  const col=table.keys.indexOf('Enabled')+1;
+  if(col<1)throw new Error('Image Settings: Enabled column missing');
+  for(const row of table.rows) {
+    if(['FACEBOOK','X'].includes(String(row.item.Platform).toUpperCase()) &&
+       String(row.item.Enabled).toUpperCase()!=='YES')
+      table.sheet.getRange(row.number,col).setValue('YES');
+  }
+}
+function scm_manualGetPost(postId) {
+  const row=scm_rows_(SCM.queue).rows.find(r=>String(r.item['Social Post ID'])===String(postId));
+  if(!row)throw new Error('Post not found');
+  const p=row.item;
+  return {id:postId,platform:String(p.Platform),text:String(p['Draft Text']||''),
+    image:String(p['Prepared JPG URL']||''),article:String(p['Article URL']||''),
+    status:String(p['Publication Status']),login:SCM_MANUAL.destinations[String(p.Platform)]||''};
+}
+function scm_openManualPublisher() {
+  const sheet=scm_book_().getActiveSheet();
+  if(sheet.getName()!==SCM_MANUAL.ready)throw new Error('Select a post row on Ready to Publish first.');
+  const row=sheet.getActiveRange().getRow();
+  if(row<2)throw new Error('Select a post row, not the heading.');
+  const id=String(sheet.getRange(row,5).getValue()||'');
+  const template=HtmlService.createTemplateFromFile('Manual_Publish_Sidebar');
+  template.postId=id;
+  SpreadsheetApp.getUi().showSidebar(template.evaluate().setTitle('Publish prepared post'));
+}
 function scm_buildManualPublishing() {
   const lock=LockService.getScriptLock();
   if(!lock.tryLock(1000))return {status:'BUSY'};
   try {
+    scm_manualEnablePlatforms_();
     const created=scm_createFacebookAndXDrafts();
     const scheduled=scm_manualReschedule_();
     const images=scm_autoPrepareQueuedImages();
