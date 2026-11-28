@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Abbey Social Temporary Images
  * Description: Converts Abbey WordPress uploads into temporary JPEGs for reviewed social posts.
- * Version: 0.2.0
+ * Version: 0.3.0
  */
 if (!defined('ABSPATH')) exit;
 
@@ -62,8 +62,8 @@ function abbey_social_prepare_image(WP_REST_Request $request) {
     $maxh = max(400, min(1600, (int)($request->get_param('max_height') ?: 900)));
     $quality = max(75, min(95, (int)($request->get_param('quality') ?: 90)));
     $fit = strtoupper((string)($request->get_param('fit') ?: 'CONTAIN'));
-    if (!in_array($fit, array('CONTAIN','COVER'), true))
-        return new WP_Error('invalid_fit','Fit must be CONTAIN or COVER.',array('status'=>400));
+    if (!in_array($fit, array('WIDTH','CONTAIN','COVER'), true))
+        return new WP_Error('invalid_fit','Fit must be WIDTH, CONTAIN or COVER.',array('status'=>400));
     $background = strtoupper((string)($request->get_param('background') ?: '#FFFFFF'));
     if (!preg_match('/^#[0-9A-F]{6}$/', $background))
         return new WP_Error('invalid_background','Expected six-digit background colour.',array('status'=>400));
@@ -83,16 +83,24 @@ function abbey_social_prepare_image(WP_REST_Request $request) {
         unset($bytes);
         if (!$src) return new WP_Error('unsupported_image','PHP GD could not decode the image.',array('status'=>400));
         $sw = imagesx($src); $sh = imagesy($src);
-        $canvas = imagecreatetruecolor($maxw,$maxh);
+        $canvas_height = $maxh;
+        if ($fit === 'WIDTH') {
+            $canvas_height = max($maxh, (int)ceil($sh * ($maxw / $sw)));
+            if ($canvas_height > 1600) {
+                imagedestroy($src);
+                return new WP_Error('image_too_tall','Full-width image exceeds the 1600px safe height limit.',array('status'=>400));
+            }
+        }
+        $canvas = imagecreatetruecolor($maxw,$canvas_height);
         if (!$canvas) { imagedestroy($src); return new WP_Error('canvas_failed','Could not prepare canvas.',array('status'=>500)); }
         $r = hexdec(substr($background,1,2));
         $g = hexdec(substr($background,3,2));
         $b = hexdec(substr($background,5,2));
         $white = imagecolorallocate($canvas,$r,$g,$b);
-        imagefilledrectangle($canvas,0,0,$maxw,$maxh,$white);
-        $scale = $fit === 'COVER' ? max($maxw/$sw,$maxh/$sh) : min(1,$maxw/$sw,$maxh/$sh);
+        imagefilledrectangle($canvas,0,0,$maxw,$canvas_height,$white);
+        $scale = $fit === 'WIDTH' ? $maxw/$sw : ($fit === 'COVER' ? max($maxw/$sw,$maxh/$sh) : min(1,$maxw/$sw,$maxh/$sh));
         $dw = max(1,(int)round($sw*$scale)); $dh = max(1,(int)round($sh*$scale));
-        $x = (int)floor(($maxw-$dw)/2); $y = (int)floor(($maxh-$dh)/2);
+        $x = (int)floor(($maxw-$dw)/2); $y = (int)floor(($canvas_height-$dh)/2);
         $copied = imagecopyresampled($canvas,$src,$x,$y,0,0,$dw,$dh,$sw,$sh);
         imagedestroy($src);
         if (!$copied || !imagejpeg($canvas,$dest,$quality)) {
@@ -105,7 +113,7 @@ function abbey_social_prepare_image(WP_REST_Request $request) {
     file_put_contents($meta,wp_json_encode(array('released_at'=>null,'prepared_at'=>time())));
     return rest_ensure_response(array(
         'jpg_url'=>trailingslashit($paths['url']).$filename,
-        'token'=>$fingerprint,'width'=>$maxw,'height'=>$maxh,'status'=>'READY',
+        'token'=>$fingerprint,'width'=>$maxw,'height'=>(int)(@getimagesize($dest)[1] ?: $maxh),'status'=>'READY',
         'fit'=>$fit,'background'=>$background
     ));
 }
