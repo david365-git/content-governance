@@ -1,0 +1,49 @@
+<!DOCTYPE html><html><head><base target="_blank"><style>
+body{font:14px Arial,sans-serif;padding:14px;color:#26352b}h3{margin:0 0 10px}
+button,a.action{display:block;box-sizing:border-box;width:100%;padding:11px;margin:9px 0;border:0;border-radius:6px;background:#236c46;color:#fff;text-align:center;text-decoration:none;cursor:pointer;font:inherit}
+button.secondary,a.secondary{background:#eef4f0;color:#245337;border:1px solid #c6d8cd}
+textarea{width:100%;min-height:175px;box-sizing:border-box;font:13px Arial;line-height:1.5;padding:9px}
+img{max-width:100%;max-height:180px;object-fit:contain;border:1px solid #ddd}
+.warn{color:#a33}.muted{color:#66756d;font-size:12px}#status{min-height:24px;margin:12px 0}
+</style></head><body>
+<h3 id="heading">Prepared social post</h3><div id="status">Loading…</div>
+<div id="image"></div><p class="muted">Use Open/Save JPG, then save the image to your PC if your browser does not download it directly.</p>
+<a id="save" class="action secondary" target="_blank" rel="noopener">Open / Save JPG</a>
+<textarea id="copytext" readonly></textarea>
+<button id="copy" type="button" onclick="copyPost()">Copy post wording and article link</button>
+<a id="article" class="action secondary" target="_blank" rel="noopener">Open original article</a>
+<a id="login" class="action" target="_blank" rel="noopener">Open publishing platform</a>
+<label for="url">Optional: URL of the post after publishing</label><input id="url" style="width:100%;padding:8px;box-sizing:border-box" placeholder="Paste published post URL (optional)">
+<button id="mark" type="button" onclick="markPublished()">Mark Published</button>
+<p class="muted">Only mark Published after you have posted it on the platform. No automatic publishing takes place.</p>
+<script>
+const postId=<?= JSON.stringify(postId) ?>;
+let post=null;
+function status(text,error){const el=document.getElementById('status');el.textContent=text;el.className=error?'warn':'muted'}
+google.script.run.withSuccessHandler(p=>{
+ post=p;document.getElementById('heading').textContent=p.platform+' — '+p.id;
+ document.getElementById('copytext').value=p.text;
+ document.getElementById('login').href=p.login;
+ document.getElementById('article').href=p.article;
+ if(p.image){document.getElementById('save').href=p.image;
+   const img=document.createElement('img');img.src=p.image;img.alt='Prepared photograph';
+   document.getElementById('image').appendChild(img);
+ }else {document.getElementById('save').style.display='none'}
+ document.getElementById('mark').disabled=!p.image||p.status==='PUBLISHED';
+ status(p.image?'Ready for manual posting.':'Image pending — do not post yet.',!p.image);
+}).withFailureHandler(e=>status(e.message||String(e),true)).scm_manualGetPost(postId);
+function copyPost(){
+ const text=document.getElementById('copytext').value;
+ navigator.clipboard.writeText(text).then(()=>status('Post wording copied.')).catch(()=>{
+  const area=document.getElementById('copytext');area.select();status('Text selected — press Ctrl+C to copy.');
+ });
+}
+function markPublished(){
+ if(!post||!post.image)return;
+ if(!confirm('Have you ALREADY published this post on '+post.platform+'?'))return;
+ document.getElementById('mark').disabled=true;
+ google.script.run.withSuccessHandler(result=>status('Recorded as '+result.status+'.')).withFailureHandler(e=>{
+   document.getElementById('mark').disabled=false;status(e.message||String(e),true);
+ }).scm_manualMarkPublished(postId,document.getElementById('url').value.trim());
+}
+</script></body></html>
