@@ -2,7 +2,8 @@
 const SCM_IMAGE_DEFAULTS = [
   ['GBP','YES',1200,900,90,'WIDTH','#FFFFFF'],
   ['FACEBOOK','NO',1200,630,90,'WIDTH','#FFFFFF'],
-  ['X','NO',1200,675,90,'WIDTH','#FFFFFF']
+  ['X','NO',1200,675,90,'WIDTH','#FFFFFF'],
+  ['PINTEREST','YES',1000,1500,90,'WIDTH','#FFFFFF']
 ];
 function scm_imageSettings_() {
   const book=scm_book_();
@@ -12,6 +13,9 @@ function scm_imageSettings_() {
     sheet.appendRow(['Platform','Enabled','Width','Height','Quality','Fit','Background']);
     SCM_IMAGE_DEFAULTS.forEach(row=>sheet.appendRow(row));
   }
+  // New platforms are added safely to an existing Image Settings tab.
+  const platforms=sheet.getDataRange().getValues().slice(1).map(r=>String(r[0]).toUpperCase().trim());
+  SCM_IMAGE_DEFAULTS.forEach(row=>{if(!platforms.includes(row[0]))sheet.appendRow(row);});
   // One-time migration of the previously installed default CONTAIN layout.
   // Thereafter the Image Settings tab remains fully user-editable.
   const props=PropertiesService.getScriptProperties();
