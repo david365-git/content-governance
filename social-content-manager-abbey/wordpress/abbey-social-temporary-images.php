@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Abbey Social Temporary Images
  * Description: Converts Abbey WordPress uploads into temporary JPEGs for reviewed social posts.
- * Version: 0.1.0
+ * Version: 0.2.0
  */
 if (!defined('ABSPATH')) exit;
 
@@ -56,28 +56,57 @@ function abbey_social_prepare_image(WP_REST_Request $request) {
     if (is_wp_error($paths)) return $paths;
     $source = abbey_social_source((string)$request->get_param('url'), $paths);
     if (is_wp_error($source)) return $source;
+    if (!function_exists('imagecreatefromstring') || !function_exists('imagecreatetruecolor'))
+        return new WP_Error('gd_required', 'PHP GD extension is required for contain/cover with white margins.', array('status'=>500));
     $maxw = max(400, min(1600, (int)($request->get_param('max_width') ?: 1200)));
-    $maxh = max(400, min(1600, (int)($request->get_param('max_height') ?: 1200)));
+    $maxh = max(400, min(1600, (int)($request->get_param('max_height') ?: 900)));
     $quality = max(75, min(95, (int)($request->get_param('quality') ?: 90)));
-    $fingerprint = hash('sha256', $source.'|'.filemtime($source).'|'.$maxw.'x'.$maxh.'|'.$quality);
+    $fit = strtoupper((string)($request->get_param('fit') ?: 'CONTAIN'));
+    if (!in_array($fit, array('CONTAIN','COVER'), true))
+        return new WP_Error('invalid_fit','Fit must be CONTAIN or COVER.',array('status'=>400));
+    $background = strtoupper((string)($request->get_param('background') ?: '#FFFFFF'));
+    if (!preg_match('/^#[0-9A-F]{6}$/', $background))
+        return new WP_Error('invalid_background','Expected six-digit background colour.',array('status'=>400));
+    $fingerprint = hash('sha256', $source.'|'.filemtime($source).'|'.$maxw.'x'.$maxh.'|'.$quality.'|'.$fit.'|'.$background.'|v2');
     $filename = 'social-'.$fingerprint.'.jpg';
     $dest = trailingslashit($paths['dir']).$filename;
     $meta = $dest.'.json';
     if (!is_file($dest)) {
-        $editor = wp_get_image_editor($source);
-        if (is_wp_error($editor)) return new WP_Error('conversion_failed', $editor->get_error_message(), array('status'=>500));
-        $editor->resize($maxw, $maxh, false);
-        $editor->set_quality($quality);
-        $result = $editor->save($dest, 'image/jpeg');
-        if (is_wp_error($result)) return new WP_Error('conversion_failed', $result->get_error_message(), array('status'=>500));
-        @chmod($dest, 0644);
+        $details = @getimagesize($source);
+        if (!$details || $details[0] < 1 || $details[1] < 1)
+            return new WP_Error('invalid_image','Source image dimensions unavailable.',array('status'=>400));
+        if ($details[0] * $details[1] > 30000000 || @filesize($source) > 30000000)
+            return new WP_Error('source_too_large','Image too large for safe resizing.',array('status'=>400));
+        $bytes = @file_get_contents($source);
+        if ($bytes === false) return new WP_Error('source_unreadable','Image could not be read.',array('status'=>400));
+        $src = @imagecreatefromstring($bytes);
+        unset($bytes);
+        if (!$src) return new WP_Error('unsupported_image','PHP GD could not decode the image.',array('status'=>400));
+        $sw = imagesx($src); $sh = imagesy($src);
+        $canvas = imagecreatetruecolor($maxw,$maxh);
+        if (!$canvas) { imagedestroy($src); return new WP_Error('canvas_failed','Could not prepare canvas.',array('status'=>500)); }
+        $r = hexdec(substr($background,1,2));
+        $g = hexdec(substr($background,3,2));
+        $b = hexdec(substr($background,5,2));
+        $white = imagecolorallocate($canvas,$r,$g,$b);
+        imagefilledrectangle($canvas,0,0,$maxw,$maxh,$white);
+        $scale = $fit === 'COVER' ? max($maxw/$sw,$maxh/$sh) : min(1,$maxw/$sw,$maxh/$sh);
+        $dw = max(1,(int)round($sw*$scale)); $dh = max(1,(int)round($sh*$scale));
+        $x = (int)floor(($maxw-$dw)/2); $y = (int)floor(($maxh-$dh)/2);
+        $copied = imagecopyresampled($canvas,$src,$x,$y,0,0,$dw,$dh,$sw,$sh);
+        imagedestroy($src);
+        if (!$copied || !imagejpeg($canvas,$dest,$quality)) {
+            imagedestroy($canvas);
+            return new WP_Error('conversion_failed','Could not save platform-specific JPEG.',array('status'=>500));
+        }
+        imagedestroy($canvas);
+        @chmod($dest,0644);
     }
-    // A prepared file remains available until it is explicitly released.
-    file_put_contents($meta, wp_json_encode(array('released_at'=>null,'prepared_at'=>time())));
+    file_put_contents($meta,wp_json_encode(array('released_at'=>null,'prepared_at'=>time())));
     return rest_ensure_response(array(
         'jpg_url'=>trailingslashit($paths['url']).$filename,
-        'token'=>$fingerprint, 'width'=>@getimagesize($dest)[0],
-        'height'=>@getimagesize($dest)[1], 'status'=>'READY'
+        'token'=>$fingerprint,'width'=>$maxw,'height'=>$maxh,'status'=>'READY',
+        'fit'=>$fit,'background'=>$background
     ));
 }
 function abbey_social_release_image(WP_REST_Request $request) {
