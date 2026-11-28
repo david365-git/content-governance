@@ -12,6 +12,24 @@ function scm_imageSettings_() {
     sheet.appendRow(['Platform','Enabled','Width','Height','Quality','Fit','Background']);
     SCM_IMAGE_DEFAULTS.forEach(row=>sheet.appendRow(row));
   }
+  // One-time migration of the previously installed default CONTAIN layout.
+  // Thereafter the Image Settings tab remains fully user-editable.
+  const props=PropertiesService.getScriptProperties();
+  if(props.getProperty('SCM_FULL_WIDTH_SETTINGS_MIGRATED')!=='YES') {
+    const range=sheet.getDataRange();
+    const oldValues=range.getValues();
+    const headers=(oldValues[0]||[]).map(String);
+    const fitIndex=headers.indexOf('Fit');
+    const platformIndex=headers.indexOf('Platform');
+    if(fitIndex>=0&&platformIndex>=0) {
+      for(let i=1;i<oldValues.length;i++) {
+        if(['GBP','FACEBOOK','X'].includes(String(oldValues[i][platformIndex]).toUpperCase()) &&
+           String(oldValues[i][fitIndex]).toUpperCase()==='CONTAIN')
+          sheet.getRange(i+1,fitIndex+1).setValue('WIDTH');
+      }
+    }
+    props.setProperty('SCM_FULL_WIDTH_SETTINGS_MIGRATED','YES');
+  }
   const data=sheet.getDataRange().getValues();
   const keys=data.shift().map(String);
   const defaults=new Map(SCM_IMAGE_DEFAULTS.map(r=>[r[0],r]));
