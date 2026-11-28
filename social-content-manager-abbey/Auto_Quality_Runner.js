@@ -35,6 +35,7 @@ function scm_autoGBPAdvance() {
       scm_autoLog_('CONFIGURATION','AI WRITING','API key missing. No paid call made; drafts retained safely.');
       result.stages.push({name:'AI WRITING',status:'WAITING FOR CONFIGURATION'});
     }
+    runStage('IMAGE PREPARATION',()=>scm_autoPrepareQueuedImages());
     runStage('SCHEDULE SYNC',()=>scm_syncPublishingSchedule());
     result.status='DONE — NO LIVE PUBLISHING';
     return result;
