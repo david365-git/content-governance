@@ -1,9 +1,9 @@
-/** Manual social publishing: GBP, Facebook, X. Never sends a post to a platform. */
+/** Manual social publishing: GBP, Facebook, X, Pinterest. Never sends a post to a platform. */
 const SCM_MANUAL = Object.freeze({
   ready:'Ready to Publish', published:'Published Posts',
-  destinations:{GBP:'https://business.google.com/',FACEBOOK:'https://www.facebook.com/',X:'https://x.com/home'},
-  days:{GBP:[1,4],FACEBOOK:[2,5],X:[1,3,6]},
-  headers:['Scheduled Date','Platform','Article','Image','Social Post ID','Post Wording','Prepared JPG URL','Article URL','Login URL','Status','Article Post ID','Opportunity ID','Published UTC','Published Post URL']
+  destinations:{GBP:'https://business.google.com/',FACEBOOK:'https://www.facebook.com/',X:'https://x.com/home',PINTEREST:'https://www.pinterest.com/pin-creation-tool/'},
+  days:{GBP:[1,4],FACEBOOK:[2,5],X:[1,3,6],PINTEREST:[3,6]},
+  headers:['Scheduled Date','Platform','Article','Image','Social Post ID','Post Wording','Prepared JPG URL','Article URL','Login URL','Status','Article Post ID','Opportunity ID','Published UTC','Published Post URL','Pinterest Board','Pinterest Pin Title']
 });
 function scm_manualTab_(name) {
   const book=scm_book_();
@@ -18,6 +18,11 @@ function scm_manualTab_(name) {
     sheet.setColumnWidth(7,320);
   }
   const header=sheet.getRange(1,1,1,SCM_MANUAL.headers.length).getValues()[0].map(String);
+  if(header.length>=14 && header.length<SCM_MANUAL.headers.length &&
+     header.every((v,i)=>v===SCM_MANUAL.headers[i])) {
+    sheet.getRange(1,1,1,SCM_MANUAL.headers.length).setValues([SCM_MANUAL.headers]);
+    return sheet;
+  }
   if(header.join('|')!==SCM_MANUAL.headers.join('|'))
     throw new Error('Unexpected headers in '+name+'. Existing data preserved.');
   return sheet;
@@ -34,10 +39,11 @@ function scm_manualText_(p,article,image) {
     // Reserve 24 URL characters plus separators under the standard X limit.
     return base.slice(0,245)+'\n'+source;
   }
+  if(String(p.Platform)==='PINTEREST')return scm_pinterestCaption_(p,article,image);
   if(String(p.Platform)==='FACEBOOK')return [caption||title,fact,'See the full Abbey Floor Care project:',source].filter(Boolean).join('\n\n');
   return raw;
 }
-/** Create one Facebook and one X draft for each GBP photo, without duplicating reruns. */
+/** Create one Facebook, X and Pinterest draft for each GBP photo, without duplicating reruns. */
 function scm_createFacebookAndXDrafts() {
   scm_checkSetup();
   const queue=scm_rows_(SCM.queue),existing=new Set(queue.rows.map(r=>String(r.item.Platform)+'|'+String(r.item['Opportunity ID'])));
@@ -47,11 +53,11 @@ function scm_createFacebookAndXDrafts() {
   for(const row of queue.rows) {
     const p=row.item;
     if(String(p.Platform)!=='GBP')continue;
-    for(const platform of ['FACEBOOK','X']) {
+    for(const platform of ['FACEBOOK','X','PINTEREST']) {
       const key=platform+'|'+String(p['Opportunity ID']);
       if(existing.has(key))continue;
       const newPost=Object.assign({},p,{
-        'Social Post ID':scm_id_(platform==='FACEBOOK'?'FB':'X'),
+        'Social Post ID':scm_id_(platform==='FACEBOOK'?'FB':platform==='PINTEREST'?'PIN':'X'),
         'Platform':platform,'Draft Text':'','Prepared JPG URL':'',
         'Approval':'DRAFT','Scheduled Date':'','Scheduled Time (UK)':'10:00',
         'Publication Status':'NOT SCHEDULED','Platform Post ID':'',
@@ -80,7 +86,7 @@ function scm_manualReschedule_() {
   const queue=scm_rows_(SCM.queue);
   const imgs=new Map(scm_rows_(SCM.images).rows.map(r=>[String(r.item['Opportunity ID']),r.item]));
   let scheduled=0;
-  for(const platform of ['GBP','FACEBOOK','X']) {
+  for(const platform of ['GBP','FACEBOOK','X','PINTEREST']) {
     const available=queue.rows.filter(r=>String(r.item.Platform)===platform &&
       !['PUBLISHED','PUBLISHING','PAUSED','REJECTED'].includes(String(r.item['Publication Status'])) &&
       !['PAUSED','REJECTED'].includes(String(r.item.Approval)));
@@ -123,11 +129,13 @@ function scm_manualRefreshViews_() {
       String(p['Draft Text']||''),String(p['Prepared JPG URL']||''),String(p['Article URL']||''),
       SCM_MANUAL.destinations[String(p.Platform)]||'',(String(p['Prepared JPG URL']||'') ? String(p['Publication Status']||'SCHEDULED') : 'IMAGE PENDING'),
       String(p['Article Post ID']||''),String(p['Opportunity ID']||''),
-      String(p['Published UTC']||''),String(p['Platform Post ID']||'')];
+      String(p['Published UTC']||''),String(p['Platform Post ID']||''),
+      String(p.Platform)==='PINTEREST'?scm_pinterestBoardFor_(article,image):'',
+      String(p.Platform)==='PINTEREST'?scm_pinterestTitle_(article,image):''];
   };
   const ready=queue.filter(r=>!['PUBLISHED','PAUSED','REJECTED'].includes(String(r.item['Publication Status'])) &&
     !['REJECTED','PAUSED'].includes(String(r.item.Approval)) &&
-    ['GBP','FACEBOOK','X'].includes(String(r.item.Platform)))
+    ['GBP','FACEBOOK','X','PINTEREST'].includes(String(r.item.Platform)))
     .sort((a,b)=>scm_validDate_(a.item['Scheduled Date']).localeCompare(scm_validDate_(b.item['Scheduled Date']))).map(make);
   const published=queue.filter(r=>String(r.item['Publication Status'])==='PUBLISHED')
     .sort((a,b)=>String(b.item['Published UTC']||'').localeCompare(String(a.item['Published UTC']||''))).map(make);
@@ -144,7 +152,7 @@ function scm_manualEnablePlatforms_() {
   const col=table.keys.indexOf('Enabled')+1;
   if(col<1)throw new Error('Image Settings: Enabled column missing');
   for(const row of table.rows) {
-    if(['FACEBOOK','X'].includes(String(row.item.Platform).toUpperCase()) &&
+    if(['FACEBOOK','X','PINTEREST'].includes(String(row.item.Platform).toUpperCase()) &&
        String(row.item.Enabled).toUpperCase()!=='YES')
       table.sheet.getRange(row.number,col).setValue('YES');
   }
@@ -155,7 +163,9 @@ function scm_manualGetPost(postId) {
   const p=row.item;
   return {id:postId,platform:String(p.Platform),text:String(p['Draft Text']||''),
     image:String(p['Prepared JPG URL']||''),article:String(p['Article URL']||''),
-    status:String(p['Publication Status']),login:SCM_MANUAL.destinations[String(p.Platform)]||''};
+    status:String(p['Publication Status']),login:SCM_MANUAL.destinations[String(p.Platform)]||'',
+    board:String(p.Platform)==='PINTEREST'?scm_pinterestBoardFor_(scm_pinterestArticle_(p),scm_pinterestImage_(p)):'',
+    title:String(p.Platform)==='PINTEREST'?scm_pinterestTitle_(scm_pinterestArticle_(p),scm_pinterestImage_(p)):''};
 }
 function scm_openManualPublisher() {
   const sheet=scm_book_().getActiveSheet();
@@ -171,6 +181,7 @@ function scm_buildManualPublishing() {
   const lock=LockService.getScriptLock();
   if(!lock.tryLock(1000))return {status:'BUSY'};
   try {
+    scm_pinterestSetupBoards();
     scm_manualEnablePlatforms_();
     const created=scm_createFacebookAndXDrafts();
     const scheduled=scm_manualReschedule_();
@@ -188,7 +199,7 @@ function scm_manualMarkPublished(postId,postUrl) {
     if(matches.length!==1)throw new Error('Post ID not uniquely found.');
     const row=matches[0],p=row.item;
     if(String(p['Publication Status'])==='PUBLISHED')return {status:'ALREADY PUBLISHED'};
-    if(!['GBP','FACEBOOK','X'].includes(String(p.Platform)))throw new Error('Invalid platform');
+    if(!['GBP','FACEBOOK','X','PINTEREST'].includes(String(p.Platform)))throw new Error('Invalid platform');
     if(!/^https:\/\/www\.abbeyfloorcare\.co\.uk\//.test(String(p['Article URL']||'')))throw new Error('Invalid article link');
     if(!String(p['Prepared JPG URL']||''))throw new Error('Image not ready');
     const at=scm_now_();
