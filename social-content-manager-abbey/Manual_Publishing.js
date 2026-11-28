@@ -18,6 +18,7 @@ function scm_manualTab_(name) {
     sheet.setColumnWidth(7,320);
   }
   const header=sheet.getRange(1,1,1,SCM_MANUAL.headers.length).getValues()[0].map(String);
+  while(header.length && !header[header.length-1])header.pop();
   if(header.length>=14 && header.length<SCM_MANUAL.headers.length &&
      header.every((v,i)=>v===SCM_MANUAL.headers[i])) {
     sheet.getRange(1,1,1,SCM_MANUAL.headers.length).setValues([SCM_MANUAL.headers]);
