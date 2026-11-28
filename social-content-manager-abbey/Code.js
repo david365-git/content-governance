@@ -16,6 +16,9 @@ function onOpen() {
     .addItem('Prepare selected JPG images', 'scm_prepareSelectedImages')
     .addItem('Preview scheduled GBP posts', 'scm_previewDueGBP')
     .addItem('Log GBP dry run', 'scm_logDryRunGBP')
+    .addSeparator()
+    .addItem('Build / refresh manual publishing', 'scm_buildManualPublishing')
+    .addItem('Open selected post', 'scm_openManualPublisher')
     .addToUi();
 }
 
