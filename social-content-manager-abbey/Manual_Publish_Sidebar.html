@@ -16,10 +16,16 @@ img{max-width:100%;max-height:180px;object-fit:contain;border:1px solid #ddd}
 <label for="url">Optional: URL of the post after publishing</label><input id="url" style="width:100%;padding:8px;box-sizing:border-box" placeholder="Paste published post URL (optional)">
 <button id="mark" type="button" onclick="markPublished()">Mark Published</button>
 <p class="muted">Only mark Published after you have posted it on the platform. No automatic publishing takes place.</p>
+<dialog id="notice" style="width:90%;box-sizing:border-box;padding:12px"><h3 id="noticeTitle">Notice</h3><textarea id="noticeText" readonly style="min-height:120px"></textarea><button type="button" id="noticeCopy" class="secondary">Copy message</button><button type="button" id="noticeOk">OK</button></dialog>
 <script>
+const notice=document.getElementById('notice');let clipboardFallback=null;
+document.getElementById('noticeOk').onclick=()=>{notice.close();if(clipboardFallback){clipboardFallback.focus();clipboardFallback.select();clipboardFallback=null;}};
+notice.addEventListener('cancel',e=>e.preventDefault());
+document.getElementById('noticeCopy').onclick=async()=>{const a=document.getElementById('noticeText');a.focus();a.select();try{await navigator.clipboard.writeText(a.value);document.getElementById('noticeCopy').textContent='Copied';}catch(e){document.getElementById('noticeCopy').textContent='Press Ctrl+C';}};
+function showNotice(text,error){document.getElementById('noticeTitle').textContent=error?'Error / warning':'Notice';document.getElementById('noticeText').value=String(text);document.getElementById('noticeCopy').textContent='Copy message';if(!notice.open)notice.showModal();}
 const postId=<?= JSON.stringify(postId) ?>;
 let post=null;
-function status(text,error){const el=document.getElementById('status');el.textContent=text;el.className=error?'warn':'muted'}
+function status(text,error,quiet){const el=document.getElementById('status');el.textContent=text;el.className=error?'warn':'muted';if(!quiet)showNotice(text,error)}
 google.script.run.withSuccessHandler(p=>{
  post=p;document.getElementById('heading').textContent=p.platform+' — '+p.id;
  document.getElementById('copytext').value=p.text;
@@ -32,13 +38,13 @@ google.script.run.withSuccessHandler(p=>{
    document.getElementById('image').appendChild(img);
  }else {document.getElementById('save').style.display='none'}
  document.getElementById('mark').disabled=!p.image||p.status==='PUBLISHED';
- status(p.image?'Ready for manual posting.':'Image pending — do not post yet.',!p.image);
+ status(p.image?'Ready for manual posting.':'Image pending — do not post yet.',!p.image,!!p.image);
 }).withFailureHandler(e=>status(e.message||String(e),true)).scm_manualGetPost(postId);
-function copyPinTitle(){navigator.clipboard.writeText(document.getElementById('pintext').value).then(()=>status('Pin title copied.')).catch(()=>{document.getElementById('pintext').select();status('Pin title selected — press Ctrl+C.');});}
+function copyPinTitle(){navigator.clipboard.writeText(document.getElementById('pintext').value).then(()=>status('Pin title copied.')).catch(()=>{clipboardFallback=document.getElementById('pintext');status('Press OK, then Ctrl+C to copy the selected pin title.');});}
 function copyPost(){
  const text=document.getElementById('copytext').value;
  navigator.clipboard.writeText(text).then(()=>status('Post wording copied.')).catch(()=>{
-  const area=document.getElementById('copytext');area.select();status('Text selected — press Ctrl+C to copy.');
+  const area=document.getElementById('copytext');clipboardFallback=area;status('Press OK, then Ctrl+C to copy the selected post wording.');
  });
 }
 function markPublished(){

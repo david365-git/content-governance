@@ -73,7 +73,7 @@ function scm_previewExistingGBP() {
       created++;
     }
   }
-  scm_book_().toast('Rewrite preview: '+created+' new, '+refreshed+' refreshed. Existing posts unchanged.');
+  scm_notice_('Rewrite preview: '+created+' new, '+refreshed+' refreshed. Existing posts unchanged.');
   return {created:created,refreshed:refreshed,skipped:skipped};
 }
 /** Only explicitly REPLACE-marked drafts may be updated. Never touch approved or published posts. */
@@ -103,6 +103,6 @@ function scm_applySelectedGBPRewrites() {
     scm_reviewPut_(preview,row,{'Status':'APPLIED','Notes':'Applied to unapproved DRAFT; previous text retained in Current Draft column.'});
     applied++;
   }
-  scm_book_().toast(applied+' GBP drafts updated; '+blocked+' blocked. No posts published.');
+  scm_notice_(applied+' GBP drafts updated; '+blocked+' blocked. No posts published.');
   return {applied:applied,blocked:blocked};
 }

@@ -38,7 +38,7 @@ function scm_prepareSelectedImages() {
     const old=byOpportunity.get(id);
     if(old && String(old.item['Processing Status'])==='READY'){skipped++;return;}
     const src=String(o['Original WebP URL']||'');
-    if(!/^https:\/\/www\.abbeyfloorcare\.co\.uk\/wp-content\/uploads\//.test(src)){failed++;return;}
+    if(!/^https:\/\/www\.abbeyfloorcare\.co\.uk\/wp-content\/uploads\//.test(src)){failed++;scm_notice_('Image '+id+': invalid source URL');return;}
     const started=scm_now_();
     try {
       const result=scm_wpRequest_('prepare',{url:src,max_width:1200,max_height:1200,quality:90});
@@ -60,6 +60,7 @@ function scm_prepareSelectedImages() {
       });
       ready++;
     } catch(error) {
+      scm_notice_('Image '+id+': '+String(error.message||error));
       const data={
         'Image Job ID':old?old.item['Image Job ID']:scm_id_('JOB'),
         'Opportunity ID':id,'Original URL':src,'Processing Status':'FAILED',
@@ -69,7 +70,7 @@ function scm_prepareSelectedImages() {
       failed++;
     }
   });
-  scm_book_().toast('JPG preparation: '+ready+' ready, '+failed+' failed, '+skipped+' already ready.');
+  scm_notice_('JPG preparation: '+ready+' ready, '+failed+' failed, '+skipped+' already ready.');
   return {ready:ready,failed:failed,skipped:skipped};
 }
 function scm_updateRow_(sheetData,rowNumber,fields) {

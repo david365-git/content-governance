@@ -10,15 +10,15 @@ const SCM = Object.freeze({
 
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('Social Content Manager')
-    .addItem('Check setup', 'scm_checkSetup')
-    .addItem('Find article images', 'scm_scanAllArticles')
-    .addItem('Create GBP drafts', 'scm_generateGBP')
-    .addItem('Prepare selected JPG images', 'scm_prepareSelectedImages')
-    .addItem('Preview scheduled GBP posts', 'scm_previewDueGBP')
-    .addItem('Log GBP dry run', 'scm_logDryRunGBP')
+    .addItem('Check setup', 'scm_checkSetupMenu')
+    .addItem('Find article images', 'scm_scanAllArticlesMenu')
+    .addItem('Create GBP drafts', 'scm_generateGBPMenu')
+    .addItem('Prepare selected JPG images', 'scm_prepareSelectedImagesMenu')
+    .addItem('Preview scheduled GBP posts', 'scm_previewDueGBPMenu')
+    .addItem('Log GBP dry run', 'scm_logDryRunGBPMenu')
     .addSeparator()
-    .addItem('Build / refresh manual publishing', 'scm_buildManualPublishing')
-    .addItem('Open selected post', 'scm_openManualPublisher')
+    .addItem('Build / refresh manual publishing', 'scm_buildManualPublishingMenu')
+    .addItem('Open selected post', 'scm_openManualPublisherMenu')
     .addToUi();
 }
 
@@ -48,7 +48,7 @@ function scm_checkSetup() {
   if (!auto || String(auto.item.Value).toUpperCase()!=='NO') {
     throw new Error('Safety stop: Settings > Auto Publish must be NO during setup.');
   }
-  scm_book_().toast('Core sheets checked; automatic publishing is OFF.');
+  scm_notice_('Core sheets checked; automatic publishing is OFF.');
 }
 
 /** Explicit send only; callable from the Content Engine project via the companion script. */
@@ -113,7 +113,7 @@ function scm_scanAllArticles() {
       created++;
     });
   });
-  scm_book_().toast(created+' new image opportunities added.');
+  scm_notice_(created+' new image opportunities added.');
   return {created:created};
 }
 /** Creates factual draft copy using the source article around each image. */
@@ -144,7 +144,7 @@ function scm_generateGBP(){
     });
     made++;queued.add(String(im['Opportunity ID']));
   });
-  scm_book_().toast(made+' GBP drafts created for review.');
+  scm_notice_(made+' GBP drafts created for review.');
   return {created:made};
 }
 
@@ -193,3 +193,54 @@ function scm_draftFromEvidence_(article, image) {
   ].filter(Boolean).join('\n\n');
   return text.slice(0,1450); // Stay comfortably below typical social post text limits.
 }
+
+
+/** Interactive notices: collect nested results, display only after work/locks finish.
+ * Background and API callers retain non-blocking execution and log their messages.
+ */
+let scm_noticeMessages_ = null;
+function scm_notice_(message) {
+  const text = String(message);
+  console.log(text);
+  if (scm_noticeMessages_ !== null) scm_noticeMessages_.push(text);
+}
+function scm_showNotice_(title, message) {
+  const escaped = String(message).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const html = HtmlService.createHtmlOutput(
+    '<!doctype html><html><body style="font:14px Arial,sans-serif;padding:14px;margin:0">'+
+    '<textarea id="message" readonly style="box-sizing:border-box;width:100%;height:230px;resize:vertical;font:13px monospace;padding:10px">'+escaped+'</textarea>'+
+    '<div style="margin-top:12px;display:flex;gap:10px;align-items:center">'+
+    '<button id="copy">Copy message</button><span id="copied" role="status"></span>'+
+    '<button style="margin-left:auto" onclick="google.script.host.close()">OK</button></div>'+
+    '<script>document.getElementById("copy").onclick=async function(){const a=document.getElementById("message");a.focus();a.select();try{await navigator.clipboard.writeText(a.value);document.getElementById("copied").textContent="Copied";}catch(e){document.getElementById("copied").textContent="Press Ctrl+C to copy the selected text.";}};<\/script></body></html>'
+  ).setWidth(620).setHeight(340);
+  SpreadsheetApp.getUi().showModalDialog(html, title);
+}
+function scm_runMenuNotice_(label, action, silentSuccess) {
+  const previous = scm_noticeMessages_;
+  const messages = [];
+  scm_noticeMessages_ = messages;
+  let result, failure;
+  try { result = action(); }
+  catch (error) {
+    failure = error;
+    console.error(String(error && error.stack || error));
+    messages.push(String(error && error.stack || error));
+  } finally { scm_noticeMessages_ = previous; }
+  if (!failure && silentSuccess) return result;
+  if (result !== undefined && result !== null) {
+    // Render counts/status and diagnostic results, not draft text or credentials.
+    messages.push(JSON.stringify(result, null, 2));
+  }
+  if (!messages.length) messages.push('Operation completed.');
+  scm_showNotice_(label + (failure ? ' — Error' : ' — Result'), messages.join('\n\n'));
+  return result;
+}
+function scm_checkSetupMenu() { return scm_runMenuNotice_("Check setup", scm_checkSetup); }
+function scm_scanAllArticlesMenu() { return scm_runMenuNotice_("Find article images", scm_scanAllArticles); }
+function scm_generateGBPMenu() { return scm_runMenuNotice_("Create GBP drafts", scm_generateGBP); }
+function scm_prepareSelectedImagesMenu() { return scm_runMenuNotice_("Prepare selected JPG images", scm_prepareSelectedImages); }
+function scm_previewDueGBPMenu() { return scm_runMenuNotice_("Preview scheduled GBP posts", scm_previewDueGBP); }
+function scm_logDryRunGBPMenu() { return scm_runMenuNotice_("Log GBP dry run", scm_logDryRunGBP); }
+function scm_buildManualPublishingMenu() { return scm_runMenuNotice_("Build / refresh manual publishing", scm_buildManualPublishing); }
+function scm_openManualPublisherMenu() { return scm_runMenuNotice_("Open selected post", scm_openManualPublisher, true); }

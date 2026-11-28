@@ -137,7 +137,7 @@ function scm_batchPlanGBP() {
   const generated=scm_generateGBP();
   const reused=scm_reuseExistingJpgs_();
   const scheduled=scm_autoScheduleGBP();
-  scm_book_().toast('GBP plan: '+generated.created+' drafts; '+scheduled.planned+' new dates. Publishing remains OFF.');
+  scm_notice_('GBP plan: '+generated.created+' drafts; '+scheduled.planned+' new dates. Publishing remains OFF.');
   return {selection:selection,generated:generated,reusedJpgs:reused,scheduled:scheduled};
 }
 

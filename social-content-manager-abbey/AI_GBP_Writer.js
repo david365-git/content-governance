@@ -117,7 +117,7 @@ function scm_generateReviewedAIPreviews() {
     });
     processed++;
   }
-  scm_book_().toast('AI previews: '+accepted+' passed, '+held+' held; nothing published.');
+  scm_notice_('AI previews: '+accepted+' passed, '+held+' held; nothing published.');
   return {accepted:accepted,held:held,articles:processed};
 }
 
