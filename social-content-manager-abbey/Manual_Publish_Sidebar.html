@@ -7,9 +7,9 @@ img{max-width:100%;max-height:180px;object-fit:contain;border:1px solid #ddd}
 .warn{color:#a33}.muted{color:#66756d;font-size:12px}#status{min-height:24px;margin:12px 0}
 </style></head><body>
 <h3 id="heading">Prepared social post</h3><div id="status">Loading…</div>
-<div id="image"></div><p class="muted">Use Open/Save JPG, then save the image to your PC if your browser does not download it directly.</p>
+<div id="board" class="muted" style="margin:8px 0"></div><div id="image"></div><p class="muted">Use Open/Save JPG, then save the image to your PC if your browser does not download it directly.</p>
 <a id="save" class="action secondary" target="_blank" rel="noopener">Open / Save JPG</a>
-<textarea id="copytext" readonly></textarea>
+<div id="pintitle" style="display:none"><label for="pintext">Pinterest Pin title</label><input id="pintext" readonly style="width:100%;box-sizing:border-box;padding:9px"><button class="secondary" type="button" onclick="copyPinTitle()">Copy Pinterest title</button></div><textarea id="copytext" readonly></textarea>
 <button id="copy" type="button" onclick="copyPost()">Copy post wording and article link</button>
 <a id="article" class="action secondary" target="_blank" rel="noopener">Open original article</a>
 <a id="login" class="action" target="_blank" rel="noopener">Open publishing platform</a>
@@ -23,6 +23,8 @@ function status(text,error){const el=document.getElementById('status');el.textCo
 google.script.run.withSuccessHandler(p=>{
  post=p;document.getElementById('heading').textContent=p.platform+' — '+p.id;
  document.getElementById('copytext').value=p.text;
+ if(p.board)document.getElementById('board').textContent='Pinterest board: '+p.board;
+ if(p.title){document.getElementById('pintitle').style.display='block';document.getElementById('pintext').value=p.title;}
  document.getElementById('login').href=p.login;
  document.getElementById('article').href=p.article;
  if(p.image){document.getElementById('save').href=p.image;
@@ -32,6 +34,7 @@ google.script.run.withSuccessHandler(p=>{
  document.getElementById('mark').disabled=!p.image||p.status==='PUBLISHED';
  status(p.image?'Ready for manual posting.':'Image pending — do not post yet.',!p.image);
 }).withFailureHandler(e=>status(e.message||String(e),true)).scm_manualGetPost(postId);
+function copyPinTitle(){navigator.clipboard.writeText(document.getElementById('pintext').value).then(()=>status('Pin title copied.')).catch(()=>{document.getElementById('pintext').select();status('Pin title selected — press Ctrl+C.');});}
 function copyPost(){
  const text=document.getElementById('copytext').value;
  navigator.clipboard.writeText(text).then(()=>status('Post wording copied.')).catch(()=>{
